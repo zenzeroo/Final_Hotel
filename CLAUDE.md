@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Is
 
-**Zenzero Hotel** — a full-stack hotel management system. Three roles: **User** (customer), **Reception** (booking staff), **Housekeeper** (cleaning staff). Started as static HTML prototypes (in `Y:/Final/V1_Prototype/extracted/`), then built into this Next.js app with Supabase + Cloudflare R2.
+**Zenzero Hotel** — a full-stack hotel management system. Two roles built: **User** (customer) and **Reception** (booking staff). Housekeeper role is **planned but not yet built** (5 pages missing). Started as static HTML prototypes (in `Y:/Final/V1_Prototype/extracted/`), then built into this Next.js app with Supabase + Cloudflare R2.
+
+**Project path**: `Y:\Final\final\` (after merge from `final-user-ui` → `final-user-booking` → `final`).
 
 ## Tech Stack (Quick Reference)
 
@@ -41,22 +43,22 @@ Single interface with **toggle** between mock and Supabase implementations, cont
 - `lib/data/rooms.ts` — public interface (`getFeaturedRooms`, `getRoomBySlug`, `searchRooms`)
 - `lib/data/mock-rooms.ts` — reads from `data/mock-rooms.json`
 - `lib/data/supabase-rooms.ts` — queries `room_types` table
-- `lib/data/bookings.ts` — user-scoped bookings
-- `lib/data/staff.ts` — staff queries (reception/housekeeper)
+- `lib/data/bookings.ts` — user-scoped bookings (`getUserBookings`, `getBookingById`, `getDefaultCancellationPolicy`)
+- `lib/data/staff.ts` — staff queries (`getAllBookings`, `getTodayStats`, `getRecentBookings`, `getRoomsStatus`, `searchCustomers`, `getRecentEvents`)
 
 **Pattern**: All Supabase queries use the singleton server client from `lib/supabase/server.ts`. The staff functions rely on RLS policies (not service role) to enforce read/write permissions.
 
 ### Server Actions (`app/actions/`)
 - `auth.ts` — `signIn`, `signUp`, `signOut`
-- `booking.ts` — `createBooking`, `cancelBooking`, `markPaid`, `createReview`
+- `booking.ts` — `createBooking`, `cancelBooking`, `markPaid`, `createReview` (no UI for review yet)
 
 Server actions are the **preferred** mutation path (form actions or `useActionState`). Direct client-side Supabase updates are used **only for staff** quick actions (e.g. check-in button on `/reception/check-in-out`) — staff actions are explicitly allowed by RLS and faster UX.
 
-### Route Group Structure
-- `app/(auth)/login`, `app/(auth)/register` — public, redirects authed users
-- `app/(public)/` — home, rooms (public)
-- `app/(booking)/bookings/` — protected by proxy (any authed user)
-- `app/reception/` — protected by proxy, requires `role IN ('reception','admin')`
+### Route Structure
+- `app/page.tsx`, `app/rooms/page.tsx`, `app/rooms/[id]/page.tsx` — public
+- `app/(auth)/login`, `app/(auth)/register` — public, redirects authed users to `/`
+- `app/(booking)/bookings/*` — protected by proxy (any authed user)
+- `app/reception/*` — protected by proxy, requires `role IN ('reception','admin')`
 - `app/(booking)/bookings/new` uses `getRoomById` (helper in same dir), not `getRoomBySlug`
 
 ### Booking Flow
@@ -77,7 +79,7 @@ Server actions are the **preferred** mutation path (form actions or `useActionSt
 1. Refresh Supabase auth cookie via `updateSession()`
 2. **Protected paths** (`/bookings`, `/account`, `/reception`, `/housekeeper`): redirect unauthed → `/login?next=...`
 3. **Staff paths** (`/reception`, `/housekeeper`): require `profiles.role` in allowed set, else redirect to `/`
-4. **Auth pages** (`/login`, `/register`): redirect authed users → `/`
+4. **Auth pages** (`/login`, `/register`): redirect authed users to `/`
 
 Server-side components re-check via `getSession()` since proxy is best-effort.
 
@@ -94,25 +96,32 @@ Server-side components re-check via `getSession()` since proxy is best-effort.
 - **Server actions**: anon key with cookies (RLS-enforced)
 - **Migrations** (`scripts/run-sql.mjs`): uses **Supabase Pooler** at `aws-0-ap-southeast-1.pooler.supabase.com:6543` (port 5432 is blocked in many networks). Requires `SUPABASE_DB_PASSWORD` (not service role key).
 
-### Migrations
+### Migrations (8 + 1 fix)
 Run in this order:
 1. `20260818_init.sql` + `20260818_rls.sql` — profiles + auth trigger
 2. `20260819_room_types.sql` + `20260819_room_types_rls.sql` — room catalog
 3. `20260819_bookings.sql` + `20260819_bookings_rls.sql` — bookings, reviews, policies
 4. `20260820_staff_role.sql` + `20260820_staff_rls.sql` — role, room_units, booking_events, guest_notes
+5. `20260820_fix_rls_recursion.sql` — **CRITICAL** fix for infinite recursion in profiles RLS
+
+### RLS Helper Functions (created by fix migration)
+- `public.is_staff()` — returns true if user is reception/housekeeper/admin (SECURITY DEFINER, bypasses RLS)
+- `public.has_role(text)` — returns true if user has specific role
+
+**Always use these functions** in RLS policies that need to check role — never query `profiles` table directly in a policy subquery (causes infinite recursion).
 
 ### RLS Patterns
 - **Public read** for `room_types`, `amenities`, `promotions`, `cancellation_policies` (anon + authenticated)
 - **Self only** for `bookings`, `reviews`, `profiles` (user can only see own)
-- **Staff read all / write** for `bookings`, `profiles`, `room_units`, `guest_notes`, `booking_events` (requires `role IN ('reception','housekeeper','admin')`)
+- **Staff read all / write** for `bookings`, `profiles`, `room_units`, `guest_notes`, `booking_events` — use `is_staff()` in policy
 - Use `TO authenticated` + ownership predicate in `USING` (not `auth.role()`)
 - UPDATE policies need both `USING` and `WITH CHECK`
 - Use `(select auth.uid())` (subquery) to allow RLS to be cached
 
-### Test Users (after seeding)
+### Test Users
 - `test@zenzero.com` / `TestPass123!` — reception
-- `somchai@example.com` / `UserPass123!` — user
 - `malee@zenzero.com` / `Reception123!` — reception
+- `somchai@example.com` / `UserPass123!` — user
 
 Promote a user to staff: `UPDATE profiles SET role='reception' WHERE id='<uuid>';`
 
@@ -124,38 +133,49 @@ Promote a user to staff: `UPDATE profiles SET role='reception' WHERE id='<uuid>'
 - `cookies()` is async — always `await cookies()` in server code
 - Do NOT use `middleware.ts` — use `proxy.ts` at root instead
 - Do NOT create `tailwind.config.ts` — Tailwind v4 uses CSS-only config
+- **Do NOT query `profiles` in RLS subquery** — causes infinite recursion (42P17). Use `is_staff()` function instead
 
 ## Project Structure (Big Picture)
 
 ```
 app/
-  (auth)/           # Login/Register (public)
-  (public)/         # Home, Rooms (public)
-  (booking)/        # /bookings/* (authed users)
-  reception/        # /reception/* (role: reception/admin)
-  actions/          # Server actions
+  (auth)/            # Login/Register (public)
+  (booking)/         # /bookings/* (authed users)
+  page.tsx           # Home (public)
+  rooms/             # Search + Detail (public)
+  reception/         # /reception/* (role: reception/admin)
+  actions/           # Server actions (auth, booking)
 components/
-  layout/           # TopNavBar, Footer, ScrollNavIsland, StaffSidebar, TransactionalHeader
-  room/             # RoomCard, BookingWidget, RoomGallery, AmenityCard/Grid
-  search/           # SearchBar, FilterSidebar, FilterChips, SearchSummaryCard
-  ui/               # Button, MaterialIcon, Card
+  layout/            # TopNavBar, Footer, ScrollNavIsland, StaffSidebar, TransactionalHeader
+  room/              # RoomCard, BookingWidget, RoomGallery, AmenityCard/Grid, RatingStars
+  search/            # SearchBar, FilterSidebar, FilterChips, SearchSummaryCard
+  ui/                # Button, MaterialIcon, Card
   feedback/          # EmptyState
+  landing/           # HeroSection
 lib/
-  data/             # Toggle between mock/Supabase
-  supabase/         # server.ts, client.ts, proxy.ts, getSession.ts
-  pricing.ts        # calculateNights, calculatePrice
-  dates.ts          # formatDate, formatDateTime
+  data/              # Toggle between mock/Supabase
+  supabase/          # server.ts, client.ts, proxy.ts, getSession.ts
+  pricing.ts         # calculateNights, calculatePrice
+  dates.ts           # formatDate, formatDateTime
 supabase/
-  migrations/       # Numbered SQL files
-  seed*.sql         # Test data
+  migrations/        # Numbered SQL files (8 + 1 fix)
+  seed*.sql          # Test data
 scripts/
-  run-sql.mjs       # Run SQL via Supabase Pooler
+  run-sql.mjs        # Run SQL via Supabase Pooler
   migrate-images.mjs # Upload prototype images to R2
   migration-config.json
 data/
-  mock-rooms.json   # 10 rooms
+  mock-rooms.json    # 10 rooms
   mock-amenities.json # 8 amenities
-proxy.ts            # Next.js 16 Proxy (root)
+proxy.ts             # Next.js 16 Proxy (root)
 ```
+
+## Known Gaps (Future Work)
+
+- **Phase 5: Housekeeper role** (5 pages) — planned, not built. See `app/housekeeper/` would be added.
+- **Reviews UI** — `createReview` action exists but no write modal.
+- **Forgot password** — no flow yet.
+- **Email confirmation** — currently auto-login on register.
+- **Image upload to R2** — script ready (`npm run images:migrate`), not yet run.
 
 For full project overview and setup, see [README.md](./README.md).

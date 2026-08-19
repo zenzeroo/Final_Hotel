@@ -20,14 +20,32 @@ export async function signIn(prevState: AuthState | null, formData: FormData): P
     return { error: 'กรุณากรอกอีเมลและรหัสผ่าน' }
   }
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
     return { error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }
   }
 
+  // Auto-redirect based on role (if no explicit next param, or next is '/')
+  let redirectTo = next && next !== '/' ? next : '/'
+
+  if (redirectTo === '/' && data.user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .maybeSingle()
+
+    const role = profile?.role
+    if (role === 'reception' || role === 'admin') {
+      redirectTo = '/reception'
+    } else if (role === 'housekeeper') {
+      redirectTo = '/housekeeper'
+    }
+  }
+
   revalidatePath('/', 'layout')
-  redirect(next || '/')
+  redirect(redirectTo)
 }
 
 export async function signUp(prevState: AuthState | null, formData: FormData): Promise<AuthState> {

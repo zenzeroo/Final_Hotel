@@ -1,0 +1,57 @@
+# =========================================================
+# Zenzero Hotel — .gitattributes
+# Force LF line endings for all text files (cross-platform consistency)
+# =========================================================
+
+# Default: all text files use LF
+* text=auto eol=lf
+
+# Explicit per-extension (belt-and-suspenders)
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.jsx       text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.css       text eol=lf
+*.scss      text eol=lf
+*.html      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.toml      text eol=lf
+*.env       text eol=lf
+*.env.example text eol=lf
+*.sql       text eol=lf
+*.mdx       text eol=lf
+*.svg       text eol=lf
+*.xml       text eol=lf
+*.txt       text eol=lf
+*.sh        text eol=lf
+*.mjs       text eol=lf
+*.mts       text eol=lf
+*.cjs       text eol=lf
+*.cts       text eol=lf
+
+# Binary files (no line ending conversion)
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.webp      binary
+*.ico       binary
+*.pdf       binary
+*.zip       binary
+*.gz        binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.otf       binary
+*.eot       binary
+*.mp4       binary
+*.webm      binary
+*.mp3       binary
+
+# Lock files (preserve as-is)
+package-lock.json text eol=lf
+yarn.lock    text eol=lf
+pnpm-lock.yaml text eol=lf
