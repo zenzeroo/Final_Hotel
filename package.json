@@ -1,0 +1,37 @@
+{
+  "name": "final",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "images:migrate": "node scripts/migrate-images.mjs",
+    "db:migrate": "node scripts/run-migrations.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1112.0",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "2.112.3",
+    "date-fns": "3.6.0",
+    "next": "16.3.0",
+    "postcss": "^8.5.26",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^16.6.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "pg": "^8.23.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5"
+  }
+}

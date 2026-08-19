@@ -1,0 +1,49 @@
+{
+  "$comment": "Maps Google URLs from V1_Prototype HTML files to R2 object keys. Run 'npm run images:migrate' to upload.",
+  "pages": {
+    "home_zenzero_hotel": {
+      "file": "Y:/Final/V1_Prototype/extracted/User/stitch_markdown_design_system/home_zenzero_hotel/code.html",
+      "label": "Home (Hero + 4 Featured Rooms)",
+      "mappings": [
+        { "urlIndex": 0, "key": "hero/home-hero.webp", "name": "Home Hero" },
+        { "urlIndex": 1, "key": "rooms/serenity-suite/hero.webp", "name": "Serenity Suite" },
+        { "urlIndex": 2, "key": "rooms/botanic-king/hero.webp", "name": "Botanic King" },
+        { "urlIndex": 3, "key": "rooms/oasis-villa/hero.webp", "name": "Oasis Villa" },
+        { "urlIndex": 4, "key": "rooms/heritage-twin/hero.webp", "name": "Heritage Twin" }
+      ]
+    },
+    "search_rooms_zenzero_hotel": {
+      "file": "Y:/Final/V1_Prototype/extracted/User/stitch_markdown_design_system/search_rooms_zenzero_hotel/code.html",
+      "label": "Search Results (3 Rooms)",
+      "mappings": [
+        { "urlIndex": 0, "key": "rooms/ocean-grand-deluxe/hero.webp", "name": "Ocean Grand Deluxe" },
+        { "urlIndex": 1, "key": "rooms/ocean-twin-premium/hero.webp", "name": "Ocean Twin Premium" },
+        { "urlIndex": 2, "key": "rooms/executive-corner-suite/hero.webp", "name": "Executive Corner Suite" }
+      ]
+    },
+    "room_details_zenzero_hotel": {
+      "file": "Y:/Final/V1_Prototype/extracted/User/stitch_markdown_design_system/room_details_zenzero_hotel/code.html",
+      "label": "Room Details (Hero + 2 Reviewers)",
+      "mappings": [
+        { "urlIndex": 0, "key": "rooms/the-heritage-suite/hero.webp", "name": "The Heritage Suite" },
+        { "urlIndex": 1, "key": "reviews/avatars/elena-rostova.webp", "name": "Elena Rostova (Reviewer)" },
+        { "urlIndex": 2, "key": "reviews/avatars/marcus-thorne.webp", "name": "Marcus Thorne (Reviewer)" }
+      ]
+    },
+    "booking_details_zenzero_hotel": {
+      "file": "Y:/Final/V1_Prototype/extracted/User/stitch_markdown_design_system/booking_details_zenzero_hotel/code.html",
+      "label": "Booking Confirmation (Room Summary)",
+      "mappings": [
+        { "urlIndex": 0, "key": "rooms/heritage-suite-balcony/hero.webp", "name": "Heritage Suite with Balcony" }
+      ]
+    },
+    "booking_history_zenzero_hotel": {
+      "file": "Y:/Final/V1_Prototype/extracted/User/stitch_markdown_design_system/booking_history_zenzero_hotel/code.html",
+      "label": "Booking History (2 Bookings)",
+      "mappings": [
+        { "urlIndex": 0, "key": "rooms/deluxe-forest-suite/hero.webp", "name": "Deluxe Forest Suite" },
+        { "urlIndex": 1, "key": "rooms/garden-view-pavilion/hero.webp", "name": "Garden View Pavilion" }
+      ]
+    }
+  }
+}

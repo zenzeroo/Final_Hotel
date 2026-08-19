@@ -1,0 +1,139 @@
+import { createClient } from '@/lib/supabase/server'
+
+export interface Booking {
+  id: string
+  booking_code: string
+  user_id: string
+  room_type_id: string
+  check_in: string
+  check_out: string
+  guests: number
+  nights: number
+  base_subtotal: number
+  discount_total: number
+  tax_total: number
+  fee_total: number
+  total: number
+  currency: string
+  promotion_id: string | null
+  cancellation_policy_id: string | null
+  status: 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled'
+  payment_status: 'unpaid' | 'paid' | 'refunded' | 'partial_refund'
+  booker_full_name: string
+  booker_email: string
+  booker_phone: string | null
+  special_request: string | null
+  created_at: string
+  updated_at: string
+  // Joined fields
+  room_type?: {
+    id: string
+    slug: string
+    name: string
+    name_th: string
+    hero_image_key: string
+  }
+}
+
+export interface CancellationPolicy {
+  id: string
+  name: string
+  free_cancel_hours: number
+  description: string
+  is_default: boolean
+}
+
+export interface Promotion {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  discount_type: 'percent' | 'flat'
+  discount_value: number
+  min_nights: number
+}
+
+/**
+ * Get user's bookings, optionally filtered by status.
+ * Returns most recent first.
+ */
+export async function getUserBookings(
+  userId: string,
+  statusFilter?: Booking['status'][]
+): Promise<Booking[]> {
+  const supabase = await createClient()
+
+  let query = supabase
+    .from('bookings')
+    .select(`
+      *,
+      room_type:room_types(id, slug, name, name_th, hero_image_key)
+    `)
+    .eq('user_id', userId)
+    .order('check_in', { ascending: false })
+
+  if (statusFilter && statusFilter.length > 0) {
+    query = query.in('status', statusFilter)
+  }
+
+  const { data, error } = await query
+  if (error) throw new Error(`Supabase: ${error.message}`)
+
+  return (data ?? []) as Booking[]
+}
+
+/**
+ * Get a single booking by ID (must belong to user).
+ */
+export async function getBookingById(
+  bookingId: string,
+  userId: string
+): Promise<Booking | null> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      room_type:room_types(id, slug, name, name_th, hero_image_key)
+    `)
+    .eq('id', bookingId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) throw new Error(`Supabase: ${error.message}`)
+  return (data as Booking) ?? null
+}
+
+/**
+ * Get default cancellation policy.
+ */
+export async function getDefaultCancellationPolicy(): Promise<CancellationPolicy | null> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('cancellation_policies')
+    .select('*')
+    .eq('is_default', true)
+    .maybeSingle()
+
+  if (error) throw new Error(`Supabase: ${error.message}`)
+  return (data as CancellationPolicy) ?? null
+}
+
+/**
+ * Get promotion by code (must be active).
+ */
+export async function getPromotionByCode(code: string): Promise<Promotion | null> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('promotions')
+    .select('*')
+    .eq('code', code.toUpperCase())
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (error) throw new Error(`Supabase: ${error.message}`)
+  return (data as Promotion) ?? null
+}

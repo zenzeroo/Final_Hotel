@@ -1,0 +1,43 @@
+import Image from 'next/image'
+import { r2Url } from '@/lib/r2/publicUrl'
+import { SearchBar } from '../search/SearchBar'
+
+export function HeroSection() {
+  return (
+    <section className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden">
+      {/* Background image */}
+      <div className="absolute inset-0">
+        <Image
+          src={r2Url('hero/home-hero.webp')}
+          alt="Zenzero Hotel exterior"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-primary/40 mix-blend-multiply" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-primary/60" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-(--spacing-container-max) px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) flex flex-col items-center text-center">
+        <span className="text-label-md text-secondary font-semibold uppercase tracking-wider mb-4">
+          Organic Luxury
+        </span>
+        <h1 className="font-display text-4xl md:text-6xl lg:text-7xl text-on-primary font-bold leading-tight max-w-3xl">
+          ค้นหาห้องพักในฝันของคุณ
+        </h1>
+        <p className="text-body-lg text-on-primary/90 mt-6 max-w-xl">
+          Experience organic luxury — where every detail is crafted for rest, reflection, and quiet wonder.
+        </p>
+      </div>
+
+      {/* Floating search bar */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) pb-6">
+        <div className="max-w-(--spacing-container-max) mx-auto">
+          <SearchBar variant="hero" />
+        </div>
+      </div>
+    </section>
+  )
+}

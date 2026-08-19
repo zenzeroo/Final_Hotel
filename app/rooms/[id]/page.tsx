@@ -1,0 +1,114 @@
+import { notFound } from 'next/navigation'
+import { getRoomBySlug } from '@/lib/data/rooms'
+import { TopNavBar } from '@/components/layout/TopNavBar'
+import { Footer } from '@/components/layout/Footer'
+import { RoomGallery } from '@/components/room/RoomGallery'
+import { AmenityGrid } from '@/components/room/AmenityGrid'
+import { RatingStars } from '@/components/room/RatingStars'
+import { BookingWidget } from '@/components/room/BookingWidget'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
+
+// Server-render on demand (Supabase data + dynamic params)
+export const dynamic = 'force-dynamic'
+
+export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
+  const { id } = await props.params
+  const room = await getRoomBySlug(id)
+
+  if (!room) {
+    notFound()
+  }
+
+  return (
+    <>
+      <TopNavBar />
+      <main className="flex-1 bg-background">
+        <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-10">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-10">
+            {/* Main content */}
+            <article className="flex flex-col gap-12">
+              <RoomGallery room={room} />
+
+              {/* Title block */}
+              <div>
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <h1 className="font-display text-3xl md:text-4xl text-primary">{room.name}</h1>
+                  <RatingStars value={room.rating_avg} count={room.rating_count} size={20} />
+                </div>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-body-md text-on-surface-variant">
+                  {room.size_sqm && (
+                    <span className="inline-flex items-center gap-2">
+                      <MaterialIcon name="square_foot" size={18} />
+                      {room.size_sqm} ตร.ม.
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-2">
+                    <MaterialIcon name="group" size={18} />
+                    สูงสุด {room.max_guests} ท่าน
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <MaterialIcon name="bed" size={18} />
+                    {room.bed_type} Bed
+                  </span>
+                  {room.view_label && (
+                    <span className="inline-flex items-center gap-2">
+                      <MaterialIcon name="landscape" size={18} />
+                      {room.view_label}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-2">
+                    <MaterialIcon name="stairs" size={18} />
+                    ชั้น {room.floor}
+                  </span>
+                </div>
+              </div>
+
+              {/* Amenities */}
+              <section>
+                <h2 className="font-display text-2xl text-primary mb-4">สิ่งอำนวยความสะดวก</h2>
+                <AmenityGrid amenitySlugs={room.amenities} />
+              </section>
+
+              {/* Description */}
+              <section>
+                <h2 className="font-display text-2xl text-primary mb-4">เกี่ยวกับห้องนี้</h2>
+                <p className="text-body-lg text-on-surface leading-relaxed">{room.description}</p>
+              </section>
+
+              {/* Reviews (placeholder) */}
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-display text-2xl text-primary">รีวิวจากผู้เข้าพัก</h2>
+                  <span className="inline-flex items-center gap-2 text-body-md text-on-surface-variant">
+                    <RatingStars value={room.rating_avg} size={16} showValue={true} />
+                    <span className="text-caption">({room.rating_count} รีวิว)</span>
+                  </span>
+                </div>
+                <div className="bg-surface-container-low rounded-2xl p-8 text-center border border-outline-variant">
+                  <MaterialIcon name="reviews" size={36} className="text-outline-variant mb-3" />
+                  <p className="text-body-md text-on-surface-variant">
+                    ระบบรีวิวจะพร้อมใช้งานในเร็วๆ นี้
+                  </p>
+                </div>
+              </section>
+            </article>
+
+            {/* Booking widget (Phase 2) */}
+            <BookingWidget room={room} />
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </>
+  )
+}
+
+export async function generateMetadata(props: PageProps<'/rooms/[id]'>) {
+  const { id } = await props.params
+  const room = await getRoomBySlug(id)
+  if (!room) return { title: 'ไม่พบห้องพัก | Zenzero Hotel' }
+  return {
+    title: `${room.name} | Zenzero Hotel`,
+    description: room.short_desc,
+  }
+}
