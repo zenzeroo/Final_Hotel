@@ -45,7 +45,7 @@ function enrichReport(r: MaintenanceReport): MaintenanceReport {
 
 const CURRENT_USER_ID = 'u-house-1'
 
-export async function getMyTasksForUser(_userId?: string): Promise<HousekeepingTask[]> {
+export async function getMyTasksForUser(): Promise<HousekeepingTask[]> {
   const tasks = (mockData.tasks as HousekeepingTask[]).filter(
     t => t.assigned_to === CURRENT_USER_ID && t.status !== 'completed' && t.status !== 'cancelled'
   )
@@ -66,7 +66,7 @@ export async function getMaintenanceReports(filters?: {
   return reports.map(enrichReport).sort((a, b) => b.created_at.localeCompare(a.created_at))
 }
 
-export async function getMyDashboardStatsForUser(_userId?: string): Promise<DashboardStats> {
+export async function getMyDashboardStatsForUser(): Promise<DashboardStats> {
   const allTasks = (mockData.tasks as HousekeepingTask[]).map(enrichTask)
   const roomsToClean = MOCK_ROOM_UNITS.filter(u => u.status === 'cleaning').length
   const myTasksCount = allTasks.filter(t => t.assigned_to === CURRENT_USER_ID && t.status !== 'completed').length
@@ -90,7 +90,7 @@ export async function getAllRoomUnits(): Promise<RoomUnitBasic[]> {
   return MOCK_ROOM_UNITS
 }
 
-export async function getMyWorkHistoryForUser(_userId?: string): Promise<WorkHistoryData> {
+export async function getMyWorkHistoryForUser(): Promise<WorkHistoryData> {
   return computeHistory(CURRENT_USER_ID)
 }
 

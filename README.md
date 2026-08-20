@@ -30,7 +30,11 @@ A full-stack hotel management system built with Next.js 16, Supabase, and Cloudf
 - Action history audit log
 
 ### Housekeeper
-- (Coming soon)
+- Dashboard with shift progress
+- Room status overview (toggle cleaning/available)
+- My tasks (claim from unassigned pool, start, complete)
+- Maintenance & damage reports (report new issues)
+- Work history analytics (my history + all hotel toggle)
 
 ## Project Structure
 
@@ -126,6 +130,7 @@ After running migrations, create test users via Supabase Dashboard or Admin API:
 | Reception | test@zenzero.com | TestPass123! |
 | Customer | somchai@example.com | UserPass123! |
 | Reception | malee@zenzero.com | Reception123! |
+| Housekeeper | somjit@zenzero.com | Housekeep123! |
 
 To make a user `reception` role, run:
 ```sql
