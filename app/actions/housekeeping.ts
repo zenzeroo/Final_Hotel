@@ -10,6 +10,16 @@ export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const VALID_ISSUE_TYPES: readonly MaintenanceIssueType[] = ['plumbing', 'electrical', 'hvac', 'furniture', 'appliance', 'other']
+const VALID_SEVERITIES: readonly MaintenanceSeverity[] = ['low', 'medium', 'high', 'critical']
+const TITLE_MAX = 100
+const DESCRIPTION_MAX = 1000
+
+function isUuid(v: unknown): v is string {
+  return typeof v === 'string' && UUID_RE.test(v)
+}
+
 async function requireStaff() {
   const session = await getSession()
   if (!session) redirect('/login?next=/housekeeper')
@@ -24,6 +34,7 @@ export async function claimTask(taskId: string): Promise<ActionResult> {
   if (session.role !== 'housekeeper' && session.role !== 'admin') {
     return { ok: false, error: 'Only housekeeper can claim tasks' }
   }
+  if (!isUuid(taskId)) return { ok: false, error: 'Invalid task id' }
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -43,6 +54,7 @@ export async function claimTask(taskId: string): Promise<ActionResult> {
 
 export async function startTask(taskId: string): Promise<ActionResult> {
   const session = await requireStaff()
+  if (!isUuid(taskId)) return { ok: false, error: 'Invalid task id' }
   const supabase = await createClient()
 
   const { data: task, error: fetchErr } = await supabase
@@ -52,7 +64,9 @@ export async function startTask(taskId: string): Promise<ActionResult> {
     .single()
 
   if (fetchErr || !task) return { ok: false, error: 'Task not found' }
-  if (task.assigned_to !== session.id && session.role !== 'admin' && session.role !== 'reception') {
+  // Only the assigned housekeeper (or admin) can start their own task.
+  // Reception may reassign via separate flow but cannot start someone else's task.
+  if (task.assigned_to !== session.id && session.role !== 'admin') {
     return { ok: false, error: 'Not authorized for this task' }
   }
 
@@ -72,6 +86,7 @@ export async function startTask(taskId: string): Promise<ActionResult> {
 
 export async function completeTask(taskId: string): Promise<ActionResult> {
   const session = await requireStaff()
+  if (!isUuid(taskId)) return { ok: false, error: 'Invalid task id' }
   const supabase = await createClient()
 
   const { data: task, error: fetchErr } = await supabase
@@ -81,7 +96,8 @@ export async function completeTask(taskId: string): Promise<ActionResult> {
     .single()
 
   if (fetchErr || !task) return { ok: false, error: 'Task not found' }
-  if (task.assigned_to !== session.id && session.role !== 'admin' && session.role !== 'reception') {
+  // Only the assigned housekeeper (or admin) can complete their own task.
+  if (task.assigned_to !== session.id && session.role !== 'admin') {
     return { ok: false, error: 'Not authorized for this task' }
   }
   if (task.status !== 'in_progress') {
@@ -113,8 +129,25 @@ export async function reportMaintenance(input: {
   const session = await requireStaff()
   const supabase = await createClient()
 
+  if (!isUuid(input.room_unit_id)) return { ok: false, error: 'Invalid room id' }
+  if (!VALID_ISSUE_TYPES.includes(input.issue_type)) return { ok: false, error: 'Invalid issue type' }
+  if (!VALID_SEVERITIES.includes(input.severity)) return { ok: false, error: 'Invalid severity' }
   if (!input.title?.trim()) return { ok: false, error: 'Title required' }
-  if (!input.room_unit_id) return { ok: false, error: 'Room required' }
+  if (input.title.length > TITLE_MAX) return { ok: false, error: `Title too long (max ${TITLE_MAX})` }
+  if (input.description && input.description.length > DESCRIPTION_MAX) {
+    return { ok: false, error: `Description too long (max ${DESCRIPTION_MAX})` }
+  }
+
+  // Verify room exists and is active before allowing report
+  const { data: room, error: roomErr } = await supabase
+    .from('room_units')
+    .select('id')
+    .eq('id', input.room_unit_id)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (roomErr) return { ok: false, error: roomErr.message }
+  if (!room) return { ok: false, error: 'Room not found or inactive' }
 
   const { error } = await supabase.from('maintenance_reports').insert({
     room_unit_id: input.room_unit_id,
@@ -138,6 +171,7 @@ export async function updateRoomStatus(
   newStatus: 'cleaning' | 'available'
 ): Promise<ActionResult> {
   await requireStaff()
+  if (!isUuid(unitId)) return { ok: false, error: 'Invalid unit id' }
   const supabase = await createClient()
 
   if (!['cleaning', 'available'].includes(newStatus)) {

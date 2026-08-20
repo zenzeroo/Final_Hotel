@@ -7,8 +7,9 @@ export const dynamic = 'force-dynamic'
 
 export default async function WorkHistoryPage({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
   const params = await searchParams
-  const scope = params.scope === 'all' ? 'all' : 'me'
   const session = await getSession()
+  // Only admins may view all-hotel history; housekeepers see their own.
+  const scope = params.scope === 'all' && session!.role === 'admin' ? 'all' : 'me'
   const data = scope === 'all'
     ? await getAllWorkHistory()
     : await getMyWorkHistoryForUser(session!.id)
