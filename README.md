@@ -131,6 +131,7 @@ After running migrations, create test users via Supabase Dashboard or Admin API:
 | Customer | somchai@example.com | UserPass123! |
 | Reception | malee@zenzero.com | Reception123! |
 | Housekeeper | somjit@zenzero.com | Housekeep123! |
+| Housekeeper | niran@zenzero.com | Housekeep123! |
 
 To make a user `reception` role, run:
 ```sql

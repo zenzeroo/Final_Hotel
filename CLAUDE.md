@@ -25,7 +25,8 @@ AI context for Claude Code. Setup/features → [README.md](./README.md). Rules �
 - `test@zenzero.com` / `TestPass123!` — reception
 - `malee@zenzero.com` / `Reception123!` — reception
 - `somchai@example.com` / `UserPass123!` — user
-- `somjit@zenzero.com` / `Housekeep123!` — housekeeper
+- `somjit@zenzero.com` / `Housekeep123!` — housekeeper (u-house-1)
+- `niran@zenzero.com` / `Housekeep123!` — housekeeper (u-house-2)
 
 ---
 
