@@ -307,3 +307,39 @@ export interface ReportsData {
   cancellationRatePct: number
   cancellationTrendPct: number
 }
+
+// =====================================================
+// Reviews & Ratings (Phase 5)
+// =====================================================
+export type ReviewStatus = 'pending' | 'approved' | 'hidden'
+
+export interface PublicReview {
+  id: string
+  rating: number // 1..5
+  title: string | null
+  body: string | null
+  createdAt: string
+  guestName: string
+  guestInitials: string
+  avatarBgClass: string
+}
+
+export interface ReviewForModeration extends PublicReview {
+  status: ReviewStatus
+  roomTypeId: string
+  roomTypeName: string
+  bookingId: string | null
+  bookingCode: string | null
+  userId: string
+  moderatedBy: string | null
+  moderatedAt: string | null
+}
+
+export interface ReviewQueueData {
+  pending: ReviewForModeration[]
+  approved: ReviewForModeration[]
+  hidden: ReviewForModeration[]
+  pendingCount: number
+  approvedCount: number
+  hiddenCount: number
+}

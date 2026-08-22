@@ -6,6 +6,7 @@ import { RoomGallery } from '@/components/room/RoomGallery'
 import { AmenityGrid } from '@/components/room/AmenityGrid'
 import { RatingStars } from '@/components/room/RatingStars'
 import { BookingWidget } from '@/components/room/BookingWidget'
+import { ReviewList } from '@/components/room/ReviewList'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 // Server-render on demand (Supabase data + dynamic params)
@@ -75,7 +76,7 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
                 <p className="text-body-lg text-on-surface leading-relaxed">{room.description}</p>
               </section>
 
-              {/* Reviews (placeholder) */}
+              {/* Reviews */}
               <section>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-display text-2xl text-primary">รีวิวจากผู้เข้าพัก</h2>
@@ -84,12 +85,7 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
                     <span className="text-caption">({room.rating_count} รีวิว)</span>
                   </span>
                 </div>
-                <div className="bg-surface-container-low rounded-2xl p-8 text-center border border-outline-variant">
-                  <MaterialIcon name="reviews" size={36} className="text-outline-variant mb-3" />
-                  <p className="text-body-md text-on-surface-variant">
-                    ระบบรีวิวจะพร้อมใช้งานในเร็วๆ นี้
-                  </p>
-                </div>
+                <ReviewList roomTypeId={room.id} />
               </section>
             </article>
 

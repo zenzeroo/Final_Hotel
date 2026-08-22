@@ -5,6 +5,7 @@ import { TransactionalHeader } from '@/components/layout/TransactionalHeader'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { ConfirmationActions } from './ConfirmationActions'
+import { WriteReviewPrompt } from './WriteReviewPrompt'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
@@ -149,6 +150,15 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                   ยกเลิกฟรีภายใน 24 ชั่วโมงก่อนเช็คอิน หลังจากนั้นจะถูกเรียกเก็บค่าห้องพัก 1 คืน
                 </p>
               </section>
+
+              {/* Review prompt — only after checkout */}
+              {booking.status === 'checked_out' && booking.room_type ? (
+                <WriteReviewPrompt
+                  bookingId={booking.id}
+                  roomTypeId={booking.room_type.id}
+                  roomTypeName={booking.room_type.name_th ?? booking.room_type.name}
+                />
+              ) : null}
             </div>
 
             {/* RIGHT: Price summary + actions */}

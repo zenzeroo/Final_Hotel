@@ -41,7 +41,7 @@ const MANAGER_NAV: NavItem[] = [
   { label: 'Booking Oversight', href: '/manager/bookings', icon: 'calendar_month' },
   { label: 'Staff Management', href: '/manager/staff', icon: 'badge', disabled: true },
   { label: 'Housekeeping Overview', href: '/manager/housekeeping', icon: 'cleaning_services' },
-  { label: 'Reviews Management', href: '/manager/reviews', icon: 'reviews', disabled: true },
+  { label: 'Reviews Management', href: '/manager/reviews', icon: 'reviews' },
   { label: 'Promotions & Discounts', href: '/manager/promotions', icon: 'sell', disabled: true },
 ]
 

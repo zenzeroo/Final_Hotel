@@ -1,1 +1,16 @@
 
+
+# =========================================================
+# Local-only files (NEVER push to remote)
+# =========================================================
+# Personal docs — not for the public repo
+/README.md
+/CLAUDE.md
+/AGENTS.md
+/Rule.md
+/docs/
+
+# All env variants (incl. .env.example)
+/.env*
+
+# .gitignore itself stays local
