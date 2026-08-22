@@ -43,13 +43,14 @@ async function requireAdmin() {
 
 const createReviewSchema = z.object({
   bookingId: z.string().uuid(),
+  roomTypeId: z.string().uuid(),
   rating: z.coerce.number().int().min(1).max(5),
   title: z.string().max(120).optional().nullable(),
   body: z.string().max(2000).optional().nullable(),
 })
 
 const reviewIdSchema = z.object({
-  reviewId: z.string().min(1).max(80),
+  reviewId: z.string().uuid(),
 })
 
 // ── Guest: create review ───────────────────────────────────────────────────
@@ -77,6 +78,7 @@ export async function createReviewAction(
 ): Promise<CreateReviewResponse> {
   const parsed = createReviewSchema.safeParse({
     bookingId: input.bookingId,
+    roomTypeId: input.roomTypeId,
     rating: input.rating,
     title: input.title ?? null,
     body: input.body ?? null,
@@ -92,7 +94,7 @@ export async function createReviewAction(
   try {
     const result = await createReviewData({
       bookingId: parsed.data.bookingId,
-      roomTypeId: input.roomTypeId,
+      roomTypeId: parsed.data.roomTypeId,
       userId: session.id,
       guestName: session.fullName ?? session.email ?? 'Guest',
       rating: parsed.data.rating,
@@ -113,7 +115,7 @@ export async function moderateReviewAction(formData: FormData): Promise<ActionRe
   const session = await requireModerator()
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
-  if (!parsed.success) return { ok: false, error: 'Missing review id' }
+  if (!parsed.success) return { ok: false, error: 'Missing or invalid review id' }
 
   try {
     await moderateReviewData({
@@ -133,7 +135,7 @@ export async function hideReviewAction(formData: FormData): Promise<ActionResult
   const session = await requireModerator()
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
-  if (!parsed.success) return { ok: false, error: 'Missing review id' }
+  if (!parsed.success) return { ok: false, error: 'Missing or invalid review id' }
 
   try {
     await hideReviewData({
@@ -153,7 +155,7 @@ export async function unhideReviewAction(formData: FormData): Promise<ActionResu
   const session = await requireModerator()
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
-  if (!parsed.success) return { ok: false, error: 'Missing review id' }
+  if (!parsed.success) return { ok: false, error: 'Missing or invalid review id' }
 
   try {
     await unhideReviewData({
@@ -175,7 +177,7 @@ export async function deleteReviewAction(formData: FormData): Promise<ActionResu
   await requireAdmin()
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
-  if (!parsed.success) return { ok: false, error: 'Missing review id' }
+  if (!parsed.success) return { ok: false, error: 'Missing or invalid review id' }
 
   try {
     await deleteReviewData({ reviewId: parsed.data.reviewId })

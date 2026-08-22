@@ -175,16 +175,16 @@ await step('Discover server-action IDs', async () => {
     .join(', ')
 })
 
-// ── Test 1: approve review (rev-003 = Olivia) ──────────────────────────────
+// ── Test 1: approve review (11111111-1111-1111-1111-000000000003 = Olivia) ──────────────────────────────
 
-await step('Test 1: Approve Olivia Brown (rev-003)', async () => {
+await step('Test 1: Approve Olivia Brown (11111111-1111-1111-1111-000000000003)', async () => {
   const before = await fetchHtml('/manager/reviews?tab=pending', mgrCookie)
   if (!before.includes('Olivia Brown')) {
-    return `rev-003 already approved in this dev session — skipped`
+    return `11111111-1111-1111-1111-000000000003 already approved in this dev session — skipped`
   }
 
   const res = await postAction(mgrCookie, '/manager/reviews', MODERATE_ID, {
-    reviewId: 'rev-003',
+    reviewId: '11111111-1111-1111-1111-000000000003',
   })
   if (res.status >= 400) throw new Error(`HTTP ${res.status}: ${res.body.slice(0, 200)}`)
 
@@ -195,16 +195,16 @@ await step('Test 1: Approve Olivia Brown (rev-003)', async () => {
   return `Olivia moved pending → approved ✓`
 })
 
-// ── Test 2: hide review (rev-001 = Eleanor) ───────────────────────────────
+// ── Test 2: hide review (11111111-1111-1111-1111-000000000001 = Eleanor) ───────────────────────────────
 
-await step('Test 2: Hide Eleanor Smith (rev-001)', async () => {
+await step('Test 2: Hide Eleanor Smith (11111111-1111-1111-1111-000000000001)', async () => {
   const before = await fetchHtml('/manager/reviews?tab=approved', mgrCookie)
   if (!before.includes('Eleanor Smith')) {
-    return `rev-001 already hidden — skipped`
+    return `11111111-1111-1111-1111-000000000001 already hidden — skipped`
   }
 
   const res = await postAction(mgrCookie, '/manager/reviews', HIDE_ID, {
-    reviewId: 'rev-001',
+    reviewId: '11111111-1111-1111-1111-000000000001',
   })
   if (res.status >= 400) throw new Error(`HTTP ${res.status}: ${res.body.slice(0, 200)}`)
 
@@ -216,16 +216,16 @@ await step('Test 2: Hide Eleanor Smith (rev-001)', async () => {
   return `Eleanor moved approved → hidden ✓`
 })
 
-// ── Test 3: unhide review (rev-006 = Markus) ──────────────────────────────
+// ── Test 3: unhide review (11111111-1111-1111-1111-000000000006 = Markus) ──────────────────────────────
 
-await step('Test 3: Unhide Markus Schneider (rev-006)', async () => {
+await step('Test 3: Unhide Markus Schneider (11111111-1111-1111-1111-000000000006)', async () => {
   const before = await fetchHtml('/manager/reviews?tab=hidden', mgrCookie)
   if (!before.includes('Markus Schneider')) {
-    return `rev-006 not in hidden tab — skipped`
+    return `11111111-1111-1111-1111-000000000006 not in hidden tab — skipped`
   }
 
   const res = await postAction(mgrCookie, '/manager/reviews', UNHIDE_ID, {
-    reviewId: 'rev-006',
+    reviewId: '11111111-1111-1111-1111-000000000006',
   })
   if (res.status >= 400) throw new Error(`HTTP ${res.status}: ${res.body.slice(0, 200)}`)
 
@@ -239,22 +239,22 @@ await step('Test 3: Unhide Markus Schneider (rev-006)', async () => {
 
 // ── Test 4: delete review (auth guard — manager cannot) ────────────────────
 
-await step('Test 4: Auth guard — manager cannot delete (rev-005)', async () => {
+await step('Test 4: Auth guard — manager cannot delete (11111111-1111-1111-1111-000000000005)', async () => {
   const beforeApproved = await fetchHtml('/manager/reviews?tab=approved', mgrCookie)
   if (!beforeApproved.includes('Sofia Petrova')) {
-    return `rev-005 already deleted — skipped`
+    return `11111111-1111-1111-1111-000000000005 already deleted — skipped`
   }
 
   const res = await postAction(mgrCookie, '/manager/reviews', DELETE_ID, {
-    reviewId: 'rev-005',
+    reviewId: '11111111-1111-1111-1111-000000000005',
   })
   if (res.status >= 500) throw new Error(`server crashed: ${res.status}`)
 
   // Manager is not admin → action returns ok:false (no redirect; requireAdmin redirects to /).
-  // Either way, rev-005 should STILL be present in approved tab.
+  // Either way, 11111111-1111-1111-1111-000000000005 should STILL be present in approved tab.
   const after = await fetchHtml('/manager/reviews?tab=approved', mgrCookie)
   assert(after.includes('Sofia Petrova'), 'manager deleted review (admin-only guard failed)')
-  return `HTTP ${res.status}; rev-005 still present (auth guard held ✓)`
+  return `HTTP ${res.status}; 11111111-1111-1111-1111-000000000005 still present (auth guard held ✓)`
 })
 
 // ── Test 5: delete review (admin can) — skipped if admin not seeded ───────
@@ -275,20 +275,20 @@ await step('Sign in as admin', async () => {
 
 if (adminAvailable) {
   const admCookie = adm.cookieHeader()
-  await step('Test 5: Admin deletes Sofia Petrova (rev-005)', async () => {
+  await step('Test 5: Admin deletes Sofia Petrova (11111111-1111-1111-1111-000000000005)', async () => {
     const before = await fetchHtml('/manager/reviews?tab=approved', admCookie)
     if (!before.includes('Sofia Petrova')) {
-      return `rev-005 already deleted — skipped`
+      return `11111111-1111-1111-1111-000000000005 already deleted — skipped`
     }
 
     const res = await postAction(admCookie, '/manager/reviews', DELETE_ID, {
-      reviewId: 'rev-005',
+      reviewId: '11111111-1111-1111-1111-000000000005',
     })
     if (res.status >= 400) throw new Error(`HTTP ${res.status}: ${res.body.slice(0, 200)}`)
 
     const after = await fetchHtml('/manager/reviews?tab=approved', admCookie)
     assert(!after.includes('Sofia Petrova'), 'Sofia still present after admin delete')
-    return `rev-005 deleted by admin ✓`
+    return `11111111-1111-1111-1111-000000000005 deleted by admin ✓`
   })
 }
 

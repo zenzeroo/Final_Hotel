@@ -97,3 +97,47 @@ drop trigger if exists trg_recalc_rating on public.reviews;
 create trigger trg_recalc_rating
   after insert or update or delete on public.reviews
   for each row execute function public.recalc_room_rating();
+
+-- =========================================================
+-- Defense in depth: prevent staff UPDATE from rewriting
+-- user-provided content (rating, title, body, ownership).
+-- Staff may only change status + audit columns.
+-- =========================================================
+create or replace function public.reviews_guard_staff_update() returns trigger
+language plpgsql
+as $$
+begin
+  -- Bypass for owners updating their own review (status changes still allowed
+  -- since owners can also delete via the application layer). The check is:
+  -- if the row's user_id is being changed OR if a content field is being
+  -- changed by anyone other than the owner, raise an exception.
+  if new.user_id is distinct from old.user_id then
+    raise exception 'reviews.user_id is immutable';
+  end if;
+  if new.room_type_id is distinct from old.room_type_id then
+    raise exception 'reviews.room_type_id is immutable';
+  end if;
+  if new.booking_id is distinct from old.booking_id then
+    raise exception 'reviews.booking_id is immutable';
+  end if;
+  if new.created_at is distinct from old.created_at then
+    raise exception 'reviews.created_at is immutable';
+  end if;
+  -- Content fields: if a staff member (anyone whose user_id does not match)
+  -- tries to change rating/title/body, reject.
+  if (select auth.uid()) is distinct from old.user_id then
+    if new.rating is distinct from old.rating then
+      raise exception 'staff cannot modify reviews.rating';
+    end if;
+    if (new.title is distinct from old.title)
+       or (new.body is distinct from old.body) then
+      raise exception 'staff cannot modify reviews content (title/body)';
+    end if;
+  end if;
+  return new;
+end; $$;
+
+drop trigger if exists trg_reviews_guard_staff_update on public.reviews;
+create trigger trg_reviews_guard_staff_update
+  before update on public.reviews
+  for each row execute function public.reviews_guard_staff_update();
