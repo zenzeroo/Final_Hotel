@@ -1,10 +1,9 @@
 import Link from 'next/link'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { signOut } from '@/app/actions/auth'
-import { formatTHB } from '@/lib/pricing'
 
 interface StaffSidebarProps {
-  role: 'reception' | 'housekeeper' | 'admin'
+  role: 'reception' | 'housekeeper' | 'manager' | 'admin'
   userName: string | null
   pathname: string
 }
@@ -13,6 +12,7 @@ interface NavItem {
   label: string
   href: string
   icon: string
+  disabled?: boolean
 }
 
 const RECEPTION_NAV: NavItem[] = [
@@ -34,14 +34,33 @@ const HOUSEKEEPER_NAV: NavItem[] = [
   { label: 'รายงานการซ่อมบำรุง', href: '/housekeeper/maintenance', icon: 'build' },
 ]
 
+const MANAGER_NAV: NavItem[] = [
+  { label: 'แดชบอร์ด', href: '/manager', icon: 'dashboard' },
+  { label: 'Reports & Analytics', href: '/manager/reports', icon: 'analytics' },
+  { label: 'Room & Rate Management', href: '/manager/rates', icon: 'bed', disabled: true },
+  { label: 'Booking Oversight', href: '/manager/bookings', icon: 'calendar_month' },
+  { label: 'Staff Management', href: '/manager/staff', icon: 'badge', disabled: true },
+  { label: 'Housekeeping Overview', href: '/manager/housekeeping', icon: 'cleaning_services' },
+  { label: 'Reviews Management', href: '/manager/reviews', icon: 'reviews', disabled: true },
+  { label: 'Promotions & Discounts', href: '/manager/promotions', icon: 'sell', disabled: true },
+]
+
+const NAV_BY_ROLE: Record<StaffSidebarProps['role'], NavItem[]> = {
+  reception: RECEPTION_NAV,
+  housekeeper: HOUSEKEEPER_NAV,
+  manager: MANAGER_NAV,
+  admin: RECEPTION_NAV,
+}
+
 const ROLE_LABEL = {
   reception: 'พนักงานต้อนรับ',
   housekeeper: 'พนักงานทำความสะอาด',
+  manager: 'ผู้จัดการ',
   admin: 'ผู้ดูแลระบบ',
 } as const
 
 export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
-  const navItems = role === 'housekeeper' ? HOUSEKEEPER_NAV : RECEPTION_NAV
+  const navItems = NAV_BY_ROLE[role] ?? []
 
   return (
     <aside className="w-72 shrink-0 bg-primary text-secondary min-h-screen flex flex-col">
@@ -58,8 +77,26 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href ||
+          const isActive = !item.disabled && (
+            pathname === item.href ||
             (item.href !== `/${role}` && pathname.startsWith(item.href + '/'))
+          )
+          if (item.disabled) {
+            return (
+              <div
+                key={item.href}
+                aria-disabled="true"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary/40 cursor-not-allowed"
+                title="เร็วๆ นี้"
+              >
+                <MaterialIcon name={item.icon} size={20} />
+                <span className="text-body-md">{item.label}</span>
+                <span className="ml-auto text-[10px] uppercase tracking-wider text-secondary/40">
+                  Soon
+                </span>
+              </div>
+            )
+          }
           return (
             <Link
               key={item.href}

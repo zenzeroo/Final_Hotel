@@ -41,6 +41,8 @@ export async function signIn(prevState: AuthState | null, formData: FormData): P
       redirectTo = '/reception'
     } else if (role === 'housekeeper') {
       redirectTo = '/housekeeper'
+    } else if (role === 'manager') {
+      redirectTo = '/manager'
     }
   }
 

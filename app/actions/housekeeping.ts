@@ -23,7 +23,7 @@ function isUuid(v: unknown): v is string {
 async function requireStaff() {
   const session = await getSession()
   if (!session) redirect('/login?next=/housekeeper')
-  if (!['housekeeper', 'reception', 'admin'].includes(session.role)) {
+  if (!['housekeeper', 'reception', 'manager', 'admin'].includes(session.role)) {
     redirect('/')
   }
   return session

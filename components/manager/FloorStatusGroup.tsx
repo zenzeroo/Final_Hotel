@@ -1,0 +1,26 @@
+import type { FloorStatusGroup as FloorStatusGroupType } from '@/lib/data/types'
+import { RoomStatusCell } from './RoomStatusCell'
+
+interface FloorStatusGroupProps {
+  group: FloorStatusGroupType
+}
+
+export function FloorStatusGroup({ group }: FloorStatusGroupProps) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-headline-sm text-headline-sm text-primary">
+          Floor {group.floor} — {group.label}
+        </h4>
+        <span className="text-caption text-on-surface-variant">
+          {group.assignedTo ? `Assigned` : 'Unassigned'}
+        </span>
+      </div>
+      <div className="grid grid-cols-4 gap-3">
+        {group.rooms.map((r) => (
+          <RoomStatusCell key={r.roomNumber} cell={r} />
+        ))}
+      </div>
+    </div>
+  )
+}
