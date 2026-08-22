@@ -132,3 +132,178 @@ export interface WorkHistoryData {
   dailyPerformance: { date: string; count: number }[]
   recentLog: HousekeepingTask[]
 }
+
+// =====================================================
+// Manager types — Dashboard
+// =====================================================
+export type DashboardAlertSeverity = 'critical' | 'warning' | 'info'
+
+export interface DashboardAlert {
+  id: string
+  severity: DashboardAlertSeverity
+  title: string
+  description: string
+  cta?: { label: string; href?: string }
+}
+
+export interface RevenueBarPoint {
+  date: string // YYYY-MM-DD
+  revenue: number
+  label?: string // 'Mon', 'Tue' ...
+}
+
+export interface ManagerDashboardStats {
+  revenueToday: number
+  revenueTrendPct: number
+  occupancyRatePct: number
+  checkInsToday: number
+  checkOutsToday: number
+  newBookingsToday: number
+  webBookings: number
+  walkInBookings: number
+  revenue7d: RevenueBarPoint[]
+  alerts: DashboardAlert[]
+}
+
+// =====================================================
+// Manager types — Housekeeping Overview
+// =====================================================
+export type FloorRoomStatus = 'dirty' | 'cleaning' | 'inspected'
+
+export interface RoomStatusCell {
+  roomNumber: string
+  status: FloorRoomStatus
+  occupied: boolean
+}
+
+export interface FloorStatusGroup {
+  floor: number
+  label: string
+  assignedTo: string | null
+  rooms: RoomStatusCell[]
+}
+
+export interface FloorAssignment {
+  floor: number
+  label: string
+  totalRooms: number
+  housekeeperId: string | null
+  housekeeperName: string | null
+}
+
+export interface UnassignedTask {
+  id: string
+  title: string
+  roomNumber: string
+  requestedAt: string
+  urgent: boolean
+}
+
+export type DamageSeverity = 'normal' | 'urgent'
+
+export interface DamageReport {
+  id: string
+  roomNumber: string
+  reportedBy: string
+  description: string
+  photoUrl: string | null
+  severity: DamageSeverity
+  costEstimate: number | null
+  resolved: boolean
+  resolvedBy?: string | null
+  resolvedAt?: string | null
+  resolutionNote?: string | null
+}
+
+export interface HousekeepingOverviewData {
+  totalRooms: number
+  dirtyCount: number
+  cleaningCount: number
+  inspectedCount: number
+  floors: FloorStatusGroup[]
+  floorAssignments: FloorAssignment[]
+  unassignedTasks: UnassignedTask[]
+  damageReports: DamageReport[]
+}
+
+// =====================================================
+// Manager types — Bookings Oversight
+// =====================================================
+export type BookingOversightStatus = 'paid' | 'pending' | 'cancelled' | 'refunded'
+
+export interface BookingOversightRow {
+  id: string
+  code: string
+  guestName: string
+  guestInitials: string
+  avatarBgClass: string
+  roomNumber: string
+  roomType: string
+  checkIn: string
+  checkOut: string
+  nights: number
+  status: BookingOversightStatus
+}
+
+export interface RefundRequest {
+  id: string
+  bookingCode: string
+  guestName: string
+  reason: string
+  amount: number // THB
+}
+
+export interface AuditLogEntry {
+  id: string
+  timestamp: string
+  staffId: string
+  action: string
+  actionBadgeClass: string
+  targetCode: string
+  details: string
+}
+
+export interface BookingsOversightData {
+  activeCount: number
+  bookings: BookingOversightRow[]
+  refundRequests: RefundRequest[]
+  auditLog: AuditLogEntry[]
+}
+
+// =====================================================
+// Manager types — Reports & Analytics
+// =====================================================
+export interface OccupancyMonthPoint {
+  month: string
+  last: number // last year %
+  current: number // current year %
+}
+
+export interface RankedRoom {
+  name: string
+  count: number
+}
+
+export interface RankedRoomTypeRevenue {
+  name: string
+  revenue: number
+}
+
+export interface ChannelSlice {
+  label: string
+  percent: number
+  color: string
+}
+
+export interface ReportsData {
+  totalRevenue7d: number
+  totalRevenueTrendPct: number
+  dailyRevenue: RevenueBarPoint[]
+  occupancyYoY: OccupancyMonthPoint[]
+  mostBookedRooms: RankedRoom[]
+  highestRevenueRoomTypes: RankedRoomTypeRevenue[]
+  channels: ChannelSlice[]
+  totalBookings7d: number
+  cancellationRatePct: number
+  cancellationTrendPct: number
+}

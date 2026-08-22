@@ -1,6 +1,6 @@
 import { createClient } from './server'
 
-export type UserRole = 'user' | 'reception' | 'housekeeper' | 'admin'
+export type UserRole = 'user' | 'reception' | 'housekeeper' | 'manager' | 'admin'
 
 export interface SessionUser {
   id: string
