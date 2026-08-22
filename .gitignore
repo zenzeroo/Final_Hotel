@@ -13,4 +13,21 @@
 # All env variants (incl. .env.example)
 /.env*
 
+# =========================================================
+# Database schema + seed files
+# Archived locally at Y:\Final\db-schemas
+# =========================================================
+/supabase/migrations/
+/supabase/seed.sql
+/supabase/seed_housekeeping.sql
+
+# =========================================================
+# Build artifacts, IDE state, tooling
+# =========================================================
+.next/
+node_modules/
+.superpowers/
+tsconfig.tsbuildinfo
+next-env.d.ts
+
 # .gitignore itself stays local
