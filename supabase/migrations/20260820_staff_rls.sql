@@ -28,10 +28,10 @@ create policy "room_units staff write"
   on public.room_units for all
   to authenticated
   using (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   )
   with check (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   );
 
 -- booking_events: booking owner can read own, staff can read all
@@ -46,14 +46,14 @@ create policy "booking_events staff read"
   on public.booking_events for select
   to authenticated
   using (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   );
 
 create policy "booking_events staff insert"
   on public.booking_events for insert
   to authenticated
   with check (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   );
 
 -- guest_notes: guest reads own, staff reads/writes all
@@ -66,17 +66,17 @@ create policy "guest_notes staff read"
   on public.guest_notes for select
   to authenticated
   using (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   );
 
 create policy "guest_notes staff write"
   on public.guest_notes for all
   to authenticated
   using (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   )
   with check (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   );
 
 -- Staff can read all profiles (for customer search)
@@ -85,7 +85,7 @@ create policy "profiles staff read all"
   on public.profiles for select
   to authenticated
   using (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   );
 
 -- Staff can read all bookings (for management)
@@ -94,7 +94,7 @@ create policy "bookings staff read"
   on public.bookings for select
   to authenticated
   using (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   );
 
 drop policy if exists "bookings staff update" on public.bookings;
@@ -102,8 +102,8 @@ create policy "bookings staff update"
   on public.bookings for update
   to authenticated
   using (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   )
   with check (
-    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','admin'))
+    exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('reception','housekeeper','manager','admin'))
   );
