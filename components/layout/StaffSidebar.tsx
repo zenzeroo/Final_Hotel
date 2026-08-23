@@ -37,12 +37,13 @@ const HOUSEKEEPER_NAV: NavItem[] = [
 const MANAGER_NAV: NavItem[] = [
   { label: 'แดชบอร์ด', href: '/manager', icon: 'dashboard' },
   { label: 'Reports & Analytics', href: '/manager/reports', icon: 'analytics' },
-  { label: 'Room & Rate Management', href: '/manager/rates', icon: 'bed', disabled: true },
+  { label: 'Hotel Settings', href: '/manager/settings', icon: 'settings' },
+  { label: 'Room & Rate Management', href: '/manager/rates', icon: 'bed' },
   { label: 'Booking Oversight', href: '/manager/bookings', icon: 'calendar_month' },
-  { label: 'Staff Management', href: '/manager/staff', icon: 'badge', disabled: true },
+  { label: 'Staff Management', href: '/manager/staff', icon: 'badge' },
   { label: 'Housekeeping Overview', href: '/manager/housekeeping', icon: 'cleaning_services' },
   { label: 'Reviews Management', href: '/manager/reviews', icon: 'reviews' },
-  { label: 'Promotions & Discounts', href: '/manager/promotions', icon: 'sell', disabled: true },
+  { label: 'Promotions & Discounts', href: '/manager/promotions', icon: 'sell' },
 ]
 
 const NAV_BY_ROLE: Record<StaffSidebarProps['role'], NavItem[]> = {

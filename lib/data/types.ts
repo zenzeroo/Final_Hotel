@@ -343,3 +343,99 @@ export interface ReviewQueueData {
   approvedCount: number
   hiddenCount: number
 }
+
+// =====================================================
+// Manager types — Phase 6 (Settings, Promotions, Staff, Rates)
+// =====================================================
+export type DiscountType = 'percent' | 'flat'
+
+export interface Promotion {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  discount_type: DiscountType
+  discount_value: number
+  min_nights: number
+  valid_from: string // YYYY-MM-DD
+  valid_until: string // YYYY-MM-DD
+  is_active: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type StaffRole = 'reception' | 'housekeeper' | 'manager'
+
+export interface StaffMember {
+  id: string
+  full_name: string
+  email: string
+  role: StaffRole
+  is_active: boolean
+  avatar_key: string | null
+  hired_at: string // YYYY-MM-DD
+}
+
+export type ShiftPosition = 'morning' | 'afternoon' | 'evening' | 'off'
+
+export interface ShiftSlot {
+  staffId: string
+  date: string // YYYY-MM-DD
+  position: ShiftPosition
+}
+
+export interface HotelSettings {
+  id: 1 // singleton — id always 1
+  name: string
+  name_th: string | null
+  address: string
+  phone: string
+  email: string
+  tax_rate: number // 0..1
+  resort_fee: number // THB
+  currency: string
+  check_in_time: string // HH:MM
+  check_out_time: string // HH:MM
+  locale_default: string
+  hero_image_key: string | null
+  updated_at: string
+  updated_by: string | null
+}
+
+export interface RoomUnitWithType {
+  id: string
+  floor: number
+  unit_label: string
+  view_label: string | null
+  status: RoomUnitStatus
+  room_type: {
+    id: string
+    slug: string
+    name: string
+    name_th: string | null
+    base_price: number
+    hero_image_key: string | null
+  }
+}
+
+export interface SeasonalRate {
+  id: string
+  room_type_id: string
+  room_type_name?: string // for display in manager preview
+  label: string
+  start_date: string // YYYY-MM-DD
+  end_date: string // YYYY-MM-DD
+  flat_price: number | null
+  price_multiplier: number | null
+  min_nights_override: number | null
+  is_active: boolean
+  priority: number
+}
+
+export interface CancellationPolicy {
+  id: string
+  name: string
+  free_cancel_hours: number // hours before check-in for free cancellation
+  refund_pct: number // 0..100
+  description: string
+}
