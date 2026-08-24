@@ -132,6 +132,7 @@ const seedStaff: StaffMember[] = [
     is_active: true,
     avatar_key: null,
     hired_at: '2024-01-15',
+    phone: '+66 81 234 5678',
   },
   {
     id: 's-002',
@@ -141,6 +142,7 @@ const seedStaff: StaffMember[] = [
     is_active: true,
     avatar_key: null,
     hired_at: '2024-06-01',
+    phone: '+66 82 345 6789',
   },
   {
     id: 's-003',
@@ -150,6 +152,7 @@ const seedStaff: StaffMember[] = [
     is_active: true,
     avatar_key: null,
     hired_at: '2025-02-10',
+    phone: '+66 83 456 7890',
   },
   {
     id: 's-004',
@@ -159,6 +162,7 @@ const seedStaff: StaffMember[] = [
     is_active: true,
     avatar_key: null,
     hired_at: '2024-09-20',
+    phone: '+66 84 567 8901',
   },
   {
     id: 's-005',
@@ -168,6 +172,7 @@ const seedStaff: StaffMember[] = [
     is_active: false,
     avatar_key: null,
     hired_at: '2024-03-12',
+    phone: null,
   },
 ]
 
@@ -405,6 +410,41 @@ export async function setPromotionActive(args: { promotionId: string; isActive: 
   return updated
 }
 
+// Phase 7 — Admin CRUD
+export async function createPromotion(args: Omit<Promotion, 'id' | 'createdAt' | 'updatedAt'>): Promise<Promotion> {
+  const now = new Date().toISOString()
+  const created: Promotion = {
+    ...args,
+    id: 'p-' + crypto.randomUUID().slice(0, 8),
+    createdAt: now,
+    updatedAt: now,
+  }
+  state.promotions.push(created)
+  return created
+}
+
+export async function updatePromotion(args: {
+  id: string
+  patch: Partial<Omit<Promotion, 'id' | 'createdAt'>>
+}): Promise<Promotion> {
+  const idx = state.promotions.findIndex((p) => p.id === args.id)
+  if (idx === -1) throw new Error('Promotion not found')
+  const updated: Promotion = {
+    ...state.promotions[idx],
+    ...args.patch,
+    updatedAt: new Date().toISOString(),
+  }
+  state.promotions[idx] = updated
+  return updated
+}
+
+export async function deletePromotion(args: { id: string }): Promise<{ id: string }> {
+  const idx = state.promotions.findIndex((p) => p.id === args.id)
+  if (idx === -1) throw new Error('Promotion not found')
+  state.promotions.splice(idx, 1)
+  return { id: args.id }
+}
+
 export async function updateHotelSettings(args: Partial<HotelSettings>): Promise<HotelSettings> {
   state.settings = {
     ...state.settings,
@@ -445,4 +485,101 @@ export async function setStaffActive(args: { staffId: string; isActive: boolean 
   }
   state.staff[idx] = updated
   return updated
+}
+
+// Phase 7 — Admin CRUD
+export async function createStaff(args: {
+  full_name: string
+  email: string
+  role: StaffMember['role']
+  phone: string | null
+  password: string
+}): Promise<{ staff: StaffMember; initialPassword: string }> {
+  const id = 's-' + crypto.randomUUID().slice(0, 8)
+  const created: StaffMember = {
+    id,
+    full_name: args.full_name,
+    email: args.email,
+    role: args.role,
+    is_active: true,
+    avatar_key: null,
+    hired_at: new Date().toISOString().slice(0, 10),
+    phone: args.phone,
+  }
+  state.staff.push(created)
+  return { staff: created, initialPassword: args.password }
+}
+
+export async function updateStaff(args: {
+  id: string
+  patch: Partial<Pick<StaffMember, 'full_name' | 'phone' | 'role' | 'is_active'>>
+}): Promise<StaffMember> {
+  const idx = state.staff.findIndex((s) => s.id === args.id)
+  if (idx === -1) throw new Error('Staff member not found')
+  const updated: StaffMember = {
+    ...state.staff[idx],
+    ...args.patch,
+  }
+  state.staff[idx] = updated
+  return updated
+}
+
+export async function countActiveAdmins(excludeId?: string): Promise<number> {
+  return state.staff.filter(
+    (s) => s.role === 'admin' && s.is_active && s.id !== excludeId,
+  ).length
+}
+
+// Phase 7 — Seasonal Rate CRUD
+export async function createSeasonalRate(
+  args: Omit<SeasonalRate, 'id' | 'room_type_name'>,
+): Promise<SeasonalRate> {
+  const id = 'sr-' + crypto.randomUUID().slice(0, 8)
+  const roomType = await import('./mock-rooms').then((m) =>
+    m.getRoomTypeById(args.room_type_id),
+  )
+  const created: SeasonalRate = {
+    ...args,
+    id,
+    room_type_name: roomType?.name,
+  }
+  state.seasonalRates.push(created)
+  return created
+}
+
+export async function updateSeasonalRate(args: {
+  id: string
+  patch: Partial<Omit<SeasonalRate, 'id' | 'room_type_name'>>
+}): Promise<SeasonalRate> {
+  const idx = state.seasonalRates.findIndex((r) => r.id === args.id)
+  if (idx === -1) throw new Error('Seasonal rate not found')
+  const updated: SeasonalRate = { ...state.seasonalRates[idx], ...args.patch }
+  state.seasonalRates[idx] = updated
+  return updated
+}
+
+export async function deleteSeasonalRate(args: { id: string }): Promise<{ id: string }> {
+  const idx = state.seasonalRates.findIndex((r) => r.id === args.id)
+  if (idx === -1) throw new Error('Seasonal rate not found')
+  state.seasonalRates.splice(idx, 1)
+  return { id: args.id }
+}
+
+/**
+ * Phase 8 — Pricing engine.
+ * Returns active seasonal rates whose [start_date, end_date] (inclusive)
+ * overlaps the booking window [checkIn, checkOut).
+ */
+export async function getActiveSeasonalRatesForRange(args: {
+  roomTypeId: string
+  checkIn: string
+  checkOut: string
+}): Promise<SeasonalRate[]> {
+  return state.seasonalRates.filter(
+    (r) =>
+      r.room_type_id === args.roomTypeId &&
+      r.is_active &&
+      r.start_date <= args.checkOut &&
+      r.end_date >= args.checkIn,
+  )
 }

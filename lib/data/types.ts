@@ -364,7 +364,7 @@ export interface Promotion {
   updatedAt?: string
 }
 
-export type StaffRole = 'reception' | 'housekeeper' | 'manager'
+export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'
 
 export interface StaffMember {
   id: string
@@ -374,6 +374,7 @@ export interface StaffMember {
   is_active: boolean
   avatar_key: string | null
   hired_at: string // YYYY-MM-DD
+  phone: string | null
 }
 
 export type ShiftPosition = 'morning' | 'afternoon' | 'evening' | 'off'

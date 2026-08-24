@@ -1,20 +1,25 @@
-import { createClient } from '@supabase/supabase-js'
 import type { RoomType, SearchFilters, SearchResult } from './types'
-import { env, hasSupabase } from '../env'
+import { hasSupabase } from '../env'
 
 /**
  * Supabase implementation — used when USE_MOCK_DATA=0.
  * Tables expected: room_types.
+ *
+ * Uses the server client (reads cookies) so authenticated writes
+ * pass RLS via `auth.uid()` / `has_role('admin')`. Phase 3 originally
+ * used a bare anon client which makes RLS denies any non-service-role
+ * write — Phase 7 admin CRUD needed the session-aware client.
  */
-function getClient() {
+async function getClient() {
   if (!hasSupabase) {
     throw new Error('Supabase not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.')
   }
-  return createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  const { createClient } = await import('@/lib/supabase/server')
+  return await createClient()
 }
 
 export async function getFeaturedRooms(): Promise<RoomType[]> {
-  const supabase = getClient()
+  const supabase = await getClient()
   const { data, error } = await supabase
     .from('room_types')
     .select('*')
@@ -27,7 +32,7 @@ export async function getFeaturedRooms(): Promise<RoomType[]> {
 }
 
 export async function getRoomBySlug(slug: string): Promise<RoomType | null> {
-  const supabase = getClient()
+  const supabase = await getClient()
   const { data, error } = await supabase
     .from('room_types')
     .select('*')
@@ -40,7 +45,7 @@ export async function getRoomBySlug(slug: string): Promise<RoomType | null> {
 }
 
 export async function searchRooms(filters: SearchFilters): Promise<SearchResult> {
-  const supabase = getClient()
+  const supabase = await getClient()
   let query = supabase
     .from('room_types')
     .select('*', { count: 'exact' })
@@ -68,4 +73,52 @@ export async function searchRooms(filters: SearchFilters): Promise<SearchResult>
   if (error) throw new Error(`Supabase: ${error.message}`)
 
   return { rooms: (data ?? []) as RoomType[], total: count ?? 0 }
+}
+
+// Phase 7 — Admin CRUD
+export async function listRoomTypes(): Promise<RoomType[]> {
+  const supabase = await getClient()
+  const { data, error } = await supabase
+    .from('room_types')
+    .select('*')
+    .order('base_price', { ascending: true })
+  if (error) throw new Error(`Supabase: ${error.message}`)
+  return (data ?? []) as RoomType[]
+}
+
+export async function getRoomTypeById(id: string): Promise<RoomType | null> {
+  const supabase = await getClient()
+  const { data, error } = await supabase
+    .from('room_types')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw new Error(`Supabase: ${error.message}`)
+  return (data as RoomType) ?? null
+}
+
+export async function createRoomType(args: Omit<RoomType, 'id'>): Promise<RoomType> {
+  const supabase = await getClient()
+  const { data, error } = await supabase
+    .from('room_types')
+    .insert(args)
+    .select()
+    .single()
+  if (error) throw new Error(`Supabase: ${error.message}`)
+  return data as RoomType
+}
+
+export async function updateRoomType(args: {
+  id: string
+  patch: Partial<Omit<RoomType, 'id'>>
+}): Promise<RoomType> {
+  const supabase = await getClient()
+  const { data, error } = await supabase
+    .from('room_types')
+    .update(args.patch)
+    .eq('id', args.id)
+    .select()
+    .single()
+  if (error) throw new Error(`Supabase: ${error.message}`)
+  return data as RoomType
 }

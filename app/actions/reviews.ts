@@ -120,7 +120,7 @@ export async function moderateReviewAction(formData: FormData): Promise<ActionRe
   try {
     await moderateReviewData({
       reviewId: parsed.data.reviewId,
-      moderatorLabel: session.email || session.fullName || session.id,
+      moderatorLabel: session.id,
     })
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Could not approve review' }
@@ -140,7 +140,7 @@ export async function hideReviewAction(formData: FormData): Promise<ActionResult
   try {
     await hideReviewData({
       reviewId: parsed.data.reviewId,
-      moderatorLabel: session.email || session.fullName || session.id,
+      moderatorLabel: session.id,
     })
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Could not hide review' }
@@ -160,7 +160,7 @@ export async function unhideReviewAction(formData: FormData): Promise<ActionResu
   try {
     await unhideReviewData({
       reviewId: parsed.data.reviewId,
-      moderatorLabel: session.email || session.fullName || session.id,
+      moderatorLabel: session.id,
     })
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Could not unhide review' }

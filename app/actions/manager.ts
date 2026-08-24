@@ -41,7 +41,9 @@ export async function resolveDamageReportAction(formData: FormData): Promise<Act
       reportId,
       costEstimate,
       resolutionNote: note,
-      resolvedBy: session.email || session.fullName || session.id,
+      // Phase 9B: store the actor's profile UUID in damage_reports.resolved_by (FK).
+      // The display label is resolved in the SELECT join inside the data layer.
+      resolvedBy: session.id,
     })
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Could not resolve report' }

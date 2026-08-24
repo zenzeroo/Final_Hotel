@@ -39,7 +39,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Protected routes
-  const protectedPaths = ['/bookings', '/account', '/reception', '/housekeeper', '/manager']
+  const protectedPaths = ['/bookings', '/account', '/reception', '/housekeeper', '/manager', '/admin']
   const isProtected = protectedPaths.some((p) => request.nextUrl.pathname.startsWith(p))
 
   if (!user && isProtected) {
@@ -64,6 +64,7 @@ export async function updateSession(request: NextRequest) {
     const isReceptionPath = path.startsWith('/reception')
     const isHousekeeperPath = path.startsWith('/housekeeper')
     const isManagerPath = path.startsWith('/manager')
+    const isAdminPath = path.startsWith('/admin')
 
     if (isReceptionPath && role !== 'reception' && role !== 'admin') {
       const url = request.nextUrl.clone()
@@ -78,6 +79,12 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url)
     }
     if (isManagerPath && role !== 'manager' && role !== 'admin') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+    if (isAdminPath && role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/'
       url.search = ''
