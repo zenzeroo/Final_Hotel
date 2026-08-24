@@ -10,7 +10,9 @@ const quoteRequestSchema = z.object({
   roomTypeId: z.string().uuid(),
   checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  basePrice: z.number().positive(),
+  // Cap nightly rate to keep quote arithmetic safe from overflow / abuse.
+  // 1,000,000 THB/night covers even ultra-luxury suites with room to spare.
+  basePrice: z.number().positive().max(1_000_000),
 })
 
 export interface SeasonalRatesResponse {

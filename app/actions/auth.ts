@@ -37,7 +37,9 @@ export async function signIn(prevState: AuthState | null, formData: FormData): P
       .maybeSingle()
 
     const role = profile?.role
-    if (role === 'reception' || role === 'admin') {
+    if (role === 'admin') {
+      redirectTo = '/admin'
+    } else if (role === 'reception') {
       redirectTo = '/reception'
     } else if (role === 'housekeeper') {
       redirectTo = '/housekeeper'

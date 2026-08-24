@@ -1,10 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useTransition, useEffect } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { RatingStars } from './RatingStars'
 import { calculateNights, calculatePrice, formatTHB } from '@/lib/pricing'
+import { getSeasonalRatesAction } from '@/app/actions/seasonal-rates'
+import type { AppliedRate } from '@/lib/pricing/seasons'
 import type { RoomType } from '@/lib/data/types'
 
 interface BookingWidgetProps {
@@ -31,7 +33,35 @@ export function BookingWidget({ room }: BookingWidgetProps) {
   })
   const [guests, setGuests] = useState(2)
 
+  // Phase 8 — seasonal rates fetched server-side whenever dates change.
+  const [appliedRates, setAppliedRates] = useState<AppliedRate[]>([])
+  const [minNightsBlocked, setMinNightsBlocked] = useState(false)
+  const [, startTransition] = useTransition()
+
+  useEffect(() => {
+    if (checkIn >= checkOut) return
+    startTransition(async () => {
+      const res = await getSeasonalRatesAction({
+        roomTypeId: room.id,
+        checkIn,
+        checkOut,
+        basePrice: room.base_price,
+      })
+      if (res.ok && res.quote) {
+        setAppliedRates(res.quote.appliedRates)
+        setMinNightsBlocked(Boolean(res.violatesMinNights))
+      } else {
+        setAppliedRates([])
+        setMinNightsBlocked(false)
+      }
+    })
+  }, [checkIn, checkOut, room.id, room.base_price])
+
   const nights = useMemo(() => calculateNights(checkIn, checkOut), [checkIn, checkOut])
+
+  // Phase 8 — when seasonal rates apply, baseSubtotal comes from the quote.
+  // We use calculatePrice without `quote` here (legacy formula) for the
+  // widget preview; createBooking re-computes the authoritative quote server-side.
   const price = useMemo(
     () =>
       calculatePrice({
@@ -52,6 +82,8 @@ export function BookingWidget({ room }: BookingWidgetProps) {
     })
     router.push(`/bookings/new?${params.toString()}`)
   }
+
+  const hasSeasonalRates = appliedRates.length > 0
 
   return (
     <aside className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient-lg) border border-outline-variant p-6 lg:sticky lg:top-24">
@@ -137,6 +169,23 @@ export function BookingWidget({ room }: BookingWidgetProps) {
       {/* Price breakdown */}
       {nights > 0 ? (
         <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-outline-variant">
+          {hasSeasonalRates && (
+            <div className="px-3 py-2 bg-secondary/10 rounded-lg">
+              <div className="text-caption uppercase tracking-wider text-on-surface-variant mb-1">
+                มีเรทฤดูกาลสำหรับช่วงที่เลือก
+              </div>
+              <ul className="flex flex-col gap-1">
+                {appliedRates.map((r) => (
+                  <li key={r.id} className="text-caption text-on-surface">
+                    • {r.label} · {r.nights} คืน
+                    {r.minNightsOverride != null && (
+                      <span className="text-warning ml-1">(ขั้นต่ำ {r.minNightsOverride} คืน)</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <PriceRow
             label={`${formatTHB(room.base_price)} × ${nights} คืน`}
             value={formatTHB(price.baseSubtotal)}
@@ -147,12 +196,19 @@ export function BookingWidget({ room }: BookingWidgetProps) {
       ) : (
         <p className="text-body-md text-error mb-4">กรุณาเลือกวันที่ให้ถูกต้อง</p>
       )}
+
+      {minNightsBlocked && (
+        <p className="text-body-md text-warning mb-4">
+          เรทฤดูกาลกำหนดจำนวนคืนขั้นต่ำมากกว่าที่เลือก — กรุณาเพิ่มจำนวนคืน
+        </p>
+      )}
+
       <PriceRow label="รวมทั้งสิ้น" value={formatTHB(price.total)} emphasis />
 
       <button
         type="button"
         onClick={handleReserve}
-        disabled={nights === 0}
+        disabled={nights === 0 || minNightsBlocked}
         className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <MaterialIcon name="bookmark" size={18} />

@@ -46,11 +46,19 @@ const MANAGER_NAV: NavItem[] = [
   { label: 'Promotions & Discounts', href: '/manager/promotions', icon: 'sell' },
 ]
 
+const ADMIN_NAV: NavItem[] = [
+  { label: 'Executive Overview', href: '/admin', icon: 'dashboard' },
+  { label: 'Promotions', href: '/admin/promotions', icon: 'sell' },
+  { label: 'Staff', href: '/admin/staff', icon: 'badge' },
+  { label: 'Rooms & Rates', href: '/admin/rates', icon: 'bed' },
+  { label: 'Hotel Settings', href: '/admin/settings', icon: 'settings' },
+]
+
 const NAV_BY_ROLE: Record<StaffSidebarProps['role'], NavItem[]> = {
   reception: RECEPTION_NAV,
   housekeeper: HOUSEKEEPER_NAV,
   manager: MANAGER_NAV,
-  admin: RECEPTION_NAV,
+  admin: ADMIN_NAV,
 }
 
 const ROLE_LABEL = {

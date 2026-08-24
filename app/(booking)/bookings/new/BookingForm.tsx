@@ -6,8 +6,9 @@ import { useState, useTransition, useMemo } from 'react'
 import { useFormStatus } from 'react-dom'
 import { createBooking, type CreateBookingResult } from '@/app/actions/booking'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { calculatePrice, calculateNights, formatTHB } from '@/lib/pricing'
+import { calculatePrice, formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
+import type { QuoteResult } from '@/lib/pricing/seasons'
 
 interface BookingFormProps {
   room: {
@@ -26,6 +27,10 @@ interface BookingFormProps {
     email: string
     phone: string
   }
+  /** Phase 8 — server-computed quote (already includes seasonal rate nightly breakdown). */
+  quote: QuoteResult
+  /** True when an applied seasonal rate has min_nights_override > stay length. */
+  minNightsBlocked: boolean
 }
 
 function formatDate(iso: string) {
@@ -60,7 +65,7 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
   )
 }
 
-export function BookingForm({ room, checkIn, checkOut, guests, profile }: BookingFormProps) {
+export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, minNightsBlocked }: BookingFormProps) {
   const router = useRouter()
   const [state, setState] = useState<CreateBookingResult | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -70,7 +75,8 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile }: Bookin
   const [specialRequest, setSpecialRequest] = useState('')
   const [promoCode, setPromoCode] = useState('')
 
-  const nights = useMemo(() => calculateNights(checkIn, checkOut), [checkIn, checkOut])
+  // Phase 8 — quote is computed server-side. Pass it to calculatePrice so
+  // baseSubtotal reflects any active seasonal rates for the stay window.
   const price = useMemo(
     () =>
       calculatePrice({
@@ -78,9 +84,11 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile }: Bookin
         checkIn,
         checkOut,
         guests,
+        quote,
       }),
-    [room.base_price, checkIn, checkOut, guests]
+    [room.base_price, checkIn, checkOut, guests, quote]
   )
+  const nights = quote.nights
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -115,6 +123,12 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile }: Bookin
         {state?.error && (
           <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
             {state.error}
+          </div>
+        )}
+
+        {minNightsBlocked && (
+          <div className="px-4 py-3 bg-warning/10 border border-warning/30 rounded-lg text-body-md text-warning">
+            เรทฤดูกาลที่ใช้อยู่กำหนดจำนวนคืนขั้นต่ำมากกว่าที่เลือก กรุณาเปลี่ยนวันที่หรือเลือกห้องอื่น
           </div>
         )}
 
@@ -208,7 +222,22 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile }: Bookin
             <div className="my-4 border-t border-outline-variant" />
 
             <div className="flex flex-col gap-2 text-body-md">
-              <PriceRow label={`${formatTHB(room.base_price)} × ${nights} คืน`} value={formatTHB(price.baseSubtotal)} />
+              {quote.appliedRates.length > 0 ? (
+                <>
+                  <PriceRow label={`${formatTHB(room.base_price)} × ${nights} คืน (ราคาฐาน)`} value={formatTHB(nights * room.base_price)} />
+                  {quote.appliedRates.map((applied) => (
+                    <div key={applied.id} className="ml-4 flex flex-col gap-1 text-caption text-on-surface-variant">
+                      <span className="italic">• {applied.label} · {applied.nights} คืน</span>
+                      {applied.minNightsOverride != null && (
+                        <span className="text-warning">ขั้นต่ำ {applied.minNightsOverride} คืน</span>
+                      )}
+                    </div>
+                  ))}
+                  <PriceRow label="รวมค่าห้อง (รวมเรทฤดูกาล)" value={formatTHB(price.baseSubtotal)} emphasis />
+                </>
+              ) : (
+                <PriceRow label={`${formatTHB(room.base_price)} × ${nights} คืน`} value={formatTHB(price.baseSubtotal)} />
+              )}
               <PriceRow label="ภาษี 7%" value={formatTHB(price.taxTotal)} />
               <PriceRow label="ค่าบริการรีสอร์ท" value={formatTHB(price.feeTotal)} />
             </div>
@@ -216,7 +245,7 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile }: Bookin
             <div className="my-4 border-t border-outline-variant" />
             <PriceRow label="รวมทั้งสิ้น" value={formatTHB(price.total)} emphasis />
 
-            <SubmitButton disabled={isPending || nights === 0} />
+            <SubmitButton disabled={isPending || nights === 0 || minNightsBlocked} />
 
             <p className="mt-4 text-caption text-on-surface-variant text-center">
               ระบบจะแสดงหน้ายืนยันเมื่อสร้างการจองสำเร็จ

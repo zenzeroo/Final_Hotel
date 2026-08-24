@@ -49,8 +49,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Staff-only routes (require reception/housekeeper/manager/admin role)
-  const staffPaths = ['/reception', '/housekeeper', '/manager']
+  // Staff-only routes (require reception/housekeeper/manager/admin role).
+  // /admin is included so authenticated non-admin users can't slip past the role check.
+  const staffPaths = ['/reception', '/housekeeper', '/manager', '/admin']
   const isStaffPath = staffPaths.some((p) => request.nextUrl.pathname.startsWith(p))
   if (user && isStaffPath) {
     const { data: profile } = await supabase

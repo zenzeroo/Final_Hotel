@@ -30,3 +30,23 @@ export async function getRoomTypes(): Promise<RoomType['type'][]> {
 export async function getFloors(): Promise<number[]> {
   return mock.getFloors()
 }
+
+// Phase 7 — Admin CRUD
+export async function listRoomTypes(): Promise<RoomType[]> {
+  return isUsingMockData ? mock.listRoomTypes() : supabase.listRoomTypes()
+}
+
+export async function getRoomTypeById(id: string): Promise<RoomType | null> {
+  return isUsingMockData ? mock.getRoomTypeById(id) : supabase.getRoomTypeById(id)
+}
+
+export async function createRoomType(args: Omit<RoomType, 'id'>): Promise<RoomType> {
+  return isUsingMockData ? mock.createRoomType(args) : supabase.createRoomType(args)
+}
+
+export async function updateRoomType(args: {
+  id: string
+  patch: Partial<Omit<RoomType, 'id'>>
+}): Promise<RoomType> {
+  return isUsingMockData ? mock.updateRoomType(args) : supabase.updateRoomType(args)
+}

@@ -1,0 +1,218 @@
+'use client'
+
+import { useActionState } from 'react'
+import { useFormStatus } from 'react-dom'
+import type { Promotion } from '@/lib/data/types'
+import {
+  createPromotionAction,
+  updatePromotionAction,
+} from '@/app/actions/promotions'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
+
+interface PromotionFormProps {
+  mode: 'create' | 'edit'
+  initial?: Promotion
+}
+
+interface FormState {
+  error?: string
+  success?: boolean
+}
+
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-label-md text-on-surface">
+        {label}
+        {required && <span className="text-error">*</span>}
+      </span>
+      {children}
+    </label>
+  )
+}
+
+const inputClass =
+  'w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors'
+
+function SubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus()
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60"
+    >
+      {pending ? (
+        <>
+          <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+          กำลังบันทึก…
+        </>
+      ) : (
+        label
+      )}
+    </button>
+  )
+}
+
+export function PromotionForm({ mode, initial }: PromotionFormProps) {
+  // useActionState requires (state, payload) => newState signature.
+  // The raw action takes only FormData, so wrap it.
+  const wrappedAction = async (
+    _state: FormState | null,
+    formData: FormData,
+  ): Promise<FormState> => {
+    const rawAction = mode === 'create' ? createPromotionAction : updatePromotionAction
+    const result = await rawAction(formData)
+    if (!result.ok) return { error: result.error }
+    return { success: true }
+  }
+
+  const [state, formAction] = useActionState<FormState | null, FormData>(wrappedAction, null)
+
+  return (
+    <form action={formAction} className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6 flex flex-col gap-5">
+      {state?.error && (
+        <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
+          {state.error}
+        </div>
+      )}
+
+      {mode === 'edit' && initial && <input type="hidden" name="id" value={initial.id} />}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="โค้ด" required>
+          <input
+            name="code"
+            type="text"
+            defaultValue={initial?.code ?? ''}
+            placeholder="SUMMER25"
+            required
+            maxLength={40}
+            className={inputClass}
+          />
+        </Field>
+
+        <Field label="ชื่อโปรโมชั่น" required>
+          <input
+            name="name"
+            type="text"
+            defaultValue={initial?.name ?? ''}
+            placeholder="ส่วนลดฤดูร้อน"
+            required
+            maxLength={120}
+            className={inputClass}
+          />
+        </Field>
+      </div>
+
+      <Field label="คำอธิบาย">
+        <textarea
+          name="description"
+          defaultValue={initial?.description ?? ''}
+          rows={2}
+          maxLength={500}
+          placeholder="ส่วนลดพิเศษสำหรับการจองล่วงหน้า"
+          className={inputClass}
+        />
+      </Field>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Field label="ประเภทส่วนลด" required>
+          <select
+            name="discount_type"
+            defaultValue={initial?.discount_type ?? 'percent'}
+            className={inputClass}
+          >
+            <option value="percent">เปอร์เซ็นต์ (%)</option>
+            <option value="flat">จำนวนเงิน (THB)</option>
+          </select>
+        </Field>
+
+        <Field label="มูลค่า" required>
+          <input
+            name="discount_value"
+            type="number"
+            min="0.01"
+            step="0.01"
+            defaultValue={initial?.discount_value ?? 10}
+            required
+            className={inputClass}
+          />
+        </Field>
+
+        <Field label="คืนขั้นต่ำ" required>
+          <input
+            name="min_nights"
+            type="number"
+            min="1"
+            max="30"
+            step="1"
+            defaultValue={initial?.min_nights ?? 1}
+            required
+            className={inputClass}
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="วันเริ่มต้น" required>
+          <input
+            name="valid_from"
+            type="date"
+            defaultValue={initial?.valid_from ?? ''}
+            required
+            className={inputClass}
+          />
+        </Field>
+
+        <Field label="วันสิ้นสุด" required>
+          <input
+            name="valid_until"
+            type="date"
+            defaultValue={initial?.valid_until ?? ''}
+            required
+            className={inputClass}
+          />
+        </Field>
+      </div>
+
+      <Field label="สถานะ">
+        <label className="inline-flex items-center gap-2 mt-2">
+          <input
+            type="checkbox"
+            name="is_active"
+            value="true"
+            defaultChecked={initial?.is_active ?? true}
+            className="w-5 h-5 rounded border-outline-variant"
+          />
+          <span className="text-body-md text-on-surface">เปิดใช้งานทันที</span>
+        </label>
+      </Field>
+
+      <div className="flex items-center gap-3 pt-2">
+        <SubmitButton label={mode === 'create' ? 'สร้างโปรโมชั่น' : 'บันทึกการแก้ไข'} />
+        <a
+          href="/admin/promotions"
+          className="inline-flex items-center justify-center px-6 py-3 bg-surface-container-low border border-outline-variant rounded-lg font-medium text-body-md hover:bg-surface-container-high transition-colors"
+        >
+          ยกเลิก
+        </a>
+      </div>
+
+      {state?.success && (
+        <div className="inline-flex items-center gap-2 text-body-md text-secondary">
+          <MaterialIcon name="check_circle" size={18} />
+          บันทึกสำเร็จ
+        </div>
+      )}
+    </form>
+  )
+}

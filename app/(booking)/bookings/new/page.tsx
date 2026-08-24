@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getRoomBySlug } from '@/lib/data/rooms'
-import { getDefaultCancellationPolicy } from '@/lib/data/bookings'
+import { getActiveSeasonalRatesForRange } from '@/lib/data/manager'
+import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { TransactionalHeader } from '@/components/layout/TransactionalHeader'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
@@ -48,8 +48,21 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
     .eq('id', user.id)
     .maybeSingle()
 
-  // Get cancellation policy
-  const policy = await getDefaultCancellationPolicy()
+  // Phase 8 — fetch seasonal rates and compute the per-night quote server-side
+  // so the user sees the actual price (with applied seasonal rates) before submit.
+  const seasonalRates = await getActiveSeasonalRatesForRange({
+    roomTypeId: room.id,
+    checkIn,
+    checkOut,
+  })
+  const quote = quoteStay({
+    roomTypeId: room.id,
+    basePrice: room.base_price,
+    checkIn,
+    checkOut,
+    rates: seasonalRates,
+  })
+  const minNightsBlocked = violatesMinNights(quote, seasonalRates)
 
   return (
     <>
@@ -77,6 +90,8 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
                 email: user.email ?? '',
                 phone: profile?.phone ?? user.user_metadata?.phone ?? '',
               }}
+              quote={quote}
+              minNightsBlocked={minNightsBlocked}
             />
           </div>
         </div>

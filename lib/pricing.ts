@@ -1,9 +1,15 @@
 /**
  * Pricing calculations for bookings.
  * All amounts in THB.
+ *
+ * Phase 8: optional `quote` field accepts a pre-computed nightly breakdown
+ * from lib/pricing/seasons.ts. When provided, `baseSubtotal` comes from
+ * the quote (which respects seasonal_rates); when omitted, falls back to
+ * `nights × basePrice` for backward compatibility with admin previews.
  */
 
 import { differenceInCalendarDays, parseISO, isValid } from 'date-fns'
+import type { QuoteResult } from './pricing/seasons'
 
 export interface PriceInput {
   basePrice: number         // THB per night
@@ -16,6 +22,11 @@ export interface PriceInput {
     discountValue: number
     minNights?: number
   } | null
+  /**
+   * Optional Phase 8 nightly quote. When provided, replaces the
+   * `nights × basePrice` baseSubtotal computation.
+   */
+  quote?: QuoteResult
 }
 
 export interface PriceBreakdown {
@@ -66,12 +77,17 @@ export function applyPromotion(
 
 /**
  * Calculate full price breakdown for a booking.
+ *
+ * If `input.quote` is supplied, `baseSubtotal` and `nights` are taken
+ * from the seasonal-aware quote. Otherwise the legacy formula applies.
  */
 export function calculatePrice(input: PriceInput): PriceBreakdown {
-  const nights = calculateNights(input.checkIn, input.checkOut)
+  const nights = input.quote ? input.quote.nights : calculateNights(input.checkIn, input.checkOut)
 
-  // Base: nights × price
-  const baseSubtotal = nights * input.basePrice
+  // Base: prefer quote (Phase 8) over flat nights × basePrice (legacy).
+  const baseSubtotal = input.quote
+    ? input.quote.baseSubtotal
+    : nights * input.basePrice
 
   // Discount (from promo)
   const discountTotal = applyPromotion(baseSubtotal, nights, input.promotion ?? null)

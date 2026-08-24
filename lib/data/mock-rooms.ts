@@ -3,19 +3,52 @@ import roomsJson from '../../data/mock-rooms.json'
 
 const rooms: RoomType[] = roomsJson as RoomType[]
 
+// In-memory mutable copy for admin CRUD.
+const state = {
+  roomTypes: [...rooms] as RoomType[],
+}
+
 export async function getFeaturedRooms(): Promise<RoomType[]> {
-  return rooms
+  return state.roomTypes
     .filter((r) => r.is_active)
     .sort((a, b) => b.rating_avg - a.rating_avg)
     .slice(0, 4)
 }
 
 export async function getRoomBySlug(slug: string): Promise<RoomType | null> {
-  return rooms.find((r) => r.slug === slug && r.is_active) ?? null
+  return state.roomTypes.find((r) => r.slug === slug && r.is_active) ?? null
+}
+
+export async function listRoomTypes(): Promise<RoomType[]> {
+  return state.roomTypes
+}
+
+export async function getRoomTypeById(id: string): Promise<RoomType | null> {
+  return state.roomTypes.find((r) => r.id === id) ?? null
+}
+
+export async function createRoomType(args: Omit<RoomType, 'id'>): Promise<RoomType> {
+  const created: RoomType = {
+    ...args,
+    id: 'rt-' + crypto.randomUUID().slice(0, 8),
+  }
+  state.roomTypes.push(created)
+  return created
+}
+
+export async function updateRoomType(args: {
+  id: string
+  patch: Partial<Omit<RoomType, 'id'>>
+}): Promise<RoomType> {
+  const idx = state.roomTypes.findIndex((r) => r.id === args.id)
+  if (idx === -1) throw new Error('Room type not found')
+  const updated: RoomType = { ...state.roomTypes[idx], ...args.patch }
+  state.roomTypes[idx] = updated
+  return updated
 }
 
 export async function searchRooms(filters: SearchFilters): Promise<SearchResult> {
-  let filtered = rooms.filter((r) => r.is_active)
+  let filtered = state.roomTypes.filter((r) => r.is_active)
 
   if (filters.type && filters.type !== 'all') {
     filtered = filtered.filter((r) => r.type === filters.type)
@@ -47,5 +80,5 @@ export async function getRoomTypes(): Promise<RoomType['type'][]> {
 }
 
 export async function getFloors(): Promise<number[]> {
-  return [...new Set(rooms.map((r) => r.floor))].sort((a, b) => a - b)
+  return [...new Set(state.roomTypes.map((r) => r.floor))].sort((a, b) => a - b)
 }

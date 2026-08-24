@@ -1,10 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { calculatePrice, generateBookingCode } from '@/lib/pricing'
+import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
+import { getActiveSeasonalRatesForRange } from '@/lib/data/manager'
 import { getDefaultCancellationPolicy, getPromotionByCode } from '@/lib/data/bookings'
 
 const createBookingSchema = z.object({
@@ -78,7 +79,35 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   // Get default cancellation policy
   const policy = await getDefaultCancellationPolicy()
 
-  // Calculate price
+  // Phase 8 — fetch seasonal rates for this room type and compute per-night quote.
+  // Falls back to base_price for all nights if no active rates match.
+  const seasonalRates = await getActiveSeasonalRatesForRange({
+    roomTypeId: data.roomTypeId,
+    checkIn: data.checkIn,
+    checkOut: data.checkOut,
+  })
+
+  let quote
+  try {
+    quote = quoteStay({
+      roomTypeId: data.roomTypeId,
+      basePrice: room.base_price,
+      checkIn: data.checkIn,
+      checkOut: data.checkOut,
+      rates: seasonalRates,
+    })
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'วันที่ไม่ถูกต้อง' }
+  }
+
+  // Enforce min_nights_override on any applied seasonal rate.
+  if (violatesMinNights(quote, seasonalRates)) {
+    return {
+      error: 'การจองนี้ต้องพักขั้นต่ำตามที่กำหนดในเรทฤดูกาล (ดูรายละเอียดเรทพิเศษ)',
+    }
+  }
+
+  // Calculate price (Phase 8 path — baseSubtotal comes from the quote).
   const price = calculatePrice({
     basePrice: room.base_price,
     checkIn: data.checkIn,
@@ -92,6 +121,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           minNights: promotion.min_nights,
         }
       : null,
+    quote,
   })
 
   if (price.nights === 0) {

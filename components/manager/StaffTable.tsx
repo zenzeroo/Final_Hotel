@@ -9,6 +9,7 @@ const ROLE_LABEL: Record<StaffMember['role'], { th: string; icon: string; tone: 
   manager: { th: 'ผู้จัดการ', icon: 'admin_panel_settings', tone: 'bg-tertiary text-secondary' },
   reception: { th: 'พนักงานต้อนรับ', icon: 'support_agent', tone: 'bg-primary text-secondary' },
   housekeeper: { th: 'พนักงานทำความสะอาด', icon: 'cleaning_services', tone: 'bg-secondary text-on-secondary' },
+  admin: { th: 'ผู้ดูแลระบบ', icon: 'shield_person', tone: 'bg-error text-on-error' },
 }
 
 function initials(name: string): string {
