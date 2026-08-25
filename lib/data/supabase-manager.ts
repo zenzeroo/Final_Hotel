@@ -624,7 +624,7 @@ export async function getReportsData(): Promise<ReportsData> {
       .neq('status', 'cancelled'),
     supabase
       .from('bookings')
-      .select('id', { count: 'exact', head: true })
+      .select('total')
       .gte('created_at', fourteenDaysAgo + 'T00:00:00Z')
       .lt('created_at', sevenDaysAgo + 'T00:00:00Z')
       .neq('status', 'cancelled'),
@@ -646,9 +646,6 @@ export async function getReportsData(): Promise<ReportsData> {
       .gte('created_at', sevenDaysAgo + 'T00:00:00Z')
       .lte('created_at', today + 'T23:59:59Z'),
   ])
-  // `prev7Rows` is a count-only query; its rows array is intentionally empty.
-  void prev7Rows
-
   for (const [label, e] of [
     ['last7Rows', e1],
     ['prev7Rows', e2],
@@ -660,14 +657,17 @@ export async function getReportsData(): Promise<ReportsData> {
   }
 
   const totalRevenue7d = (last7Rows ?? []).reduce((sum, r) => sum + (r.total ?? 0), 0)
+  const prev7Revenue = (prev7Rows ?? []).reduce((sum, r) => sum + (r.total ?? 0), 0)
 
-  // We didn't pull revenue rows for prev7 to keep query count low — instead
-  // use the prior period's booking count to derive a rough trend. For accurate
-  // revenue trend we'd issue another .select('total') over the prior window.
-  // Tradeoff: 1 extra query vs. slightly less accurate trend. Going with the
-  // lighter path; UI shows trend as directional only.
-  const prev7BookingsCount = 0 // TODO(phase-10): second sum query for accurate trend
-  const totalRevenueTrendPct = prev7BookingsCount === 0 ? 0 : 0
+  // Phase 10: real percent change vs prior 7-day window. Round to whole pct.
+  // If prior was 0 and current is positive, show +100% (consistent with how
+  // cancellationTrendPct handles the same edge case below).
+  const totalRevenueTrendPct =
+    prev7Revenue === 0
+      ? totalRevenue7d > 0
+        ? 100
+        : 0
+      : Math.round(((totalRevenue7d - prev7Revenue) / prev7Revenue) * 100)
 
   const last7TotalCount = (totalBookings7d as number | null) ?? 0
   const last7CancelledCount = (last7Cancelled as number | null) ?? 0
@@ -727,16 +727,12 @@ export async function resolveDamageReport(args: {
 export async function approveRefund(args: { refundId: string }): Promise<{ id: string }> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
-  // Phase 9B TODO: approving should also flip bookings.payment_status='refunded'.
-  // For now only the request row updates (matches mock behavior + the action-layer
-  // contract). Will be addressed by an approve_refund(uuid) RPC in a follow-up migration.
-  const { error } = await supabase
-    .from('refund_requests')
-    .update({
-      status: 'approved',
-      decided_at: new Date().toISOString(),
-    })
-    .eq('id', args.refundId)
+  // Phase 10: RPC atomically flips refund_requests.status='approved' AND
+  // bookings.payment_status='refunded' on the linked booking. Also records
+  // decided_by = auth.uid() server-side (see 20260833_approve_refund_rpc.sql).
+  const { error } = await supabase.rpc('approve_refund', {
+    p_refund_id: args.refundId,
+  })
   if (error) throw new Error(`Supabase: ${error.message}`)
   return { id: args.refundId }
 }

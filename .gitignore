@@ -30,4 +30,12 @@ node_modules/
 tsconfig.tsbuildinfo
 next-env.d.ts
 
+# Dev server logs (untracked, leaked from terminal)
+/.dev-server*.log
+
+# Supabase CLI local artifacts
+/scripts/.ca-bundle.crt
+/scripts/.supabase-ca.crt
+/supabase/.temp/
+
 # .gitignore itself stays local

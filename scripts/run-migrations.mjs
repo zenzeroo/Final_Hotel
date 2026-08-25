@@ -51,11 +51,11 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // references review status / moderated_at columns that the live DB never
 // received. Without it, the reviews wire fails at runtime.
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(27|29|30|31|32)_.*\.sql$/.test(f))
+  .filter((f) => /202608(27|29|30|31|32|33)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 
-console.log('Phase 9 migrations to apply:')
+console.log('Phase 9 + Phase 10 migrations to apply:')
 for (const f of targets) console.log('  • ' + f)
 if (dryRun) {
   console.log('\nDRY RUN — exiting without applying.')
