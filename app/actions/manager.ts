@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/supabase/getSession'
+import { getSession, roleHomePath } from '@/lib/supabase/getSession'
 import {
   resolveDamageReport,
   approveRefund,
@@ -17,7 +17,7 @@ async function requireManager() {
   const session = await getSession()
   if (!session) redirect('/login?next=/manager')
   if (session.role !== 'manager' && session.role !== 'admin') {
-    redirect('/')
+    redirect(roleHomePath(session.role))
   }
   return session
 }

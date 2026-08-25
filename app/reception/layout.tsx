@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
-import { getSession } from '@/lib/supabase/getSession'
+import { getSession, roleHomePath } from '@/lib/supabase/getSession'
 import { StaffSidebar } from '@/components/layout/StaffSidebar'
 
 export default async function ReceptionLayout({ children }: { children: React.ReactNode }) {
@@ -10,7 +10,7 @@ export default async function ReceptionLayout({ children }: { children: React.Re
     redirect('/login?next=/reception')
   }
   if (session.role !== 'reception' && session.role !== 'admin') {
-    redirect('/')
+    redirect(roleHomePath(session.role))
   }
 
   // Read pathname from headers (set by middleware/Next.js)

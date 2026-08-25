@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { env, hasSupabase } from '../env'
+import { roleHomePath, type UserRole } from './getSession'
 
 /**
  * Proxy (Next.js 16 — replaces middleware.ts).
@@ -60,44 +61,52 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .maybeSingle()
 
-    const role = profile?.role
+    const role = (profile?.role as UserRole | undefined) ?? 'user'
     const path = request.nextUrl.pathname
     const isReceptionPath = path.startsWith('/reception')
     const isHousekeeperPath = path.startsWith('/housekeeper')
     const isManagerPath = path.startsWith('/manager')
     const isAdminPath = path.startsWith('/admin')
 
+    // Phase 11: wrong-role staff redirect to THEIR OWN dashboard, not '/'.
     if (isReceptionPath && role !== 'reception' && role !== 'admin') {
       const url = request.nextUrl.clone()
-      url.pathname = '/'
+      url.pathname = roleHomePath(role)
       url.search = ''
       return NextResponse.redirect(url)
     }
     if (isHousekeeperPath && role !== 'housekeeper' && role !== 'admin') {
       const url = request.nextUrl.clone()
-      url.pathname = '/'
+      url.pathname = roleHomePath(role)
       url.search = ''
       return NextResponse.redirect(url)
     }
     if (isManagerPath && role !== 'manager' && role !== 'admin') {
       const url = request.nextUrl.clone()
-      url.pathname = '/'
+      url.pathname = roleHomePath(role)
       url.search = ''
       return NextResponse.redirect(url)
     }
     if (isAdminPath && role !== 'admin') {
       const url = request.nextUrl.clone()
-      url.pathname = '/'
+      url.pathname = roleHomePath(role)
       url.search = ''
       return NextResponse.redirect(url)
     }
   }
 
-  // Redirect authed users away from /login and /register
+  // Redirect authed users away from /login and /register to their role home.
+  // Phase 11: staff now land on their dashboard, not '/'.
   const authPages = ['/login', '/register']
   if (user && authPages.includes(request.nextUrl.pathname)) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+    const role = (profile?.role as UserRole | undefined) ?? 'user'
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = roleHomePath(role)
     url.search = ''
     return NextResponse.redirect(url)
   }

@@ -11,6 +11,29 @@ export interface SessionUser {
 }
 
 /**
+ * Single source of truth for role → home-path mapping. Used by every
+ * wrong-role redirect in the codebase (proxy.ts, layouts, server actions).
+ *
+ * Phase 11: staff must never land on `/` (User homepage) — they go to
+ * their own dashboard instead. If you add a new role, update this AND
+ * add the route to proxy.ts `staffPaths` (or a role-specific layout).
+ */
+export function roleHomePath(role: UserRole): string {
+  switch (role) {
+    case 'admin':
+      return '/admin'
+    case 'manager':
+      return '/manager'
+    case 'reception':
+      return '/reception'
+    case 'housekeeper':
+      return '/housekeeper'
+    case 'user':
+      return '/'
+  }
+}
+
+/**
  * Server-side session helper. Returns null if not authenticated.
  */
 export async function getSession(): Promise<SessionUser | null> {

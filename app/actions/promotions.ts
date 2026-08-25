@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession } from '@/lib/supabase/getSession'
+import { getSession, roleHomePath } from '@/lib/supabase/getSession'
 import {
   setPromotionActive,
   createPromotion,
@@ -20,7 +20,7 @@ async function requirePromotionManager() {
   if (!session) redirect('/login?next=/manager/promotions')
   // Promotion rights are intentionally restricted: manager + admin only.
   if (session.role !== 'manager' && session.role !== 'admin') {
-    redirect('/')
+    redirect(roleHomePath(session.role))
   }
   return session
 }
@@ -29,7 +29,7 @@ async function requireAdminOnly() {
   const session = await getSession()
   if (!session) redirect('/login?next=/admin/promotions')
   // Admin-only: managers use /manager/promotions (toggle only).
-  if (session.role !== 'admin') redirect('/')
+  if (session.role !== 'admin') redirect(roleHomePath(session.role))
   return session
 }
 

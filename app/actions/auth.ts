@@ -26,10 +26,13 @@ export async function signIn(prevState: AuthState | null, formData: FormData): P
     return { error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }
   }
 
-  // Auto-redirect based on role (if no explicit next param, or next is '/')
+  // Auto-redirect based on role. Phase 11: staff ALWAYS land on their own
+  // dashboard, ignoring `?next=` (prevents phishing via crafted login links
+  // like /login?next=/admin/dangerous-action). Regular `user` role honours
+  // `?next=` so deep-links to /bookings/[id] still work.
   let redirectTo = next && next !== '/' ? next : '/'
 
-  if (redirectTo === '/' && data.user) {
+  if (data.user) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -46,6 +49,7 @@ export async function signIn(prevState: AuthState | null, formData: FormData): P
     } else if (role === 'manager') {
       redirectTo = '/manager'
     }
+    // role === 'user' (or null/missing) → keep redirectTo (= next or '/')
   }
 
   revalidatePath('/', 'layout')

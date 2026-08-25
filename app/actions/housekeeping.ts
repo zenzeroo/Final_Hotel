@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getSession } from '@/lib/supabase/getSession'
+import { getSession, roleHomePath } from '@/lib/supabase/getSession'
 import type { MaintenanceIssueType, MaintenanceSeverity } from '@/lib/data/types'
 
 export type ActionResult<T = void> =
@@ -24,7 +24,7 @@ async function requireStaff() {
   const session = await getSession()
   if (!session) redirect('/login?next=/housekeeper')
   if (!['housekeeper', 'reception', 'manager', 'admin'].includes(session.role)) {
-    redirect('/')
+    redirect(roleHomePath(session.role))
   }
   return session
 }

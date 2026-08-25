@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession } from '@/lib/supabase/getSession'
+import { getSession, roleHomePath } from '@/lib/supabase/getSession'
 import {
   createReview as createReviewData,
   moderateReview as moderateReviewData,
@@ -28,14 +28,14 @@ async function requireModerator() {
     session.role !== 'admin' &&
     session.role !== 'reception'
   ) {
-    redirect('/')
+    redirect(roleHomePath(session.role))
   }
   return session
 }
 
 async function requireAdmin() {
   const session = await requireUser()
-  if (session.role !== 'admin') redirect('/')
+  if (session.role !== 'admin') redirect(roleHomePath(session.role))
   return session
 }
 

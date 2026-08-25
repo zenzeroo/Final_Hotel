@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
-import { getSession } from '@/lib/supabase/getSession'
+import { getSession, roleHomePath } from '@/lib/supabase/getSession'
 import { StaffSidebar } from '@/components/layout/StaffSidebar'
 
 export const dynamic = 'force-dynamic'
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export default async function HousekeeperLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
   if (!session) redirect('/login?next=/housekeeper')
-  if (session.role !== 'housekeeper' && session.role !== 'admin') redirect('/')
+  if (session.role !== 'housekeeper' && session.role !== 'admin') redirect(roleHomePath(session.role))
 
   const headerList = await headers()
   const pathname = headerList.get('x-invoke-path') ?? '/housekeeper'

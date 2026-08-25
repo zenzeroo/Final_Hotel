@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession } from '@/lib/supabase/getSession'
+import { getSession, roleHomePath } from '@/lib/supabase/getSession'
 import { createRoomType, updateRoomType, listRoomTypes } from '@/lib/data/rooms'
 import {
   createSeasonalRate,
@@ -16,7 +16,7 @@ export type ActionResult = { ok: true } | { ok: false; error: string }
 async function requireAdminRates() {
   const session = await getSession()
   if (!session) redirect('/login?next=/admin/rates')
-  if (session.role !== 'admin') redirect('/')
+  if (session.role !== 'admin') redirect(roleHomePath(session.role))
   return session
 }
 

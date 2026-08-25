@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession } from '@/lib/supabase/getSession'
+import { getSession, roleHomePath } from '@/lib/supabase/getSession'
 import { closeRoomUnit, reopenRoomUnit } from '@/lib/data/manager'
 
 export type ActionResult<T = void> =
@@ -14,7 +14,7 @@ async function requireManager() {
   const session = await getSession()
   if (!session) redirect('/login?next=/manager/rates')
   if (session.role !== 'manager' && session.role !== 'admin') {
-    redirect('/')
+    redirect(roleHomePath(session.role))
   }
   return session
 }
