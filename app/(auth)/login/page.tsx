@@ -7,6 +7,10 @@ export default async function LoginPage(props: PageProps<'/login'>) {
   const searchParams = await props.searchParams
   const next = typeof searchParams.next === 'string' ? searchParams.next : '/'
 
+  // Phase 14 — surface OAuth callback failures (?error=oauth_cancelled |
+  // oauth_failed) into the form's red banner.
+  const errorMessage = mapOAuthError(searchParams.error)
+
   return (
     <main className="min-h-screen relative flex items-center justify-center px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-12">
       {/* Background image */}
@@ -40,7 +44,7 @@ export default async function LoginPage(props: PageProps<'/login'>) {
           </p>
         </div>
 
-        <LoginForm next={next} />
+        <LoginForm next={next} errorMessage={errorMessage} />
 
         <p className="mt-8 text-center text-body-md text-on-surface-variant">
           ยังไม่มีบัญชี?{' '}
@@ -54,4 +58,21 @@ export default async function LoginPage(props: PageProps<'/login'>) {
       </div>
     </main>
   )
+}
+
+/**
+ * Phase 14 — Translate the OAuth callback's `?error=` flag into a Thai
+ * message the LoginForm banner can render. Returns `undefined` for no error
+ * (so the banner stays hidden).
+ */
+function mapOAuthError(error: string | string[] | undefined): string | undefined {
+  const value = Array.isArray(error) ? error[0] : error
+  switch (value) {
+    case 'oauth_cancelled':
+      return 'ยกเลิกการเข้าสู่ระบบด้วย Google แล้ว'
+    case 'oauth_failed':
+      return 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+    default:
+      return undefined
+  }
 }

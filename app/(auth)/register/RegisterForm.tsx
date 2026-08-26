@@ -1,13 +1,19 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState, useTransition } from 'react'
 import { useFormStatus } from 'react-dom'
-import { signUp, type AuthState } from '@/app/actions/auth'
+import { signUp, signInWithGoogle, type AuthState } from '@/app/actions/auth'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { GoogleLogo } from '@/components/ui/GoogleLogo'
 
 interface RegisterFormProps {
   next: string
+  /**
+   * Phase 14 — OAuth callback error surfaced from `?error=` in the URL.
+   * Same display path as the email/password error above.
+   */
+  errorMessage?: string
 }
 
 function SubmitButton() {
@@ -30,16 +36,30 @@ function SubmitButton() {
   )
 }
 
-export function RegisterForm({ next }: RegisterFormProps) {
+export function RegisterForm({ next, errorMessage }: RegisterFormProps) {
   const [state, formAction] = useActionState<AuthState | null, FormData>(signUp, null)
+  const [googleError, setGoogleError] = useState<string | undefined>()
+  const [googlePending, startGoogleTransition] = useTransition()
+
+  const handleGoogle = () => {
+    startGoogleTransition(async () => {
+      const result = await signInWithGoogle(next)
+      // Success: `redirect()` throws server-side, Next.js navigates the
+      // browser, `result` resolves as undefined — we never see it.
+      // Failure: action returns { error } — surface in the form banner.
+      if (result?.error) setGoogleError(result.error)
+    })
+  }
+
+  const displayError = state?.error ?? errorMessage ?? googleError
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next} />
 
-      {state?.error && (
+      {displayError && (
         <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
-          {state.error}
+          {displayError}
         </div>
       )}
 
@@ -129,6 +149,35 @@ export function RegisterForm({ next }: RegisterFormProps) {
       </label>
 
       <SubmitButton />
+
+      {/* Divider */}
+      <div className="flex items-center gap-3 my-2">
+        <div className="flex-1 h-px bg-outline-variant" />
+        <span className="text-caption text-on-surface-variant uppercase tracking-wider">หรือ</span>
+        <div className="flex-1 h-px bg-outline-variant" />
+      </div>
+
+      {/* Google signup — same handler as LoginForm. OAuth doesn't distinguish
+          sign-in vs sign-up; the callback route handles both (existing email
+          → sign-in, new email → trigger creates profile with role='user'). */}
+      <button
+        type="button"
+        onClick={handleGoogle}
+        disabled={googlePending}
+        className="w-full inline-flex items-center justify-center gap-3 px-6 py-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md font-medium text-on-surface hover:bg-surface-container transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {googlePending ? (
+          <>
+            <span className="inline-block w-4 h-4 border-2 border-on-surface border-t-transparent rounded-full animate-spin" />
+            กำลังเชื่อมต่อกับ Google…
+          </>
+        ) : (
+          <>
+            <GoogleLogo />
+            สมัครสมาชิกด้วย Google
+          </>
+        )}
+      </button>
     </form>
   )
 }

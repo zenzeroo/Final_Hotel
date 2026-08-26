@@ -1,13 +1,20 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState, useTransition } from 'react'
 import { useFormStatus } from 'react-dom'
-import { signIn, type AuthState } from '@/app/actions/auth'
+import { signIn, signInWithGoogle, type AuthState } from '@/app/actions/auth'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { GoogleLogo } from '@/components/ui/GoogleLogo'
 
 interface LoginFormProps {
   next: string
+  /**
+   * Phase 14 — OAuth callback error (e.g. `?error=oauth_cancelled` after the
+   * user closed the Google consent screen). Surfaces in the same red banner
+   * as the email/password error. The page reads it from `searchParams.error`.
+   */
+  errorMessage?: string
 }
 
 function SubmitButton() {
@@ -30,16 +37,30 @@ function SubmitButton() {
   )
 }
 
-export function LoginForm({ next }: LoginFormProps) {
+export function LoginForm({ next, errorMessage }: LoginFormProps) {
   const [state, formAction] = useActionState<AuthState | null, FormData>(signIn, null)
+  const [googleError, setGoogleError] = useState<string | undefined>()
+  const [googlePending, startGoogleTransition] = useTransition()
+
+  const handleGoogle = () => {
+    startGoogleTransition(async () => {
+      const result = await signInWithGoogle(next)
+      // Success: `redirect()` throws server-side, Next.js navigates the
+      // browser, `result` resolves as undefined — we never see it.
+      // Failure: action returns { error } — surface in the form banner.
+      if (result?.error) setGoogleError(result.error)
+    })
+  }
+
+  const displayError = state?.error ?? errorMessage ?? googleError
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
       <input type="hidden" name="next" value={next} />
 
-      {state?.error && (
+      {displayError && (
         <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
-          {state.error}
+          {displayError}
         </div>
       )}
 
@@ -92,14 +113,24 @@ export function LoginForm({ next }: LoginFormProps) {
         <div className="flex-1 h-px bg-outline-variant" />
       </div>
 
-      {/* Social buttons (UI only — wire up later) */}
+      {/* Social buttons */}
       <button
         type="button"
-        disabled
-        className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-surface-container-low border border-outline-variant rounded-lg text-body-md font-medium text-on-surface opacity-60 cursor-not-allowed"
+        onClick={handleGoogle}
+        disabled={googlePending}
+        className="w-full inline-flex items-center justify-center gap-3 px-6 py-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md font-medium text-on-surface hover:bg-surface-container transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>account_circle</span>
-        เข้าสู่ระบบด้วย Google
+        {googlePending ? (
+          <>
+            <span className="inline-block w-4 h-4 border-2 border-on-surface border-t-transparent rounded-full animate-spin" />
+            กำลังเชื่อมต่อกับ Google…
+          </>
+        ) : (
+          <>
+            <GoogleLogo />
+            เข้าสู่ระบบด้วย Google
+          </>
+        )}
       </button>
     </form>
   )

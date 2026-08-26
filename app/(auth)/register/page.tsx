@@ -6,6 +6,8 @@ import { RegisterForm } from './RegisterForm'
 export default async function RegisterPage(props: PageProps<'/register'>) {
   const searchParams = await props.searchParams
   const next = typeof searchParams.next === 'string' ? searchParams.next : '/'
+  // Phase 14 — surface OAuth callback failures into the form banner.
+  const errorMessage = mapOAuthError(searchParams.error)
 
   return (
     <main className="min-h-screen relative flex items-center justify-center px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-12">
@@ -40,7 +42,7 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
           </p>
         </div>
 
-        <RegisterForm next={next} />
+        <RegisterForm next={next} errorMessage={errorMessage} />
 
         <p className="mt-8 text-center text-body-md text-on-surface-variant">
           มีบัญชีอยู่แล้ว?{' '}
@@ -54,4 +56,17 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
       </div>
     </main>
   )
+}
+
+/** Phase 14 — same mapping as LoginPage. */
+function mapOAuthError(error: string | string[] | undefined): string | undefined {
+  const value = Array.isArray(error) ? error[0] : error
+  switch (value) {
+    case 'oauth_cancelled':
+      return 'ยกเลิกการสมัครสมาชิกด้วย Google แล้ว'
+    case 'oauth_failed':
+      return 'สมัครสมาชิกด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+    default:
+      return undefined
+  }
 }
