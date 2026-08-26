@@ -51,7 +51,7 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // references review status / moderated_at columns that the live DB never
 // received. Without it, the reviews wire fails at runtime.
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(27|29|30|31|32|33)_.*\.sql$/.test(f))
+  .filter((f) => /202608(27|29|30|31|32|33|34)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 

@@ -1,20 +1,7 @@
-import { config as loadEnv } from 'dotenv'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { pgPoolerConfig } from './_db-connection.mjs'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-loadEnv({ path: resolve(__dirname, '..', '.env.local') })
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const ref = url.replace(/^https?:\/\//, '').split('.')[0]
-const c = new pg.Client({
-  host: 'aws-0-ap-southeast-1.pooler.supabase.com',
-  port: 6543,
-  database: 'postgres',
-  user: `postgres.${ref}`,
-  password: process.env.SUPABASE_DB_PASSWORD,
-})
+const c = new pg.Client(pgPoolerConfig())
 
 const targetId = '862ca949-75de-4b32-a1e1-5df80f973ddd'
 

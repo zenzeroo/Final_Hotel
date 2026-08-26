@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { calculatePrice, generateBookingCode } from '@/lib/pricing'
+import { calculatePrice, generateBookingCode, DEFAULT_PRICING } from '@/lib/pricing'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
-import { getActiveSeasonalRatesForRange } from '@/lib/data/manager'
+import { getActiveSeasonalRatesForRange, getHotelSettings } from '@/lib/data/manager'
 import { getDefaultCancellationPolicy, getPromotionByCode } from '@/lib/data/bookings'
 
 const createBookingSchema = z.object({
@@ -108,6 +108,15 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   }
 
   // Calculate price (Phase 8 path — baseSubtotal comes from the quote).
+  // Phase 12: fetch hotel_settings for live tax + resort fee. Falls back to
+  // DEFAULT_PRICING (0.07/150) if the singleton row is missing.
+  const hotelSettings = await getHotelSettings()
+  const pricingSettings = hotelSettings
+    ? {
+        taxRate: Number(hotelSettings.tax_rate ?? DEFAULT_PRICING.taxRate),
+        resortFeePerNight: Number(hotelSettings.resort_fee ?? DEFAULT_PRICING.resortFeePerNight),
+      }
+    : DEFAULT_PRICING
   const price = calculatePrice({
     basePrice: room.base_price,
     checkIn: data.checkIn,
@@ -122,7 +131,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
         }
       : null,
     quote,
-  })
+  }, pricingSettings)
 
   if (price.nights === 0) {
     return { error: 'จำนวนคืนต้องมากกว่า 0' }
@@ -154,6 +163,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       booker_email: data.bookerEmail,
       booker_phone: data.bookerPhone ?? null,
       special_request: data.specialRequest ?? null,
+      channel: 'web',
     })
     .select('id')
     .single()

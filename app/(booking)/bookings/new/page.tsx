@@ -1,12 +1,12 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getActiveSeasonalRatesForRange } from '@/lib/data/manager'
+import { getActiveSeasonalRatesForRange, getHotelSettings } from '@/lib/data/manager'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { TransactionalHeader } from '@/components/layout/TransactionalHeader'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { BookingForm } from './BookingForm'
-import { calculateNights } from '@/lib/pricing'
+import { calculateNights, DEFAULT_PRICING } from '@/lib/pricing'
 import { getRoomById } from './helper'
 
 export const dynamic = 'force-dynamic'
@@ -64,6 +64,16 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
   })
   const minNightsBlocked = violatesMinNights(quote, seasonalRates)
 
+  // Phase 12: live hotel_settings → tax + fee for the client preview. Server
+  // createBooking also reads these (see app/actions/booking.ts).
+  const hotelSettings = await getHotelSettings()
+  const pricingSettings = hotelSettings
+    ? {
+        taxRate: Number(hotelSettings.tax_rate ?? DEFAULT_PRICING.taxRate),
+        resortFeePerNight: Number(hotelSettings.resort_fee ?? DEFAULT_PRICING.resortFeePerNight),
+      }
+    : DEFAULT_PRICING
+
   return (
     <>
       <TopNavBar />
@@ -92,6 +102,7 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
               }}
               quote={quote}
               minNightsBlocked={minNightsBlocked}
+              settings={pricingSettings}
             />
           </div>
         </div>

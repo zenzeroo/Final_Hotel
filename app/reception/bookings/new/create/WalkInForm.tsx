@@ -2,9 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useTransition, useMemo } from 'react'
-import { createBooking } from '@/app/actions/booking'
-import { calculateNights, calculatePrice, formatTHB, generateBookingCode } from '@/lib/pricing'
-import { createClient } from '@/lib/supabase/client'
+import { createWalkInBooking } from '@/app/actions/walk-in-booking'
+import { calculateNights, calculatePrice, formatTHB } from '@/lib/pricing'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface WalkInFormProps {
@@ -58,14 +57,10 @@ export function WalkInForm({ room }: WalkInFormProps) {
     e.preventDefault()
     setError(null)
     startTransition(async () => {
-      // For walk-in: create a profile first if email doesn't exist
-      const supabase = createClient()
-      // Try to find existing user
-      // (we can't list users from client, so we'll just create the booking — the action
-      // requires user_id, so for walk-in we need to use a service-role call from the server action)
-      // For now, use createBooking which will require a user; in a real impl, the staff
-      // would create/find a user via admin API.
-      const result = await createBooking({
+      // Walk-in guests have no auth.users row — the dedicated server action
+      // uses the service role to find or create the guest's account, then
+      // inserts the booking with channel='walk_in' + payment_status=paid/unpaid.
+      const result = await createWalkInBooking({
         roomTypeId: room.id,
         checkIn,
         checkOut,
@@ -74,16 +69,12 @@ export function WalkInForm({ room }: WalkInFormProps) {
         bookerEmail: email,
         bookerPhone: phone || undefined,
         specialRequest: specialRequest || undefined,
+        markAsPaid,
       })
 
       if (result.error) {
         setError(result.error)
         return
-      }
-
-      if (result.bookingId && markAsPaid) {
-        // Mark as paid via a separate action (server-side)
-        // For now, just redirect
       }
 
       router.push(`/reception/bookings?status=all`)

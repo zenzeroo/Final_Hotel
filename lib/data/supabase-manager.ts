@@ -28,6 +28,10 @@ import type {
   RoomUnitWithType,
   SeasonalRate,
   CancellationPolicy,
+  OccupancyMonthPoint,
+  RankedRoom,
+  RankedRoomTypeRevenue,
+  ChannelSlice,
 } from './types'
 
 // =========================================================
@@ -118,6 +122,8 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
     { data: weekRows, error: e8 },
     { data: urgentDamages, error: e9 },
     { data: pendingRefunds, error: e10 },
+    { count: webBookings, error: e11 },
+    { count: walkInBookings, error: e12 },
   ] = await Promise.all([
     supabase
       .from('bookings')
@@ -172,6 +178,18 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
       .select('id, amount')
       .eq('status', 'pending')
       .limit(5),
+    supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', today + 'T00:00:00Z')
+      .lt('created_at', today + 'T23:59:59Z')
+      .eq('channel', 'web'),
+    supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', today + 'T00:00:00Z')
+      .lt('created_at', today + 'T23:59:59Z')
+      .eq('channel', 'walk_in'),
   ])
 
   for (const [label, e] of [
@@ -185,6 +203,8 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
     ['weekRows', e8],
     ['urgentDamages', e9],
     ['pendingRefunds', e10],
+    ['webBookings', e11],
+    ['walkInBookings', e12],
   ] as const) {
     if (e) throw new Error(`Supabase (${label}): ${e.message}`)
   }
@@ -231,9 +251,11 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
     checkInsToday: checkInsToday ?? 0,
     checkOutsToday: checkOutsToday ?? 0,
     newBookingsToday: newBookingsToday ?? 0,
-    // No `channel` column on `bookings` → all online. walkInBookings is a known gap.
-    webBookings: newBookingsToday ?? 0,
-    walkInBookings: 0,
+    // Phase 12: real channel split from bookings.channel column.
+    // webBookings + walkInBookings may each be 0 on a quiet day; the KPI
+    // strip renders Web + Walk-in numbers independently.
+    webBookings: webBookings ?? 0,
+    walkInBookings: walkInBookings ?? 0,
     revenue7d,
     alerts,
   }
@@ -488,7 +510,8 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
       .select(
         `
         id, booking_code, booker_full_name, check_in, check_out, nights, status,
-        room_type:room_types(name)
+        room_type:room_types(name),
+        room_unit:room_units(unit_label)
       `,
       )
       // booking_status enum is ('pending','confirmed','checked_in','checked_out','cancelled');
@@ -532,12 +555,12 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
   }))
 
   const bookings: BookingOversightRow[] = (bookingRows ?? []).map((row) => {
-    // room_type is an embedded relation; could be null for orphaned bookings.
+    // room_type + room_unit are embedded relations; could be null for
+    // orphaned bookings. room_unit is null until reception checks the guest
+    // in and selects a unit (see CheckInOutActions + migration 20260834).
     const roomType = Array.isArray(row.room_type) ? row.room_type[0] : row.room_type
-    // The mock labels each row with a unit number; for real bookings we have
-    // room_type_id only (room_units assignment lives in booking_events metadata
-    // or stays in the housekeeping_tasks system). Use '—' placeholder.
-    const roomNumber = '—'
+    const roomUnit = Array.isArray(row.room_unit) ? row.room_unit[0] : row.room_unit
+    const roomNumber = roomUnit?.unit_label ?? '—'
     return {
       id: row.id,
       code: row.booking_code,
@@ -608,6 +631,17 @@ export async function getReportsData(): Promise<ReportsData> {
   const today = todayIso()
   const sevenDaysAgo = isoDaysAgo(6)
   const fourteenDaysAgo = isoDaysAgo(13)
+  // Phase 12: live GROUP BY for the 5 analytics arrays. No precomputed
+  // analytics tables — relies on the 2 new indexes from migration 20260834:
+  //   idx_bookings_checkin_status, idx_bookings_roomtype_status.
+  const thirtyDaysAgo = isoDaysAgo(29)
+  // Same 30-day window one year prior for occupancyYoY.
+  const lastYearToday = new Date(today + 'T00:00:00Z')
+  lastYearToday.setUTCFullYear(lastYearToday.getUTCFullYear() - 1)
+  const lastYearThirtyAgo = new Date(thirtyDaysAgo + 'T00:00:00Z')
+  lastYearThirtyAgo.setUTCFullYear(lastYearThirtyAgo.getUTCFullYear() - 1)
+  const lastYearTodayIso = lastYearToday.toISOString().slice(0, 10)
+  const lastYearThirtyAgoIso = lastYearThirtyAgo.toISOString().slice(0, 10)
 
   const [
     { data: last7Rows, error: e1 },
@@ -615,6 +649,11 @@ export async function getReportsData(): Promise<ReportsData> {
     { data: last7Cancelled, error: e3 },
     { data: prev7Cancelled, error: e4 },
     { count: totalBookings7d, error: e5 },
+    { data: dailyRevenueRows, error: e6 },
+    { data: currentMonthRows, error: e7 },
+    { data: priorYearRows, error: e8 },
+    { data: roomTypeRows, error: e9 },
+    { data: channelRows, error: e10 },
   ] = await Promise.all([
     supabase
       .from('bookings')
@@ -645,6 +684,38 @@ export async function getReportsData(): Promise<ReportsData> {
       .select('id', { count: 'exact', head: true })
       .gte('created_at', sevenDaysAgo + 'T00:00:00Z')
       .lte('created_at', today + 'T23:59:59Z'),
+    // dailyRevenue: 7-day window keyed on check_in (not created_at — that's
+    // when the booking was made, not when revenue was earned). Includes
+    // confirmed + checked_out (i.e. realised revenue; pending is excluded
+    // because the guest may still cancel).
+    supabase
+      .from('bookings')
+      .select('check_in, total')
+      .gte('check_in', sevenDaysAgo)
+      .lte('check_in', today)
+      .in('status', ['confirmed', 'checked_out']),
+    // occupancyYoY: current 30-day booking count + same range 1 year prior.
+    supabase
+      .from('bookings')
+      .select('check_in', { count: 'exact' })
+      .gte('check_in', thirtyDaysAgo)
+      .lte('check_in', today)
+      .in('status', ['confirmed', 'checked_in', 'checked_out']),
+    supabase
+      .from('bookings')
+      .select('check_in', { count: 'exact' })
+      .gte('check_in', lastYearThirtyAgoIso)
+      .lte('check_in', lastYearTodayIso)
+      .in('status', ['confirmed', 'checked_in', 'checked_out']),
+    // mostBookedRooms + highestRevenueRoomTypes: GROUP BY room_type_id with
+    // the embedded room_type name for label. SELECT only the columns we need
+    // to keep the row size small.
+    supabase
+      .from('bookings')
+      .select('room_type_id, total, room_type:room_types(name)')
+      .in('status', ['confirmed', 'checked_in', 'checked_out']),
+    // channels: GROUP BY channel — used for the donut chart.
+    supabase.from('bookings').select('channel'),
   ])
   for (const [label, e] of [
     ['last7Rows', e1],
@@ -652,6 +723,11 @@ export async function getReportsData(): Promise<ReportsData> {
     ['last7Cancelled', e3],
     ['prev7Cancelled', e4],
     ['totalBookings7d', e5],
+    ['dailyRevenueRows', e6],
+    ['currentMonthRows', e7],
+    ['priorYearRows', e8],
+    ['roomTypeRows', e9],
+    ['channelRows', e10],
   ] as const) {
     if (e) throw new Error(`Supabase (${label}): ${e.message}`)
   }
@@ -682,17 +758,108 @@ export async function getReportsData(): Promise<ReportsData> {
         : 0
       : Math.round(((last7CancelledCount - prev7CancelledCount) / prev7CancelledCount) * 100)
 
+  // ── dailyRevenue: bucket client-side (matches bucketRevenue7d pattern) ──
+  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const dailyBuckets: Record<string, number> = {}
+  for (let i = 6; i >= 0; i--) dailyBuckets[isoDaysAgo(i)] = 0
+  for (const r of dailyRevenueRows ?? []) {
+    const day = r.check_in
+    if (day in dailyBuckets) dailyBuckets[day] += r.total ?? 0
+  }
+  const dailyRevenue: RevenueBarPoint[] = Object.entries(dailyBuckets).map(([date, revenue]) => {
+    const d = new Date(date + 'T00:00:00Z')
+    const isToday = date === today
+    return {
+      date,
+      revenue,
+      label: isToday ? 'Today' : dayLabels[d.getUTCDay()] ?? '',
+    }
+  })
+
+  // ── occupancyYoY: system is < 1 year old in most installs → prior is 0
+  // rows. Return [] in that case. Otherwise build a single point comparing
+  // current 30d to the same window last year. ──
+  const priorCount = Array.isArray(priorYearRows) ? priorYearRows.length : 0
+  const currentCount = Array.isArray(currentMonthRows) ? currentMonthRows.length : 0
+  const occupancyYoY: OccupancyMonthPoint[] =
+    priorCount === 0
+      ? []
+      : [
+          {
+            month: today.slice(0, 7), // YYYY-MM
+            last: Math.min(100, Math.round((priorCount / 30) * 100)),
+            current: Math.min(100, Math.round((currentCount / 30) * 100)),
+          },
+        ]
+
+  // ── mostBookedRooms + highestRevenueRoomTypes: group by room_type_id ──
+  type RoomTypeAgg = { id: string | null; name: string; count: number; revenue: number }
+  // Supabase typing for the embedded `room_type:room_types(name)` select is
+  // `never` when the project types aren't regenerated. Cast through unknown
+  // so we can pluck the name defensively (array for !inner, object otherwise).
+  type RoomTypeJoin = { name?: string } | { name?: string }[] | null
+  const roomAgg = new Map<string, RoomTypeAgg>()
+  for (const r of roomTypeRows ?? []) {
+    const id = r.room_type_id
+    if (!id) continue
+    const joined = r.room_type as unknown as RoomTypeJoin
+    const name =
+      (Array.isArray(joined) ? joined[0]?.name : joined?.name) ?? '—'
+    const cur = roomAgg.get(id) ?? { id, name, count: 0, revenue: 0 }
+    cur.count += 1
+    cur.revenue += r.total ?? 0
+    roomAgg.set(id, cur)
+  }
+  const sortedByCount = [...roomAgg.values()].sort((a, b) => b.count - a.count).slice(0, 5)
+  const sortedByRevenue = [...roomAgg.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 5)
+  const mostBookedRooms: RankedRoom[] = sortedByCount.map((r) => ({
+    name: r.name,
+    count: r.count,
+  }))
+  const highestRevenueRoomTypes: RankedRoomTypeRevenue[] = sortedByRevenue.map((r) => ({
+    name: r.name,
+    revenue: r.revenue,
+  }))
+
+  // ── channels: GROUP BY channel + percent of total ──
+  const channelCounts: Record<string, number> = {}
+  let channelTotal = 0
+  for (const r of channelRows ?? []) {
+    const ch = r.channel ?? 'web'
+    channelCounts[ch] = (channelCounts[ch] ?? 0) + 1
+    channelTotal += 1
+  }
+  // Fixed palette per channel — single source of truth for chart colors.
+  const channelPalette: Record<string, string> = {
+    web: '#3b82f6',
+    walk_in: '#10b981',
+    phone: '#f59e0b',
+    ota: '#a855f7',
+  }
+  const channelLabels: Record<string, string> = {
+    web: 'Online',
+    walk_in: 'Walk-in',
+    phone: 'Phone',
+    ota: 'OTA',
+  }
+  const channels: ChannelSlice[] = Object.entries(channelCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([key, count]) => ({
+      label: channelLabels[key] ?? key,
+      percent: channelTotal > 0 ? Math.round((count / channelTotal) * 100) : 0,
+      color: channelPalette[key] ?? '#94a3b8',
+    }))
+
   return {
     totalRevenue7d,
     totalRevenueTrendPct,
-    // Daily revenue + occupancy YoY + most-booked rooms + revenue-by-type +
-    // channel mix all require precomputed analytics tables — out of scope for
-    // Phase 9C. UI renders empty state copy when arrays are empty.
-    dailyRevenue: [],
-    occupancyYoY: [],
-    mostBookedRooms: [],
-    highestRevenueRoomTypes: [],
-    channels: [],
+    // Phase 12: live aggregation. Empty arrays only when the underlying query
+    // returned 0 rows (e.g. a brand-new install with no bookings yet).
+    dailyRevenue,
+    occupancyYoY,
+    mostBookedRooms,
+    highestRevenueRoomTypes,
+    channels,
     totalBookings7d: last7TotalCount,
     cancellationRatePct,
     cancellationTrendPct,
@@ -891,29 +1058,25 @@ export async function listSeasonalRates(): Promise<SeasonalRate[]> {
 }
 
 export async function listCancellationPolicies(): Promise<CancellationPolicy[]> {
-  return [
-    {
-      id: 'cp-flexible',
-      name: 'Flexible',
-      free_cancel_hours: 48,
-      refund_pct: 100,
-      description: 'ยกเลิกฟรีภายใน 48 ชั่วโมงก่อนเช็คอิน คืนเงิน 100%',
-    },
-    {
-      id: 'cp-moderate',
-      name: 'Moderate',
-      free_cancel_hours: 24,
-      refund_pct: 50,
-      description: 'ยกเลิกฟรีภายใน 24 ชั่วโมงก่อนเช็คอิน คืนเงิน 50%',
-    },
-    {
-      id: 'cp-strict',
-      name: 'Strict',
-      free_cancel_hours: 0,
-      refund_pct: 0,
-      description: 'ไม่คืนเงินหากยกเลิก',
-    },
-  ]
+  // Phase 12: real query against the seeded table. refund_pct was added in
+  // migration 20260834 (default 100, with 100/50/0 backfill for the 3
+  // existing seed rows). public-read RLS is set in
+  // 20260819_bookings_rls.sql:61-64, so no auth check is needed.
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('cancellation_policies')
+    .select('id, name, free_cancel_hours, refund_pct, description')
+    .order('free_cancel_hours', { ascending: false })
+  if (error) throw new Error(`Supabase: ${error.message}`)
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    free_cancel_hours: r.free_cancel_hours,
+    // numeric → number; explicit cast in case the JS client returns a string.
+    refund_pct: Number(r.refund_pct),
+    description: r.description,
+  }))
 }
 
 export async function setPromotionActive(args: { promotionId: string; isActive: boolean }): Promise<Promotion> {

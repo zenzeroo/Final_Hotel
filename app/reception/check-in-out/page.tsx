@@ -18,7 +18,7 @@ export default async function CheckInOutPage() {
   const supabase = await createClient()
   const today = new Date().toISOString().slice(0, 10)
 
-  const [checkInsRes, checkOutsRes, inHouseRes] = await Promise.all([
+  const [checkInsRes, checkOutsRes, inHouseRes, availableUnitsRes] = await Promise.all([
     supabase
       .from('bookings')
       .select(`
@@ -45,11 +45,24 @@ export default async function CheckInOutPage() {
       `)
       .eq('status', 'checked_in')
       .order('check_out'),
+    // Phase 12: list of rooms reception can assign during check-in.
+    // Filtered to active + status='available'. Staff may also pick a
+    // maintenance-status room (e.g. resolved between shifts) — but the
+    // default UI restricts to available for safety.
+    supabase
+      .from('room_units')
+      .select('id, unit_label, floor, room_type_id, status')
+      .eq('is_active', true)
+      .eq('status', 'available')
+      .order('floor')
+      .order('unit_label'),
   ])
 
   const checkIns = checkInsRes.data ?? []
   const checkOuts = checkOutsRes.data ?? []
   const inHouse = inHouseRes.data ?? []
+  // availableUnits may be undefined if RLS blocks; treat as empty.
+  const allAvailableUnits = availableUnitsRes.data ?? []
 
   return (
     <div className="p-6 md:p-8">
@@ -76,21 +89,35 @@ export default async function CheckInOutPage() {
             <p className="text-body-md text-on-surface-variant text-center py-8">ไม่มีเช็คอินวันนี้</p>
           ) : (
             <div className="flex flex-col gap-3">
-              {checkIns.map((b) => (
-                <GuestCard
-                  key={b.id}
-                  booking={b}
-                  action={
-                    b.status === 'confirmed' ? (
-                      <CheckInOutActions bookingId={b.id} action="check_in" label="เช็คอิน" />
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-caption font-semibold">
-                        <MaterialIcon name="verified" size={14} /> เข้าพักแล้ว
-                      </span>
-                    )
-                  }
-                />
-              ))}
+              {checkIns.map((b) => {
+                // Prefer units of the same room_type; fall back to any
+                // available unit if none match the booking's type.
+                const matchingType = allAvailableUnits.filter(
+                  (u) => u.room_type_id === b.room_type_id,
+                )
+                const availableForBooking =
+                  matchingType.length > 0 ? matchingType : allAvailableUnits
+                return (
+                  <GuestCard
+                    key={b.id}
+                    booking={b}
+                    action={
+                      b.status === 'confirmed' ? (
+                        <CheckInOutActions
+                          bookingId={b.id}
+                          action="check_in"
+                          label="เช็คอิน"
+                          availableUnits={availableForBooking}
+                        />
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-caption font-semibold">
+                          <MaterialIcon name="verified" size={14} /> เข้าพักแล้ว
+                        </span>
+                      )
+                    }
+                  />
+                )
+              })}
             </div>
           )}
         </section>

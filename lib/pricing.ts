@@ -43,6 +43,23 @@ const TAX_RATE = 0.07
 const RESORT_FEE_PER_NIGHT = 150
 
 /**
+ * Phase 12: settings bag for `calculatePrice`. Server actions fetch the live
+ * values from `hotel_settings` (via `getHotelSettings()`) and pass them in.
+ * Client preview calls (e.g. BookingWidget, WalkInForm) leave the second arg
+ * unset → use `DEFAULT_PRICING` below. This keeps the legacy 0.07/150 hardcode
+ * alive as a single, named fallback rather than inline magic numbers.
+ */
+export interface PricingSettings {
+  taxRate: number
+  resortFeePerNight: number
+}
+
+export const DEFAULT_PRICING: PricingSettings = {
+  taxRate: TAX_RATE,
+  resortFeePerNight: RESORT_FEE_PER_NIGHT,
+}
+
+/**
  * Calculate the number of nights between check-in and check-out.
  * Returns 0 for invalid dates.
  */
@@ -80,8 +97,15 @@ export function applyPromotion(
  *
  * If `input.quote` is supplied, `baseSubtotal` and `nights` are taken
  * from the seasonal-aware quote. Otherwise the legacy formula applies.
+ *
+ * `settings` defaults to `DEFAULT_PRICING` (0.07 / 150). Server-side
+ * callers SHOULD pass live values from `getHotelSettings()` so admins
+ * can update tax + fee without a code change.
  */
-export function calculatePrice(input: PriceInput): PriceBreakdown {
+export function calculatePrice(
+  input: PriceInput,
+  settings: PricingSettings = DEFAULT_PRICING,
+): PriceBreakdown {
   const nights = input.quote ? input.quote.nights : calculateNights(input.checkIn, input.checkOut)
 
   // Base: prefer quote (Phase 8) over flat nights × basePrice (legacy).
@@ -92,12 +116,12 @@ export function calculatePrice(input: PriceInput): PriceBreakdown {
   // Discount (from promo)
   const discountTotal = applyPromotion(baseSubtotal, nights, input.promotion ?? null)
 
-  // Resort fee: 150 per night
-  const feeTotal = nights * RESORT_FEE_PER_NIGHT
+  // Resort fee: settings.resortFeePerNight per night (default 150)
+  const feeTotal = nights * settings.resortFeePerNight
 
-  // Tax: 7% of (subtotal - discount)
+  // Tax: settings.taxRate of (subtotal - discount) (default 0.07)
   const taxableAmount = baseSubtotal - discountTotal
-  const taxTotal = Math.round(taxableAmount * TAX_RATE)
+  const taxTotal = Math.round(taxableAmount * settings.taxRate)
 
   const total = baseSubtotal - discountTotal + taxTotal + feeTotal
 

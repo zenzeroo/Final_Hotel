@@ -19,11 +19,20 @@ const MOCK_ROOM_UNITS: RoomUnitBasic[] = [
   { id: 'u-012', floor: 4, unit_label: '404', view_label: 'Pool View', status: 'occupied', room_type: { id: 'rt-003', name: 'Suite Pool', name_th: 'สวีท พูล', hero_image_key: 'rooms/suite-pool-1.jpg' }},
 ]
 
+// Phase 12: mock UIDs are now env-driven so the same mock UI can be tested
+// against a real auth.users.id (set MOCK_HOUSE_1_UID=<real-uid> in .env.local).
+// Defaults match the synthetic IDs baked into data/mock-housekeeper.json — see
+// the JSON file header for the "display-only" note.
+const MOCK_HOUSE_1 = process.env.MOCK_HOUSE_1_UID ?? 'u-house-1'
+const MOCK_HOUSE_2 = process.env.MOCK_HOUSE_2_UID ?? 'u-house-2'
+const MOCK_RECEP_1 = process.env.MOCK_RECEP_1_UID ?? 'u-recep-1'
+const MOCK_ADMIN_1 = process.env.MOCK_ADMIN_1_UID ?? 'u-admin-1'
+
 const MOCK_USERS: Record<string, { full_name: string }> = {
-  'u-house-1': { full_name: 'Somjit (You)' },
-  'u-house-2': { full_name: 'Niran' },
-  'u-recep-1': { full_name: 'Malee' },
-  'u-admin-1': { full_name: 'Admin' },
+  [MOCK_HOUSE_1]: { full_name: 'Somjit (You)' },
+  [MOCK_HOUSE_2]: { full_name: 'Niran' },
+  [MOCK_RECEP_1]: { full_name: 'Malee' },
+  [MOCK_ADMIN_1]: { full_name: 'Admin' },
 }
 
 function enrichTask(t: HousekeepingTask): HousekeepingTask {
@@ -43,7 +52,7 @@ function enrichReport(r: MaintenanceReport): MaintenanceReport {
   }
 }
 
-const CURRENT_USER_ID = 'u-house-1'
+const CURRENT_USER_ID = MOCK_HOUSE_1
 
 export async function getMyTasksForUser(): Promise<HousekeepingTask[]> {
   const tasks = (mockData.tasks as HousekeepingTask[]).filter(

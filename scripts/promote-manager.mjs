@@ -1,24 +1,30 @@
-import { config as loadEnv } from 'dotenv'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { pgPoolerConfig } from './_db-connection.mjs'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-loadEnv({ path: resolve(__dirname, '..', '.env.local') })
+const c = new pg.Client(pgPoolerConfig())
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const ref = url.replace(/^https?:\/\//, '').split('.')[0]
-const c = new pg.Client({
-  host: 'aws-0-ap-southeast-1.pooler.supabase.com',
-  port: 6543,
-  database: 'postgres',
-  user: `postgres.${ref}`,
-  password: process.env.SUPABASE_DB_PASSWORD,
-})
-
-const MANAGER_ID = 'ba4b825d-3dec-4db0-b604-82f20c8cb165'
+// Phase 12: resolve target manager UID from env with backward-compat fallback.
+// Priority: MANAGER_ID (explicit UUID) > MANAGER_EMAIL (auth.users lookup) >
+// legacy hardcoded literal. See .env.example for documentation.
+const LEGACY_MANAGER_ID = 'ba4b825d-3dec-4db0-b604-82f20c8cb165'
 
 await c.connect()
+
+const MANAGER_ID = await (async () => {
+  if (process.env.MANAGER_ID) return process.env.MANAGER_ID
+  const email = process.env.MANAGER_EMAIL
+  if (!email) return LEGACY_MANAGER_ID
+  const { rows } = await c.query(
+    `select id from auth.users where email = $1 order by created_at desc limit 1`,
+    [email],
+  )
+  if (rows.length === 0) {
+    await c.end()
+    throw new Error(`MANAGER_EMAIL=${email} not found in auth.users`)
+  }
+  console.log(`Resolved MANAGER_EMAIL=${email} → uid=${rows[0].id}`)
+  return rows[0].id
+})()
 
 // 1. Verify auth.users row
 const { rows: authRows } = await c.query(

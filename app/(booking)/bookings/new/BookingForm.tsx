@@ -6,7 +6,7 @@ import { useState, useTransition, useMemo } from 'react'
 import { useFormStatus } from 'react-dom'
 import { createBooking, type CreateBookingResult } from '@/app/actions/booking'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { calculatePrice, formatTHB } from '@/lib/pricing'
+import { calculatePrice, formatTHB, type PricingSettings } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
 import type { QuoteResult } from '@/lib/pricing/seasons'
 
@@ -31,6 +31,13 @@ interface BookingFormProps {
   quote: QuoteResult
   /** True when an applied seasonal rate has min_nights_override > stay length. */
   minNightsBlocked: boolean
+  /**
+   * Phase 12 — live tax + resort fee from `hotel_settings`, fetched by the
+   * server page. Falls back to `DEFAULT_PRICING` (0.07 / 150) at the server
+   * if the singleton row is missing; this preview matches the value the
+   * server action will write into `bookings.tax_total` / `fee_total`.
+   */
+  settings: PricingSettings
 }
 
 function formatDate(iso: string) {
@@ -65,7 +72,7 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
   )
 }
 
-export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, minNightsBlocked }: BookingFormProps) {
+export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, minNightsBlocked, settings }: BookingFormProps) {
   const router = useRouter()
   const [state, setState] = useState<CreateBookingResult | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -77,6 +84,8 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, m
 
   // Phase 8 — quote is computed server-side. Pass it to calculatePrice so
   // baseSubtotal reflects any active seasonal rates for the stay window.
+  // Phase 12 — also pass `settings` so the preview matches the live
+  // `hotel_settings.tax_rate` / `resort_fee` the server action will use.
   const price = useMemo(
     () =>
       calculatePrice({
@@ -85,8 +94,8 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, m
         checkOut,
         guests,
         quote,
-      }),
-    [room.base_price, checkIn, checkOut, guests, quote]
+      }, settings),
+    [room.base_price, checkIn, checkOut, guests, quote, settings]
   )
   const nights = quote.nights
 
@@ -238,8 +247,8 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, m
               ) : (
                 <PriceRow label={`${formatTHB(room.base_price)} × ${nights} คืน`} value={formatTHB(price.baseSubtotal)} />
               )}
-              <PriceRow label="ภาษี 7%" value={formatTHB(price.taxTotal)} />
-              <PriceRow label="ค่าบริการรีสอร์ท" value={formatTHB(price.feeTotal)} />
+              <PriceRow label={`ภาษี ${Math.round(settings.taxRate * 100)}%`} value={formatTHB(price.taxTotal)} />
+              <PriceRow label={`ค่าบริการรีสอร์ท (${formatTHB(settings.resortFeePerNight)}/คืน)`} value={formatTHB(price.feeTotal)} />
             </div>
 
             <div className="my-4 border-t border-outline-variant" />

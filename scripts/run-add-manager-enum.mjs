@@ -1,28 +1,8 @@
 // Run manager migration with COMMIT hack for ALTER TYPE ADD VALUE.
-import { config as loadEnv } from 'dotenv'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { pgPoolerConfig } from './_db-connection.mjs'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-loadEnv({ path: resolve(__dirname, '..', '.env.local') })
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD
-
-if (!url || !DB_PASSWORD) {
-  console.error('❌ Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_DB_PASSWORD in .env.local')
-  process.exit(1)
-}
-
-const projectRef = url.replace(/^https?:\/\//, '').split('.')[0]
-const c = new pg.Client({
-  host: 'aws-0-ap-southeast-1.pooler.supabase.com',
-  port: 6543,
-  database: 'postgres',
-  user: `postgres.${projectRef}`,
-  password: DB_PASSWORD,
-})
+const c = new pg.Client(pgPoolerConfig())
 
 async function run() {
   await c.connect()

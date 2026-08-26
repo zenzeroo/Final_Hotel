@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { signUp, type AuthState } from '@/app/actions/auth'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 
 interface RegisterFormProps {
   next: string
@@ -106,43 +107,25 @@ export function RegisterForm({ next }: RegisterFormProps) {
       {/* Password */}
       <label className="flex flex-col gap-1.5">
         <span className="text-label-md text-on-surface">รหัสผ่าน</span>
-        <div className="relative">
-          <MaterialIcon
-            name="lock"
-            size={20}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="อย่างน้อย 8 ตัวอักษร"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
-          />
-        </div>
+        <PasswordInput
+          name="password"
+          placeholder="อย่างน้อย 8 ตัวอักษร"
+          required
+          minLength={8}
+          autoComplete="new-password"
+        />
       </label>
 
       {/* Confirm password */}
       <label className="flex flex-col gap-1.5">
         <span className="text-label-md text-on-surface">ยืนยันรหัสผ่าน</span>
-        <div className="relative">
-          <MaterialIcon
-            name="lock"
-            size={20}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
-          />
-          <input
-            type="password"
-            name="confirm_password"
-            placeholder="••••••••"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
-          />
-        </div>
+        <PasswordInput
+          name="confirm_password"
+          placeholder="••••••••"
+          required
+          minLength={8}
+          autoComplete="new-password"
+        />
       </label>
 
       <SubmitButton />
