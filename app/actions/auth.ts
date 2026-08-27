@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { sanitizeNext } from '@/app/auth/next-utils'
+import { translateSupabaseError } from '@/lib/errors/translate'
 
 export interface AuthState {
   error?: string
@@ -90,7 +91,7 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
   })
 
   if (error) {
-    return { error: error.message }
+    return { error: translateSupabaseError(error.message) }
   }
 
   revalidatePath('/', 'layout')
@@ -160,11 +161,10 @@ export async function signInWithGoogle(next: string): Promise<AuthState> {
       return {
         error:
           'Google OAuth ยังไม่ได้เปิดใช้งาน — แอดมินต้องไป enable ที่ ' +
-          'Supabase Dashboard → Authentication → Providers → Google ' +
-          '(ดู setup guide ใน docs/google-oauth-setup.md)',
+          'Supabase Dashboard → Authentication → Providers → Google',
       }
     }
-    return { error: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้: ' + error.message }
+    return { error: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้: ' + translateSupabaseError(error.message) }
   }
   if (!data?.url) {
     return { error: 'ไม่ได้รับ URL จาก Google — กรุณาลองใหม่อีกครั้ง' }

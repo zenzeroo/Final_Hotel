@@ -7,6 +7,7 @@ import { calculatePrice, generateBookingCode, DEFAULT_PRICING } from '@/lib/pric
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { getActiveSeasonalRatesForRange, getHotelSettings } from '@/lib/data/manager'
 import { getDefaultCancellationPolicy, getPromotionByCode } from '@/lib/data/bookings'
+import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
 
 const createBookingSchema = z.object({
   roomTypeId: z.string().uuid(),
@@ -35,7 +36,7 @@ export interface CreateBookingResult {
 export async function createBooking(input: CreateBookingInput): Promise<CreateBookingResult> {
   const parsed = createBookingSchema.safeParse(input)
   if (!parsed.success) {
-    return { error: 'ข้อมูลไม่ถูกต้อง: ' + parsed.error.issues.map((i) => i.message).join(', ') }
+    return { error: 'ข้อมูลไม่ถูกต้อง: ' + translateZodIssues(parsed.error.issues) }
   }
 
   const data = parsed.data
@@ -169,7 +170,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     .single()
 
   if (insertErr || !booking) {
-    return { error: 'ไม่สามารถสร้างการจอง: ' + (insertErr?.message ?? 'unknown') }
+    return { error: 'ไม่สามารถสร้างการจอง: ' + translateSupabaseError(insertErr?.message) }
   }
 
   revalidatePath('/bookings')
@@ -192,7 +193,7 @@ export async function markPaid(bookingId: string) {
     .eq('id', bookingId)
     .eq('user_id', user.id)
 
-  if (error) return { error: 'ไม่สามารถอัปเดตการชำระเงิน: ' + error.message }
+  if (error) return { error: 'ไม่สามารถอัปเดตการชำระเงิน: ' + translateSupabaseError(error.message) }
 
   revalidatePath(`/bookings/${bookingId}`)
   revalidatePath('/bookings')
@@ -215,7 +216,7 @@ export async function cancelBooking(bookingId: string) {
     .eq('id', bookingId)
     .eq('user_id', user.id)
 
-  if (error) return { error: 'ไม่สามารถยกเลิกการจอง: ' + error.message }
+  if (error) return { error: 'ไม่สามารถยกเลิกการจอง: ' + translateSupabaseError(error.message) }
 
   revalidatePath('/bookings')
   revalidatePath(`/bookings/${bookingId}`)

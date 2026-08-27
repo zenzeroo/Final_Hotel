@@ -8,6 +8,7 @@ import { calculatePrice, generateBookingCode, DEFAULT_PRICING } from '@/lib/pric
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { getActiveSeasonalRatesForRange, getHotelSettings } from '@/lib/data/manager'
 import { getDefaultCancellationPolicy } from '@/lib/data/bookings'
+import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
 
 /**
  * Phase 12 — Walk-in booking server action.
@@ -48,7 +49,7 @@ export interface WalkInBookingResult {
 export async function createWalkInBooking(input: WalkInBookingInput): Promise<WalkInBookingResult> {
   const parsed = walkInSchema.safeParse(input)
   if (!parsed.success) {
-    return { error: 'ข้อมูลไม่ถูกต้อง: ' + parsed.error.issues.map((i) => i.message).join(', ') }
+    return { error: 'ข้อมูลไม่ถูกต้อง: ' + translateZodIssues(parsed.error.issues) }
   }
   const data = parsed.data
 
@@ -150,7 +151,7 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
       },
     })
     if (createErr || !created.user) {
-      return { error: 'ไม่สามารถสร้างบัญชีผู้เข้าพัก: ' + (createErr?.message ?? 'unknown') }
+      return { error: 'ไม่สามารถสร้างบัญชีผู้เข้าพัก: ' + translateSupabaseError(createErr?.message) }
     }
     guestUserId = created.user.id
     // `handle_new_user()` trigger auto-creates the profile row.
@@ -188,7 +189,7 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
     .single()
 
   if (insertErr || !booking) {
-    return { error: 'ไม่สามารถสร้างการจอง: ' + (insertErr?.message ?? 'unknown') }
+    return { error: 'ไม่สามารถสร้างการจอง: ' + translateSupabaseError(insertErr?.message) }
   }
 
   revalidatePath('/reception/bookings')

@@ -12,6 +12,7 @@ import {
   deleteReview as deleteReviewData,
 } from '@/lib/data/reviews'
 import type { ActionResult } from './manager'
+import { translateSupabaseError } from '@/lib/errors/translate'
 
 // ── Auth helpers ────────────────────────────────────────────────────────────
 
@@ -105,7 +106,7 @@ export async function createReviewAction(
     revalidatePath('/rooms')
     return { success: true, reviewId: result.id }
   } catch (e) {
-    return { error: e instanceof Error ? e.message : 'ไม่สามารถสร้างรีวิวได้' }
+    return { error: translateSupabaseError(e instanceof Error ? e.message : null) }
   }
 }
 
@@ -115,7 +116,7 @@ export async function moderateReviewAction(formData: FormData): Promise<ActionRe
   const session = await requireModerator()
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
-  if (!parsed.success) return { ok: false, error: 'Missing or invalid review id' }
+  if (!parsed.success) return { ok: false, error: 'ไม่พบรหัสรีวิวที่ถูกต้อง' }
 
   try {
     await moderateReviewData({
@@ -123,7 +124,7 @@ export async function moderateReviewAction(formData: FormData): Promise<ActionRe
       moderatorLabel: session.id,
     })
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Could not approve review' }
+    return { ok: false, error: translateSupabaseError(e instanceof Error ? e.message : null) }
   }
 
   revalidatePath('/manager/reviews')
@@ -135,7 +136,7 @@ export async function hideReviewAction(formData: FormData): Promise<ActionResult
   const session = await requireModerator()
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
-  if (!parsed.success) return { ok: false, error: 'Missing or invalid review id' }
+  if (!parsed.success) return { ok: false, error: 'ไม่พบรหัสรีวิวที่ถูกต้อง' }
 
   try {
     await hideReviewData({
@@ -143,7 +144,7 @@ export async function hideReviewAction(formData: FormData): Promise<ActionResult
       moderatorLabel: session.id,
     })
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Could not hide review' }
+    return { ok: false, error: translateSupabaseError(e instanceof Error ? e.message : null) }
   }
 
   revalidatePath('/manager/reviews')
@@ -155,7 +156,7 @@ export async function unhideReviewAction(formData: FormData): Promise<ActionResu
   const session = await requireModerator()
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
-  if (!parsed.success) return { ok: false, error: 'Missing or invalid review id' }
+  if (!parsed.success) return { ok: false, error: 'ไม่พบรหัสรีวิวที่ถูกต้อง' }
 
   try {
     await unhideReviewData({
@@ -163,7 +164,7 @@ export async function unhideReviewAction(formData: FormData): Promise<ActionResu
       moderatorLabel: session.id,
     })
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Could not unhide review' }
+    return { ok: false, error: translateSupabaseError(e instanceof Error ? e.message : null) }
   }
 
   revalidatePath('/manager/reviews')
@@ -177,12 +178,12 @@ export async function deleteReviewAction(formData: FormData): Promise<ActionResu
   await requireAdmin()
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
-  if (!parsed.success) return { ok: false, error: 'Missing or invalid review id' }
+  if (!parsed.success) return { ok: false, error: 'ไม่พบรหัสรีวิวที่ถูกต้อง' }
 
   try {
     await deleteReviewData({ reviewId: parsed.data.reviewId })
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Could not delete review' }
+    return { ok: false, error: translateSupabaseError(e instanceof Error ? e.message : null) }
   }
 
   revalidatePath('/manager/reviews')
