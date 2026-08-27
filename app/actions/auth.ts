@@ -139,6 +139,13 @@ export async function signInWithGoogle(next: string): Promise<AuthState> {
     provider: 'google',
     options: {
       redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
+      // Force the Google account picker every time — prevents silent
+      // auto-login of the wrong account on shared devices, and matches
+      // the standard expectation for login UX (Google's own docs recommend
+      // `prompt=select_account` for SPAs / web apps).
+      queryParams: {
+        prompt: 'select_account',
+      },
     },
   })
 
@@ -146,9 +153,16 @@ export async function signInWithGoogle(next: string): Promise<AuthState> {
     // Phase 14 follow-up — the most common failure is the Google provider not
     // being enabled in the user's Supabase dashboard. The raw Supabase message
     // ("Unsupported provider: provider is not enabled") is jargon; translate
-    // it to a Thai hint that points at the dashboard fix instead.
+    // it to a Thai hint that names the exact dashboard path so the admin can
+    // resolve it without reading docs/. Setup steps live in
+    // `docs/google-oauth-setup.md`.
     if (error.message?.includes('provider is not enabled')) {
-      return { error: 'Google OAuth ยังไม่ได้เปิดใช้งานในระบบ กรุณาติดต่อผู้ดูแลระบบ' }
+      return {
+        error:
+          'Google OAuth ยังไม่ได้เปิดใช้งาน — แอดมินต้องไป enable ที่ ' +
+          'Supabase Dashboard → Authentication → Providers → Google ' +
+          '(ดู setup guide ใน docs/google-oauth-setup.md)',
+      }
     }
     return { error: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้: ' + error.message }
   }
