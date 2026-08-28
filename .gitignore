@@ -34,7 +34,6 @@ next-env.d.ts
 /.dev-server*.log
 
 # Supabase CLI local artifacts
-/scripts/.ca-bundle.crt
 /scripts/.supabase-ca.crt
 /supabase/.temp/
 

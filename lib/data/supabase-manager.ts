@@ -113,7 +113,7 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
   // Parallel queries — JS client multiplexes over a single HTTP/2 connection.
   const [
     { data: revenueTodayRows, error: e1 },
-    { count: revenueYesterdayRows, error: e2 },
+    { error: e2 },
     { count: checkInsToday, error: e3 },
     { count: checkOutsToday, error: e4 },
     { count: newBookingsToday, error: e5 },
@@ -208,9 +208,6 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
   ] as const) {
     if (e) throw new Error(`Supabase (${label}): ${e.message}`)
   }
-
-  // Suppress unused-var lint for revenueYesterdayRows (count is intentionally unused).
-  void revenueYesterdayRows
 
   const revenueToday = (revenueTodayRows ?? []).reduce((sum, r) => sum + (r.total ?? 0), 0)
   // Revenue trend is computed from created_at day-buckets above (weekRows),
@@ -1144,8 +1141,7 @@ export async function updateHotelSettings(args: Partial<HotelSettings>): Promise
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
   // Singleton `id` is not user-editable — strip it from the patch.
-  const { id: _ignore, ...patch } = args
-  void _ignore
+  const { id: _id, ...patch } = args
   const { data, error } = await supabase
     .from('hotel_settings')
     .update(patch)

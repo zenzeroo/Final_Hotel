@@ -11,6 +11,3 @@ export function r2Url(key: string | null | undefined): string {
   const clean = key.replace(/^\/+/, '')
   return `${base}/${clean}`
 }
-
-/** Alias for `r2Url` — clearer in image contexts. */
-export const imageUrl = r2Url

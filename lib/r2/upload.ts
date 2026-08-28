@@ -96,6 +96,3 @@ export async function uploadImageToR2(file: File, key: string): Promise<UploadRe
 
   return { key }
 }
-
-/** Bucket name (re-exported for admin routes that need it for display). */
-export { R2_BUCKET }
