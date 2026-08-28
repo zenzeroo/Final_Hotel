@@ -4,9 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { calculatePrice, generateBookingCode, DEFAULT_PRICING } from '@/lib/pricing'
+import { calculatePrice, generateBookingCode } from '@/lib/pricing'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
-import { getActiveSeasonalRatesForRange, getHotelSettings } from '@/lib/data/manager'
+import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/manager'
 import { getDefaultCancellationPolicy } from '@/lib/data/bookings'
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
 
@@ -111,14 +111,9 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
     }
   }
 
-  // Phase 12: live hotel_settings → tax + fee (mirror booking.ts).
-  const hotelSettings = await getHotelSettings()
-  const walkInSettings = hotelSettings
-    ? {
-        taxRate: Number(hotelSettings.tax_rate ?? DEFAULT_PRICING.taxRate),
-        resortFeePerNight: Number(hotelSettings.resort_fee ?? DEFAULT_PRICING.resortFeePerNight),
-      }
-    : DEFAULT_PRICING
+  // Live tax + resort fee come from hotel_settings via getPricingConstants
+  // (same helper used by createBooking in app/actions/booking.ts).
+  const walkInSettings = await getPricingConstants()
 
   const price = calculatePrice({
     basePrice: room.base_price,

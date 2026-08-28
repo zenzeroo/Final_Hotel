@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { calculatePrice, generateBookingCode, DEFAULT_PRICING } from '@/lib/pricing'
+import { calculatePrice, generateBookingCode } from '@/lib/pricing'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
-import { getActiveSeasonalRatesForRange, getHotelSettings } from '@/lib/data/manager'
+import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/manager'
 import { getDefaultCancellationPolicy, getPromotionByCode } from '@/lib/data/bookings'
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
 
@@ -109,15 +109,10 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   }
 
   // Calculate price (Phase 8 path — baseSubtotal comes from the quote).
-  // Phase 12: fetch hotel_settings for live tax + resort fee. Falls back to
-  // DEFAULT_PRICING (0.07/150) if the singleton row is missing.
-  const hotelSettings = await getHotelSettings()
-  const pricingSettings = hotelSettings
-    ? {
-        taxRate: Number(hotelSettings.tax_rate ?? DEFAULT_PRICING.taxRate),
-        resortFeePerNight: Number(hotelSettings.resort_fee ?? DEFAULT_PRICING.resortFeePerNight),
-      }
-    : DEFAULT_PRICING
+  // Live tax + resort fee come from hotel_settings via getPricingConstants,
+  // which falls back to DEFAULT_PRICING (0.07 / 150) when the singleton row
+  // is missing.
+  const pricingSettings = await getPricingConstants()
   const price = calculatePrice({
     basePrice: room.base_price,
     checkIn: data.checkIn,

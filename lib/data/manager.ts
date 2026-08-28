@@ -1,5 +1,6 @@
 import * as mock from './mock-manager'
 import * as real from './supabase-manager'
+import { DEFAULT_PRICING, type PricingSettings } from '@/lib/pricing'
 
 const useMock = process.env.USE_MOCK_DATA === '1' || process.env.USE_MOCK_DATA === 'true'
 
@@ -13,6 +14,24 @@ export const rejectRefund = useMock ? mock.rejectRefund : real.rejectRefund
 
 // Phase 6 — Settings, Promotions, Staff, Rates
 export const getHotelSettings = useMock ? mock.getHotelSettings : real.getHotelSettings
+
+/**
+ * Read pricing constants from `hotel_settings` and shape them as a
+ * `PricingSettings` object suitable for `calculatePrice(settings)`.
+ * Falls back to `DEFAULT_PRICING` (0.07 tax / 150 THB resort fee) when
+ * the singleton row is missing or the columns are null.
+ *
+ * Used by every server-action caller of `calculatePrice` so the admin
+ * `tax_rate` / `resort_fee` overrides actually reach the booking insert.
+ */
+export async function getPricingConstants(): Promise<PricingSettings> {
+  const settings = await getHotelSettings()
+  if (!settings) return DEFAULT_PRICING
+  return {
+    taxRate: Number(settings.tax_rate ?? DEFAULT_PRICING.taxRate),
+    resortFeePerNight: Number(settings.resort_fee ?? DEFAULT_PRICING.resortFeePerNight),
+  }
+}
 export const listPromotions = useMock ? mock.listPromotions : real.listPromotions
 export const getPromotionById = useMock ? mock.getPromotionById : real.getPromotionById
 export const listStaff = useMock ? mock.listStaff : real.listStaff
