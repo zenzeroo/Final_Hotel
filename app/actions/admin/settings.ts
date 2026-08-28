@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth/require'
+import { actionFail } from '@/lib/errors/supabase'
 import { updateHotelSettings } from '@/lib/data/manager'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
@@ -58,10 +59,7 @@ export async function updateHotelSettingsAction(formData: FormData): Promise<Act
       updated_by: session.id,
     })
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not update hotel settings',
-    }
+    return actionFail(e, 'Could not update hotel settings')
   }
 
   revalidatePath('/admin/settings')

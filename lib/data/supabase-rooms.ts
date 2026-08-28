@@ -1,5 +1,6 @@
 import type { RoomType, SearchFilters, SearchResult } from './types'
 import { hasSupabase } from '../env'
+import { wrapSupabaseError } from '@/lib/errors/supabase'
 
 /**
  * Supabase implementation — used when USE_MOCK_DATA=0.
@@ -27,7 +28,7 @@ export async function getFeaturedRooms(): Promise<RoomType[]> {
     .order('rating_avg', { ascending: false })
     .limit(4)
 
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []) as RoomType[]
 }
 
@@ -40,7 +41,7 @@ export async function getRoomBySlug(slug: string): Promise<RoomType | null> {
     .eq('is_active', true)
     .maybeSingle()
 
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data as RoomType) ?? null
 }
 
@@ -70,7 +71,7 @@ export async function searchRooms(filters: SearchFilters): Promise<SearchResult>
   }
 
   const { data, count, error } = await query
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
 
   return { rooms: (data ?? []) as RoomType[], total: count ?? 0 }
 }
@@ -81,7 +82,7 @@ export async function listRoomTypes(): Promise<RoomType[]> {
     .from('room_types')
     .select('*')
     .order('base_price', { ascending: true })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []) as RoomType[]
 }
 
@@ -92,7 +93,7 @@ export async function getRoomTypeById(id: string): Promise<RoomType | null> {
     .select('*')
     .eq('id', id)
     .maybeSingle()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data as RoomType) ?? null
 }
 
@@ -103,7 +104,7 @@ export async function createRoomType(args: Omit<RoomType, 'id'>): Promise<RoomTy
     .insert(args)
     .select()
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data as RoomType
 }
 
@@ -118,6 +119,6 @@ export async function updateRoomType(args: {
     .eq('id', args.id)
     .select()
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data as RoomType
 }

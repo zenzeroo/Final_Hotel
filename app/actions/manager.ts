@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireRole } from '@/lib/auth/require'
+import { actionFail } from '@/lib/errors/supabase'
 import {
   resolveDamageReport,
   approveRefund,
@@ -36,7 +37,7 @@ export async function resolveDamageReportAction(formData: FormData): Promise<Act
       resolvedBy: session.id,
     })
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Could not resolve report' }
+    return actionFail(e, 'Could not resolve report')
   }
 
   revalidatePath('/manager')
@@ -53,7 +54,7 @@ export async function approveRefundAction(formData: FormData): Promise<ActionRes
   try {
     await approveRefund({ refundId })
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Could not approve refund' }
+    return actionFail(e, 'Could not approve refund')
   }
 
   revalidatePath('/manager')
@@ -72,7 +73,7 @@ export async function rejectRefundAction(formData: FormData): Promise<ActionResu
   try {
     await rejectRefund({ refundId, reason })
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Could not reject refund' }
+    return actionFail(e, 'Could not reject refund')
   }
 
   revalidatePath('/manager')

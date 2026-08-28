@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { wrapSupabaseError } from '@/lib/errors/supabase'
 
 export interface Booking {
   id: string
@@ -77,7 +78,7 @@ export async function getUserBookings(
   }
 
   const { data, error } = await query
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
 
   return (data ?? []) as Booking[]
 }
@@ -101,7 +102,7 @@ export async function getBookingById(
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data as Booking) ?? null
 }
 
@@ -117,7 +118,7 @@ export async function getDefaultCancellationPolicy(): Promise<CancellationPolicy
     .eq('is_default', true)
     .maybeSingle()
 
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data as CancellationPolicy) ?? null
 }
 
@@ -134,6 +135,6 @@ export async function getPromotionByCode(code: string): Promise<Promotion | null
     .eq('is_active', true)
     .maybeSingle()
 
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data as Promotion) ?? null
 }

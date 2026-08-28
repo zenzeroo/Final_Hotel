@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/require'
+import { actionFail } from '@/lib/errors/supabase'
 import type { MaintenanceIssueType, MaintenanceSeverity } from '@/lib/data/types'
 
 export type ActionResult<T = void> =
@@ -66,7 +67,7 @@ export async function startTask(taskId: string): Promise<ActionResult> {
     .eq('id', taskId)
     .eq('status', 'assigned')
 
-  if (error) return { ok: false, error: error.message }
+  if (error) return actionFail(error, 'Could not start task')
 
   revalidatePath('/housekeeper')
   revalidatePath('/housekeeper/tasks')
@@ -100,7 +101,7 @@ export async function completeTask(taskId: string): Promise<ActionResult> {
     .eq('id', taskId)
     .eq('status', 'in_progress')
 
-  if (error) return { ok: false, error: error.message }
+  if (error) return actionFail(error, 'Could not complete task')
 
   revalidatePath('/housekeeper')
   revalidatePath('/housekeeper/tasks')
@@ -148,7 +149,7 @@ export async function reportMaintenance(input: {
     reported_by: session.id,
   })
 
-  if (error) return { ok: false, error: error.message }
+  if (error) return actionFail(error, 'Could not report maintenance')
 
   revalidatePath('/housekeeper')
   revalidatePath('/housekeeper/maintenance')
@@ -173,7 +174,7 @@ export async function updateRoomStatus(
     .update({ status: newStatus, updated_at: new Date().toISOString() })
     .eq('id', unitId)
 
-  if (error) return { ok: false, error: error.message }
+  if (error) return actionFail(error, 'Could not update room status')
 
   revalidatePath('/housekeeper/rooms')
   return { ok: true }

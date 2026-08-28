@@ -33,6 +33,7 @@ import type {
   RankedRoomTypeRevenue,
   ChannelSlice,
 } from './types'
+import { wrapSupabaseError } from '@/lib/errors/supabase'
 
 // =========================================================
 // Phase 9 — Date helpers (ISO day boundaries in the server's TZ).
@@ -206,7 +207,7 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
     ['webBookings', e11],
     ['walkInBookings', e12],
   ] as const) {
-    if (e) throw new Error(`Supabase (${label}): ${e.message}`)
+    if (e) wrapSupabaseError(label, e)
   }
 
   const revenueToday = (revenueTodayRows ?? []).reduce((sum, r) => sum + (r.total ?? 0), 0)
@@ -391,7 +392,7 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     ['unassignedTasks', e3],
     ['activeTasks', e4],
   ] as const) {
-    if (e) throw new Error(`Supabase (${label}): ${e.message}`)
+    if (e) wrapSupabaseError(label, e)
   }
 
   const damageReports = (damageRows ?? []).map((r) =>
@@ -540,7 +541,7 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
     ['audit', e3],
     ['activeCount', e4],
   ] as const) {
-    if (e) throw new Error(`Supabase (${label}): ${e.message}`)
+    if (e) wrapSupabaseError(label, e)
   }
 
   const refundRequests: RefundRequest[] = (refundRows ?? []).map((r) => ({
@@ -726,7 +727,7 @@ export async function getReportsData(): Promise<ReportsData> {
     ['roomTypeRows', e9],
     ['channelRows', e10],
   ] as const) {
-    if (e) throw new Error(`Supabase (${label}): ${e.message}`)
+    if (e) wrapSupabaseError(label, e)
   }
 
   const totalRevenue7d = (last7Rows ?? []).reduce((sum, r) => sum + (r.total ?? 0), 0)
@@ -884,7 +885,7 @@ export async function resolveDamageReport(args: {
     .eq('id', args.reportId)
     .select(DAMAGE_REPORT_SELECT)
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return toDamageReport(data as unknown as DamageReportRow)
 }
 
@@ -897,7 +898,7 @@ export async function approveRefund(args: { refundId: string }): Promise<{ id: s
   const { error } = await supabase.rpc('approve_refund', {
     p_refund_id: args.refundId,
   })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return { id: args.refundId }
 }
 
@@ -912,7 +913,7 @@ export async function rejectRefund(args: { refundId: string; reason: string }): 
       decision_note: args.reason,
     })
     .eq('id', args.refundId)
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return { id: args.refundId }
 }
 
@@ -928,7 +929,7 @@ export async function getHotelSettings(): Promise<HotelSettings> {
     .select('*')
     .eq('id', 1)
     .maybeSingle()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   // The seeded singleton row (from 20260828 migration) is the source of truth.
   // If missing, fall back to safe defaults so the UI doesn't crash mid-deploy.
   if (!data) {
@@ -960,7 +961,7 @@ export async function listPromotions(): Promise<Promotion[]> {
     .from('promotions')
     .select('*')
     .order('valid_from', { ascending: false })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   // DB has no `updated_at` column on promotions; Promotion.updatedAt stays undefined.
   return (data ?? []) as Promotion[]
 }
@@ -973,7 +974,7 @@ export async function getPromotionById(id: string): Promise<Promotion | null> {
     .select('*')
     .eq('id', id)
     .maybeSingle()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data as Promotion | null) ?? null
 }
 
@@ -989,7 +990,7 @@ export async function listStaff(): Promise<StaffMember[]> {
     .in('role', ['reception', 'housekeeper', 'manager', 'admin'])
     .order('role', { ascending: true })
     .order('full_name', { ascending: true })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []).map((r) => ({
     id: r.id,
     full_name: r.full_name ?? '',
@@ -1016,7 +1017,7 @@ export async function listShifts(): Promise<ShiftSlot[]> {
     .gte('shift_date', today)
     .lte('shift_date', weekFromNow)
     .order('shift_date', { ascending: true })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []).map((r) => ({
     staffId: r.staff_id,
     date: r.shift_date,
@@ -1036,7 +1037,7 @@ export async function listRoomUnits(): Promise<RoomUnitWithType[]> {
     .eq('is_active', true)
     .order('floor', { ascending: true })
     .order('unit_label', { ascending: true })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []) as unknown as RoomUnitWithType[]
 }
 
@@ -1047,7 +1048,7 @@ export async function listSeasonalRates(): Promise<SeasonalRate[]> {
     .from('seasonal_rates')
     .select(`*, room_type:room_types(name)`)
     .order('start_date', { ascending: false })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []).map((row) => {
     const r = row as SeasonalRate & { room_type: { name: string } | null }
     return { ...r, room_type_name: r.room_type?.name }
@@ -1065,7 +1066,7 @@ export async function listCancellationPolicies(): Promise<CancellationPolicy[]> 
     .from('cancellation_policies')
     .select('id, name, free_cancel_hours, refund_pct, description')
     .order('free_cancel_hours', { ascending: false })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []).map((r) => ({
     id: r.id,
     name: r.name,
@@ -1085,7 +1086,7 @@ export async function setPromotionActive(args: { promotionId: string; isActive: 
     .eq('id', args.promotionId)
     .select('*')
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data as Promotion
 }
 
@@ -1109,7 +1110,7 @@ export async function createPromotion(args: Omit<Promotion, 'id' | 'createdAt' |
     .insert(insertRow)
     .select()
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data as Promotion
 }
 
@@ -1125,7 +1126,7 @@ export async function updatePromotion(args: {
     .eq('id', args.id)
     .select()
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data as Promotion
 }
 
@@ -1133,7 +1134,7 @@ export async function deletePromotion(args: { id: string }): Promise<{ id: strin
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
   const { error } = await supabase.from('promotions').delete().eq('id', args.id)
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return { id: args.id }
 }
 
@@ -1148,7 +1149,7 @@ export async function updateHotelSettings(args: Partial<HotelSettings>): Promise
     .eq('id', 1)
     .select('*')
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data as HotelSettings
 }
 
@@ -1164,7 +1165,7 @@ export async function closeRoomUnit(args: { unitId: string }): Promise<RoomUnitW
       room_type:room_types(id, slug, name, name_th, base_price, hero_image_key)
     `)
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data as unknown as RoomUnitWithType
 }
 
@@ -1180,7 +1181,7 @@ export async function reopenRoomUnit(args: { unitId: string }): Promise<RoomUnit
       room_type:room_types(id, slug, name, name_th, base_price, hero_image_key)
     `)
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data as unknown as RoomUnitWithType
 }
 
@@ -1193,7 +1194,7 @@ export async function setStaffActive(args: { staffId: string; isActive: boolean 
     .eq('id', args.staffId)
     .select('id, full_name, email, phone, role, is_active, avatar_key, hired_at, created_at')
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return {
     id: data.id,
     full_name: data.full_name ?? '',
@@ -1262,7 +1263,7 @@ export async function updateStaff(args: {
     .eq('id', args.id)
     .select('id, full_name, phone, role')
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return {
     id: data.id,
     full_name: data.full_name ?? '',
@@ -1283,7 +1284,7 @@ export async function countActiveAdmins(excludeId?: string): Promise<number> {
     .eq('is_active', true)
   if (excludeId) q = q.neq('id', excludeId)
   const { count, error } = await q
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return count ?? 0
 }
 
@@ -1308,7 +1309,7 @@ export async function createSeasonalRate(
     })
     .select(`*, room_type:room_types(name)`)
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   const row = data as SeasonalRate & { room_type: { name: string } | null }
   return { ...row, room_type_name: row.room_type?.name }
 }
@@ -1325,7 +1326,7 @@ export async function updateSeasonalRate(args: {
     .eq('id', args.id)
     .select(`*, room_type:room_types(name)`)
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   const row = data as SeasonalRate & { room_type: { name: string } | null }
   return { ...row, room_type_name: row.room_type?.name }
 }
@@ -1334,7 +1335,7 @@ export async function deleteSeasonalRate(args: { id: string }): Promise<{ id: st
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
   const { error } = await supabase.from('seasonal_rates').delete().eq('id', args.id)
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return { id: args.id }
 }
 
@@ -1358,6 +1359,6 @@ export async function getActiveSeasonalRatesForRange(args: {
     .lte('start_date', args.checkOut)
     .gte('end_date', args.checkIn)
     .order('priority', { ascending: false })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []) as SeasonalRate[]
 }

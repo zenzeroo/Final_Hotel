@@ -5,6 +5,8 @@
  * with the mock layer's shape (modulo slight palette differences).
  */
 
+import { wrapSupabaseError } from '@/lib/errors/supabase'
+
 import type {
   PublicReview,
   ReviewForModeration,
@@ -118,7 +120,7 @@ export async function getApprovedRoomReviews(roomTypeId: string): Promise<Public
     .eq('room_type_id', roomTypeId)
     .eq('status', 'approved')
     .order('created_at', { ascending: false })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []).map((r) => toModeration(r as unknown as ReviewRow)).map(toPublic)
 }
 
@@ -131,7 +133,7 @@ export async function getReviewModerationQueue(): Promise<ReviewQueueData> {
     .from('reviews')
     .select(REVIEW_SELECT)
     .order('created_at', { ascending: false })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   const rows = (data ?? []).map((r) => toModeration(r as unknown as ReviewRow))
   const byStatus = (status: ReviewStatus) =>
     rows.filter((r) => r.status === status).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
@@ -180,7 +182,7 @@ export async function createReview(args: {
     })
     .select('id')
     .single()
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return { id: data.id }
 }
 
@@ -204,7 +206,7 @@ async function setReviewStatus(args: {
   }
   if (moderatorUuid) patch.moderated_by = moderatorUuid
   const { error } = await supabase.from('reviews').update(patch).eq('id', args.reviewId)
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return { id: args.reviewId }
 }
 
@@ -240,6 +242,6 @@ export async function deleteReview(args: { reviewId: string }): Promise<{ id: st
   const supabase = await createClient()
   // RLS `review admin delete` restricts to admin only.
   const { error } = await supabase.from('reviews').delete().eq('id', args.reviewId)
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return { id: args.reviewId }
 }

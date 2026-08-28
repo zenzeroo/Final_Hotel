@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Booking } from './bookings'
+import { wrapSupabaseError } from '@/lib/errors/supabase'
 
 /**
  * Staff data access — queries that bypass RLS for reception/housekeeper.
@@ -42,7 +43,7 @@ export async function getAllBookings(filters?: {
   }
 
   const { data, error } = await query
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []) as StaffBooking[]
 }
 
@@ -101,7 +102,7 @@ export async function getRoomsStatus() {
     .order('floor')
     .order('unit_label')
 
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data ?? []
 }
 
@@ -115,7 +116,7 @@ export async function searchCustomers(q: string) {
     .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`)
     .limit(20)
 
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data ?? []
 }
 
@@ -134,6 +135,6 @@ export async function getRecentEvents(limit = 10) {
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return data ?? []
 }

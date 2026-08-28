@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth/require'
+import { actionFail } from '@/lib/errors/supabase'
 import { closeRoomUnit, reopenRoomUnit } from '@/lib/data/manager'
 
 export type ActionResult<T = void> =
@@ -19,10 +20,7 @@ export async function closeRoomAction(formData: FormData): Promise<ActionResult>
   try {
     await closeRoomUnit({ unitId: parsed.data })
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not close room',
-    }
+    return actionFail(e, 'Could not close room')
   }
   revalidatePath('/manager/rates')
   return { ok: true }
@@ -36,10 +34,7 @@ export async function reopenRoomAction(formData: FormData): Promise<ActionResult
   try {
     await reopenRoomUnit({ unitId: parsed.data })
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not reopen room',
-    }
+    return actionFail(e, 'Could not reopen room')
   }
   revalidatePath('/manager/rates')
   return { ok: true }

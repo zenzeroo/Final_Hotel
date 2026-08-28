@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth/require'
+import { actionFail } from '@/lib/errors/supabase'
 import { createRoomType, updateRoomType, listRoomTypes } from '@/lib/data/rooms'
 import {
   createSeasonalRate,
@@ -85,10 +86,7 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
     }
   } catch (e) {
     if (e instanceof R2UploadError) return { ok: false, error: e.message }
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Image upload failed',
-    }
+    return actionFail(e, 'Image upload failed')
   }
 
   const existing = await listRoomTypes()
@@ -107,10 +105,7 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
   try {
     await createRoomType(createArgs)
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not create room type',
-    }
+    return actionFail(e, 'Could not create room type')
   }
 
   revalidatePath('/admin/rates')
@@ -188,19 +183,13 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
     }
   } catch (e) {
     if (e instanceof R2UploadError) return { ok: false, error: e.message }
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Image upload failed',
-    }
+    return actionFail(e, 'Image upload failed')
   }
 
   try {
     await updateRoomType({ id, patch })
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not update room type',
-    }
+    return actionFail(e, 'Could not update room type')
   }
 
   revalidatePath('/admin/rates')
@@ -264,10 +253,7 @@ export async function createSeasonalRateAction(formData: FormData): Promise<Acti
   try {
     await createSeasonalRate(parsed.data)
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not create seasonal rate',
-    }
+    return actionFail(e, 'Could not create seasonal rate')
   }
 
   revalidatePath('/admin/rates')
@@ -303,10 +289,7 @@ export async function updateSeasonalRateAction(formData: FormData): Promise<Acti
   try {
     await updateSeasonalRate({ id: idParsed.data.id, patch: parsed.data })
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not update seasonal rate',
-    }
+    return actionFail(e, 'Could not update seasonal rate')
   }
 
   revalidatePath('/admin/rates')
@@ -323,10 +306,7 @@ export async function deleteSeasonalRateAction(formData: FormData): Promise<Acti
   try {
     await deleteSeasonalRate({ id })
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not delete seasonal rate',
-    }
+    return actionFail(e, 'Could not delete seasonal rate')
   }
 
   revalidatePath('/admin/rates')

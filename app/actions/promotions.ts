@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth/require'
+import { actionFail } from '@/lib/errors/supabase'
 import {
   setPromotionActive,
   createPromotion,
@@ -41,10 +42,7 @@ export async function togglePromotionAction(formData: FormData): Promise<ActionR
       isActive: activeParsed.data,
     })
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not update promotion',
-    }
+    return actionFail(e, 'Could not update promotion')
   }
 
   revalidatePath('/manager/promotions')
@@ -103,10 +101,7 @@ export async function createPromotionAction(formData: FormData): Promise<ActionR
   try {
     await createPromotion(parsed.data)
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not create promotion',
-    }
+    return actionFail(e, 'Could not create promotion')
   }
 
   revalidatePath('/admin/promotions')
@@ -146,10 +141,7 @@ export async function updatePromotionAction(formData: FormData): Promise<ActionR
   try {
     await updatePromotion({ id, patch: parsed.data })
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not update promotion',
-    }
+    return actionFail(e, 'Could not update promotion')
   }
 
   revalidatePath('/admin/promotions')
@@ -166,10 +158,7 @@ export async function deletePromotionAction(formData: FormData): Promise<ActionR
   try {
     await deletePromotion({ id })
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : 'Could not delete promotion',
-    }
+    return actionFail(e, 'Could not delete promotion')
   }
 
   revalidatePath('/admin/promotions')

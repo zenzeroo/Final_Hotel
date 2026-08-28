@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { wrapSupabaseError } from '@/lib/errors/supabase'
 import type {
   HousekeepingTask, MaintenanceReport, RoomUnitBasic,
   DashboardStats, WorkHistoryData, MaintenanceStatus, MaintenanceSeverity,
@@ -19,7 +20,7 @@ export async function getMyTasksForUser(userId: string): Promise<HousekeepingTas
     .in('status', ['assigned', 'in_progress'])
     .order('priority', { ascending: false })
     .order('created_at', { ascending: false })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []) as HousekeepingTask[]
 }
 
@@ -35,7 +36,7 @@ export async function getUnassignedTasks(): Promise<HousekeepingTask[]> {
     .eq('status', 'unassigned')
     .order('priority', { ascending: false })
     .order('created_at', { ascending: false })
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []) as HousekeepingTask[]
 }
 
@@ -55,7 +56,7 @@ export async function getMaintenanceReports(filters?: {
   if (filters?.status?.length) query = query.in('status', filters.status)
   if (filters?.severity?.length) query = query.in('severity', filters.severity)
   const { data, error } = await query
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return (data ?? []) as MaintenanceReport[]
 }
 
@@ -76,13 +77,13 @@ export async function getMyDashboardStatsForUser(userId: string): Promise<Dashbo
     `).in('priority', ['urgent', 'high']).in('status', ['unassigned', 'assigned', 'in_progress'])
       .order('priority', { ascending: false }).limit(5),
   ])
-  if (cleaningCount.error) throw new Error(cleaningCount.error.message)
-  if (maintCount.error) throw new Error(maintCount.error.message)
+  if (cleaningCount.error) wrapSupabaseError('', cleaningCount.error)
+  if (maintCount.error) wrapSupabaseError('', maintCount.error)
 
   const today = new Date().toISOString().slice(0, 10)
   const completedTodayRes = await supabase.from('housekeeping_tasks').select('id', { count: 'exact', head: true })
     .eq('assigned_to', userId).eq('status', 'completed').gte('completed_at', `${today}T00:00:00Z`)
-  if (completedTodayRes.error) throw new Error(completedTodayRes.error.message)
+  if (completedTodayRes.error) wrapSupabaseError('', completedTodayRes.error)
   const shiftProgress = Math.round(((completedTodayRes.count ?? 0) / 12) * 100)
 
   return {
@@ -105,7 +106,7 @@ export async function getAllRoomUnits(): Promise<RoomUnitBasic[]> {
     `)
     .eq('is_active', true)
     .order('floor').order('unit_label')
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   return ((data ?? []) as unknown as RoomUnitBasic[])
 }
 
@@ -126,7 +127,7 @@ async function computeHistory(userId: string | null): Promise<WorkHistoryData> {
   `).eq('status', 'completed').order('completed_at', { ascending: false }).limit(200)
   if (userId) query = query.eq('assigned_to', userId)
   const { data, error } = await query
-  if (error) throw new Error(`Supabase: ${error.message}`)
+  if (error) wrapSupabaseError('', error)
   const completed = (data ?? []) as unknown as HousekeepingTask[]
 
   const roomsCleaned = completed.length

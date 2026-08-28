@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth/require'
+import { actionFail } from '@/lib/errors/supabase'
 import {
   createStaff,
   updateStaff,
@@ -47,7 +48,7 @@ export async function createStaffAction(formData: FormData): Promise<ActionResul
     return { ok: true, data: { initialPassword } }
   } catch (e) {
     console.error('[createStaffAction]', e)
-    return { ok: false, error: 'Could not create staff member' }
+    return actionFail(e, 'Could not create staff member')
   }
 }
 
@@ -114,7 +115,7 @@ export async function updateStaffAction(formData: FormData): Promise<ActionResul
     })
   } catch (e) {
     console.error('[updateStaffAction]', e)
-    return { ok: false, error: 'Could not update staff member' }
+    return actionFail(e, 'Could not update staff member')
   }
 
   revalidatePath('/admin/staff')
@@ -151,7 +152,7 @@ export async function setStaffActiveAction(formData: FormData): Promise<ActionRe
     await setStaffActive({ staffId, isActive })
   } catch (e) {
     console.error('[setStaffActiveAction]', e)
-    return { ok: false, error: 'Could not update staff status' }
+    return actionFail(e, 'Could not update staff status')
   }
 
   revalidatePath('/admin/staff')
