@@ -47,7 +47,6 @@ export async function createStaffAction(formData: FormData): Promise<ActionResul
     revalidatePath('/admin/staff')
     return { ok: true, data: { initialPassword } }
   } catch (e) {
-    console.error('[createStaffAction]', e)
     return actionFail(e, 'Could not create staff member')
   }
 }
@@ -114,7 +113,6 @@ export async function updateStaffAction(formData: FormData): Promise<ActionResul
       },
     })
   } catch (e) {
-    console.error('[updateStaffAction]', e)
     return actionFail(e, 'Could not update staff member')
   }
 
@@ -151,7 +149,6 @@ export async function setStaffActiveAction(formData: FormData): Promise<ActionRe
   try {
     await setStaffActive({ staffId, isActive })
   } catch (e) {
-    console.error('[setStaffActiveAction]', e)
     return actionFail(e, 'Could not update staff status')
   }
 
