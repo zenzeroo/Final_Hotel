@@ -1,28 +1,18 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession, roleHomePath } from '@/lib/supabase/getSession'
+import { requireRole } from '@/lib/auth/require'
 import { closeRoomUnit, reopenRoomUnit } from '@/lib/data/manager'
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string }
 
-async function requireManager() {
-  const session = await getSession()
-  if (!session) redirect('/login?next=/manager/rates')
-  if (session.role !== 'manager' && session.role !== 'admin') {
-    redirect(roleHomePath(session.role))
-  }
-  return session
-}
-
 const unitIdSchema = z.string().min(1).max(80)
 
 export async function closeRoomAction(formData: FormData): Promise<ActionResult> {
-  await requireManager()
+  await requireRole(['manager', 'admin'], '/manager/rates')
   const rawId = String(formData.get('unitId') ?? '').trim()
   const parsed = unitIdSchema.safeParse(rawId)
   if (!parsed.success) return { ok: false, error: 'Missing or invalid room unit id' }
@@ -39,7 +29,7 @@ export async function closeRoomAction(formData: FormData): Promise<ActionResult>
 }
 
 export async function reopenRoomAction(formData: FormData): Promise<ActionResult> {
-  await requireManager()
+  await requireRole(['manager', 'admin'], '/manager/rates')
   const rawId = String(formData.get('unitId') ?? '').trim()
   const parsed = unitIdSchema.safeParse(rawId)
   if (!parsed.success) return { ok: false, error: 'Missing or invalid room unit id' }

@@ -1,9 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession, roleHomePath } from '@/lib/supabase/getSession'
+import { requireRole } from '@/lib/auth/require'
 import { createRoomType, updateRoomType, listRoomTypes } from '@/lib/data/rooms'
 import {
   createSeasonalRate,
@@ -18,13 +17,6 @@ import {
 } from '@/lib/r2/upload'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
-
-async function requireAdminRates() {
-  const session = await getSession()
-  if (!session) redirect('/login?next=/admin/rates')
-  if (session.role !== 'admin') redirect(roleHomePath(session.role))
-  return session
-}
 
 // =====================================================
 // Room type actions
@@ -50,7 +42,7 @@ function collectFiles(values: FormDataEntryValue[]): File[] {
 }
 
 export async function createRoomTypeAction(formData: FormData): Promise<ActionResult> {
-  await requireAdminRates()
+  await requireRole('admin', '/admin/rates')
 
   const candidate = {
     slug: String(formData.get('slug') ?? '').trim(),
@@ -76,7 +68,7 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
   const galleryFiles = collectFiles(formData.getAll('gallery_image_files'))
 
   let hero_image_key = ''
-  let gallery_keys: string[] = []
+  const gallery_keys: string[] = []
 
   try {
     if (heroFile instanceof File && heroFile.size > 0 && heroFile.type.length > 0) {
@@ -141,7 +133,7 @@ function parseExistingGalleryKeys(raw: FormDataEntryValue | null): string[] {
 }
 
 export async function updateRoomTypeAction(formData: FormData): Promise<ActionResult> {
-  await requireAdminRates()
+  await requireRole('admin', '/admin/rates')
 
   const candidate = {
     id: String(formData.get('id') ?? '').trim(),
@@ -250,7 +242,7 @@ function parseOptionalNum(raw: string | null): number | null {
 }
 
 export async function createSeasonalRateAction(formData: FormData): Promise<ActionResult> {
-  await requireAdminRates()
+  await requireRole('admin', '/admin/rates')
 
   const candidate = {
     room_type_id: String(formData.get('room_type_id') ?? '').trim(),
@@ -284,7 +276,7 @@ export async function createSeasonalRateAction(formData: FormData): Promise<Acti
 }
 
 export async function updateSeasonalRateAction(formData: FormData): Promise<ActionResult> {
-  await requireAdminRates()
+  await requireRole('admin', '/admin/rates')
 
   const baseCandidate = {
     id: String(formData.get('id') ?? '').trim(),
@@ -323,7 +315,7 @@ export async function updateSeasonalRateAction(formData: FormData): Promise<Acti
 }
 
 export async function deleteSeasonalRateAction(formData: FormData): Promise<ActionResult> {
-  await requireAdminRates()
+  await requireRole('admin', '/admin/rates')
 
   const id = String(formData.get('id') ?? '').trim()
   if (!id) return { ok: false, error: 'Missing seasonal rate id' }

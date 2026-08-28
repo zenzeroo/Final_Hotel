@@ -1,9 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession, roleHomePath } from '@/lib/supabase/getSession'
+import { requireRole } from '@/lib/auth/require'
 import {
   createStaff,
   updateStaff,
@@ -15,13 +14,6 @@ export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string }
 
-async function requireAdminStaff() {
-  const session = await getSession()
-  if (!session) redirect('/login?next=/admin/staff')
-  if (session.role !== 'admin') redirect(roleHomePath(session.role))
-  return session
-}
-
 const createStaffSchema = z.object({
   full_name: z.string().min(1).max(120),
   email: z.string().email(),
@@ -31,7 +23,7 @@ const createStaffSchema = z.object({
 })
 
 export async function createStaffAction(formData: FormData): Promise<ActionResult<{ initialPassword: string }>> {
-  await requireAdminStaff()
+  await requireRole('admin', '/admin/staff')
 
   const candidate = {
     full_name: String(formData.get('full_name') ?? '').trim(),
@@ -68,7 +60,7 @@ const updateStaffSchema = z.object({
 })
 
 export async function updateStaffAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAdminStaff()
+  const session = await requireRole('admin', '/admin/staff')
 
   const candidate = {
     id: String(formData.get('id') ?? '').trim(),
@@ -130,7 +122,7 @@ export async function updateStaffAction(formData: FormData): Promise<ActionResul
 }
 
 export async function setStaffActiveAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAdminStaff()
+  const session = await requireRole('admin', '/admin/staff')
 
   const staffId = String(formData.get('staffId') ?? '').trim()
   const isActive = formData.get('isActive') === 'true'

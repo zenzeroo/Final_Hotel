@@ -1,9 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getSession, roleHomePath } from '@/lib/supabase/getSession'
+import { requireRole } from '@/lib/auth/require'
 import type { MaintenanceIssueType, MaintenanceSeverity } from '@/lib/data/types'
 
 export type ActionResult<T = void> =
@@ -20,17 +19,8 @@ function isUuid(v: unknown): v is string {
   return typeof v === 'string' && UUID_RE.test(v)
 }
 
-async function requireStaff() {
-  const session = await getSession()
-  if (!session) redirect('/login?next=/housekeeper')
-  if (!['housekeeper', 'reception', 'manager', 'admin'].includes(session.role)) {
-    redirect(roleHomePath(session.role))
-  }
-  return session
-}
-
 export async function claimTask(taskId: string): Promise<ActionResult> {
-  const session = await requireStaff()
+  const session = await requireRole(['housekeeper', 'reception', 'manager', 'admin'], '/housekeeper')
   if (session.role !== 'housekeeper' && session.role !== 'admin') {
     return { ok: false, error: 'Only housekeeper can claim tasks' }
   }
@@ -53,7 +43,7 @@ export async function claimTask(taskId: string): Promise<ActionResult> {
 }
 
 export async function startTask(taskId: string): Promise<ActionResult> {
-  const session = await requireStaff()
+  const session = await requireRole(['housekeeper', 'reception', 'manager', 'admin'], '/housekeeper')
   if (!isUuid(taskId)) return { ok: false, error: 'Invalid task id' }
   const supabase = await createClient()
 
@@ -85,7 +75,7 @@ export async function startTask(taskId: string): Promise<ActionResult> {
 }
 
 export async function completeTask(taskId: string): Promise<ActionResult> {
-  const session = await requireStaff()
+  const session = await requireRole(['housekeeper', 'reception', 'manager', 'admin'], '/housekeeper')
   if (!isUuid(taskId)) return { ok: false, error: 'Invalid task id' }
   const supabase = await createClient()
 
@@ -126,7 +116,7 @@ export async function reportMaintenance(input: {
   title: string
   description?: string
 }): Promise<ActionResult> {
-  const session = await requireStaff()
+  const session = await requireRole(['housekeeper', 'reception', 'manager', 'admin'], '/housekeeper')
   const supabase = await createClient()
 
   if (!isUuid(input.room_unit_id)) return { ok: false, error: 'Invalid room id' }
@@ -170,7 +160,7 @@ export async function updateRoomStatus(
   unitId: string,
   newStatus: 'cleaning' | 'available'
 ): Promise<ActionResult> {
-  await requireStaff()
+  await requireRole(['housekeeper', 'reception', 'manager', 'admin'], '/housekeeper')
   if (!isUuid(unitId)) return { ok: false, error: 'Invalid unit id' }
   const supabase = await createClient()
 

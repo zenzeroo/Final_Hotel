@@ -1,9 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession, roleHomePath } from '@/lib/supabase/getSession'
+import { requireRole } from '@/lib/auth/require'
 import {
   createReview as createReviewData,
   moderateReview as moderateReviewData,
@@ -14,31 +13,10 @@ import {
 import type { ActionResult } from './manager'
 import { translateSupabaseError } from '@/lib/errors/translate'
 
-// ── Auth helpers ────────────────────────────────────────────────────────────
-
-async function requireUser() {
-  const session = await getSession()
-  if (!session) redirect('/login')
-  return session
-}
-
-async function requireModerator() {
-  const session = await requireUser()
-  if (
-    session.role !== 'manager' &&
-    session.role !== 'admin' &&
-    session.role !== 'reception'
-  ) {
-    redirect(roleHomePath(session.role))
-  }
-  return session
-}
-
-async function requireAdmin() {
-  const session = await requireUser()
-  if (session.role !== 'admin') redirect(roleHomePath(session.role))
-  return session
-}
+// Role sets used by the action bodies below. Centralizing here keeps the
+// `requireRole(...)` call sites readable.
+const ANY_AUTH = ['user', 'reception', 'housekeeper', 'manager', 'admin'] as const
+const MODERATOR_ROLES = ['manager', 'admin', 'reception'] as const
 
 // ── Schemas ────────────────────────────────────────────────────────────────
 
@@ -88,7 +66,7 @@ export async function createReviewAction(
     return { error: 'ข้อมูลไม่ถูกต้อง' }
   }
 
-  const session = await requireUser()
+  const session = await requireRole(ANY_AUTH)
   const title = parsed.data.title?.trim() || null
   const body = parsed.data.body?.trim() || null
 
@@ -113,7 +91,7 @@ export async function createReviewAction(
 // ── Staff: approve / hide / unhide ─────────────────────────────────────────
 
 export async function moderateReviewAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireModerator()
+  const session = await requireRole(MODERATOR_ROLES)
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
   if (!parsed.success) return { ok: false, error: 'ไม่พบรหัสรีวิวที่ถูกต้อง' }
@@ -133,7 +111,7 @@ export async function moderateReviewAction(formData: FormData): Promise<ActionRe
 }
 
 export async function hideReviewAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireModerator()
+  const session = await requireRole(MODERATOR_ROLES)
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
   if (!parsed.success) return { ok: false, error: 'ไม่พบรหัสรีวิวที่ถูกต้อง' }
@@ -153,7 +131,7 @@ export async function hideReviewAction(formData: FormData): Promise<ActionResult
 }
 
 export async function unhideReviewAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireModerator()
+  const session = await requireRole(MODERATOR_ROLES)
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
   if (!parsed.success) return { ok: false, error: 'ไม่พบรหัสรีวิวที่ถูกต้อง' }
@@ -175,7 +153,7 @@ export async function unhideReviewAction(formData: FormData): Promise<ActionResu
 // ── Admin: hard delete ─────────────────────────────────────────────────────
 
 export async function deleteReviewAction(formData: FormData): Promise<ActionResult> {
-  await requireAdmin()
+  await requireRole('admin')
 
   const parsed = reviewIdSchema.safeParse({ reviewId: formData.get('reviewId') })
   if (!parsed.success) return { ok: false, error: 'ไม่พบรหัสรีวิวที่ถูกต้อง' }

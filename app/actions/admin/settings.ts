@@ -1,19 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession, roleHomePath } from '@/lib/supabase/getSession'
+import { requireRole } from '@/lib/auth/require'
 import { updateHotelSettings } from '@/lib/data/manager'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
-
-async function requireAdminSettings() {
-  const session = await getSession()
-  if (!session) redirect('/login?next=/admin/settings')
-  if (session.role !== 'admin') redirect(roleHomePath(session.role))
-  return session
-}
 
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
 
@@ -33,7 +25,7 @@ const settingsSchema = z.object({
 })
 
 export async function updateHotelSettingsAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireAdminSettings()
+  const session = await requireRole('admin', '/admin/settings')
 
   const optStr = (key: string): string | null => {
     const v = String(formData.get(key) ?? '').trim()

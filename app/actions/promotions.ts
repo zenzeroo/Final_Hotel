@@ -1,9 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession, roleHomePath } from '@/lib/supabase/getSession'
+import { requireRole } from '@/lib/auth/require'
 import {
   setPromotionActive,
   createPromotion,
@@ -15,24 +14,6 @@ export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string }
 
-async function requirePromotionManager() {
-  const session = await getSession()
-  if (!session) redirect('/login?next=/manager/promotions')
-  // Promotion rights are intentionally restricted: manager + admin only.
-  if (session.role !== 'manager' && session.role !== 'admin') {
-    redirect(roleHomePath(session.role))
-  }
-  return session
-}
-
-async function requireAdminOnly() {
-  const session = await getSession()
-  if (!session) redirect('/login?next=/admin/promotions')
-  // Admin-only: managers use /manager/promotions (toggle only).
-  if (session.role !== 'admin') redirect(roleHomePath(session.role))
-  return session
-}
-
 const promotionIdSchema = z.string().min(1).max(80)
 const booleanSchema = z.preprocess((val) => {
   if (typeof val === 'string') return val === 'true'
@@ -40,7 +21,7 @@ const booleanSchema = z.preprocess((val) => {
 }, z.boolean())
 
 export async function togglePromotionAction(formData: FormData): Promise<ActionResult> {
-  await requirePromotionManager()
+  await requireRole(['manager', 'admin'], '/manager/promotions')
 
   const rawId = String(formData.get('promotionId') ?? '').trim()
   const rawActive = formData.get('isActive')
@@ -88,7 +69,7 @@ const promotionInputSchema = z.object({
 })
 
 export async function createPromotionAction(formData: FormData): Promise<ActionResult> {
-  await requireAdminOnly()
+  await requireRole('admin', '/admin/promotions')
 
   const rawDiscountValue = String(formData.get('discount_value') ?? '').trim()
   const rawMinNights = String(formData.get('min_nights') ?? '').trim()
@@ -134,7 +115,7 @@ export async function createPromotionAction(formData: FormData): Promise<ActionR
 }
 
 export async function updatePromotionAction(formData: FormData): Promise<ActionResult> {
-  await requireAdminOnly()
+  await requireRole('admin', '/admin/promotions')
 
   const id = String(formData.get('id') ?? '').trim()
   if (!id) return { ok: false, error: 'Missing promotion id' }
@@ -177,7 +158,7 @@ export async function updatePromotionAction(formData: FormData): Promise<ActionR
 }
 
 export async function deletePromotionAction(formData: FormData): Promise<ActionResult> {
-  await requireAdminOnly()
+  await requireRole('admin', '/admin/promotions')
 
   const id = String(formData.get('id') ?? '').trim()
   if (!id) return { ok: false, error: 'Missing promotion id' }

@@ -1,8 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
-import { getSession, roleHomePath } from '@/lib/supabase/getSession'
+import { requireRole } from '@/lib/auth/require'
 import {
   resolveDamageReport,
   approveRefund,
@@ -13,17 +12,8 @@ export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string }
 
-async function requireManager() {
-  const session = await getSession()
-  if (!session) redirect('/login?next=/manager')
-  if (session.role !== 'manager' && session.role !== 'admin') {
-    redirect(roleHomePath(session.role))
-  }
-  return session
-}
-
 export async function resolveDamageReportAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireManager()
+  const session = await requireRole(['manager', 'admin'], '/manager')
 
   const reportId = String(formData.get('reportId') ?? '').trim()
   const costRaw = String(formData.get('costEstimate') ?? '').trim()
@@ -55,7 +45,7 @@ export async function resolveDamageReportAction(formData: FormData): Promise<Act
 }
 
 export async function approveRefundAction(formData: FormData): Promise<ActionResult> {
-  await requireManager()
+  await requireRole(['manager', 'admin'], '/manager')
 
   const refundId = String(formData.get('refundId') ?? '').trim()
   if (!refundId) return { ok: false, error: 'Missing refund id' }
@@ -72,7 +62,7 @@ export async function approveRefundAction(formData: FormData): Promise<ActionRes
 }
 
 export async function rejectRefundAction(formData: FormData): Promise<ActionResult> {
-  await requireManager()
+  await requireRole(['manager', 'admin'], '/manager')
 
   const refundId = String(formData.get('refundId') ?? '').trim()
   const reason = String(formData.get('reason') ?? '').trim().slice(0, 500)
