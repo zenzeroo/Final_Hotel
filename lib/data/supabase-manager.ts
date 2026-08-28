@@ -1,7 +1,7 @@
 /**
- * Supabase implementation of Manager data layer.
- * Stubs return safe empty shapes; mutations throw "Phase 7".
- * Real queries will land in Phase 7 once the admin portal ships.
+ * Supabase implementation of the Manager data layer.
+ * Real PostgREST queries against the live DB; consumed by the manager
+ * dashboard, bookings, housekeeping, reviews, and reports pages.
  */
 
 import type {

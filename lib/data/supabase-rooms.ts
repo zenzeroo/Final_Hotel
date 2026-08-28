@@ -75,7 +75,6 @@ export async function searchRooms(filters: SearchFilters): Promise<SearchResult>
   return { rooms: (data ?? []) as RoomType[], total: count ?? 0 }
 }
 
-// Phase 7 — Admin CRUD
 export async function listRoomTypes(): Promise<RoomType[]> {
   const supabase = await getClient()
   const { data, error } = await supabase

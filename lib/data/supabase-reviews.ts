@@ -1,9 +1,8 @@
 /**
- * Supabase implementation of Reviews & Ratings data layer.
- * Real PostgREST queries — Phase 9D replacement for the mock-backed stubs.
+ * Supabase implementation of the Reviews & Ratings data layer.
  *
- * NOTE: avatar background classes and initials are derived in JS to match
- * the mock layer's shape (modulo slight palette differences).
+ * Avatar background classes and initials are derived in JS to keep parity
+ * with the mock layer's shape (modulo slight palette differences).
  */
 
 import type {

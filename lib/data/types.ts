@@ -309,7 +309,7 @@ export interface ReportsData {
 }
 
 // =====================================================
-// Reviews & Ratings (Phase 5)
+// Reviews & Ratings
 // =====================================================
 export type ReviewStatus = 'pending' | 'approved' | 'hidden'
 
@@ -345,7 +345,7 @@ export interface ReviewQueueData {
 }
 
 // =====================================================
-// Manager types — Phase 6 (Settings, Promotions, Staff, Rates)
+// Manager types (Settings, Promotions, Staff, Rates)
 // =====================================================
 export type DiscountType = 'percent' | 'flat'
 

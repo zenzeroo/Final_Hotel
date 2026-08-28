@@ -19,8 +19,8 @@ const MOCK_ROOM_UNITS: RoomUnitBasic[] = [
   { id: 'u-012', floor: 4, unit_label: '404', view_label: 'Pool View', status: 'occupied', room_type: { id: 'rt-003', name: 'Suite Pool', name_th: 'สวีท พูล', hero_image_key: 'rooms/suite-pool-1.jpg' }},
 ]
 
-// Phase 12: mock UIDs are now env-driven so the same mock UI can be tested
-// against a real auth.users.id (set MOCK_HOUSE_1_UID=<real-uid> in .env.local).
+// Mock UIDs are env-driven so the same mock UI can be tested against a real
+// auth.users.id (set MOCK_HOUSE_1_UID=<real-uid> in .env.local).
 // Defaults match the synthetic IDs baked into data/mock-housekeeper.json — see
 // the JSON file header for the "display-only" note.
 const MOCK_HOUSE_1 = process.env.MOCK_HOUSE_1_UID ?? 'u-house-1'

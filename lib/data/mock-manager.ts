@@ -29,7 +29,7 @@ const typed = mockData as {
 }
 
 // =========================================================
-// Phase 6 seeded data — Settings, Promotions, Staff, Rates
+// Seeded data — Settings, Promotions, Staff, Rates
 // Module-scope mutable `state` mirrors mutations across requests during dev.
 // =========================================================
 
@@ -359,7 +359,7 @@ export async function rejectRefund(args: { refundId: string; reason: string }): 
 }
 
 // =========================================================
-// Phase 6 — getters
+// Getters
 // =========================================================
 
 export async function getHotelSettings(): Promise<HotelSettings> {
@@ -395,7 +395,7 @@ export async function listCancellationPolicies(): Promise<CancellationPolicy[]> 
 }
 
 // =========================================================
-// Phase 6 — mutations
+// Mutations
 // =========================================================
 
 export async function setPromotionActive(args: { promotionId: string; isActive: boolean }): Promise<Promotion> {
@@ -410,7 +410,6 @@ export async function setPromotionActive(args: { promotionId: string; isActive: 
   return updated
 }
 
-// Phase 7 — Admin CRUD
 export async function createPromotion(args: Omit<Promotion, 'id' | 'createdAt' | 'updatedAt'>): Promise<Promotion> {
   const now = new Date().toISOString()
   const created: Promotion = {
@@ -487,7 +486,6 @@ export async function setStaffActive(args: { staffId: string; isActive: boolean 
   return updated
 }
 
-// Phase 7 — Admin CRUD
 export async function createStaff(args: {
   full_name: string
   email: string
@@ -530,7 +528,6 @@ export async function countActiveAdmins(excludeId?: string): Promise<number> {
   ).length
 }
 
-// Phase 7 — Seasonal Rate CRUD
 export async function createSeasonalRate(
   args: Omit<SeasonalRate, 'id' | 'room_type_name'>,
 ): Promise<SeasonalRate> {
@@ -566,7 +563,7 @@ export async function deleteSeasonalRate(args: { id: string }): Promise<{ id: st
 }
 
 /**
- * Phase 8 — Pricing engine.
+ * Pricing engine helper.
  * Returns active seasonal rates whose [start_date, end_date] (inclusive)
  * overlaps the booking window [checkIn, checkOut).
  */
