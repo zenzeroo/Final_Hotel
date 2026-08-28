@@ -191,7 +191,7 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, m
               type="text"
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="EARLY15"
+              placeholder="PROMO15"
               className="flex-1 bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
             />
             <button

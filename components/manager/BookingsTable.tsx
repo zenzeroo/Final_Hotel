@@ -15,31 +15,31 @@ const STATUS_CLASS: Record<BookingOversightRow['status'], string> = {
 }
 
 const STATUS_LABEL: Record<BookingOversightRow['status'], string> = {
-  paid: 'Paid',
-  pending: 'Pending',
-  cancelled: 'Cancelled',
-  refunded: 'Refunded',
+  paid: 'ชำระแล้ว',
+  pending: 'รอดำเนินการ',
+  cancelled: 'ยกเลิกแล้ว',
+  refunded: 'คืนเงินแล้ว',
 }
 
 export function BookingsTable({ bookings, activeCount }: BookingsTableProps) {
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <h3 className="font-headline-sm text-headline-sm text-primary">Active Bookings</h3>
+        <h3 className="font-headline-sm text-headline-sm text-primary">การจองที่ใช้งานอยู่</h3>
         <span className="text-caption text-on-surface-variant">
-          Showing {bookings.length} of {activeCount} active
+          แสดง {bookings.length} จาก {activeCount} รายการที่ใช้งานอยู่
         </span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-body-md">
           <thead className="text-label-md uppercase tracking-wider text-on-surface-variant border-b border-outline-variant">
             <tr>
-              <th className="py-3 pr-4">ID</th>
-              <th className="py-3 pr-4">Guest</th>
-              <th className="py-3 pr-4">Room / Type</th>
-              <th className="py-3 pr-4">Dates</th>
-              <th className="py-3 pr-4">Status</th>
-              <th className="py-3 pr-4">Actions</th>
+              <th className="py-3 pr-4">รหัส</th>
+              <th className="py-3 pr-4">แขก</th>
+              <th className="py-3 pr-4">ห้อง / ประเภท</th>
+              <th className="py-3 pr-4">วันที่</th>
+              <th className="py-3 pr-4">สถานะ</th>
+              <th className="py-3 pr-4">ดำเนินการ</th>
             </tr>
           </thead>
           <tbody>
@@ -57,12 +57,12 @@ export function BookingsTable({ bookings, activeCount }: BookingsTableProps) {
                   </div>
                 </td>
                 <td className="py-3 pr-4 text-on-surface">
-                  <span className="font-semibold">Room {b.roomNumber}</span>
+                  <span className="font-semibold">ห้อง {b.roomNumber}</span>
                   <span className="block text-caption text-on-surface-variant">{b.roomType}</span>
                 </td>
                 <td className="py-3 pr-4 text-on-surface-variant">
                   {format(new Date(b.checkIn), 'd MMM')} – {format(new Date(b.checkOut), 'd MMM')}
-                  <span className="block text-caption">{b.nights} nights</span>
+                  <span className="block text-caption">{b.nights} คืน</span>
                 </td>
                 <td className="py-3 pr-4">
                   <span
@@ -75,7 +75,7 @@ export function BookingsTable({ bookings, activeCount }: BookingsTableProps) {
                   <button
                     type="button"
                     className="inline-flex items-center gap-1 text-caption text-primary hover:text-secondary"
-                    title="Special Edit"
+                    title="แก้ไขพิเศษ"
                   >
                     <MaterialIcon name="edit" size={16} />
                   </button>

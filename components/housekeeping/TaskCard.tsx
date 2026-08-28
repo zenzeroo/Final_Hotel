@@ -6,11 +6,11 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import type { HousekeepingTask } from '@/lib/data/types'
 
 const TASK_TYPE_LABELS: Record<string, string> = {
-  cleaning: 'Cleaning',
-  turn_down: 'Turn-down',
-  deep_clean: 'Deep Clean',
-  inspection: 'Inspection',
-  restock: 'Restock',
+  cleaning: 'ทำความสะอาด',
+  turn_down: 'เตรียมห้อง',
+  deep_clean: 'ทำความสะอาดลึก',
+  inspection: 'ตรวจสอบ',
+  restock: 'เติมสิ่งของ',
 }
 
 interface Props {
@@ -25,7 +25,7 @@ export function TaskCard({ task, variant = 'my' }: Props) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap mb-2">
           <h4 className="font-headline-sm text-headline-sm text-primary">
-            {unit ? `Room ${unit.unit_label}` : `Unit ${task.room_unit_id}`}
+            {unit ? `ห้อง ${unit.unit_label}` : `Unit ${task.room_unit_id}`}
           </h4>
           <PriorityBadge priority={task.priority} />
           <StatusBadge status={task.status} />

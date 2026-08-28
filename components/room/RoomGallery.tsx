@@ -22,7 +22,7 @@ export function RoomGallery({ room }: RoomGalleryProps) {
           className="object-cover"
         />
         <span className="absolute top-4 left-4 px-4 py-2 bg-secondary text-on-secondary rounded-full text-label-md font-semibold uppercase tracking-wider">
-          Signature Collection
+          คอลเลกชั่นพิเศษ
         </span>
       </div>
 

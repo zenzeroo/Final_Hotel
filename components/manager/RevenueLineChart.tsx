@@ -32,7 +32,7 @@ export function RevenueLineChart({ data, total, trendPct }: RevenueLineChartProp
     labels,
     datasets: [
       {
-        label: 'Revenue',
+        label: 'รายได้',
         data: values,
         borderColor: chartColors.primary,
         borderWidth: 2,
@@ -64,7 +64,7 @@ export function RevenueLineChart({ data, total, trendPct }: RevenueLineChartProp
         bodyColor: '#faf9f6',
         padding: 10,
         callbacks: {
-          label: (ctx) => `Revenue: ${formatTHB(ctx.parsed.y as number)}`,
+          label: (ctx) => `รายได้: ${formatTHB(ctx.parsed.y as number)}`,
         },
       },
     },
@@ -89,7 +89,7 @@ export function RevenueLineChart({ data, total, trendPct }: RevenueLineChartProp
       <div className="flex items-end justify-between mb-4 flex-wrap gap-2">
         <div>
           <p className="text-label-md uppercase tracking-wider text-on-surface-variant">
-            Total Revenue (7 days)
+            รายได้รวม (7 วัน)
           </p>
           <p className="font-display text-display-lg-mobile text-primary">{formatTHB(total)}</p>
         </div>

@@ -38,12 +38,12 @@ export function FloorGroupSection({ rooms }: FloorGroupSectionProps) {
               ชั้น {floor}
               {floor === 4 && (
                 <span className="ml-3 text-label-md text-secondary font-semibold uppercase tracking-wider">
-                  · Executive Level
+                  · ชั้นผู้บริหาร
                 </span>
               )}
               {floor === 3 && (
                 <span className="ml-3 text-label-md text-secondary font-semibold uppercase tracking-wider">
-                  · Ocean View
+                  · วิวทะเล
                 </span>
               )}
             </h2>

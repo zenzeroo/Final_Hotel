@@ -198,7 +198,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
               <span className="text-on-surface">{formatTHB(price.baseSubtotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-on-surface-variant">ภาษี 7%</span>
+              <span className="text-on-surface-variant">ภาษี</span>
               <span className="text-on-surface">{formatTHB(price.taxTotal)}</span>
             </div>
             <div className="flex justify-between">

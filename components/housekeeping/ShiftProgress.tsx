@@ -4,7 +4,7 @@ export function ShiftProgress({ percent }: { percent: number }) {
     <div>
       <div className="flex items-end justify-between mb-2">
         <span className="font-display-lg text-display-lg text-primary">{clamped}%</span>
-        <span className="text-caption text-on-surface-variant uppercase tracking-wider">Target: 12 rooms</span>
+        <span className="text-caption text-on-surface-variant uppercase tracking-wider">เป้าหมาย: 12 ห้อง</span>
       </div>
       <div className="h-2 bg-surface-container rounded-full overflow-hidden">
         <div

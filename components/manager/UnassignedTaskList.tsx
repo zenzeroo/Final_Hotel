@@ -9,9 +9,9 @@ interface UnassignedTaskListProps {
 export function UnassignedTaskList({ tasks }: UnassignedTaskListProps) {
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">Unassigned Tasks</h3>
+      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">งานที่ยังไม่ได้มอบหมาย</h3>
       {tasks.length === 0 ? (
-        <p className="text-body-md text-on-surface-variant italic">All tasks are assigned.</p>
+        <p className="text-body-md text-on-surface-variant italic">งานทั้งหมดถูกมอบหมายแล้ว</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {tasks.map((t) => (
@@ -27,7 +27,7 @@ export function UnassignedTaskList({ tasks }: UnassignedTaskListProps) {
               <div className="flex-1">
                 <p className="text-body-md font-semibold text-primary">{t.title}</p>
                 <p className="text-caption text-on-surface-variant">
-                  Room {t.roomNumber} ·{' '}
+                  ห้อง {t.roomNumber} ·{' '}
                   {formatDistanceToNow(new Date(t.requestedAt), { addSuffix: true })}
                 </p>
               </div>

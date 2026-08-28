@@ -8,9 +8,9 @@ const STATUS_BG: Record<RoomStatusCellType['status'], string> = {
 }
 
 const STATUS_LABEL: Record<RoomStatusCellType['status'], string> = {
-  dirty: 'Dirty',
-  cleaning: 'Cleaning',
-  inspected: 'Ready',
+  dirty: 'สกปรก',
+  cleaning: 'กำลังทำความสะอาด',
+  inspected: 'พร้อมใช้',
 }
 
 interface RoomStatusCellProps {
@@ -21,7 +21,7 @@ export function RoomStatusCell({ cell }: RoomStatusCellProps) {
   return (
     <div
       className={`relative aspect-square rounded-md flex flex-col items-center justify-center text-center ${STATUS_BG[cell.status]}`}
-      title={`Room ${cell.roomNumber} — ${STATUS_LABEL[cell.status]}${cell.occupied ? ' (occupied)' : ''}`}
+      title={`ห้อง ${cell.roomNumber} — ${STATUS_LABEL[cell.status]}${cell.occupied ? ' (มีแขก)' : ''}`}
     >
       <p className="font-headline-sm text-headline-sm leading-none">{cell.roomNumber}</p>
       <p className="text-[10px] uppercase tracking-wider mt-1 opacity-80">

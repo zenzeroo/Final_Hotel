@@ -28,14 +28,14 @@ export function OccupancyBarChart({ data }: OccupancyBarChartProps) {
     labels,
     datasets: [
       {
-        label: 'Last Year',
+        label: 'ปีก่อน',
         data: last,
         backgroundColor: chartColors.outlineVariant,
         borderRadius: 4,
         barThickness: 18,
       },
       {
-        label: 'This Year',
+        label: 'ปีนี้',
         data: current,
         backgroundColor: chartColors.secondary,
         borderRadius: 4,
@@ -78,7 +78,7 @@ export function OccupancyBarChart({ data }: OccupancyBarChartProps) {
 
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">Occupancy Rate YoY</h3>
+      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">อัตราการเข้าพักเทียบปีก่อน</h3>
       <div className="h-64">
         <Bar data={chartData} options={options} />
       </div>

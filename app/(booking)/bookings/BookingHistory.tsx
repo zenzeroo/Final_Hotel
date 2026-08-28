@@ -169,7 +169,7 @@ function BookingRow({
             </span>
           </div>
           <p className="text-caption text-on-surface-variant font-mono mb-2">
-            #{booking.booking_code}
+            รหัส #{booking.booking_code}
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body-md text-on-surface-variant">
             <span className="inline-flex items-center gap-1.5">

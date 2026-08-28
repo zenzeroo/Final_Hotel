@@ -76,7 +76,7 @@ export function LoginForm({ next, errorMessage }: LoginFormProps) {
           <input
             type="email"
             name="email"
-            placeholder="example@gmail.com"
+            placeholder="เช่น yourname@email.com"
             required
             autoComplete="email"
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"

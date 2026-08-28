@@ -28,14 +28,14 @@ export function AlertsPanel({ alerts }: AlertsPanelProps) {
   if (alerts.length === 0) {
     return (
       <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-        <h3 className="font-headline-sm text-headline-sm text-primary mb-2">Alerts</h3>
-        <p className="text-body-md text-on-surface-variant italic">No active alerts.</p>
+        <h3 className="font-headline-sm text-headline-sm text-primary mb-2">การแจ้งเตือน</h3>
+        <p className="text-body-md text-on-surface-variant italic">ไม่มีการแจ้งเตือนที่ใช้งานอยู่</p>
       </div>
     )
   }
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6 flex flex-col gap-4">
-      <h3 className="font-headline-sm text-headline-sm text-primary">Alerts</h3>
+      <h3 className="font-headline-sm text-headline-sm text-primary">การแจ้งเตือน</h3>
       <ul className="flex flex-col gap-3">
         {alerts.map((a) => (
           <li

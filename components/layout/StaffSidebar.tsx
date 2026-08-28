@@ -18,7 +18,7 @@ interface NavItem {
 const RECEPTION_NAV: NavItem[] = [
   { label: 'แดชบอร์ด', href: '/reception', icon: 'dashboard' },
   { label: 'จัดการการจอง', href: '/reception/bookings', icon: 'bookmark' },
-  { label: 'Walk-in Booking', href: '/reception/bookings/new', icon: 'person_add' },
+  { label: 'การจองแบบ Walk-in', href: '/reception/bookings/new', icon: 'person_add' },
   { label: 'เช็คอิน / เช็คเอาท์', href: '/reception/check-in-out', icon: 'swap_horiz' },
   { label: 'ค้นหาลูกค้า', href: '/reception/customers', icon: 'search' },
   { label: 'คำขอจากแขก', href: '/reception/requests', icon: 'forum' },
@@ -36,22 +36,22 @@ const HOUSEKEEPER_NAV: NavItem[] = [
 
 const MANAGER_NAV: NavItem[] = [
   { label: 'แดชบอร์ด', href: '/manager', icon: 'dashboard' },
-  { label: 'Reports & Analytics', href: '/manager/reports', icon: 'analytics' },
-  { label: 'Hotel Settings', href: '/manager/settings', icon: 'settings' },
-  { label: 'Room & Rate Management', href: '/manager/rates', icon: 'bed' },
-  { label: 'Booking Oversight', href: '/manager/bookings', icon: 'calendar_month' },
-  { label: 'Staff Management', href: '/manager/staff', icon: 'badge' },
-  { label: 'Housekeeping Overview', href: '/manager/housekeeping', icon: 'cleaning_services' },
-  { label: 'Reviews Management', href: '/manager/reviews', icon: 'reviews' },
-  { label: 'Promotions & Discounts', href: '/manager/promotions', icon: 'sell' },
+  { label: 'รายงานและการวิเคราะห์', href: '/manager/reports', icon: 'analytics' },
+  { label: 'ตั้งค่าโรงแรม', href: '/manager/settings', icon: 'settings' },
+  { label: 'จัดการห้องและราคา', href: '/manager/rates', icon: 'bed' },
+  { label: 'ดูแลการจอง', href: '/manager/bookings', icon: 'calendar_month' },
+  { label: 'จัดการเจ้าหน้าที่', href: '/manager/staff', icon: 'badge' },
+  { label: 'ภาพรวมแม่บ้าน', href: '/manager/housekeeping', icon: 'cleaning_services' },
+  { label: 'จัดการรีวิว', href: '/manager/reviews', icon: 'reviews' },
+  { label: 'โปรโมชั่นและส่วนลด', href: '/manager/promotions', icon: 'sell' },
 ]
 
 const ADMIN_NAV: NavItem[] = [
-  { label: 'Executive Overview', href: '/admin', icon: 'dashboard' },
-  { label: 'Promotions', href: '/admin/promotions', icon: 'sell' },
-  { label: 'Staff', href: '/admin/staff', icon: 'badge' },
-  { label: 'Rooms & Rates', href: '/admin/rates', icon: 'bed' },
-  { label: 'Hotel Settings', href: '/admin/settings', icon: 'settings' },
+  { label: 'ภาพรวมผู้บริหาร', href: '/admin', icon: 'dashboard' },
+  { label: 'โปรโมชั่น', href: '/admin/promotions', icon: 'sell' },
+  { label: 'เจ้าหน้าที่', href: '/admin/staff', icon: 'badge' },
+  { label: 'ห้องและราคา', href: '/admin/rates', icon: 'bed' },
+  { label: 'ตั้งค่าโรงแรม', href: '/admin/settings', icon: 'settings' },
 ]
 
 const NAV_BY_ROLE: Record<StaffSidebarProps['role'], NavItem[]> = {
@@ -101,7 +101,7 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
                 <MaterialIcon name={item.icon} size={20} />
                 <span className="text-body-md">{item.label}</span>
                 <span className="ml-auto text-[10px] uppercase tracking-wider text-secondary/40">
-                  Soon
+                  เร็วๆ นี้
                 </span>
               </div>
             )

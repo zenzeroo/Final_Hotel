@@ -17,7 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Zenzero Hotel | Organic Luxury",
+  title: "Zenzero Hotel | ความหรูหราจากธรรมชาติ",
   description:
     "ค้นหาห้องพักในฝันของคุณ — ประสบการณ์พักผ่อนที่เป็นธรรมชาติและหรูหรา",
 };

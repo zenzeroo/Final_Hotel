@@ -8,23 +8,23 @@ export function AuditLogTable({ entries }: AuditLogTableProps) {
   if (entries.length === 0) {
     return (
       <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-        <h3 className="font-headline-sm text-headline-sm text-primary mb-2">Audit Log</h3>
-        <p className="text-body-md text-on-surface-variant italic">No audit entries yet.</p>
+        <h3 className="font-headline-sm text-headline-sm text-primary mb-2">บันทึกการตรวจสอบ</h3>
+        <p className="text-body-md text-on-surface-variant italic">ยังไม่มีรายการตรวจสอบ</p>
       </div>
     )
   }
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">Audit Log</h3>
+      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">บันทึกการตรวจสอบ</h3>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-body-md">
           <thead className="text-label-md uppercase tracking-wider text-on-surface-variant border-b border-outline-variant">
             <tr>
-              <th className="py-3 pr-4">Timestamp</th>
-              <th className="py-3 pr-4">Staff ID</th>
-              <th className="py-3 pr-4">Action</th>
-              <th className="py-3 pr-4">Target</th>
-              <th className="py-3 pr-4">Details</th>
+              <th className="py-3 pr-4">เวลา</th>
+              <th className="py-3 pr-4">รหัสเจ้าหน้าที่</th>
+              <th className="py-3 pr-4">การกระทำ</th>
+              <th className="py-3 pr-4">เป้าหมาย</th>
+              <th className="py-3 pr-4">รายละเอียด</th>
             </tr>
           </thead>
           <tbody>

@@ -49,7 +49,7 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
                   </span>
                   <span className="inline-flex items-center gap-2">
                     <MaterialIcon name="bed" size={18} />
-                    {room.bed_type} Bed
+                    {room.bed_type} เตียง
                   </span>
                   {room.view_label && (
                     <span className="inline-flex items-center gap-2">

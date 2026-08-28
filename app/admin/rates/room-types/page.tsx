@@ -25,7 +25,7 @@ export default async function AdminRoomTypesPage() {
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            Room Types & Rates
+            ประเภทห้องและราคา
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
             จัดการประเภทห้องและอัตราตามฤดูกาล — สร้าง / แก้ไข / เปิด-ปิด

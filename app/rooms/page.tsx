@@ -67,7 +67,7 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
             {/* Results */}
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h1 className="font-display text-3xl text-primary">Available Rooms</h1>
+                <h1 className="font-display text-3xl text-primary">ห้องพักที่ว่าง</h1>
                 <span className="text-body-md text-on-surface-variant">
                   แสดง {total} ห้อง
                 </span>

@@ -22,7 +22,7 @@ export default async function AdminPromotionsPage() {
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            Promotions Management
+            จัดการโปรโมชั่น
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
             จัดการโปรโมชั่นและส่วนลดทั้งหมด — สร้าง / แก้ไข / ลบ / เปิด-ปิด

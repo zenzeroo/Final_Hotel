@@ -14,7 +14,7 @@ export function DailyPerformanceChart({ data }: { data: WorkHistoryData['dailyPe
                 <div
                   className="w-full bg-secondary rounded-t-md transition-all duration-500"
                   style={{ height: `${heightPct}%`, minHeight: d.count > 0 ? '4px' : '0' }}
-                  title={`${d.date}: ${d.count} tasks`}
+                  title={`${d.date}: ${d.count} งาน`}
                 />
               </div>
               <span className="text-caption text-on-surface-variant mt-1.5">{d.date}</span>

@@ -22,25 +22,25 @@ export function DamageReportTable({ reports }: DamageReportTableProps) {
   if (reports.length === 0) {
     return (
       <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-        <h3 className="font-headline-sm text-headline-sm text-primary mb-2">Damage Report Log</h3>
-        <p className="text-body-md text-on-surface-variant italic">No damage reports.</p>
+        <h3 className="font-headline-sm text-headline-sm text-primary mb-2">บันทึกรายงานความเสียหาย</h3>
+        <p className="text-body-md text-on-surface-variant italic">ไม่มีรายงานความเสียหาย</p>
       </div>
     )
   }
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">Damage Report Log</h3>
+      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">บันทึกรายงานความเสียหาย</h3>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-body-md">
           <thead className="text-label-md uppercase tracking-wider text-on-surface-variant border-b border-outline-variant">
             <tr>
-              <th className="py-3 pr-4">Room</th>
-              <th className="py-3 pr-4">Reported by</th>
-              <th className="py-3 pr-4">Description</th>
-              <th className="py-3 pr-4">Photo</th>
-              <th className="py-3 pr-4">Severity</th>
-              <th className="py-3 pr-4">Cost</th>
-              <th className="py-3 pr-4">Action</th>
+              <th className="py-3 pr-4">ห้อง</th>
+              <th className="py-3 pr-4">รายงานโดย</th>
+              <th className="py-3 pr-4">คำอธิบาย</th>
+              <th className="py-3 pr-4">รูปภาพ</th>
+              <th className="py-3 pr-4">ความรุนแรง</th>
+              <th className="py-3 pr-4">ค่าใช้จ่าย</th>
+              <th className="py-3 pr-4">ดำเนินการ</th>
             </tr>
           </thead>
           <tbody>
@@ -80,7 +80,7 @@ export function DamageReportTable({ reports }: DamageReportTableProps) {
                 <td className="py-3 pr-4">
                   {r.resolved ? (
                     <span className="text-caption text-on-surface-variant">
-                      Resolved {r.resolvedAt ? format(new Date(r.resolvedAt), 'd MMM') : ''}
+                      แก้ไขแล้ว {r.resolvedAt ? format(new Date(r.resolvedAt), 'd MMM') : ''}
                     </span>
                   ) : (
                     <ResolveDamageButton reportId={r.id} defaultCost={r.costEstimate} />

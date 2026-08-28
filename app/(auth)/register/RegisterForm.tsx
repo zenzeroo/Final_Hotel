@@ -95,7 +95,7 @@ export function RegisterForm({ next, errorMessage }: RegisterFormProps) {
           <input
             type="email"
             name="email"
-            placeholder="example@gmail.com"
+            placeholder="เช่น yourname@email.com"
             required
             autoComplete="email"
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
@@ -117,7 +117,7 @@ export function RegisterForm({ next, errorMessage }: RegisterFormProps) {
           <input
             type="tel"
             name="phone"
-            placeholder="08x-xxx-xxxx"
+            placeholder="08X-XXX-XXXX"
             autoComplete="tel"
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
           />

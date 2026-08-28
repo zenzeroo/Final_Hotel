@@ -1,10 +1,12 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
+import Image from 'next/image'
 import type { RoomType } from '@/lib/data/types'
 import { createRoomTypeAction, updateRoomTypeAction } from '@/app/actions/admin/rates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { r2Url } from '@/lib/r2/publicUrl'
 
 interface RoomTypeFormProps {
   mode: 'create' | 'edit'
@@ -59,6 +61,163 @@ function SubmitButton({ label }: { label: string }) {
   )
 }
 
+/**
+ * Image upload section: hero (single file, replaces) + gallery (multi-file, appends).
+ * Shows live previews for newly selected files via `URL.createObjectURL`.
+ * Existing gallery keys are forwarded to the server action via a hidden JSON input
+ * so updates don't wipe the gallery when only adding more.
+ */
+function RoomImagesSection({ initial }: { initial?: RoomType }) {
+  const heroUrl = initial?.hero_image_key ? r2Url(initial.hero_image_key) : ''
+  const existingGallery = initial?.gallery_keys ?? []
+
+  const [heroPreview, setHeroPreview] = useState<string | null>(null)
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
+  const objectUrlsRef = useRef<string[]>([])
+
+  // Revoke any object URLs we created when the component unmounts (memory leak guard).
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [])
+
+  const handleHeroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) {
+      setHeroPreview(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    objectUrlsRef.current.push(url)
+    setHeroPreview(url)
+  }
+
+  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    // Revoke previous previews before creating new ones.
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    objectUrlsRef.current = []
+    const urls = files.map((file) => {
+      const url = URL.createObjectURL(file)
+      objectUrlsRef.current.push(url)
+      return url
+    })
+    setGalleryPreviews(urls)
+  }
+
+  const heroDisplay = heroPreview ?? heroUrl
+  const hasExistingGallery = existingGallery.length > 0
+  const hasNewGallery = galleryPreviews.length > 0
+
+  return (
+    <div className="flex flex-col gap-4 p-4 bg-surface-container-low border border-outline-variant rounded-lg">
+      <div className="flex items-center gap-2">
+        <MaterialIcon name="photo_library" size={20} className="text-secondary" />
+        <span className="text-label-lg text-on-surface font-semibold">รูปภาพห้อง</span>
+      </div>
+
+      {initial?.id && (
+        <input type="hidden" name="existing_gallery_keys" value={JSON.stringify(existingGallery)} />
+      )}
+
+      {/* Hero */}
+      <div className="flex flex-col gap-2">
+        <span className="text-label-md text-on-surface">รูป Hero (ภาพหลัก)</span>
+        {heroDisplay && (
+          <div className="relative w-full aspect-[16/9] max-w-md rounded-lg overflow-hidden bg-surface-container">
+            <Image
+              src={heroDisplay}
+              alt="Hero preview"
+              fill
+              unoptimized
+              sizes="(max-width: 768px) 100vw, 448px"
+              className="object-cover"
+            />
+          </div>
+        )}
+        <input
+          type="file"
+          name="hero_image_file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleHeroChange}
+          className="block w-full text-body-sm text-on-surface file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-secondary file:font-semibold file:cursor-pointer hover:file:bg-primary-container file:transition-colors"
+        />
+        <span className="text-body-sm text-on-surface-variant">
+          JPEG / PNG / WebP, สูงสุด 10 MB · อัปโหลดใหม่จะแทนที่รูปเดิม
+        </span>
+      </div>
+
+      {/* Gallery */}
+      <div className="flex flex-col gap-2">
+        <span className="text-label-md text-on-surface">รูป Gallery (เพิ่มได้หลายรูป)</span>
+
+        {hasExistingGallery && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-body-sm text-on-surface-variant">
+              รูป Gallery ปัจจุบัน ({existingGallery.length} รูป):
+            </span>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+              {existingGallery.map((key) => (
+                <div
+                  key={key}
+                  className="relative aspect-square rounded-md overflow-hidden bg-surface-container"
+                >
+                  <Image
+                    src={r2Url(key)}
+                    alt="Gallery"
+                    fill
+                    unoptimized
+                    sizes="120px"
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {hasNewGallery && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-body-sm text-on-surface-variant">
+              รูปใหม่ที่จะเพิ่ม ({galleryPreviews.length} รูป):
+            </span>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+              {galleryPreviews.map((url, i) => (
+                <div
+                  key={url}
+                  className="relative aspect-square rounded-md overflow-hidden bg-surface-container ring-2 ring-secondary"
+                >
+                  <Image
+                    src={url}
+                    alt={`New ${i + 1}`}
+                    fill
+                    unoptimized
+                    sizes="120px"
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <input
+          type="file"
+          name="gallery_image_files"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          onChange={handleGalleryChange}
+          className="block w-full text-body-sm text-on-surface file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-secondary file:font-semibold file:cursor-pointer hover:file:bg-primary-container file:transition-colors"
+        />
+        <span className="text-body-sm text-on-surface-variant">
+          รูปใหม่จะถูกเพิ่มต่อท้าย gallery เดิม (ไม่ลบรูปเก่า)
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
   const wrapped = async (
     _state: FormState | null,
@@ -89,7 +248,7 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
       {mode === 'edit' && initial && <input type="hidden" name="id" value={initial.id} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Slug (URL-friendly)" required>
+        <Field label="Slug (ใช้ใน URL)" required>
           <input
             name="slug"
             type="text"
@@ -162,6 +321,8 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
           className={inputClass}
         />
       </Field>
+
+      <RoomImagesSection initial={initial} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="จำนวนผู้เข้าพักสูงสุด" required>

@@ -10,10 +10,10 @@ export function FloorStatusGroup({ group }: FloorStatusGroupProps) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-headline-sm text-headline-sm text-primary">
-          Floor {group.floor} — {group.label}
+          ชั้น {group.floor} — {group.label}
         </h4>
         <span className="text-caption text-on-surface-variant">
-          {group.assignedTo ? `Assigned` : 'Unassigned'}
+          {group.assignedTo ? `มอบหมายแล้ว` : 'ยังไม่ได้มอบหมาย'}
         </span>
       </div>
       <div className="grid grid-cols-4 gap-3">

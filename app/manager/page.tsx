@@ -9,7 +9,7 @@ import { formatTHB } from '@/lib/pricing'
 export const dynamic = 'force-dynamic'
 
 function today() {
-  return new Date().toLocaleDateString('en-US', {
+  return new Date().toLocaleDateString('th-TH', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -17,20 +17,27 @@ function today() {
   })
 }
 
+function greeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'สวัสดีตอนเช้า'
+  if (h < 18) return 'สวัสดีตอนบ่าย'
+  return 'สวัสดีตอนเย็น'
+}
+
 export default async function ManagerDashboard() {
   const session = await getSession()
   const stats = await getManagerDashboardStats()
-  const name = session?.fullName ?? 'Manager'
+  const name = session?.fullName ?? 'ผู้จัดการ'
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            Good Morning, {name}
+            {greeting()}, {name}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            Overview of Zenzero Hotel · {today()}
+            ภาพรวมการดำเนินงาน Zenzero Hotel · {today()}
           </p>
         </div>
         <div className="inline-flex items-center gap-2 text-body-md text-on-surface-variant bg-surface-container-low rounded-full px-4 py-2">
@@ -46,7 +53,7 @@ export default async function ManagerDashboard() {
           </p>
           <div className="flex items-center gap-1 mt-2 text-caption text-secondary">
             <MaterialIcon name="trending_up" size={14} />
-            +{stats.revenueTrendPct.toFixed(1)}% vs. yesterday
+            +{stats.revenueTrendPct.toFixed(1)}% เทียบเมื่อวาน
           </div>
         </KpiCard>
 
@@ -73,14 +80,14 @@ export default async function ManagerDashboard() {
               <p className="font-display-lg text-display-lg-mobile text-primary">
                 {stats.checkInsToday}
               </p>
-              <p className="text-caption text-on-surface-variant">in</p>
+              <p className="text-caption text-on-surface-variant">เข้า</p>
             </div>
             <div className="w-px h-10 bg-outline-variant" />
             <div>
               <p className="font-display-lg text-display-lg-mobile text-primary">
                 {stats.checkOutsToday}
               </p>
-              <p className="text-caption text-on-surface-variant">out</p>
+              <p className="text-caption text-on-surface-variant">ออก</p>
             </div>
           </div>
         </KpiCard>
@@ -91,7 +98,7 @@ export default async function ManagerDashboard() {
           </p>
           <div className="flex items-center gap-3 mt-2 text-caption text-on-secondary-container">
             <span className="inline-flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-primary" /> Web {stats.webBookings}
+              <span className="w-2 h-2 rounded-full bg-primary" /> เว็บ {stats.webBookings}
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-tertiary" /> Walk-in {stats.walkInBookings}

@@ -11,7 +11,7 @@ export default async function AdminSettingsPage() {
     <div className="p-8 lg:p-12 max-w-4xl">
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-headline-md text-headline-md text-primary">Hotel Settings</h1>
+          <h1 className="font-headline-md text-headline-md text-primary">ตั้งค่าโรงแรม</h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
             ตั้งค่าข้อมูลโรงแรม ภาษี ค่าธรรมเนียม และเวลาเช็คอิน/เอาท์
           </p>

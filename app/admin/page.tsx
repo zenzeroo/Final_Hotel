@@ -41,7 +41,7 @@ export default async function AdminDashboard() {
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            Executive Overview
+            ภาพรวมผู้บริหาร
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
             สวัสดี {name} · ภาพรวมการดำเนินงานของโรงแรม · {today()}
@@ -49,7 +49,7 @@ export default async function AdminDashboard() {
         </div>
         <div className="inline-flex items-center gap-2 text-body-md text-on-surface-variant bg-surface-container-low rounded-full px-4 py-2">
           <MaterialIcon name="shield_person" size={18} />
-          Admin Portal
+          พอร์ทัลผู้ดูแลระบบ
         </div>
       </header>
 
@@ -99,14 +99,14 @@ export default async function AdminDashboard() {
               <p className="font-display-lg text-display-lg-mobile text-primary">
                 {stats.checkInsToday}
               </p>
-              <p className="text-caption text-on-surface-variant">in</p>
+              <p className="text-caption text-on-surface-variant">เข้า</p>
             </div>
             <div className="w-px h-10 bg-outline-variant" />
             <div>
               <p className="font-display-lg text-display-lg-mobile text-primary">
                 {stats.checkOutsToday}
               </p>
-              <p className="text-caption text-on-surface-variant">out</p>
+              <p className="text-caption text-on-surface-variant">ออก</p>
             </div>
           </div>
         </KpiCard>

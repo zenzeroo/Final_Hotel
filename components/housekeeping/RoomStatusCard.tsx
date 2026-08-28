@@ -11,10 +11,10 @@ export function RoomStatusCard({ unit }: { unit: RoomUnitBasic }) {
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-caption text-on-surface-variant uppercase tracking-wider">Floor {unit.floor}</span>
+            <span className="text-caption text-on-surface-variant uppercase tracking-wider">ชั้น {unit.floor}</span>
           </div>
           <h3 className="font-headline-sm text-headline-sm text-primary">
-            Room {unit.unit_label}
+            ห้อง {unit.unit_label}
           </h3>
           {unit.room_type && (
             <p className="text-body-md text-on-surface-variant mt-1">
@@ -27,7 +27,7 @@ export function RoomStatusCard({ unit }: { unit: RoomUnitBasic }) {
       </div>
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-outline-variant/30">
         <span className="text-caption text-on-surface-variant">
-          {canEdit ? 'Toggle status' : 'Read-only (reception controls)'}
+          {canEdit ? 'สลับสถานะ' : 'อ่านอย่างเดียว (พนักงานต้อนรับควบคุม)'}
         </span>
         {canEdit ? (
           <RoomStatusDropdown unitId={unit.id} currentStatus={unit.status as 'cleaning' | 'available'} />

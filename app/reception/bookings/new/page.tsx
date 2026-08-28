@@ -22,7 +22,7 @@ export default async function WalkInBookingPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-primary">Walk-in Booking</h1>
+        <h1 className="font-display text-3xl text-primary">การจองแบบ Walk-in</h1>
         <p className="text-body-md text-on-surface-variant mt-1">
           เลือกห้องพักเพื่อสร้างการจองสำหรับลูกค้าที่มาถึงโดยไม่ได้จองล่วงหน้า
         </p>

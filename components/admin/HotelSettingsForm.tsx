@@ -146,7 +146,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Field label="Tax Rate (0–1)" required>
+        <Field label="อัตราภาษี (0–1)" required>
           <input
             name="tax_rate"
             type="number"
@@ -159,7 +159,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
           />
         </Field>
 
-        <Field label="Resort Fee (THB)" required>
+        <Field label="ค่าบริการรีสอร์ท (THB)" required>
           <input
             name="resort_fee"
             type="number"
@@ -184,7 +184,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Field label="Check-in (HH:MM)" required>
+        <Field label="เช็คอิน (HH:MM)" required>
           <input
             name="check_in_time"
             type="time"
@@ -194,7 +194,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
           />
         </Field>
 
-        <Field label="Check-out (HH:MM)" required>
+        <Field label="เช็คเอาท์ (HH:MM)" required>
           <input
             name="check_out_time"
             type="time"
@@ -204,7 +204,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
           />
         </Field>
 
-        <Field label="Locale (default)" required>
+        <Field label="ภาษาเริ่มต้น" required>
           <select
             name="locale_default"
             defaultValue={settings.locale_default}
@@ -217,7 +217,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
         </Field>
       </div>
 
-      <Field label="Hero Image R2 Key">
+      <Field label="คีย์รูป Hero ใน R2">
         <input
           name="hero_image_key"
           type="text"

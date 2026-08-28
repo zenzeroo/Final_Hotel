@@ -18,7 +18,7 @@ interface HorizontalBarChartProps {
 // server never has to pass a function across the RSC boundary.
 const FORMATTERS: Record<BarFormat, (v: number) => string> = {
   thb: (v) => `฿${new Intl.NumberFormat('th-TH').format(v)}`,
-  count: (v) => `${v} bookings`,
+  count: (v) => `${v} การจอง`,
   percent: (v) => `${v}%`,
 }
 

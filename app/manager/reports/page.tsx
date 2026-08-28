@@ -16,10 +16,10 @@ export default async function ManagerReportsPage() {
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            Reports &amp; Analytics
+            รายงานและการวิเคราะห์
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            Performance overview · last 7 days &amp; YoY
+            ภาพรวมผลงาน · 7 วันล่าสุด และเทียบปีก่อน
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -28,14 +28,14 @@ export default async function ManagerReportsPage() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-outline text-body-md text-primary hover:bg-surface-container-low"
           >
             <MaterialIcon name="picture_as_pdf" size={18} />
-            Export PDF
+            ส่งออก PDF
           </button>
           <button
             type="button"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-secondary text-body-md font-semibold"
           >
             <MaterialIcon name="table_view" size={18} />
-            Export Excel
+            ส่งออก Excel
           </button>
         </div>
       </header>
@@ -61,18 +61,18 @@ export default async function ManagerReportsPage() {
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <HorizontalBarChart
-          title="Most Booked Rooms"
+          title="ห้องที่ถูกจองมากที่สุด"
           labels={data.mostBookedRooms.map((r) => r.name)}
           values={data.mostBookedRooms.map((r) => r.count)}
           format="count"
-          label="Bookings"
+          label="การจอง"
         />
         <HorizontalBarChart
-          title="Highest Revenue Room Types"
+          title="ประเภทห้องที่มีรายได้สูงสุด"
           labels={data.highestRevenueRoomTypes.map((r) => r.name)}
           values={data.highestRevenueRoomTypes.map((r) => r.revenue)}
           format="thb"
-          label="Revenue"
+          label="รายได้"
         />
         <ChannelsDonutChart channels={data.channels} />
       </section>

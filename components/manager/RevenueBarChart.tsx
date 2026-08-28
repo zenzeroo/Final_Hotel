@@ -18,9 +18,9 @@ export function RevenueBarChart({ data, className = '' }: RevenueBarChartProps) 
     <div className={`bg-surface-container-lowest rounded-lg shadow-level-1 p-6 ${className}`}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="font-headline-sm text-headline-sm text-primary">Revenue (7 days)</h3>
+          <h3 className="font-headline-sm text-headline-sm text-primary">รายได้ (7 วัน)</h3>
           <p className="text-caption text-on-surface-variant mt-1">
-            Daily revenue · highest bar = today
+            รายได้รายวัน · แท่งสูงสุดคือวันนี้
           </p>
         </div>
         <div className="inline-flex rounded-full border border-outline-variant overflow-hidden text-caption">

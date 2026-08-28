@@ -8,9 +8,9 @@ interface BookingsOversightTabsProps {
 }
 
 const TAB_BASE: TabItem<Tab>[] = [
-  { key: 'main', label: 'Main Bookings', icon: 'bookmark', href: '/manager/bookings' },
+  { key: 'main', label: 'การจองหลัก', icon: 'bookmark', href: '/manager/bookings' },
   { key: 'refunds', label: 'คำขอคืนเงิน', icon: 'undo', href: '/manager/bookings?tab=refunds', badgeTone: 'error' },
-  { key: 'audit', label: 'Audit Log', icon: 'history', href: '/manager/bookings?tab=audit' },
+  { key: 'audit', label: 'บันทึกการตรวจสอบ', icon: 'history', href: '/manager/bookings?tab=audit' },
 ]
 
 export function BookingsOversightTabs({ active, refundCount }: BookingsOversightTabsProps) {

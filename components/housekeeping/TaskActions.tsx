@@ -17,8 +17,8 @@ export function TaskActions({
   if (status !== 'assigned' && status !== 'in_progress') return null
 
   function handle(action: 'start' | 'complete') {
-    if (action === 'start' && !confirm('Start this task? Room status will change to cleaning.')) return
-    if (action === 'complete' && !confirm('Mark as completed? This will mark the room available.')) return
+    if (action === 'start' && !confirm('เริ่มงานนี้เลยไหม? สถานะห้องจะเปลี่ยนเป็นกำลังทำความสะอาด')) return
+    if (action === 'complete' && !confirm('บันทึกว่าเสร็จสิ้นเลยไหม? ห้องจะกลับเป็นสถานะว่าง')) return
     startTransition(async () => {
       const fn = action === 'start' ? startTask : completeTask
       const result = await fn(taskId)
@@ -35,7 +35,7 @@ export function TaskActions({
           className="px-3 py-1.5 bg-primary text-secondary rounded-md text-caption uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-50 flex items-center gap-1"
         >
           <MaterialIcon name="play_arrow" size={16} />
-          Start
+          เริ่ม
         </button>
       )}
       {status === 'in_progress' && (
@@ -45,7 +45,7 @@ export function TaskActions({
           className="px-3 py-1.5 bg-secondary text-primary rounded-md text-caption uppercase tracking-wider hover:bg-secondary/90 transition-colors disabled:opacity-50 flex items-center gap-1"
         >
           <MaterialIcon name="check" size={16} />
-          Complete
+          เสร็จสิ้น
         </button>
       )}
     </div>

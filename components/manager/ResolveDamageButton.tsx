@@ -48,13 +48,13 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
             className="w-full max-w-md bg-surface-container-lowest rounded-lg shadow-level-2 p-6"
           >
             <h3 className="font-headline-sm text-headline-sm text-primary mb-4">
-              Resolve Damage Report
+              แก้ไขรายงานความเสียหาย
             </h3>
             <input type="hidden" name="reportId" value={reportId} />
 
             <label className="block mb-3">
               <span className="text-label-md uppercase tracking-wider text-on-surface-variant">
-                Cost Estimate (THB)
+                ค่าใช้จ่ายประมาณการ (THB)
               </span>
               <input
                 type="number"
@@ -69,7 +69,7 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
 
             <label className="block mb-3">
               <span className="text-label-md uppercase tracking-wider text-on-surface-variant">
-                Resolution Note
+                บันทึกการแก้ไข
               </span>
               <textarea
                 name="resolutionNote"
@@ -101,7 +101,7 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
                 disabled={pending}
                 className="px-4 py-2 rounded-md bg-primary text-secondary text-body-md font-semibold disabled:opacity-50"
               >
-                {pending ? 'กำลังบันทึก...' : 'Confirm Resolve'}
+                {pending ? 'กำลังบันทึก...' : 'ยืนยันการแก้ไข'}
               </button>
             </div>
           </form>

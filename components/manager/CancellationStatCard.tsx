@@ -25,7 +25,7 @@ export function CancellationStatCard({
       <div className="relative">
         <MaterialIcon name="event_busy" size={28} className="text-secondary mb-3" />
         <p className="text-label-md uppercase tracking-wider text-secondary/70">
-          Cancellation Rate
+          อัตราการยกเลิก
         </p>
         <p className="font-display text-display-lg-mobile text-secondary mt-1">
           {ratePct.toFixed(1)}%
@@ -45,7 +45,7 @@ export function CancellationStatCard({
             {Math.abs(trendPct).toFixed(1)}%
           </span>
           <span className="text-caption text-secondary/80">
-            of {totalBookings} bookings
+            จากการจอง {totalBookings} รายการ
           </span>
         </div>
       </div>

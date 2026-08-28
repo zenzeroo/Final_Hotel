@@ -33,7 +33,7 @@ export function RejectRefundButton({ refundId }: RejectRefundButtonProps) {
         onClick={() => setConfirming(true)}
         className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-outline text-caption text-primary hover:bg-surface-container-low"
       >
-        Reject
+        ปฏิเสธ
       </button>
     )
   }
@@ -62,7 +62,7 @@ export function RejectRefundButton({ refundId }: RejectRefundButtonProps) {
           disabled={pending || !reason.trim()}
           className="px-2 py-1 rounded-md bg-error text-on-error text-caption font-semibold disabled:opacity-50"
         >
-          {pending ? '...' : 'Confirm'}
+          {pending ? '...' : 'ยืนยัน'}
         </button>
         <button
           type="button"
@@ -74,7 +74,7 @@ export function RejectRefundButton({ refundId }: RejectRefundButtonProps) {
           disabled={pending}
           className="px-2 py-1 rounded-md text-caption text-on-surface-variant hover:bg-surface-container-low disabled:opacity-50"
         >
-          Cancel
+          ยกเลิก
         </button>
       </div>
     </form>

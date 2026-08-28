@@ -4,12 +4,12 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import type { MaintenanceReport } from '@/lib/data/types'
 
 const ISSUE_LABELS: Record<string, string> = {
-  plumbing: 'Plumbing',
-  electrical: 'Electrical',
-  hvac: 'HVAC / AC',
-  furniture: 'Furniture',
-  appliance: 'Appliance',
-  other: 'Other',
+  plumbing: 'ประปา',
+  electrical: 'ไฟฟ้า',
+  hvac: 'แอร์/เครื่องปรับอากาศ',
+  furniture: 'เฟอร์นิเจอร์',
+  appliance: 'เครื่องใช้ไฟฟ้า',
+  other: 'อื่นๆ',
 }
 
 export function MaintenanceReportCard({ report }: { report: MaintenanceReport }) {
@@ -27,7 +27,7 @@ export function MaintenanceReportCard({ report }: { report: MaintenanceReport })
         <StatusBadge status={report.status} />
         {unit && (
           <span className="text-caption text-on-surface-variant">
-            Room {unit.unit_label}
+            ห้อง {unit.unit_label}
           </span>
         )}
       </div>
@@ -37,7 +37,7 @@ export function MaintenanceReportCard({ report }: { report: MaintenanceReport })
       <div className="flex items-center gap-3 text-caption text-on-surface-variant pt-3 border-t border-outline-variant/30">
         <span className="flex items-center gap-1">
           <MaterialIcon name="person" size={14} />
-          {report.reporter?.full_name ?? 'Unknown'}
+          {report.reporter?.full_name ?? 'ไม่ระบุ'}
         </span>
         <span className="flex items-center gap-1">
           <MaterialIcon name="schedule" size={14} />

@@ -24,7 +24,7 @@ export default async function HomePage() {
             <div className="flex items-end justify-between mb-10">
               <div>
                 <span className="text-label-md text-secondary font-semibold uppercase tracking-wider">
-                  Featured
+                  แนะนำ
                 </span>
                 <h2 className="font-display text-3xl md:text-4xl text-primary mt-2">
                   ห้องพักแนะนำ

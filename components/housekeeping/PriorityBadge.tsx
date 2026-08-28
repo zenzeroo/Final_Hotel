@@ -1,10 +1,10 @@
 import type { HousekeepingTaskPriority } from '@/lib/data/types'
 
 const STYLES: Record<HousekeepingTaskPriority, { bg: string; text: string; label: string }> = {
-  low: { bg: 'bg-surface-container-low', text: 'text-on-surface-variant', label: 'Low' },
-  normal: { bg: 'bg-secondary/10', text: 'text-secondary', label: 'Normal' },
-  high: { bg: 'bg-secondary/30', text: 'text-on-secondary-container', label: 'High' },
-  urgent: { bg: 'bg-error-container', text: 'text-on-error-container', label: 'Urgent' },
+  low: { bg: 'bg-surface-container-low', text: 'text-on-surface-variant', label: 'ต่ำ' },
+  normal: { bg: 'bg-secondary/10', text: 'text-secondary', label: 'ปกติ' },
+  high: { bg: 'bg-secondary/30', text: 'text-on-secondary-container', label: 'สูง' },
+  urgent: { bg: 'bg-error-container', text: 'text-on-error-container', label: 'เร่งด่วน' },
 }
 
 export function PriorityBadge({ priority }: { priority: HousekeepingTaskPriority }) {

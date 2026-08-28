@@ -80,7 +80,7 @@ export function SeasonalRatesAdminTable({ rates }: SeasonalRatesAdminTableProps)
               <th className="text-left px-4 py-3 font-medium">ประเภทห้อง</th>
               <th className="text-left px-4 py-3 font-medium">ช่วงวันที่</th>
               <th className="text-left px-4 py-3 font-medium">ราคา</th>
-              <th className="text-left px-4 py-3 font-medium">Priority</th>
+              <th className="text-left px-4 py-3 font-medium">ลำดับความสำคัญ</th>
               <th className="text-left px-4 py-3 font-medium">สถานะ</th>
               <th className="text-right px-4 py-3 font-medium">จัดการ</th>
             </tr>

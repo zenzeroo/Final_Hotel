@@ -23,7 +23,7 @@ export function ApproveRefundButton({ refundId }: ApproveRefundButtonProps) {
         className="inline-flex items-center gap-1 px-3 py-2 rounded-md bg-primary text-secondary text-caption font-semibold disabled:opacity-50"
       >
         <MaterialIcon name="check" size={16} />
-        {pending ? '...' : 'Approve'}
+        {pending ? '...' : 'อนุมัติ'}
       </button>
     </form>
   )

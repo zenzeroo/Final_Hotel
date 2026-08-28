@@ -190,7 +190,7 @@ export function BookingWidget({ room }: BookingWidgetProps) {
             label={`${formatTHB(room.base_price)} × ${nights} คืน`}
             value={formatTHB(price.baseSubtotal)}
           />
-          <PriceRow label="ภาษี 7%" value={formatTHB(price.taxTotal)} />
+          <PriceRow label="ภาษี" value={formatTHB(price.taxTotal)} />
           <PriceRow label="ค่าบริการรีสอร์ท" value={formatTHB(price.feeTotal)} />
         </div>
       ) : (

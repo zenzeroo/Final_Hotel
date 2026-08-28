@@ -13,14 +13,14 @@ export function Footer() {
         </Link>
 
         <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-body-md">
-          <FooterLink href="/privacy">Privacy Policy</FooterLink>
-          <FooterLink href="/terms">Terms of Service</FooterLink>
-          <FooterLink href="/contact">Contact Us</FooterLink>
-          <FooterLink href="/careers">Careers</FooterLink>
+          <FooterLink href="/privacy">นโยบายความเป็นส่วนตัว</FooterLink>
+          <FooterLink href="/terms">เงื่อนไขการให้บริการ</FooterLink>
+          <FooterLink href="/contact">ติดต่อเรา</FooterLink>
+          <FooterLink href="/careers">ร่วมงานกับเรา</FooterLink>
         </nav>
 
         <p className="text-caption text-secondary/70">
-          © {year} Zenzero Hotel. All rights reserved.
+          © {year} Zenzero Hotel สงวนลิขสิทธิ์
         </p>
       </div>
     </footer>

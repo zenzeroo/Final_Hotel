@@ -21,7 +21,7 @@ export default async function ManagerPromotionsPage() {
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            Promotions & Discounts
+            โปรโมชั่นและส่วนลด
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
             เปิด/ปิดโปรโมชั่น — การสร้างและแก้ไขทำได้ผ่าน Admin

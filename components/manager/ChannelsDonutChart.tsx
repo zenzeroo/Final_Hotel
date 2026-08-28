@@ -41,7 +41,7 @@ export function ChannelsDonutChart({ channels }: ChannelsDonutChartProps) {
 
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">Booking Channels</h3>
+      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">ช่องทางการจอง</h3>
       <div className="flex items-center gap-6">
         <div className="relative w-32 h-32 shrink-0">
           <Doughnut data={chartData} options={options} />

@@ -22,13 +22,13 @@ export function HeroSection() {
       {/* Content */}
       <div className="relative z-10 w-full max-w-(--spacing-container-max) px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) flex flex-col items-center text-center">
         <span className="text-label-md text-secondary font-semibold uppercase tracking-wider mb-4">
-          Organic Luxury
+          ความหรูหราจากธรรมชาติ
         </span>
         <h1 className="font-display text-4xl md:text-6xl lg:text-7xl text-on-primary font-bold leading-tight max-w-3xl">
           ค้นหาห้องพักในฝันของคุณ
         </h1>
         <p className="text-body-lg text-on-primary/90 mt-6 max-w-xl">
-          Experience organic luxury — where every detail is crafted for rest, reflection, and quiet wonder.
+          สัมผัสความหรูหราที่เป็นธรรมชาติ — ทุกรายละเอียดถูกรังสรรค์เพื่อการพักผ่อน การไตร่ตรอง และความมหัศจรรย์อันเงียบสงบ
         </p>
       </div>
 

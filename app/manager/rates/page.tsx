@@ -23,7 +23,7 @@ export default async function ManagerRatesPage() {
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            Room & Rate Management
+            จัดการห้องและราคา
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
             ปิด/เปิดห้องพักและดูอัตราตามฤดูกาล — การแก้ไขห้องและราคาทำได้ผ่าน Admin

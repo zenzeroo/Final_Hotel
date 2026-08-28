@@ -16,7 +16,7 @@ const POSITION_LABEL: Record<ShiftSlot['position'], { th: string; icon: string; 
 function formatDayHeader(dateStr: string): { weekday: string; day: string } {
   const d = new Date(dateStr)
   return {
-    weekday: d.toLocaleDateString('en-US', { weekday: 'short' }),
+    weekday: d.toLocaleDateString('th-TH', { weekday: 'short' }),
     day: d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }),
   }
 }

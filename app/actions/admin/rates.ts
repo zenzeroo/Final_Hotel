@@ -10,6 +10,12 @@ import {
   updateSeasonalRate,
   deleteSeasonalRate,
 } from '@/lib/data/manager'
+import {
+  uploadImageToR2,
+  roomImageKey,
+  pickExt,
+  R2UploadError,
+} from '@/lib/r2/upload'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -36,6 +42,13 @@ const roomTypeSchema = z.object({
   is_active: z.boolean(),
 })
 
+/** Filter FormData entry collection down to actual `File` instances (skip empty placeholders). */
+function collectFiles(values: FormDataEntryValue[]): File[] {
+  return values.filter(
+    (v): v is File => v instanceof File && v.size > 0 && v.type.length > 0,
+  )
+}
+
 export async function createRoomTypeAction(formData: FormData): Promise<ActionResult> {
   await requireAdminRates()
 
@@ -56,16 +69,44 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
     return { ok: false, error: 'Invalid input: ' + parsed.error.issues[0]?.message }
   }
 
-  // bed_type, floor, type, view_label, hero_image_key, gallery_keys, amenities
-  // default to reasonable stubs since the admin form doesn't expose them yet.
+  // Upload hero + gallery files to R2 first — if upload fails we abort BEFORE
+  // creating the room row (so we never end up with a room pointing at a half-uploaded
+  // image set).
+  const heroFile = formData.get('hero_image_file')
+  const galleryFiles = collectFiles(formData.getAll('gallery_image_files'))
+
+  let hero_image_key = ''
+  let gallery_keys: string[] = []
+
+  try {
+    if (heroFile instanceof File && heroFile.size > 0 && heroFile.type.length > 0) {
+      const ext = pickExt(heroFile)
+      const key = roomImageKey(parsed.data.slug, 'hero', ext)
+      const result = await uploadImageToR2(heroFile, key)
+      hero_image_key = result.key
+    }
+    for (const file of galleryFiles) {
+      const ext = pickExt(file)
+      const key = roomImageKey(parsed.data.slug, 'gallery', ext)
+      const result = await uploadImageToR2(file, key)
+      gallery_keys.push(result.key)
+    }
+  } catch (e) {
+    if (e instanceof R2UploadError) return { ok: false, error: e.message }
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : 'Image upload failed',
+    }
+  }
+
   const existing = await listRoomTypes()
   const createArgs = {
     ...parsed.data,
     bed_type: 'King' as const,
     floor: existing.length > 0 ? Math.max(...existing.map((r) => r.floor)) + 1 : 1,
     type: 'Deluxe' as const,
-    hero_image_key: '',
-    gallery_keys: [] as string[],
+    hero_image_key,
+    gallery_keys,
     amenities: [] as string[],
     rating_avg: 0,
     rating_count: 0,
@@ -88,6 +129,17 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
 
 const roomTypeUpdateSchema = roomTypeSchema.partial().extend({ id: z.string().min(1) })
 
+/** Parse the JSON-encoded list of existing gallery keys sent by the edit form. */
+function parseExistingGalleryKeys(raw: FormDataEntryValue | null): string[] {
+  if (typeof raw !== 'string' || raw.trim() === '') return []
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((k): k is string => typeof k === 'string') : []
+  } catch {
+    return []
+  }
+}
+
 export async function updateRoomTypeAction(formData: FormData): Promise<ActionResult> {
   await requireAdminRates()
 
@@ -109,7 +161,47 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
     return { ok: false, error: 'Invalid input: ' + parsed.error.issues[0]?.message }
   }
 
-  const { id, ...patch } = parsed.data
+  const { id, ...rest } = parsed.data
+
+  // Image updates are optional — only patch the columns the admin actually changed.
+  // Hero: uploaded file → replace; no file → keep existing (omit from patch).
+  // Gallery: append new keys to existing_gallery_keys; if no new uploads, keep existing.
+  const heroFile = formData.get('hero_image_file')
+  const galleryFiles = collectFiles(formData.getAll('gallery_image_files'))
+  const existingGalleryKeys = parseExistingGalleryKeys(formData.get('existing_gallery_keys'))
+
+  const patch: Partial<Omit<typeof rest, never>> & {
+    hero_image_key?: string
+    gallery_keys?: string[]
+  } = { ...rest }
+
+  try {
+    if (heroFile instanceof File && heroFile.size > 0 && heroFile.type.length > 0) {
+      const slugForKey = rest.slug ?? id
+      const ext = pickExt(heroFile)
+      const key = roomImageKey(slugForKey, 'hero', ext)
+      const result = await uploadImageToR2(heroFile, key)
+      patch.hero_image_key = result.key
+    }
+    if (galleryFiles.length > 0) {
+      const slugForKey = rest.slug ?? id
+      const newKeys: string[] = []
+      for (const file of galleryFiles) {
+        const ext = pickExt(file)
+        const key = roomImageKey(slugForKey, 'gallery', ext)
+        const result = await uploadImageToR2(file, key)
+        newKeys.push(result.key)
+      }
+      patch.gallery_keys = [...existingGalleryKeys, ...newKeys]
+    }
+  } catch (e) {
+    if (e instanceof R2UploadError) return { ok: false, error: e.message }
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : 'Image upload failed',
+    }
+  }
+
   try {
     await updateRoomType({ id, patch })
   } catch (e) {

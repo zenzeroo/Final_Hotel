@@ -27,7 +27,7 @@ export function RoomTypesAdminTable({ roomTypes }: RoomTypesAdminTableProps) {
           <thead className="bg-surface-container-low border-b border-outline-variant">
             <tr className="text-label-md uppercase tracking-wider text-on-surface-variant">
               <th className="text-left px-4 py-3 font-medium">ประเภทห้อง</th>
-              <th className="text-left px-4 py-3 font-medium">Slug</th>
+              <th className="text-left px-4 py-3 font-medium">Slug (URL)</th>
               <th className="text-right px-4 py-3 font-medium">ราคาฐาน</th>
               <th className="text-right px-4 py-3 font-medium">ผู้เข้าพัก</th>
               <th className="text-right px-4 py-3 font-medium">ขนาด</th>

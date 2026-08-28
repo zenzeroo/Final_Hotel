@@ -175,7 +175,7 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                       discount
                     />
                   )}
-                  <PriceRow label="ภาษี 7%" value={formatTHB(booking.tax_total)} />
+                  <PriceRow label="ภาษี" value={formatTHB(booking.tax_total)} />
                   <PriceRow label="ค่าบริการรีสอร์ท" value={formatTHB(booking.fee_total)} />
                 </div>
 

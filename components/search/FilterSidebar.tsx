@@ -11,9 +11,9 @@ const PRICE_RANGES = [
 ] as const
 
 const ROOM_TYPES = [
-  { value: 'Deluxe', label: 'Deluxe' },
-  { value: 'Suite', label: 'Suite' },
-  { value: 'Villa', label: 'Villa' },
+  { value: 'Deluxe', label: 'ดีลักซ์' },
+  { value: 'Suite', label: 'สวีท' },
+  { value: 'Villa', label: 'วิลล่า' },
 ] as const
 
 const FLOORS = [1, 2, 3, 4] as const

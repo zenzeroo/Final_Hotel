@@ -81,7 +81,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
           ) : (
             <>
               <MaterialIcon name="credit_card" size={18} />
-              ยืนยันการจ่ายเงิน (ทดสอบ)
+              ยืนยันการจ่ายเงิน
             </>
           )}
         </button>

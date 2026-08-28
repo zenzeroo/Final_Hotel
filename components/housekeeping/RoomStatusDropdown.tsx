@@ -31,8 +31,8 @@ export function RoomStatusDropdown({
       disabled={isPending}
       className="px-3 py-1.5 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-primary font-medium focus:outline-none focus:ring-2 focus:ring-secondary disabled:opacity-50"
     >
-      <option value="cleaning">Cleaning</option>
-      <option value="available">Available</option>
+      <option value="cleaning">กำลังทำความสะอาด</option>
+      <option value="available">ว่าง</option>
     </select>
   )
 }

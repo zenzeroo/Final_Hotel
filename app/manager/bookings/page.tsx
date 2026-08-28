@@ -25,9 +25,9 @@ export default async function ManagerBookingsPage(props: {
     <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-headline-md text-headline-md text-primary">Booking Oversight</h1>
+          <h1 className="font-headline-md text-headline-md text-primary">ดูแลการจอง</h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            Review bookings, refund requests, and staff activity.
+            ตรวจสอบการจอง คำขอคืนเงิน และกิจกรรมของเจ้าหน้าที่
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -35,7 +35,7 @@ export default async function ManagerBookingsPage(props: {
             <MaterialIcon name="search" size={16} className="text-on-surface-variant" />
             <input
               type="search"
-              placeholder="Search bookings..."
+              placeholder="ค้นหาการจอง..."
               className="bg-transparent text-body-md outline-none w-48"
             />
           </div>
@@ -53,7 +53,7 @@ export default async function ManagerBookingsPage(props: {
           {data.refundRequests.length === 0 ? (
             <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
               <p className="text-body-md text-on-surface-variant italic">
-                No pending refund requests.
+                ไม่มีคำขอคืนเงินที่รอดำเนินการ
               </p>
             </div>
           ) : (

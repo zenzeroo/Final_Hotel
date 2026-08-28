@@ -20,7 +20,7 @@ export default async function ManagerSettingsPage() {
     <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-headline-md text-headline-md text-primary">Hotel Settings</h1>
+          <h1 className="font-headline-md text-headline-md text-primary">ตั้งค่าโรงแรม</h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
             ข้อมูลโรงแรม นโยบาย และภาษี — ตั้งค่าได้ผ่าน Admin เท่านั้น
           </p>
@@ -39,7 +39,7 @@ export default async function ManagerSettingsPage() {
 
       {/* 4-col KPI strip */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-        <KpiCard label="Tax Rate" icon="percent" tone="gold">
+        <KpiCard label="อัตราภาษี" icon="percent" tone="gold">
           <p className="font-display-lg text-display-lg-mobile text-on-secondary-container">
             {taxPercent}%
           </p>
@@ -48,21 +48,21 @@ export default async function ManagerSettingsPage() {
           </p>
         </KpiCard>
 
-        <KpiCard label="Resort Fee" icon="receipt_long">
+        <KpiCard label="ค่าบริการรีสอร์ท" icon="receipt_long">
           <p className="font-display-lg text-display-lg-mobile text-primary">
             {resortFeeLabel}
           </p>
           <p className="text-caption text-on-surface-variant mt-2">ต่อคืน ต่อห้อง</p>
         </KpiCard>
 
-        <KpiCard label="Check-in" icon="login">
+        <KpiCard label="เช็คอิน" icon="login">
           <p className="font-display-lg text-display-lg-mobile text-primary">
             {settings.check_in_time}
           </p>
           <p className="text-caption text-on-surface-variant mt-2">เวลาเข้าห้องพัก</p>
         </KpiCard>
 
-        <KpiCard label="Check-out" icon="logout">
+        <KpiCard label="เช็คเอาท์" icon="logout">
           <p className="font-display-lg text-display-lg-mobile text-primary">
             {settings.check_out_time}
           </p>

@@ -32,7 +32,7 @@ export default async function ManagerStaffPage(props: {
     <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-headline-md text-headline-md text-primary">Staff Management</h1>
+          <h1 className="font-headline-md text-headline-md text-primary">จัดการเจ้าหน้าที่</h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
             รายชื่อพนักงานและตารางเวร 7 วัน — การแก้ไขทำได้ผ่าน Admin
           </p>
