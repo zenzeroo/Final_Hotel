@@ -22,6 +22,15 @@ const ROLE_LABEL: Record<string, string> = {
   admin: 'ผู้ดูแล',
 }
 
+interface RecentEventRow {
+  id: string
+  event_type: string
+  description: string
+  created_at: string
+  booking_id: string | null
+  actor: { full_name: string; role: string }[]
+}
+
 export default async function ActionHistoryPage() {
   const events = await getRecentEvents(50)
 
@@ -45,7 +54,7 @@ export default async function ActionHistoryPage() {
       ) : (
         <div className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-hidden">
           <ul className="divide-y divide-outline-variant">
-            {events.map((e: any) => {
+            {events.map((e: RecentEventRow) => {
               const meta = EVENT_TYPE_META[e.event_type] ?? {
                 label: e.event_type,
                 color: 'bg-surface-container text-on-surface-variant',
@@ -67,10 +76,10 @@ export default async function ActionHistoryPage() {
                     </div>
                     <p className="text-body-md text-on-surface mt-1">{e.description}</p>
                     <div className="mt-2 flex items-center gap-3 text-caption text-on-surface-variant">
-                      {e.actor && (
+                      {e.actor?.[0] && (
                         <span className="inline-flex items-center gap-1.5">
                           <MaterialIcon name="person" size={14} />
-                          {e.actor.full_name} · {ROLE_LABEL[e.actor.role] ?? e.actor.role}
+                          {e.actor[0].full_name} · {ROLE_LABEL[e.actor[0].role] ?? e.actor[0].role}
                         </span>
                       )}
                       {e.booking_id && (

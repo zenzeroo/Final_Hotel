@@ -4,13 +4,17 @@ import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
+interface RoomTypeSummary {
+  name_th: string
+}
+
 interface Room {
   id: string
   floor: number
   unit_label: string
   view_label: string | null
   status: string
-  room_type: any
+  room_type: RoomTypeSummary[]
 }
 
 interface RoomStatusGridProps {
@@ -68,7 +72,7 @@ export function RoomStatusGrid({ rooms, statusMeta }: RoomStatusGridProps) {
               <MaterialIcon name={meta.icon} size={18} className={meta.color} />
             </div>
             <p className="text-caption text-on-surface-variant truncate">
-              {room.room_type?.name_th ?? 'ห้องพัก'}
+              {room.room_type?.[0]?.name_th ?? 'ห้องพัก'}
             </p>
             <p className={`text-caption font-semibold mt-1 ${meta.color}`}>{meta.label}</p>
             {room.view_label && (

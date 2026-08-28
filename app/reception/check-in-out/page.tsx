@@ -192,11 +192,18 @@ export default async function CheckInOutPage() {
   )
 }
 
+interface GuestCardBooking {
+  booker_full_name: string
+  room_type: { name_th: string } | null
+  guests: number
+  booking_code: string
+}
+
 function GuestCard({
   booking,
   action,
 }: {
-  booking: any
+  booking: GuestCardBooking
   action: React.ReactNode
 }) {
   return (

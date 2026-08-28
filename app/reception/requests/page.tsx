@@ -21,6 +21,17 @@ const NOTE_TYPE_META: Record<string, { label: string; color: string; icon: strin
   general: { label: 'ทั่วไป', color: 'bg-surface-container text-on-surface-variant', icon: 'info' },
 }
 
+interface GuestNoteRow {
+  id: string
+  note_type: string
+  title: string
+  body: string
+  created_at: string
+  is_resolved: boolean
+  guest: { full_name: string } | null
+  booking: { booking_code: string; room_type: { name_th: string } | null } | null
+}
+
 export default async function GuestRequestsPage(props: PageProps<'/reception/requests'>) {
   const searchParams = await props.searchParams
   const status = typeof searchParams.status === 'string' ? searchParams.status : 'open'
@@ -74,7 +85,7 @@ export default async function GuestRequestsPage(props: PageProps<'/reception/req
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {notes.map((n: any) => {
+          {notes.map((n: GuestNoteRow) => {
             const meta = NOTE_TYPE_META[n.note_type] ?? NOTE_TYPE_META.general
             return (
               <article
