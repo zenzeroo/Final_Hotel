@@ -55,8 +55,9 @@ Rules ละเอียดเต็มอยู่ใน `Rule.md` ที่ ro
 | 12 — Backend wiring v2 + secrets rotation | ✓ | `listCancellationPolicies` + `getReportsData()` analytics arrays wired; `scripts/_db-connection.mjs` pooler + direct SSL helpers; migration `20260834` (bookings.channel + room_unit_id); password leak ใน `check-cols.mjs` ใช้ `pgDirectConnectionString()` แทน |
 | 14 — Google OAuth login | ✓ | Supabase hosted OAuth (`signInWithOAuth({ provider: 'google' })`) + `signInWithGoogle` server action + `app/auth/callback/route.ts`; LoginForm/RegisterForm `useTransition` + `setGoogleError` สำหรับ surface error; Thai translation ของ `provider is not enabled` |
 | 15 — DB documentation | ✓ | `Y:\Final\db-schemas\schema-documentation.docx` (Thai Word — 17 tables + 11 enums + 4 SECURITY DEFINER fns) + `drawio-prompt.txt` (Mermaid ER + draw.io CSV + NL prompt) |
+| 16 — Refactor + clean-up pass | ✓ | Quick wins + Type safety — 9 commits on `origin/main` (2026-08-28). New helpers: `lib/auth/require.ts` (consolidates 11 requireXxx), `lib/errors/supabase.ts` (wrapSupabaseError + actionFail, replaces 70 throw sites), `lib/ids.ts` (UUID_RE + isUuid), `lib/auth/sanitize.ts` (relocated from app/auth). Deleted: dead code (imageUrl/R2_BUCKET), void casts, `.ca-bundle.crt`, duplicate `getRoomById` + duplicate `isUuid` defs. Full plan + deferred items: `C:\Users\suns9\.claude\plans\nifty-chasing-raccoon.md` |
 
-**Current HEAD**: `e765105` on `main` (synced with `origin/main`)
+**Current HEAD**: `56d09ca` on `main` (synced with `origin/main`)
 
 ---
 
@@ -115,16 +116,19 @@ Rules ละเอียดเต็มอยู่ใน `Rule.md` ที่ ro
 type ActionResult<T = void> = { ok: true; data?: T } | { ok: false; error: string }
 
 export async function someAction(formData: FormData): Promise<ActionResult> {
-  const session = await getSession()
-  if (!session) redirect('/login?next=...')
-  if (session.role !== 'manager') redirect('/')
+  const session = await requireRole('manager', '/manager')
   
   // 1. Parse + Zod-validate inputs
   // 2. Call data layer wrapper (e.g. approveRefund({ refundId }))
   // 3. revalidatePath('/manager')
-  // 4. Return { ok: true } or { ok: false, error: '...' }
+  // 4. Return { ok: true } or actionFail(e, 'Could not …')
 }
 ```
+
+Note: `requireRole(allowed, redirectPath?)` lives in `lib/auth/require.ts` —
+replaces the 11 inline `requireXxx` helpers that used to live in each action file.
+`actionFail(e, fallback)` lives in `lib/errors/supabase.ts` and surfaces
+`e.message` to the user instead of relying on browser `console.error`.
 
 ### Mock vs real data toggle
 3 patterns in use:
@@ -362,7 +366,7 @@ git push origin main     # specify branch
 
 - **Backing booking columns (Phase 12)** — `bookings.channel` (default `'web'`, check constraint web/walk_in/phone/ota) และ `bookings.room_unit_id` (nullable FK → `room_units`) ต้องการ migration `20260834_bookings_channel_and_unit.sql`. Reception check-in ต้อง select unit จาก `<select>` ก่อน update — ถ้าไม่ใส่ `room_unit_id` ตอน check-in, `/manager/bookings` จะแสดง "—" แทน unit label. ตัว service-role action `createWalkInBooking` ตั้ง `channel='walk_in'`, `createBooking` ตั้ง `channel='web'`; ถ้ามี OTA/phone channel ต้องเพิ่มเส้นทาง insert ใหม่
 
-- **Pricing defaults vs DB (Phase 12)** — `lib/pricing.ts:DEFAULT_PRICING` คงค่า 0.07 / 150 ไว้เป็น fallback สำหรับ client preview (BookingWidget, WalkInForm). ทุก server-action caller ใหม่ของ `calculatePrice` ต้อง pass `settings` จาก `getHotelSettings()` เสมอ — มิงั้น booking จะ write ด้วย hardcoded 0.07/150 แม้ admin จะแก้ `hotel_settings.tax_rate` แล้ว. Wired แล้วใน: `app/actions/booking.ts`, `app/actions/walk-in-booking.ts`, `app/(booking)/bookings/new/page.tsx` → `BookingForm`. `BookingForm` แสดง label เป็น `${Math.round(settings.taxRate * 100)}%` และ `${formatTHB(settings.resortFeePerNight)}/คืน` — ห้าม hardcode "ภาษี 7%" กลับเข้าไป
+- **Pricing defaults vs DB (Phase 12 + Phase 16)** — `lib/pricing.ts:DEFAULT_PRICING` คงค่า 0.07 / 150 ไว้เป็น fallback สำหรับ client preview (BookingWidget, WalkInForm). ทุก server-action caller ใหม่ของ `calculatePrice` ต้อง pass `settings` จาก `getHotelSettings()` เสมอ — ใช้ `getPricingConstants()` ใน `lib/data/manager.ts` แทน extract block เอง (Phase 16 extracted). Wired แล้วใน: `app/actions/booking.ts`, `app/actions/walk-in-booking.ts`, `app/(booking)/bookings/new/page.tsx` → `BookingForm`. `BookingForm` แสดง label เป็น `${Math.round(settings.taxRate * 100)}%` และ `${formatTHB(settings.resortFeePerNight)}/คืน` — ห้าม hardcode "ภาษี 7%" กลับเข้าไป
 
 - **Shared DB helper (Phase 12)** — `scripts/_db-connection.mjs` อ่าน `SUPABASE_POOLER_HOST` (default `aws-0-ap-southeast-1.pooler.supabase.com`) + `SUPABASE_DB_PASSWORD` + parse project ref จาก `NEXT_PUBLIC_SUPABASE_URL`. Export `pgPoolerConfig()` (pooler สำหรับ queries ทั่วไป) และ `pgDirectConnectionString()` (direct host + SSL `scripts/.supabase-ca.crt` สำหรับ migration runner). Region migration = แก้ env var เดียว. Scripts ที่ห้าม reconnect ผ่าน helper คือ `run-migrations.mjs` (ใช้ direct SSL) — pattern อื่นๆ ที่ต้องการ PG connection ใหม่ให้ใช้ helper เสมอ
 
@@ -421,6 +425,11 @@ Saved memories in `~/.claude/projects/Y--Final/memory/`:
 | Server action template | `app/actions/auth.ts` |
 | Pricing logic | `lib/pricing.ts`, `lib/pricing/seasons.ts` |
 | Supabase clients | `lib/supabase/server.ts`, `client.ts`, `proxy.ts`, `admin.ts`, `getSession.ts` |
+| **RBAC `requireRole` helper** | `lib/auth/require.ts` (consolidates 11 `requireXxx` — Phase 16) |
+| **Supabase error helpers** | `lib/errors/supabase.ts` (`wrapSupabaseError` + `actionFail` — Phase 16) |
+| **Shared UUID validator** | `lib/ids.ts` (`UUID_RE` + `isUuid` — Phase 16, replaces 2 duplicate defs) |
+| **`sanitizeNext` helper** | `lib/auth/sanitize.ts` (relocated from `app/auth/next-utils.ts` — Phase 16) |
+| **Refactor plan file** | `C:\Users\suns9\.claude\plans\nifty-chasing-raccoon.md` (9-commit execution log + deferred items) |
 | Mock data toggle | `lib/data/manager.ts:4`, `lib/data/rooms.ts:2`, `lib/env.ts` |
 | R2 image URLs | `lib/r2/publicUrl.ts` |
 | Design tokens | `app/globals.css` (`@theme {}`) |

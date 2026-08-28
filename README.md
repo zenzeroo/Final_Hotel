@@ -152,7 +152,7 @@ cp .env.example .env.local
 ### 3. Apply database migrations
 
 ```bash
-# Apply ทุก pending migrations (filtered to 202608(27|29|30|31|32|33))
+# Apply ทุก pending migrations (filtered to 202608(27|29|30|31|32|33|34))
 node scripts/run-migrations.mjs
 
 # Apply migration เดียว
@@ -162,8 +162,8 @@ node scripts/run-migrations.mjs --only=20260833
 node scripts/run-migrations.mjs --dry-run
 ```
 
-**Migration filter ปัจจุบัน** (`scripts/run-migrations.mjs:53`):
-`/202608(27|29|30|31|32|33)_.*\.sql$/` — migrations 18–26 และ 28 apply ผ่าน
+**Migration filter ปัจจุบัน** (`scripts/run-migrations.mjs:54`):
+`/202608(27|29|30|31|32|33|34)_.*\.sql$/` — migrations 18–26 และ 28 apply ผ่าน
 Supabase Dashboard SQL editor ไปแล้ว
 
 **หลัง apply migration ใหม่**: copy file ไปที่ `Y:\Final\db-schemas\` (local archive)
@@ -250,7 +250,7 @@ Y:\Final\final\
 │
 ├── lib/                       # Pure utilities + Supabase wrappers
 │   ├── data/                  # Toggle layer — mock vs Supabase
-│   │   ├── manager.ts         # 32 exports (manager + admin CRUD wrapped)
+│   │   ├── manager.ts         # 32 exports (manager + admin CRUD wrapped) + getPricingConstants() helper
 │   │   ├── admin.ts           # Service-role client factory (lib/supabase/admin.ts equivalent)
 │   │   ├── rooms.ts           # 7 exports (uses validated isUsingMockData)
 │   │   ├── bookings.ts        # Supabase-only (no toggle)
@@ -260,6 +260,12 @@ Y:\Final\final\
 │   │   ├── types.ts           # 443 lines — all shared types
 │   │   ├── mock-*.ts          # In-memory state (USE_MOCK_DATA=1 only)
 │   │   └── supabase-*.ts      # Real PostgREST queries
+│   ├── auth/                  # Auth helpers (Phase 16 refactor)
+│   │   ├── require.ts         # requireRole(allowed, redirectPath?) — replaces 11 inline requireXxx helpers
+│   │   └── sanitize.ts        # sanitizeNext(next) — guards open-redirect on ?next= param (relocated from app/auth/next-utils.ts)
+│   ├── errors/                # Error helpers (Phase 16 refactor)
+│   │   └── supabase.ts        # wrapSupabaseError(label, e) + actionFail(e, fallback) — replaces 70 throw sites
+│   ├── ids.ts                 # UUID_RE + isUuid(v) — shared UUID validator (replaces 2 duplicate defs)
 │   ├── supabase/              # server.ts, client.ts, proxy.ts, getSession.ts, admin.ts
 │   ├── pricing.ts             # calculateNights, applyPromotion, calculatePrice, formatTHB, generateBookingCode
 │   ├── pricing/seasons.ts     # pickSeasonalRate, quoteStay, violatesMinNights
@@ -323,6 +329,7 @@ Y:\Final\final\
 | 9 | `20260832` | Staff shifts, profiles.email/hired_at |
 | 10 | `20260833` | `approve_refund(uuid)` RPC |
 | 12 | `20260834` | `bookings.channel` + `bookings.room_unit_id` (walk-in + unit assignment) |
+| 16 | _(no migration)_ | Refactor + clean-up pass — `lib/auth/require.ts` + `lib/errors/supabase.ts` + `lib/ids.ts` + `lib/auth/sanitize.ts`; deleted dead code + swept Phase-X comments; full plan ที่ `C:\Users\suns9\.claude\plans\nifty-chasing-raccoon.md` |
 
 **17 tables**, **11 enums**, **4 SECURITY DEFINER functions** (RLS bypass), **20+ RLS policies**
 
