@@ -4,21 +4,17 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/require'
 import { actionFail } from '@/lib/errors/supabase'
+import { isUuid } from '@/lib/ids'
 import type { MaintenanceIssueType, MaintenanceSeverity } from '@/lib/data/types'
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const VALID_ISSUE_TYPES: readonly MaintenanceIssueType[] = ['plumbing', 'electrical', 'hvac', 'furniture', 'appliance', 'other']
 const VALID_SEVERITIES: readonly MaintenanceSeverity[] = ['low', 'medium', 'high', 'critical']
 const TITLE_MAX = 100
 const DESCRIPTION_MAX = 1000
-
-function isUuid(v: unknown): v is string {
-  return typeof v === 'string' && UUID_RE.test(v)
-}
 
 export async function claimTask(taskId: string): Promise<ActionResult> {
   const session = await requireRole(['housekeeper', 'reception', 'manager', 'admin'], '/housekeeper')

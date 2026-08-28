@@ -1,13 +1,13 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/manager'
+import { getRoomTypeById } from '@/lib/data/rooms'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { TransactionalHeader } from '@/components/layout/TransactionalHeader'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { BookingForm } from './BookingForm'
 import { calculateNights } from '@/lib/pricing'
-import { getRoomById } from './helper'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,9 +32,10 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
     redirect(`/login?next=/bookings/new?roomId=${roomId}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`)
   }
 
-  // Get room
-  const room = await getRoomById(roomId)
-  if (!room) notFound()
+  // Get room (filter out inactive so a crafted URL can't start a booking
+  // for a hidden room_type).
+  const room = await getRoomTypeById(roomId)
+  if (!room || !room.is_active) notFound()
 
   const nights = calculateNights(checkIn, checkOut)
   if (nights === 0) {

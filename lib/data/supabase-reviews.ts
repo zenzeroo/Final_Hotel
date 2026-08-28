@@ -6,6 +6,7 @@
  */
 
 import { wrapSupabaseError } from '@/lib/errors/supabase'
+import { isUuid } from '@/lib/ids'
 
 import type {
   PublicReview,
@@ -208,11 +209,6 @@ async function setReviewStatus(args: {
   const { error } = await supabase.from('reviews').update(patch).eq('id', args.reviewId)
   if (error) wrapSupabaseError('', error)
   return { id: args.reviewId }
-}
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-function isUuid(s: string): boolean {
-  return UUID_RE.test(s)
 }
 
 export async function moderateReview(args: {
