@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { sanitizeNext } from '@/app/auth/next-utils'
+import { sanitizeNext } from '@/lib/auth/sanitize'
 import { translateSupabaseError } from '@/lib/errors/translate'
 
 export interface AuthState {

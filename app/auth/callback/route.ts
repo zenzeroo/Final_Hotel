@@ -21,7 +21,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { roleHomePath, type UserRole } from '@/lib/supabase/getSession'
-import { sanitizeNext } from '@/app/auth/next-utils'
+import { sanitizeNext } from '@/lib/auth/sanitize'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)

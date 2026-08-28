@@ -1,8 +1,9 @@
 /**
- * Phase 14 — Shared helpers for the OAuth callback route + signInWithGoogle
- * server action. Lives outside `app/actions/auth.ts` so both the `'use server'`
- * action and the non-action route handler can import it without violating the
- * "all exports must be async actions" rule that `'use server'` files impose.
+ * Shared helpers for the OAuth callback route + signInWithGoogle server
+ * action. Lives outside `app/actions/auth.ts` so both the `'use server'`
+ * action and the non-action route handler can import it without violating
+ * the "all exports must be async actions" rule that `'use server'` files
+ * impose.
  */
 
 /**
