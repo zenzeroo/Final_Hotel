@@ -145,6 +145,21 @@ export function formatTHB(amount: number): string {
 }
 
 /**
+ * Format a promotion discount for display.
+ * - percent → "20%"
+ * - flat    → "฿1,500"  (canonical `฿X,XXX` via `formatTHB`)
+ *
+ * Replaces identical duplicates in `PromotionsAdminTable` and `PromotionsTable`.
+ */
+export function formatDiscount(p: {
+  discount_type: 'percent' | 'flat'
+  discount_value: number
+}): string {
+  if (p.discount_type === 'percent') return `${p.discount_value}%`
+  return formatTHB(p.discount_value)
+}
+
+/**
  * Generate a human-readable booking code (display only).
  * Format: ZZR-XXXXX (5 random alphanumeric chars)
  */

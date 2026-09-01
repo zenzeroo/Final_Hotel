@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { SeasonalRate } from '@/lib/data/types'
+import { formatTHB } from '@/lib/pricing'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { DeleteSeasonalRateButton } from '@/components/admin/DeleteSeasonalRateButton'
 
@@ -16,7 +17,7 @@ function formatDate(s: string): string {
 }
 
 function formatPrice(r: SeasonalRate): string {
-  if (r.flat_price != null) return `${r.flat_price.toLocaleString('th-TH')} THB`
+  if (r.flat_price != null) return formatTHB(r.flat_price)
   if (r.price_multiplier != null) return `×${r.price_multiplier.toFixed(2)}`
   return '—'
 }

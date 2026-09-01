@@ -1,13 +1,10 @@
 import Link from 'next/link'
 import type { RoomType } from '@/lib/data/types'
+import { formatTHB } from '@/lib/pricing'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface RoomTypesAdminTableProps {
   roomTypes: RoomType[]
-}
-
-function formatPrice(p: number): string {
-  return p.toLocaleString('th-TH') + ' THB'
 }
 
 export function RoomTypesAdminTable({ roomTypes }: RoomTypesAdminTableProps) {
@@ -46,7 +43,7 @@ export function RoomTypesAdminTable({ roomTypes }: RoomTypesAdminTableProps) {
                   <span className="font-mono text-body-sm text-on-surface-variant">{r.slug}</span>
                 </td>
                 <td className="px-4 py-4 text-right text-body-md text-primary font-semibold">
-                  {formatPrice(r.base_price)}
+                  {formatTHB(r.base_price)}
                 </td>
                 <td className="px-4 py-4 text-right text-body-md text-on-surface">
                   {r.max_guests} คน

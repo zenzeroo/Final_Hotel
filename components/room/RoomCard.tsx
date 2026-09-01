@@ -1,7 +1,7 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import type { RoomType } from '@/lib/data/types'
-import { r2Url } from '@/lib/r2/publicUrl'
+import { formatTHB } from '@/lib/pricing'
+import { RoomImage } from './RoomImage'
 import { RatingStars } from './RatingStars'
 import { MaterialIcon } from '../ui/MaterialIcon'
 
@@ -12,7 +12,6 @@ interface RoomCardProps {
 
 export function RoomCard({ room, variant = 'default' }: RoomCardProps) {
   const isFeatured = variant === 'featured'
-  const formattedPrice = new Intl.NumberFormat('th-TH').format(room.base_price)
 
   return (
     <Link
@@ -20,9 +19,9 @@ export function RoomCard({ room, variant = 'default' }: RoomCardProps) {
       className="group block bg-surface-container-lowest rounded-2xl overflow-hidden shadow-(--shadow-ambient) transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1"
     >
       {/* Image */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-surface-container">
-        <Image
-          src={r2Url(room.hero_image_key)}
+      <div className="relative aspect-[4/3] overflow-hidden">
+        <RoomImage
+          imageKey={room.hero_image_key}
           alt={room.name}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
@@ -50,7 +49,7 @@ export function RoomCard({ room, variant = 'default' }: RoomCardProps) {
         <div className="flex items-end justify-between mt-2 pt-4 border-t border-outline-variant">
           <div>
             <span className="text-caption text-on-surface-variant block">เริ่มต้น</span>
-            <span className="text-2xl font-display font-bold text-primary">฿{formattedPrice}</span>
+            <span className="text-2xl font-display font-bold text-primary">{formatTHB(room.base_price)}</span>
             <span className="text-body-md text-on-surface-variant"> / คืน</span>
           </div>
           <span

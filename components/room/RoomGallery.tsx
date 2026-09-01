@@ -1,6 +1,5 @@
-import Image from 'next/image'
 import type { RoomType } from '@/lib/data/types'
-import { r2Url } from '@/lib/r2/publicUrl'
+import { RoomImage } from './RoomImage'
 
 interface RoomGalleryProps {
   room: RoomType
@@ -13,13 +12,14 @@ export function RoomGallery({ room }: RoomGalleryProps) {
     <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:grid-rows-2 md:h-[600px]">
       {/* Hero image (spans 2 cols, 2 rows on desktop) */}
       <div className="relative md:col-span-2 md:row-span-2 rounded-2xl overflow-hidden bg-surface-container min-h-[300px] md:min-h-0">
-        <Image
-          src={r2Url(images[0])}
+        <RoomImage
+          imageKey={images[0]}
           alt={room.name}
           fill
           priority
           sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover"
+          fallbackIcon="hotel"
         />
         <span className="absolute top-4 left-4 px-4 py-2 bg-secondary text-on-secondary rounded-full text-label-md font-semibold uppercase tracking-wider">
           คอลเลกชั่นพิเศษ
@@ -29,12 +29,13 @@ export function RoomGallery({ room }: RoomGalleryProps) {
       {/* Thumbnail 1 */}
       {images[1] && (
         <div className="relative md:col-span-2 rounded-2xl overflow-hidden bg-surface-container min-h-[200px]">
-          <Image
-            src={r2Url(images[1])}
+          <RoomImage
+            imageKey={images[1]}
             alt={`${room.name} 2`}
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover"
+            fallbackIcon="image"
           />
         </div>
       )}
@@ -42,12 +43,13 @@ export function RoomGallery({ room }: RoomGalleryProps) {
       {/* Thumbnail 2 */}
       {images[2] && (
         <div className="relative rounded-2xl overflow-hidden bg-surface-container min-h-[200px]">
-          <Image
-            src={r2Url(images[2])}
+          <RoomImage
+            imageKey={images[2]}
             alt={`${room.name} 3`}
             fill
             sizes="(max-width: 768px) 100vw, 25vw"
             className="object-cover"
+            fallbackIcon="image"
           />
         </div>
       )}
@@ -55,12 +57,13 @@ export function RoomGallery({ room }: RoomGalleryProps) {
       {/* Thumbnail 3 (with placeholder/gradient) */}
       {images[3] ? (
         <div className="relative rounded-2xl overflow-hidden bg-surface-container min-h-[200px]">
-          <Image
-            src={r2Url(images[3])}
+          <RoomImage
+            imageKey={images[3]}
             alt={`${room.name} 4`}
             fill
             sizes="(max-width: 768px) 100vw, 25vw"
             className="object-cover"
+            fallbackIcon="image"
           />
         </div>
       ) : (

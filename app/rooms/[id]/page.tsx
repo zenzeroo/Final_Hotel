@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getRoomBySlug } from '@/lib/data/rooms'
+import { getPricingConstants } from '@/lib/data/manager'
+import { bedTypeLabel } from '@/lib/format/bedType'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { RoomGallery } from '@/components/room/RoomGallery'
@@ -15,6 +17,10 @@ export const dynamic = 'force-dynamic'
 export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
   const { id } = await props.params
   const room = await getRoomBySlug(id)
+  // Phase parity — pass live tax + resort fee to the BookingWidget so its
+  // preview totals match `/bookings/new`. Without this, the widget falls
+  // back to the hardcoded DEFAULT_PRICING (0.07 / 150).
+  const pricingSettings = await getPricingConstants()
 
   if (!room) {
     notFound()
@@ -49,7 +55,7 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
                   </span>
                   <span className="inline-flex items-center gap-2">
                     <MaterialIcon name="bed" size={18} />
-                    {room.bed_type} เตียง
+                    {bedTypeLabel(room.bed_type)}
                   </span>
                   {room.view_label && (
                     <span className="inline-flex items-center gap-2">
@@ -90,7 +96,7 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
             </article>
 
             {/* Booking widget (Phase 2) */}
-            <BookingWidget room={room} />
+            <BookingWidget room={room} settings={pricingSettings} />
           </div>
         </div>
       </main>

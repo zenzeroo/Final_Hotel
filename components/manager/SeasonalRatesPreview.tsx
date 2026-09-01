@@ -1,4 +1,5 @@
 import type { SeasonalRate } from '@/lib/data/types'
+import { formatTHB } from '@/lib/pricing'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface SeasonalRatesPreviewProps {
@@ -14,7 +15,7 @@ function formatDate(s: string): string {
 }
 
 function formatPricing(rate: SeasonalRate): string {
-  if (rate.flat_price != null) return `${rate.flat_price.toLocaleString('th-TH')} THB/คืน`
+  if (rate.flat_price != null) return `${formatTHB(rate.flat_price)}/คืน`
   if (rate.price_multiplier != null) {
     const pct = (rate.price_multiplier * 100).toFixed(0)
     const sign = rate.price_multiplier >= 1 ? '+' : ''

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useTransition } from 'react'
 import type { Promotion } from '@/lib/data/types'
+import { formatDiscount } from '@/lib/pricing'
 import { TogglePromotionButton } from '@/components/manager/TogglePromotionButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { deletePromotionAction } from '@/app/actions/promotions'
@@ -10,11 +11,6 @@ import { deletePromotionAction } from '@/app/actions/promotions'
 interface PromotionsAdminTableProps {
   promotions: Promotion[]
   now: Date
-}
-
-function formatDiscount(p: Promotion): string {
-  if (p.discount_type === 'percent') return `${p.discount_value}%`
-  return `${p.discount_value.toLocaleString('th-TH')} THB`
 }
 
 function formatDate(s: string): string {

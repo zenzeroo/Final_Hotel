@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
-import { r2Url } from '@/lib/r2/publicUrl'
+import { RoomImage } from '@/components/room/RoomImage'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
 
@@ -35,9 +34,9 @@ export default async function WalkInBookingPage() {
             href={`/reception/bookings/new/create?roomId=${room.id}`}
             className="group block bg-surface-container-lowest rounded-2xl overflow-hidden shadow-(--shadow-ambient) border border-outline-variant hover:shadow-(--shadow-ambient-md) transition-all"
           >
-            <div className="relative aspect-[4/3] overflow-hidden bg-surface-container">
-              <Image
-                src={r2Url(room.hero_image_key)}
+            <div className="relative aspect-[4/3] overflow-hidden">
+              <RoomImage
+                imageKey={room.hero_image_key}
                 alt={room.name}
                 fill
                 sizes="(max-width: 768px) 100vw, 33vw"

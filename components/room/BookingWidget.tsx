@@ -4,13 +4,20 @@ import { useRouter } from 'next/navigation'
 import { useState, useMemo, useTransition, useEffect } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { RatingStars } from './RatingStars'
-import { calculateNights, calculatePrice, formatTHB } from '@/lib/pricing'
+import {
+  calculateNights,
+  calculatePrice,
+  formatTHB,
+  type PricingSettings,
+} from '@/lib/pricing'
 import { getSeasonalRatesAction } from '@/app/actions/seasonal-rates'
-import type { AppliedRate } from '@/lib/pricing/seasons'
+import type { AppliedRate, QuoteResult } from '@/lib/pricing/seasons'
 import type { RoomType } from '@/lib/data/types'
 
 interface BookingWidgetProps {
   room: RoomType
+  /** Phase parity — live tax + resort fee from `getPricingConstants()` */
+  settings: PricingSettings
 }
 
 function getTodayIso() {
@@ -23,7 +30,7 @@ function getTomorrowIso() {
   return d.toISOString().slice(0, 10)
 }
 
-export function BookingWidget({ room }: BookingWidgetProps) {
+export function BookingWidget({ room, settings }: BookingWidgetProps) {
   const router = useRouter()
   const [checkIn, setCheckIn] = useState(getTomorrowIso)
   const [checkOut, setCheckOut] = useState(() => {
@@ -33,8 +40,10 @@ export function BookingWidget({ room }: BookingWidgetProps) {
   })
   const [guests, setGuests] = useState(2)
 
-  // Phase 8 — seasonal rates fetched server-side whenever dates change.
+  // Phase parity — capture full QuoteResult so calculatePrice uses the
+  // seasonal-aware baseSubtotal. Also drives the appliedRates banner.
   const [appliedRates, setAppliedRates] = useState<AppliedRate[]>([])
+  const [quote, setQuote] = useState<QuoteResult | null>(null)
   const [minNightsBlocked, setMinNightsBlocked] = useState(false)
   const [, startTransition] = useTransition()
 
@@ -49,9 +58,11 @@ export function BookingWidget({ room }: BookingWidgetProps) {
       })
       if (res.ok && res.quote) {
         setAppliedRates(res.quote.appliedRates)
+        setQuote(res.quote)
         setMinNightsBlocked(Boolean(res.violatesMinNights))
       } else {
         setAppliedRates([])
+        setQuote(null)
         setMinNightsBlocked(false)
       }
     })
@@ -59,18 +70,22 @@ export function BookingWidget({ room }: BookingWidgetProps) {
 
   const nights = useMemo(() => calculateNights(checkIn, checkOut), [checkIn, checkOut])
 
-  // Phase 8 — when seasonal rates apply, baseSubtotal comes from the quote.
-  // We use calculatePrice without `quote` here (legacy formula) for the
-  // widget preview; createBooking re-computes the authoritative quote server-side.
+  // Phase parity — pass `quote` + `settings` so widget preview matches
+  // `/bookings/new`. Quote drives baseSubtotal; settings drive tax + fee.
+  // createBooking re-computes authoritatively server-side.
   const price = useMemo(
     () =>
-      calculatePrice({
-        basePrice: room.base_price,
-        checkIn,
-        checkOut,
-        guests,
-      }),
-    [room.base_price, checkIn, checkOut, guests]
+      calculatePrice(
+        {
+          basePrice: room.base_price,
+          checkIn,
+          checkOut,
+          guests,
+          quote: quote ?? undefined,
+        },
+        settings,
+      ),
+    [room.base_price, checkIn, checkOut, guests, quote, settings]
   )
 
   const handleReserve = () => {

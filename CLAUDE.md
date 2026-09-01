@@ -382,6 +382,10 @@ git push origin main     # specify branch
   ```
   รันผ่าน `node scripts/run-sql.mjs <notif-file>.sql` หรือ Supabase SQL Editor. รอ ~5s แล้ว PostgREST จะ re-read `pg_catalog` และ embed ได้ปกติ. Reference: `db-schemas/20260834_bookings_channel_and_unit.sql` (first symptom reported for `bookings.room_unit_id` → `room_units.id` — `/manager/bookings` page error `Supabase (bookings): Could not find a relationship between 'bookings' and 'room_units' in the schema cache` ที่ `lib/data/supabase-manager.ts:508-522`). **First-debug step**: verify FK actually exists ก่อน — ถ้า migration ไม่เคย apply จริง (column ไม่มี) reload cache อย่างเดียวไม่ช่วย ต้อง apply migration ก่อนแล้ว NOTIFY ตาม
 
+- **Use canonical `formatTHB()` from `lib/pricing.ts:143`** — never shadow with local `formatPrice`/`formatTHB` helpers or inline `toLocaleString('th-TH') + ' THB'` patterns. Local helpers silently drift on currency/locale swap (e.g. Phase 17 refactor swept 6 files: `RoomCard.tsx:15`, `RoomTypesAdminTable.tsx:9-11`, `SeasonalRatesAdminTable.tsx:19`, `PromotionsAdminTable.tsx:17`, `RoomInventoryTable.tsx:42-44`, `SeasonalRatesPreview.tsx:17`). Use the canonical `formatTHB` for base prices, `formatDiscount(p)` for promotion discounts (handles percent/flat), and the inline `${formatTHB(amount)}/คืน` template for seasonal flat rates
+
+- **Wrap `<Image>` with `<RoomImage>` for user-facing hero/gallery** — `lib/r2/publicUrl.ts` returns empty string on null `imageKey`, and a Next `<Image>` with empty src renders raw alt text on grey background (visual noise + accessibility leak). `<RoomImage>` (client component) handles both empty src AND 404/network errors via gradient + MaterialIcon fallback. Consumer wrapper must be `relative` + sized (e.g. `aspect-[4/3]`) — both `<Image>` and fallback use `absolute inset-0`. Used in `RoomCard`, `app/reception/bookings/new/page.tsx`, `RoomGallery` (hero + 4 thumbs)
+
 ---
 
 ## 📌 Known Issues / TODO

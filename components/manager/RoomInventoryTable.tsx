@@ -1,4 +1,5 @@
 import type { RoomUnitWithType, RoomUnitStatus } from '@/lib/data/types'
+import { formatTHB } from '@/lib/pricing'
 import { CloseRoomButton } from './CloseRoomButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
@@ -37,10 +38,6 @@ const STATUS_LABEL: Record<RoomUnitStatus, { th: string; icon: string; chip: str
     chip: 'bg-surface-container-high text-on-surface-variant',
     dot: 'bg-on-surface-variant',
   },
-}
-
-function formatTHB(value: number): string {
-  return value.toLocaleString('th-TH')
 }
 
 export function RoomInventoryTable({ units }: RoomInventoryTableProps) {
@@ -101,8 +98,7 @@ export function RoomInventoryTable({ units }: RoomInventoryTableProps) {
                       <td className="px-4 py-4 text-right">
                         <span className="text-body-md font-semibold text-primary">
                           {formatTHB(unit.room_type.base_price)}
-                        </span>{' '}
-                        <span className="text-caption text-on-surface-variant">THB</span>
+                        </span>
                       </td>
                       <td className="px-4 py-4">
                         <span

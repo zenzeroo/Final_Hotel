@@ -1,15 +1,11 @@
 import type { Promotion } from '@/lib/data/types'
+import { formatDiscount } from '@/lib/pricing'
 import { TogglePromotionButton } from './TogglePromotionButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface PromotionsTableProps {
   promotions: Promotion[]
   now: Date
-}
-
-function formatDiscount(p: Promotion): string {
-  if (p.discount_type === 'percent') return `${p.discount_value}%`
-  return `${p.discount_value.toLocaleString('th-TH')} THB`
 }
 
 function formatDate(s: string): string {
