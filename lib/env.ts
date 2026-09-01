@@ -39,6 +39,13 @@ const envSchema = z.object({
     .string()
     .default('150')
     .transform((v) => parseInt(v, 10)),
+
+  // Stripe (Public — client-safe publishable key)
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
+
+  // Stripe (Server-only — secret key + webhook signing secret)
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)
@@ -54,3 +61,4 @@ export const env = parsed.data
 export const isUsingMockData = env.USE_MOCK_DATA
 export const hasSupabase = Boolean(env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 export const hasR2 = Boolean(env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY)
+export const hasPaymentGateway = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET)
