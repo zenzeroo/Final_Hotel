@@ -46,12 +46,13 @@ const onlyArg = args.find((a) => a.startsWith('--only='))
 const only = onlyArg ? onlyArg.slice('--only='.length) : null
 
 const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
-// Apply Phase 9 migrations (20260827–32).
+// Apply Phase 9–17 migrations (20260827–34 + 20260902).
 // NOTE: 20260827 (reviews RLS + status column) is a fix-up: code in phase 9D
 // references review status / moderated_at columns that the live DB never
 // received. Without it, the reviews wire fails at runtime.
+// 20260902 adds Phase 17 (Stripe payments table + 3 SECURITY DEFINER RPCs).
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(27|29|30|31|32|33|34)_.*\.sql$/.test(f))
+  .filter((f) => /202608(27|29|30|31|32|33|34)|20260902_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 
