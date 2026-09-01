@@ -32,7 +32,7 @@ export default async function WalkInBookingPage() {
           <Link
             key={room.id}
             href={`/reception/bookings/new/create?roomId=${room.id}`}
-            className="group block bg-surface-container-lowest rounded-2xl overflow-hidden shadow-(--shadow-ambient) border border-outline-variant hover:shadow-(--shadow-ambient-md) transition-all"
+            className="group flex flex-col bg-surface-container-lowest rounded-2xl overflow-hidden shadow-(--shadow-ambient) border border-outline-variant hover:shadow-(--shadow-ambient-md) transition-all"
           >
             <div className="relative aspect-[4/3] overflow-hidden">
               <RoomImage
@@ -46,19 +46,19 @@ export default async function WalkInBookingPage() {
                 {room.type}
               </span>
             </div>
-            <div className="p-5">
+            <div className="p-5 flex flex-col flex-1">
               <h3 className="font-display text-lg text-primary">{room.name_th}</h3>
-              <p className="text-caption text-on-surface-variant line-clamp-2 mt-1">
+              <p className="text-caption text-on-surface-variant line-clamp-2 flex-1 mb-0">
                 {room.short_desc}
               </p>
-              <div className="mt-3 flex items-baseline justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
                   <span className="text-caption text-on-surface-variant">เริ่มต้น</span>
-                  <span className="text-xl font-display font-bold text-primary ml-1">
+                  <span className="text-xl font-display font-bold text-primary ml-1 whitespace-nowrap">
                     {formatTHB(room.base_price)}
                   </span>
                 </div>
-                <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-primary text-secondary">
+                <span className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full bg-primary text-secondary">
                   <MaterialIcon name="arrow_forward" size={18} />
                 </span>
               </div>

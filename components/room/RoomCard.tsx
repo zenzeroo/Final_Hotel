@@ -16,7 +16,7 @@ export function RoomCard({ room, variant = 'default' }: RoomCardProps) {
   return (
     <Link
       href={`/rooms/${room.slug}`}
-      className="group block bg-surface-container-lowest rounded-2xl overflow-hidden shadow-(--shadow-ambient) transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1"
+      className="group flex flex-col bg-surface-container-lowest rounded-2xl overflow-hidden shadow-(--shadow-ambient) transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1"
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -36,24 +36,24 @@ export function RoomCard({ room, variant = 'default' }: RoomCardProps) {
       </div>
 
       {/* Content */}
-      <div className="p-6 flex flex-col gap-3">
+      <div className="p-6 flex flex-col gap-3 flex-1">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-display text-xl text-primary font-semibold">{room.name_th}</h3>
         </div>
-        <p className="text-body-md text-on-surface-variant line-clamp-2">{room.short_desc}</p>
+        <p className="text-body-md text-on-surface-variant line-clamp-2 flex-1 mb-0">{room.short_desc}</p>
 
         <div className="flex items-center justify-between mt-2">
           <RatingStars value={room.rating_avg} count={room.rating_count} size={16} />
         </div>
 
-        <div className="flex items-end justify-between mt-2 pt-4 border-t border-outline-variant">
-          <div>
+        <div className="flex items-center justify-between mt-2 pt-4 border-t border-outline-variant gap-3">
+          <div className="min-w-0">
             <span className="text-caption text-on-surface-variant block">เริ่มต้น</span>
-            <span className="text-2xl font-display font-bold text-primary">{formatTHB(room.base_price)}</span>
-            <span className="text-body-md text-on-surface-variant"> / คืน</span>
+            <span className="text-2xl font-display font-bold text-primary whitespace-nowrap">{formatTHB(room.base_price)}</span>
+            <span className="text-body-md text-on-surface-variant whitespace-nowrap"> / คืน</span>
           </div>
           <span
-            className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary transition-transform duration-300 group-hover:translate-x-1"
+            className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary transition-transform duration-300 group-hover:translate-x-1"
             aria-label="ดูรายละเอียด"
           >
             <MaterialIcon name="arrow_forward" size={20} />

@@ -386,6 +386,8 @@ git push origin main     # specify branch
 
 - **Wrap `<Image>` with `<RoomImage>` for user-facing hero/gallery** — `lib/r2/publicUrl.ts` returns empty string on null `imageKey`, and a Next `<Image>` with empty src renders raw alt text on grey background (visual noise + accessibility leak). `<RoomImage>` (client component) handles both empty src AND 404/network errors via gradient + MaterialIcon fallback. Consumer wrapper must be `relative` + sized (e.g. `aspect-[4/3]`) — both `<Image>` and fallback use `absolute inset-0`. Used in `RoomCard`, `app/reception/bookings/new/page.tsx`, `RoomGallery` (hero + 4 thumbs)
 
+- **RoomCard layout stability (price drift + description collapse)** — ห้ามใช้ `flex items-end` หรือ `flex items-baseline` คู่กับ typography price text + fixed-height round button (arrow pill drops on 5+ digit prices), และ ห้ามใช้ bare `<p className="line-clamp-2">` description โดยไม่ pin height (short desc ทำให้ section อื่นเลื่อนขึ้น). Fix ต้องครบทั้งสองแกน: (1) price row: `flex items-center` + `whitespace-nowrap` บน price span + `flex-shrink-0` บนปุ่ม + `min-w-0` บน text column + `gap-3`; (2) card structure: `<Link>` ต้อง `flex flex-col` + content wrapper `<div>` ต้อง `flex-1` + description `<p>` ต้อง `flex-1 mb-0` (absorbs leftover space, doesn't shift other sections). Affects `components/room/RoomCard.tsx:19,39,43,49` (primary: covers `/rooms` + `/`) และ `app/reception/bookings/new/page.tsx:35,49,51,54` (walk-in picker). ใช้ `grid grid-cols-N` ปกติจะให้ `align-items: stretch` ทำให้ card สูงเท่ากันอัตโนมัติ — แต่ต้องเปิด `flex flex-col` บน `<Link>` ก่อน ไม่งั้น content wrapper ไม่รู้จัก available space
+
 ---
 
 ## 📌 Known Issues / TODO
