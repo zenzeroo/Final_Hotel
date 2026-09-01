@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
-import { markPaid, cancelBooking } from '@/app/actions/booking'
+import { cancelBooking } from '@/app/actions/booking'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface ConfirmationActionsProps {
@@ -12,23 +12,14 @@ interface ConfirmationActionsProps {
 }
 
 export function ConfirmationActions({ bookingId, status, paymentStatus }: ConfirmationActionsProps) {
+  // paymentStatus will be used by the Stripe pay button in Commit 5.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _ps = paymentStatus
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const isCancelled = status === 'cancelled'
   const isCheckedOut = status === 'checked_out'
-  const isPaid = paymentStatus === 'paid'
-
-  const handleMarkPaid = () => {
-    startTransition(async () => {
-      const result = await markPaid(bookingId)
-      if (result?.error) {
-        alert(result.error)
-      } else {
-        router.refresh()
-      }
-    })
-  }
 
   const handleCancel = () => {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้?')) return
@@ -66,26 +57,6 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
 
   return (
     <div className="mt-6 flex flex-col gap-3">
-      {!isPaid && (
-        <button
-          type="button"
-          onClick={handleMarkPaid}
-          disabled={isPending}
-          className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60"
-        >
-          {isPending ? (
-            <>
-              <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-              กำลังดำเนินการ…
-            </>
-          ) : (
-            <>
-              <MaterialIcon name="credit_card" size={18} />
-              ยืนยันการจ่ายเงิน
-            </>
-          )}
-        </button>
-      )}
       <button
         type="button"
         onClick={handleCancel}

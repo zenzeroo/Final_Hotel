@@ -173,29 +173,6 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 }
 
 /**
- * Mark a booking as paid (stub — no real payment gateway).
- */
-export async function markPaid(bookingId: string) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
-
-  const { error } = await supabase
-    .from('bookings')
-    .update({ payment_status: 'paid' })
-    .eq('id', bookingId)
-    .eq('user_id', user.id)
-
-  if (error) return { error: 'ไม่สามารถอัปเดตการชำระเงิน: ' + translateSupabaseError(error.message) }
-
-  revalidatePath(`/bookings/${bookingId}`)
-  revalidatePath('/bookings')
-  return { success: true }
-}
-
-/**
  * Cancel a booking (sets status to 'cancelled').
  */
 export async function cancelBooking(bookingId: string) {

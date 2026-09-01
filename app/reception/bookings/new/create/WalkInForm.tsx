@@ -39,7 +39,10 @@ export function WalkInForm({ room }: WalkInFormProps) {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [specialRequest, setSpecialRequest] = useState('')
-  const [markAsPaid, setMarkAsPaid] = useState(true)
+  // Phase 17 — replaces `markAsPaid` boolean. `card` triggers a Stripe
+  // Checkout redirect in the submit handler. `unpaid` is for "pay later"
+  // walk-ins (folio created, payment collected later at desk).
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'unpaid'>('cash')
 
   const nights = useMemo(() => calculateNights(checkIn, checkOut), [checkIn, checkOut])
   const price = useMemo(
@@ -69,7 +72,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
         bookerEmail: email,
         bookerPhone: phone || undefined,
         specialRequest: specialRequest || undefined,
-        markAsPaid,
+        paymentMethod,
       })
 
       if (result.error) {
@@ -175,17 +178,34 @@ export function WalkInForm({ room }: WalkInFormProps) {
           />
         </div>
 
-        <label className="flex items-center gap-3 px-4 py-3 bg-surface-container-lowest rounded-xl border border-outline-variant">
-          <input
-            type="checkbox"
-            checked={markAsPaid}
-            onChange={(e) => setMarkAsPaid(e.target.checked)}
-            className="w-4 h-4 accent-primary"
-          />
-          <span className="text-body-md text-on-surface">
-            ลูกค้าชำระเงินแล้ว ณ ตอนนี้
-          </span>
-        </label>
+        <fieldset className="bg-surface-container-lowest rounded-xl border border-outline-variant p-4">
+          <legend className="px-2 text-label-md text-on-surface font-semibold">
+            วิธีชำระเงิน
+          </legend>
+          <div className="flex flex-col gap-2">
+            <PaymentOption
+              value="cash"
+              label="เงินสด"
+              description="ลูกค้าชำระ ณ ตอนนี้ — ระบบบันทึกสถานะชำระเงินแล้วทันที"
+              selected={paymentMethod === 'cash'}
+              onSelect={() => setPaymentMethod('cash')}
+            />
+            <PaymentOption
+              value="card"
+              label="บัตรเครดิต / PromptPay"
+              description="เปิดหน้า Stripe Checkout เพื่อรับชำระเงินออนไลน์"
+              selected={paymentMethod === 'card'}
+              onSelect={() => setPaymentMethod('card')}
+            />
+            <PaymentOption
+              value="unpaid"
+              label="ชำระภายหลัง"
+              description="สร้างการจองไว้ก่อน — เก็บเงินที่เคาน์เตอร์ในภายหลัง"
+              selected={paymentMethod === 'unpaid'}
+              onSelect={() => setPaymentMethod('unpaid')}
+            />
+          </div>
+        </fieldset>
       </div>
 
       {/* RIGHT: summary */}
@@ -261,6 +281,43 @@ function Field({ label, required, children }: { label: string; required?: boolea
         {required && <span className="text-error">*</span>}
       </span>
       {children}
+    </label>
+  )
+}
+
+function PaymentOption({
+  value,
+  label,
+  description,
+  selected,
+  onSelect,
+}: {
+  value: 'cash' | 'card' | 'unpaid'
+  label: string
+  description: string
+  selected: boolean
+  onSelect: () => void
+}) {
+  return (
+    <label
+      className={`flex items-start gap-3 px-3 py-3 rounded-lg border cursor-pointer transition-colors ${
+        selected
+          ? 'border-primary bg-primary/5'
+          : 'border-outline-variant hover:bg-surface-container-low'
+      }`}
+    >
+      <input
+        type="radio"
+        name="paymentMethod"
+        value={value}
+        checked={selected}
+        onChange={onSelect}
+        className="mt-1 w-4 h-4 accent-primary"
+      />
+      <div className="flex flex-col">
+        <span className="text-body-md font-semibold text-on-surface">{label}</span>
+        <span className="text-body-sm text-on-surface-variant">{description}</span>
+      </div>
     </label>
   )
 }

@@ -34,7 +34,9 @@ const walkInSchema = z.object({
   bookerPhone: z.string().max(40).optional().nullable(),
   specialRequest: z.string().max(500).optional().nullable(),
   promoCode: z.string().max(40).optional().nullable(),
-  markAsPaid: z.boolean().default(true),
+  // Phase 17 — replaces the boolean `markAsPaid`. `card` will redirect to
+  // Stripe Checkout via `createCheckoutSessionAction` from the form layer.
+  paymentMethod: z.enum(['cash', 'card', 'unpaid']).default('cash'),
 })
 
 export type WalkInBookingInput = z.infer<typeof walkInSchema>
@@ -173,7 +175,10 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
       currency: price.currency,
       cancellation_policy_id: policy?.id ?? null,
       status: 'confirmed',
-      payment_status: data.markAsPaid ? 'paid' : 'unpaid',
+      // Phase 17 — cash flips to paid (we also insert a `payments` row in
+      // markCashPaidAction so the accounting path is uniform); card/unpaid
+      // stay `unpaid` until Stripe webhook confirms payment.
+      payment_status: data.paymentMethod === 'cash' ? 'paid' : 'unpaid',
       booker_full_name: data.bookerFullName,
       booker_email: data.bookerEmail,
       booker_phone: data.bookerPhone ?? null,
@@ -185,6 +190,30 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
 
   if (insertErr || !booking) {
     return { error: 'ไม่สามารถสร้างการจอง: ' + translateSupabaseError(insertErr?.message) }
+  }
+
+  // Phase 17 — for cash walk-ins, record a payments row in the same call so
+  // the accounting path is uniform with Stripe-originated payments (manager
+  // dashboard sums `payments.amount` regardless of provider).
+  if (data.paymentMethod === 'cash') {
+    const { error: payErr } = await admin.from('payments').insert({
+      booking_id: booking.id,
+      provider: 'cash',
+      payment_method: 'cash',
+      amount: price.total,
+      currency: price.currency,
+      status: 'succeeded',
+      paid_at: new Date().toISOString(),
+      metadata: {
+        actor_id: caller.id,
+        actor_role: callerProfile.role,
+      },
+    })
+    if (payErr) {
+      // Don't fail the whole booking — booking row exists, payments row is
+      // audit-only. Log and continue.
+      console.warn('[walk-in] failed to insert cash payment row:', payErr.message)
+    }
   }
 
   revalidatePath('/reception/bookings')
