@@ -1,8 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { cancelBooking } from '@/app/actions/booking'
+import { createCheckoutSessionAction } from '@/app/actions/payment'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface ConfirmationActionsProps {
@@ -12,14 +13,30 @@ interface ConfirmationActionsProps {
 }
 
 export function ConfirmationActions({ bookingId, status, paymentStatus }: ConfirmationActionsProps) {
-  // paymentStatus will be used by the Stripe pay button in Commit 5.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _ps = paymentStatus
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  // Phase 17 — inline error state (Phase 14 lesson: silent server-action
+  // failures via `void action()` were a UX trap; surface every error).
+  const [payError, setPayError] = useState<string | null>(null)
 
   const isCancelled = status === 'cancelled'
   const isCheckedOut = status === 'checked_out'
+  const isPaid = paymentStatus === 'paid'
+
+  const handlePay = () => {
+    setPayError(null)
+    startTransition(async () => {
+      const result = await createCheckoutSessionAction({ bookingId })
+      if (!result.ok) {
+        setPayError(result.error)
+        return
+      }
+      // Full-page redirect to Stripe-hosted Checkout. Using
+      // window.location.assign (not router.push) because Stripe's page is
+      // on a different origin — Next.js client routing can't help here.
+      window.location.assign(result.data!.url)
+    })
+  }
 
   const handleCancel = () => {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้?')) return
@@ -57,6 +74,31 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
 
   return (
     <div className="mt-6 flex flex-col gap-3">
+      {payError && (
+        <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
+          {payError}
+        </div>
+      )}
+      {!isPaid && (
+        <button
+          type="button"
+          onClick={handlePay}
+          disabled={isPending}
+          className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60"
+        >
+          {isPending ? (
+            <>
+              <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+              กำลังเปิดหน้าชำระเงิน…
+            </>
+          ) : (
+            <>
+              <MaterialIcon name="credit_card" size={18} />
+              ชำระเงินผ่าน Stripe
+            </>
+          )}
+        </button>
+      )}
       <button
         type="button"
         onClick={handleCancel}

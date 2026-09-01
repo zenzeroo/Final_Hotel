@@ -61,6 +61,13 @@ function StatusBadge({ status, paymentStatus }: { status: string; paymentStatus:
 
 export default async function BookingConfirmationPage(props: PageProps<'/bookings/[id]'>) {
   const { id } = await props.params
+  const sp = await props.searchParams
+  // Phase 17 — Stripe redirects back here with these query params.
+  //   ?session_id=cs_test_…  → success (webhook flips payment_status='paid')
+  //   ?cancelled=1           → user bailed at the Stripe-hosted page
+  // The page is `force-dynamic`, so the fresh fetch already reflects the
+  // webhook's payment_status flip on the success path — no extra RPC needed.
+  const cancelledByUser = sp.cancelled === '1'
   const session = await getSession()
   if (!session) {
     return (
@@ -90,6 +97,15 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
           <p className="text-body-md text-on-surface-variant mb-8">
             รหัสการจอง: <span className="font-mono font-semibold">#{booking.booking_code}</span>
           </p>
+
+          {cancelledByUser && (
+            <div className="mb-6 px-4 py-3 bg-warning/10 border border-warning/30 rounded-lg flex items-center gap-3">
+              <MaterialIcon name="info" size={20} />
+              <p className="text-body-md text-on-surface">
+                การชำระเงินถูกยกเลิก — การจองของคุณยังไม่ได้ชำระ สามารถลองชำระใหม่ได้ด้านล่าง
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-8">
             {/* LEFT */}

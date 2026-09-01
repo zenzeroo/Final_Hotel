@@ -589,6 +589,8 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
       cancelled: 'bg-error-container text-on-error-container',
       created: 'bg-surface-variant text-on-surface-variant',
       confirmed: 'bg-primary-container text-on-primary-container',
+      // Phase 17 — written by confirm_payment_session RPC + markCashPaidAction.
+      payment_confirmed: 'bg-primary text-on-primary',
     }
     const actionLabel: Record<string, string> = {
       special_edit: 'Special Edit',
@@ -599,6 +601,9 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
       cancelled: 'Cancelled',
       created: 'Created',
       confirmed: 'Confirmed',
+      // Phase 17 — matches the new booking_events.event_type value written by
+      // the webhook handler (online) and markCashPaidAction (walk-in cash).
+      payment_confirmed: 'Payment Confirmed',
     }
     return {
       id: row.id,
