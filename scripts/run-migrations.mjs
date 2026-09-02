@@ -51,8 +51,9 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // references review status / moderated_at columns that the live DB never
 // received. Without it, the reviews wire fails at runtime.
 // 20260902 adds Phase 17 (Stripe payments table + 3 SECURITY DEFINER RPCs).
+// 20260903 adds Phase 18 (confirm_refund_session RPC for charge.refunded webhook).
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(27|29|30|31|32|33|34)|20260902_.*\.sql$/.test(f))
+  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 
