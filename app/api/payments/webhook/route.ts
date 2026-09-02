@@ -14,8 +14,9 @@
  *   - 200 → success + unhandled event types. Stripe marks delivered.
  *
  * All DB writes go through SECURITY DEFINER RPCs (`confirm_payment_session`,
- * `expire_payment_session`). The RPC `provider_event_id` UNIQUE gives
- * us idempotency — replayed webhooks return the same row silently.
+ * `expire_payment_session`, `confirm_refund_session` — Phase 18). The RPC
+ * `provider_event_id` UNIQUE gives us idempotency — replayed webhooks
+ * return the same row silently.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -84,7 +85,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       // Phase 18: charge.refunded → flip payments.status='refunded'
-      // + bookings.payment_status='refunded' + audit row.
+      // + bookings.payment_status='refunded' + audit row. The RPC is
+      // idempotent on provider_event_id, so a duplicate event (Stripe
+      // retries, or our own confirmation flow re-emitting) is a safe
+      // no-op. We always read `payment_intent` (not `charge.id`) because
+      // refunds are keyed off the PI in the confirm_refund_session RPC.
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge
+        const paymentIntentId =
+          typeof charge.payment_intent === 'string' ? charge.payment_intent : ''
+        if (!paymentIntentId) {
+          throw new Error('charge.refunded missing payment_intent')
+        }
+        const { error } = await admin.rpc('confirm_refund_session', {
+          p_payment_intent: paymentIntentId,
+          p_event_id: event.id,
+        })
+        if (error) throw error
+        break
+      }
+
       default:
         // Ack unhandled events so Stripe stops retrying.
         break
