@@ -591,6 +591,10 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
       confirmed: 'bg-primary-container text-on-primary-container',
       // Phase 17 — written by confirm_payment_session RPC + markCashPaidAction.
       payment_confirmed: 'bg-primary text-on-primary',
+      // Phase 18 — written by confirm_refund_session RPC when Stripe POSTs
+      // charge.refunded to the webhook. Confirms the guest's card was
+      // actually credited, distinct from `refund_approved` (manager intent).
+      refund_confirmed: 'bg-error text-on-error',
     }
     const actionLabel: Record<string, string> = {
       special_edit: 'Special Edit',
@@ -604,6 +608,9 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
       // Phase 17 — matches the new booking_events.event_type value written by
       // the webhook handler (online) and markCashPaidAction (walk-in cash).
       payment_confirmed: 'Payment Confirmed',
+      // Phase 18 — webhook-driven refund confirmation (distinct from
+      // manager-initiated `refund_approved`).
+      refund_confirmed: 'Refund Confirmed (Stripe)',
     }
     return {
       id: row.id,

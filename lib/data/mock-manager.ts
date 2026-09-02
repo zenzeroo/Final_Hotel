@@ -349,6 +349,12 @@ export async function resolveDamageReport(args: {
 }
 
 export async function approveRefund(args: { refundId: string }): Promise<{ id: string }> {
+  // Phase 18 — mock parity note: the mock `RefundRequest` type doesn't carry
+  // a `booking_id` field (only `bookingCode`), so we can't look up payments
+  // by booking here. The real DB layer handles the `payments.status` flip
+  // via the Stripe `charge.refunded` webhook → `confirm_refund_session` RPC.
+  // The manager UI doesn't surface `payments.status` directly in the refunds
+  // tab, so skipping the mock flip is acceptable for UI development parity.
   state.refundRequests = state.refundRequests.filter((r) => r.id !== args.refundId)
   return { id: args.refundId }
 }
