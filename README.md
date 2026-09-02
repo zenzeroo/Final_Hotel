@@ -9,6 +9,13 @@ each with their own dashboards, permissions, and server actions.
 Originally prototyped as static HTML at `Y:/Final/V1_Prototype/extracted/`, then
 rebuilt into a typed Next.js + Supabase app across 15 phases.
 
+> ⚠️ **Phase 18 in-flight (2/4 commits landed in working tree, not yet committed)** —
+> `confirm_refund_session(text,text)` RPC + `charge.refunded` webhook handler are
+> live in DB; next session should resume from Commit 3 of the plan at
+> `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md`
+> (`approveRefundAction` rewrite — `stripe.refunds.create()` BEFORE RPC +
+> partial_refund override + audit row + tests + final CLAUDE.md sync)
+
 ---
 
 ## ✨ Features ที่เด่น
@@ -19,6 +26,9 @@ rebuilt into a typed Next.js + Supabase app across 15 phases.
 - **Atomic refund approval** ผ่าน `approve_refund(uuid)` SECURITY DEFINER RPC
   (Phase 10) — flip `refund_requests.status='approved'` และ
   `bookings.payment_status='refunded'` ใน transaction เดียว พร้อม double-decision guard
+- **Stripe payment gateway** (Phase 17) — `payments` table + Checkout Session +
+  `charge.refunded` webhook → `confirm_refund_session` RPC + promptpay/cards ใน THB;
+  webhook HMAC-verified + idempotent ผ่าน `provider_event_id` UNIQUE
 - **Seasonal pricing engine** (Phase 8) — `quoteStay()` รวม seasonal rate overrides,
   `min_nights_override`, คำนวณ baseSubtotal + discount + tax (7%) + resort fee (150 THB/night)
 - **Live availability + room status** — `room_units` พร้อม status enum
@@ -152,18 +162,18 @@ cp .env.example .env.local
 ### 3. Apply database migrations
 
 ```bash
-# Apply ทุก pending migrations (filtered to 202608(27|29|30|31|32|33|34))
+# Apply ทุก pending migrations (filtered to 202608(27|29|30|31|32|33|34) + 202609(02|03))
 node scripts/run-migrations.mjs
 
 # Apply migration เดียว
-node scripts/run-migrations.mjs --only=20260833
+node scripts/run-migrations.mjs --only=20260903
 
 # Dry-run ดูว่าจะ apply อะไร
 node scripts/run-migrations.mjs --dry-run
 ```
 
 **Migration filter ปัจจุบัน** (`scripts/run-migrations.mjs:54`):
-`/202608(27|29|30|31|32|33|34)_.*\.sql$/` — migrations 18–26 และ 28 apply ผ่าน
+`/202608(27|29|30|31|32|33|34)|202609(02|03)_.*\.sql$/` — migrations 18–26 และ 28 apply ผ่าน
 Supabase Dashboard SQL editor ไปแล้ว
 
 **หลัง apply migration ใหม่**: copy file ไปที่ `Y:\Final\db-schemas\` (local archive)
@@ -281,7 +291,7 @@ Y:\Final\final\
 │   └── mock-reviews.json      # 6 reviews (approved/pending/hidden mix)
 │
 ├── supabase/                  # In .gitignore — local-only DB files
-│   ├── migrations/            # 24 numbered SQL files (20260818_*.sql → 20260833_*.sql)
+│   ├── migrations/            # 26 numbered SQL files (20260818_*.sql → 20260903_*.sql)
 │   ├── seed.sql               # doc-only — curl snippet for Auth API user creation
 │   └── seed_housekeeping.sql  # 10 tasks + 5 maintenance reports
 │
@@ -310,11 +320,13 @@ Y:\Final\final\
 
 ## 🗄️ Database (high-level)
 
-24 migrations, Phase 1 → Phase 12 (full detail ใน `db-schemas/`):
+26 migrations, Phase 1 → Phase 18 (full detail ใน `db-schemas/`):
 - **Phase 11**: ไม่มี migration ใหม่ — RBAC code-only fix (proxy.ts + layout + signIn)
 - **Phase 12**: `20260834` (bookings.channel + bookings.room_unit_id) — รองรับ walk-in booking + room assignment ตอน check-in
 - **Phase 14**: ไม่มี migration ใหม่ — Google OAuth code-only (Supabase hosted flow + error surfacing)
 - **Phase 15**: ไม่มี migration — DB documentation (Word + draw.io prompt ใน `Y:\Final\db-schemas\`)
+- **Phase 17**: `20260902` (`payments` table + 3 SECURITY DEFINER RPCs + Stripe Checkout + webhook)
+- **Phase 18**: `20260903` (`confirm_refund_session(text,text)` RPC for `charge.refunded` webhook — DB layer shipped; action layer wiring in flight)
 
 | Phase | Migrations | What |
 |---|---|---|
@@ -330,6 +342,8 @@ Y:\Final\final\
 | 10 | `20260833` | `approve_refund(uuid)` RPC |
 | 12 | `20260834` | `bookings.channel` + `bookings.room_unit_id` (walk-in + unit assignment) |
 | 16 | _(no migration)_ | Refactor + clean-up pass — `lib/auth/require.ts` + `lib/errors/supabase.ts` + `lib/ids.ts` + `lib/auth/sanitize.ts`; deleted dead code + swept Phase-X comments; full plan ที่ `C:\Users\suns9\.claude\plans\nifty-chasing-raccoon.md` |
+| 17 | `20260902` | Stripe payment gateway — `payments` table + `create_payment_session` / `confirm_payment_session` / `expire_payment_session` SECURITY DEFINER RPCs + webhook + `createCheckoutSessionAction`/`markCashPaidAction`; plan: `y-final-screenshot-card-zesty-puppy.md` (Phase 17) |
+| 18 | `20260903` | `confirm_refund_session(text,text)` RPC + `charge.refunded` webhook handler + `buildRefundIdempotencyKey` helper; pending action rewrite + tests; plan: `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md` (Phase 18) |
 
 **17 tables**, **11 enums**, **4 SECURITY DEFINER functions** (RLS bypass), **20+ RLS policies**
 
@@ -378,6 +392,10 @@ Key business rules enforced in DB:
    provider ใน Supabase Dashboard (Authentication → Providers → Google) + paste
    OAuth Client ID/Secret จาก Google Cloud Console. ถ้าไม่ enable, login/register
    page จะแสดง error "Google OAuth ยังไม่ได้เปิดใช้งานในระบบ" แทน silent fail
+9. **Phase 18 working tree** — migration `20260903_confirm_refund_rpc.sql` applied to
+   DB + mirrored to `Y:\Final\db-schemas\` แต่ commit/push ยังไม่เกิด. ผู้ที่รับช่วงต่อ
+   ต้อง commit Commit 1+2 ก่อน (regex + webhook handler + idempotency helper) แล้ว
+   proceed ตาม plan ที่ `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md`
 
 ---
 
