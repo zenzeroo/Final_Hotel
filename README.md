@@ -9,12 +9,11 @@ each with their own dashboards, permissions, and server actions.
 Originally prototyped as static HTML at `Y:/Final/V1_Prototype/extracted/`, then
 rebuilt into a typed Next.js + Supabase app across 15 phases.
 
-> ⚠️ **Phase 18 in-flight (2/4 commits landed in working tree, not yet committed)** —
-> `confirm_refund_session(text,text)` RPC + `charge.refunded` webhook handler are
-> live in DB; next session should resume from Commit 3 of the plan at
-> `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md`
-> (`approveRefundAction` rewrite — `stripe.refunds.create()` BEFORE RPC +
-> partial_refund override + audit row + tests + final CLAUDE.md sync)
+> ✅ **Phase 18 shipped (2026-09-03)** — 5 commits on `origin/main`:
+> `confirm_refund_session(text,text)` RPC + `charge.refunded` webhook handler +
+> `approveRefundAction` rewrite (Stripe call BEFORE DB flip per D5 ordering) +
+> partial_refund override + `refund_approved` audit row + 19/19 integration tests.
+> Plan: `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md`.
 
 ---
 
@@ -326,7 +325,7 @@ Y:\Final\final\
 - **Phase 14**: ไม่มี migration ใหม่ — Google OAuth code-only (Supabase hosted flow + error surfacing)
 - **Phase 15**: ไม่มี migration — DB documentation (Word + draw.io prompt ใน `Y:\Final\db-schemas\`)
 - **Phase 17**: `20260902` (`payments` table + 3 SECURITY DEFINER RPCs + Stripe Checkout + webhook)
-- **Phase 18**: `20260903` (`confirm_refund_session(text,text)` RPC for `charge.refunded` webhook — DB layer shipped; action layer wiring in flight)
+- **Phase 18**: `20260903` (`confirm_refund_session(text,text)` RPC + Stripe refund wiring — `charge.refunded` webhook + `approveRefundAction` rewrite with D5 ordering + partial_refund override + audit row + 19/19 tests)
 
 | Phase | Migrations | What |
 |---|---|---|
@@ -343,7 +342,7 @@ Y:\Final\final\
 | 12 | `20260834` | `bookings.channel` + `bookings.room_unit_id` (walk-in + unit assignment) |
 | 16 | _(no migration)_ | Refactor + clean-up pass — `lib/auth/require.ts` + `lib/errors/supabase.ts` + `lib/ids.ts` + `lib/auth/sanitize.ts`; deleted dead code + swept Phase-X comments; full plan ที่ `C:\Users\suns9\.claude\plans\nifty-chasing-raccoon.md` |
 | 17 | `20260902` | Stripe payment gateway — `payments` table + `create_payment_session` / `confirm_payment_session` / `expire_payment_session` SECURITY DEFINER RPCs + webhook + `createCheckoutSessionAction`/`markCashPaidAction`; plan: `y-final-screenshot-card-zesty-puppy.md` (Phase 17) |
-| 18 | `20260903` | `confirm_refund_session(text,text)` RPC + `charge.refunded` webhook handler + `buildRefundIdempotencyKey` helper; pending action rewrite + tests; plan: `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md` (Phase 18) |
+| 18 | `20260903` | Stripe refund wiring — `confirm_refund_session(text,text)` RPC + `charge.refunded` webhook + `buildRefundIdempotencyKey` + `approveRefundAction` rewrite (Stripe call BEFORE RPC per D5 ordering) + `partial_refund` override + `refund_approved` audit row + 19/19 integration tests; plan: `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md` (Phase 18) |
 
 **17 tables**, **11 enums**, **4 SECURITY DEFINER functions** (RLS bypass), **20+ RLS policies**
 
@@ -392,10 +391,11 @@ Key business rules enforced in DB:
    provider ใน Supabase Dashboard (Authentication → Providers → Google) + paste
    OAuth Client ID/Secret จาก Google Cloud Console. ถ้าไม่ enable, login/register
    page จะแสดง error "Google OAuth ยังไม่ได้เปิดใช้งานในระบบ" แทน silent fail
-9. **Phase 18 working tree** — migration `20260903_confirm_refund_rpc.sql` applied to
-   DB + mirrored to `Y:\Final\db-schemas\` แต่ commit/push ยังไม่เกิด. ผู้ที่รับช่วงต่อ
-   ต้อง commit Commit 1+2 ก่อน (regex + webhook handler + idempotency helper) แล้ว
-   proceed ตาม plan ที่ `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md`
+9. **Phase 18 working tree shipped (2026-09-03)** — 5 commits on `origin/main`
+   (`41b8202` → `77b2331`). `confirm_refund_session(text,text)` RPC + `charge.refunded`
+   webhook handler + `buildRefundIdempotencyKey` + `approveRefundAction` rewrite
+   (D5 ordering) + partial_refund override + `refund_approved` audit row + 19/19
+   integration tests. Next: Phase 19 deferred items (see plan tail).
 
 ---
 
