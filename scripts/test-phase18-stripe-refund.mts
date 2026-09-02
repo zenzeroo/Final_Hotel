@@ -512,6 +512,13 @@ await step('Action fixture: real Stripe PI + refund_request', async () => {
   })
   assert(pi.id.startsWith('pi_'), 'expected real PI, got ' + pi.id)
 
+  // Confirm the PI in test mode — auto-success with pm_card_visa.
+  // Without confirmation, stripe.refunds.create() rejects (no charge to refund).
+  const confirmed = await stripe.paymentIntents.confirm(pi.id, {
+    payment_method: 'pm_card_visa',
+  })
+  assert(confirmed.status === 'succeeded', 'PI should be succeeded after confirm, got ' + confirmed.status)
+
   const { data: b, error: bErr } = await admin
     .from('bookings')
     .insert({
@@ -582,6 +589,16 @@ await step('Test 5: Manager approves Stripe refund → 1 new refund + DB flip', 
   })
   if (res.status >= 500) throw new Error('HTTP ' + res.status + ': ' + res.text.slice(0, 300))
 
+  // Parse the action's JSON response so we can surface errors when DB
+  // stayed untouched (Stripe-side failures return {ok:false} with HTTP 200).
+  let actionResult: { ok?: boolean; error?: string } = {}
+  try {
+    actionResult = JSON.parse(res.text || '{}')
+  } catch {}
+  if (actionResult.ok === false) {
+    throw new Error('action returned ok=false: ' + (actionResult.error ?? '(no error msg)'))
+  }
+
   // Verify refund_request was approved.
   const { data: rr } = await admin
     .from('refund_requests')
@@ -611,11 +628,13 @@ await step('Test 5: Manager approves Stripe refund → 1 new refund + DB flip', 
   assert(actionStripeRefundId?.startsWith('re_'), 'audit metadata.stripe_refund_id should be re_…, got ' + actionStripeRefundId)
 
   // Verify a Stripe refund object was actually created via API.
-  const { data: refunds } = await stripe.refunds.list({ payment_intent: (
+  // stripe.refunds.list() returns ApiListPromise<Refund> — after await, the
+  // result has `.data` already pointing at Refund[] (not at ApiList).
+  const refunds = (await stripe.refunds.list({ payment_intent: (
     await admin.from('payments').select('provider_payment_id').eq('id', actionStripePaymentId).maybeSingle()
-  ).data?.provider_payment_id as string, limit: 1 })
-  assert(refunds.data.length === 1, 'expected 1 Stripe refund, got ' + refunds.data.length)
-  assert(refunds.data[0].id === actionStripeRefundId, 'Stripe refund id mismatch: ' + refunds.data[0].id + ' vs ' + actionStripeRefundId)
+  ).data?.provider_payment_id as string, limit: 1 })).data
+  assert(refunds.length === 1, 'expected 1 Stripe refund, got ' + refunds.length)
+  assert(refunds[0].id === actionStripeRefundId, 'Stripe refund id mismatch: ' + refunds[0].id + ' vs ' + actionStripeRefundId)
 
   return `stripe_refund=${actionStripeRefundId.slice(0, 12)}… audit_row=present`
 })
@@ -696,6 +715,15 @@ await step('Test 6: Manager approves cash refund → DB-only flip, no Stripe cal
   })
   if (res.status >= 500) throw new Error('HTTP ' + res.status + ': ' + res.text.slice(0, 300))
 
+  // Surface action-layer errors (e.g. unexpected exception during audit insert).
+  let actionResult: { ok?: boolean; error?: string } = {}
+  try {
+    actionResult = JSON.parse(res.text || '{}')
+  } catch {}
+  if (actionResult.ok === false) {
+    throw new Error('action returned ok=false: ' + (actionResult.error ?? '(no error msg)'))
+  }
+
   // Verify booking.payment_status flipped (DB-only — no Stripe call attempted).
   const { data: b } = await admin
     .from('bookings')
@@ -752,6 +780,14 @@ await step('Test 7a: Manager approves refund (positive case)', async () => {
   })
   // Action returns ok (or some 200). Should not redirect.
   assert(res.status < 400, 'manager should succeed, got HTTP ' + res.status)
+  // Surface action-layer errors (e.g. Stripe call failure on second approval).
+  let actionResult: { ok?: boolean; error?: string } = {}
+  try {
+    actionResult = JSON.parse(res.text || '{}')
+  } catch {}
+  if (actionResult.ok === false) {
+    throw new Error('action returned ok=false: ' + (actionResult.error ?? '(no error msg)'))
+  }
   return 'HTTP ' + res.status + ' (manager allowed)'
 })
 
@@ -774,6 +810,14 @@ await step('Test 7b: Admin approves refund (positive case)', async () => {
     refundId: rr.id,
   })
   assert(res.status < 400, 'admin should succeed, got HTTP ' + res.status)
+  // Surface action-layer errors (e.g. Stripe call failure on second approval).
+  let actionResult: { ok?: boolean; error?: string } = {}
+  try {
+    actionResult = JSON.parse(res.text || '{}')
+  } catch {}
+  if (actionResult.ok === false) {
+    throw new Error('action returned ok=false: ' + (actionResult.error ?? '(no error msg)'))
+  }
   return 'HTTP ' + res.status + ' (admin allowed)'
 })
 
