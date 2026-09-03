@@ -55,9 +55,19 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
       const result = await cancelBooking(bookingId)
       if (result?.error) {
         alert(result.error)
-      } else {
-        router.refresh()
+        return
       }
+      // Phase 20 #24 — mirror the policy summary from ConfirmationActions
+      // so the guest sees the same refund/penalty breakdown here.
+      const refund = Number(result.refundAmount ?? 0)
+      const penalty = Number(result.penaltyAmount ?? 0)
+      const policy = result.policyName ?? 'นโยบาย'
+      const summary =
+        refund > 0
+          ? `ยกเลิกสำเร็จ (${policy}) — จะคืนเงิน ${refund.toLocaleString('th-TH')} บาท, เสียค่าธรรมเนียม ${penalty.toLocaleString('th-TH')} บาท`
+          : 'ยกเลิกสำเร็จ — ไม่มีการคืนเงินตามนโยบาย'
+      alert(summary)
+      router.refresh()
     })
   }
 

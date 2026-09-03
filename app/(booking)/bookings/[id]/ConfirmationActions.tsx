@@ -44,9 +44,21 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
       const result = await cancelBooking(bookingId)
       if (result?.error) {
         alert(result.error)
-      } else {
-        router.refresh()
+        return
       }
+      // Phase 20 #24 — surface the policy result so the guest sees what
+      // they will receive back vs forfeit, per their linked policy.
+      const refund = Number(result.refundAmount ?? 0)
+      const penalty = Number(result.penaltyAmount ?? 0)
+      const policy = result.policyName ?? 'นโยบาย'
+      const summary =
+        refund > 0
+          ? `ยกเลิกการจองสำเร็จ\nตามเงื่อนไข "${policy}": จะได้รับคืน ${refund.toLocaleString('th-TH')} บาท (เสียค่าธรรมเนียม ${penalty.toLocaleString('th-TH')} บาท)\nคำขอคืนเงินถูกส่งให้ผู้จัดการพิจารณาแล้ว`
+          : penalty > 0
+            ? `ยกเลิกการจองสำเร็จ\nตามเงื่อนไข "${policy}": ไม่สามารถขอคืนเงินได้ (เสียค่าธรรมเนียม ${penalty.toLocaleString('th-TH')} บาท)`
+            : 'ยกเลิกการจองสำเร็จ'
+      alert(summary)
+      router.refresh()
     })
   }
 
