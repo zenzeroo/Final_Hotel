@@ -133,43 +133,48 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     return { error: 'จำนวนคืนต้องมากกว่า 0' }
   }
 
-  // Insert booking
+  // Phase 20 #23 — server action delegates the atomic insert + capacity check
+  // to the `create_booking` SECURITY DEFINER RPC. The RPC acquires a FOR
+  // UPDATE lock on the room_units pool for this room_type_id, counts slot-
+  // occupying bookings overlapping the date range, and throws P0001 when the
+  // pool is exhausted. Auth remains the server action's responsibility — the
+  // RPC trusts the caller (GRANT includes authenticated + service_role).
   const bookingCode = generateBookingCode()
-  const { data: booking, error: insertErr } = await supabase
-    .from('bookings')
-    .insert({
-      booking_code: bookingCode,
-      user_id: user.id,
-      room_type_id: data.roomTypeId,
-      check_in: data.checkIn,
-      check_out: data.checkOut,
-      guests: data.guests,
-      nights: price.nights,
-      base_subtotal: price.baseSubtotal,
-      discount_total: price.discountTotal,
-      tax_total: price.taxTotal,
-      fee_total: price.feeTotal,
-      total: price.total,
-      currency: price.currency,
-      promotion_id: promotion?.id ?? null,
-      cancellation_policy_id: policy?.id ?? null,
-      status: 'confirmed',
-      payment_status: 'unpaid',
-      booker_full_name: data.bookerFullName,
-      booker_email: data.bookerEmail,
-      booker_phone: data.bookerPhone ?? null,
-      special_request: data.specialRequest ?? null,
-      channel: 'web',
-    })
-    .select('id')
-    .single()
+  const { data: bookingId, error: rpcError } = await supabase.rpc('create_booking', {
+    p_user_id: user.id,
+    p_room_type_id: data.roomTypeId,
+    p_check_in: data.checkIn,
+    p_check_out: data.checkOut,
+    p_guests: data.guests,
+    p_nights: price.nights,
+    p_base_subtotal: price.baseSubtotal,
+    p_discount_total: price.discountTotal,
+    p_tax_total: price.taxTotal,
+    p_fee_total: price.feeTotal,
+    p_total: price.total,
+    p_currency: price.currency,
+    p_promotion_id: promotion?.id ?? null,
+    p_cancellation_policy_id: policy?.id ?? null,
+    p_booker_full_name: data.bookerFullName,
+    p_booker_email: data.bookerEmail,
+    p_booker_phone: data.bookerPhone ?? null,
+    p_special_request: data.specialRequest ?? null,
+    p_channel: 'web',
+    p_booking_code: bookingCode,
+  })
 
-  if (insertErr || !booking) {
-    return { error: 'ไม่สามารถสร้างการจอง: ' + translateSupabaseError(insertErr?.message) }
+  if (rpcError || !bookingId) {
+    // P0001 = pool exhausted / no active rooms of this type
+    if (rpcError?.code === 'P0001') {
+      return {
+        error: 'ห้องพักประเภทนี้ไม่ว่างในช่วงวันที่เลือก กรุณาเลือกวันอื่นหรือประเภทอื่น',
+      }
+    }
+    return { error: 'ไม่สามารถสร้างการจอง: ' + translateSupabaseError(rpcError?.message) }
   }
 
   revalidatePath('/bookings')
-  return { success: true, bookingId: booking.id }
+  return { success: true, bookingId }
 }
 
 /**

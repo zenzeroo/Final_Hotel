@@ -154,50 +154,57 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
     // `handle_new_user()` trigger auto-creates the profile row.
   }
 
-  // ── 5. Default cancellation policy + insert booking ──
+  // ── 5. Default cancellation policy + atomic booking insert via RPC ──
+  // Phase 20 #23 — the RPC enforces overbooking prevention (capacity check
+  // under FOR UPDATE lock on the room_units pool). For walk-in we use the
+  // service-role admin client; the RPC grants EXECUTE to service_role for
+  // this reason. Auth check is the server action's responsibility (already
+  // done at step 1).
+  //
+  // The RPC always inserts with payment_status='unpaid'. The cash flow below
+  // flips it to 'paid' + records a `payments` row after the RPC returns.
   const policy = await getDefaultCancellationPolicy()
   const bookingCode = generateBookingCode()
-  const { data: booking, error: insertErr } = await admin
-    .from('bookings')
-    .insert({
-      booking_code: bookingCode,
-      user_id: guestUserId,
-      room_type_id: data.roomTypeId,
-      check_in: data.checkIn,
-      check_out: data.checkOut,
-      guests: data.guests,
-      nights: price.nights,
-      base_subtotal: price.baseSubtotal,
-      discount_total: price.discountTotal,
-      tax_total: price.taxTotal,
-      fee_total: price.feeTotal,
-      total: price.total,
-      currency: price.currency,
-      cancellation_policy_id: policy?.id ?? null,
-      status: 'confirmed',
-      // Phase 17 — cash flips to paid (we also insert a `payments` row in
-      // markCashPaidAction so the accounting path is uniform); card/unpaid
-      // stay `unpaid` until Stripe webhook confirms payment.
-      payment_status: data.paymentMethod === 'cash' ? 'paid' : 'unpaid',
-      booker_full_name: data.bookerFullName,
-      booker_email: data.bookerEmail,
-      booker_phone: data.bookerPhone ?? null,
-      special_request: data.specialRequest ?? null,
-      channel: 'walk_in',
-    })
-    .select('id')
-    .single()
+  const { data: bookingId, error: rpcError } = await admin.rpc('create_booking', {
+    p_user_id: guestUserId,
+    p_room_type_id: data.roomTypeId,
+    p_check_in: data.checkIn,
+    p_check_out: data.checkOut,
+    p_guests: data.guests,
+    p_nights: price.nights,
+    p_base_subtotal: price.baseSubtotal,
+    p_discount_total: price.discountTotal,
+    p_tax_total: price.taxTotal,
+    p_fee_total: price.feeTotal,
+    p_total: price.total,
+    p_currency: price.currency,
+    p_promotion_id: null,  // walk-in doesn't accept promo codes
+    p_cancellation_policy_id: policy?.id ?? null,
+    p_booker_full_name: data.bookerFullName,
+    p_booker_email: data.bookerEmail,
+    p_booker_phone: data.bookerPhone ?? null,
+    p_special_request: data.specialRequest ?? null,
+    p_channel: 'walk_in',
+    p_booking_code: bookingCode,
+  })
 
-  if (insertErr || !booking) {
-    return { error: 'ไม่สามารถสร้างการจอง: ' + translateSupabaseError(insertErr?.message) }
+  if (rpcError || !bookingId) {
+    // P0001 = pool exhausted / no active rooms of this type
+    if (rpcError?.code === 'P0001') {
+      return {
+        error: 'ห้องพักไม่ว่างในช่วงวันที่เลือก กรุณาเลือกวันอื่นหรือประเภทอื่น',
+      }
+    }
+    return { error: 'ไม่สามารถสร้างการจอง: ' + translateSupabaseError(rpcError?.message) }
   }
 
-  // Phase 17 — for cash walk-ins, record a payments row in the same call so
-  // the accounting path is uniform with Stripe-originated payments (manager
-  // dashboard sums `payments.amount` regardless of provider).
+  // Phase 17 — for cash walk-ins, flip payment_status to 'paid' AND record
+  // a payments row so the accounting path is uniform with Stripe-originated
+  // payments (manager dashboard sums `payments.amount` regardless of
+  // provider). Card/unpaid stay 'unpaid' until Stripe webhook confirms.
   if (data.paymentMethod === 'cash') {
     const { error: payErr } = await admin.from('payments').insert({
-      booking_id: booking.id,
+      booking_id: bookingId,
       provider: 'cash',
       payment_method: 'cash',
       amount: price.total,
@@ -213,10 +220,21 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
       // Don't fail the whole booking — booking row exists, payments row is
       // audit-only. Log and continue.
       console.warn('[walk-in] failed to insert cash payment row:', payErr.message)
+    } else {
+      // Flip booking.payment_status to 'paid' so the UI matches the cash
+      // receipt. The RPC always writes 'unpaid'; the original inline-insert
+      // path used to write 'paid' directly.
+      const { error: updateErr } = await admin
+        .from('bookings')
+        .update({ payment_status: 'paid' })
+        .eq('id', bookingId)
+      if (updateErr) {
+        console.warn('[walk-in] failed to flip booking payment_status:', updateErr.message)
+      }
     }
   }
 
   revalidatePath('/reception/bookings')
   revalidatePath('/manager')
-  return { success: true, bookingId: booking.id, userId: guestUserId }
+  return { success: true, bookingId, userId: guestUserId }
 }
