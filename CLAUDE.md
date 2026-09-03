@@ -58,8 +58,9 @@ Rules ละเอียดเต็มอยู่ใน `Rule.md` ที่ ro
 | 16 — Refactor + clean-up pass | ✓ | Quick wins + Type safety — 9 commits on `origin/main` (2026-08-28). New helpers: `lib/auth/require.ts` (consolidates 11 requireXxx), `lib/errors/supabase.ts` (wrapSupabaseError + actionFail, replaces 70 throw sites), `lib/ids.ts` (UUID_RE + isUuid), `lib/auth/sanitize.ts` (relocated from app/auth). Deleted: dead code (imageUrl/R2_BUCKET), void casts, `.ca-bundle.crt`, duplicate `getRoomById` + duplicate `isUuid` defs. Full plan + deferred items: `C:\Users\suns9\.claude\plans\nifty-chasing-raccoon.md` |
 | 17 — Stripe payment gateway | ✓ | `payments` table + 3 SECURITY DEFINER RPCs (`create_payment_session` / `confirm_payment_session` / `expire_payment_session`) + `/api/payments/webhook` (HMAC-verified) + `createCheckoutSessionAction`/`markCashPaidAction`; user + walk-in; cards + PromptPay in THB; webhook-driven status updates via `provider_event_id` UNIQUE idempotency. `markPaid` stub deleted (was a security hole — owner could self-mark paid). 5 commits on `origin/main` (2026-09-02). Plan: `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md` |
 | 18 — Stripe refund wiring | ✓ | `confirm_refund_session(text,text)` RPC + `charge.refunded` webhook handler branch + `buildRefundIdempotencyKey` helper + `approveRefundAction` rewrite (Stripe-first D5 ordering + partial_refund override + audit row) + `scripts/test-phase18-stripe-refund.mts` (7 integration tests). Closes gap where Stripe payments flipped `payment_status='refunded'` in DB but never actually refunded the customer's card. 4 commits on `origin/main` (2026-09-02). Plan: `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md`. |
+| 19 — Overbooking prevention (Phase 20 Block 1) | ✓ | `create_booking(uuid,uuid,date,date,...)` SECURITY DEFINER RPC (`db-schemas/20260904_create_booking_rpc_and_constraint.sql`) with `FOR UPDATE` lock on room_units pool + overlap count under `daterange && daterange`; defense-in-depth EXCLUDE constraint `bookings_no_unit_overlap` on `(room_unit_id WITH =, daterange(check_in, check_out, '[)') WITH &&) WHERE room_unit_id IS NOT NULL AND status IN ('confirmed','checked_in')`. `app/actions/booking.ts:138-178` + `app/actions/walk-in-booking.ts:157-239` refactored to call RPC; P0001 → Thai error message. `scripts/test-phase20-overbooking.mts` (7 integration tests: single insert, non-overlapping, overlapping rejected, cancel+rebook, 5-way concurrent, walk-in-vs-web overlap, EXCLUDE constraint). Closes gap where two web bookings for same `room_type_id` + overlapping dates both succeeded at DB level. Plan: `C:\Users\suns9\.claude\plans\project-quirky-storm.md`. |
 
-**Current HEAD**: `a43887e` on `main` (synced with `origin/main`; 4 commits pushed) — Phase 18 commits 1+2+3+4 NOT YET committed (working tree only — pending R2 ask)
+**Current HEAD**: TBD on `main` (Phase 19/20 #23 implementation in progress — pending R2 commit/push approvals)
 
 ---
 
@@ -344,6 +345,8 @@ git push origin main     # specify branch
 
 - **RLS infinite recursion (42P17)** — inline `EXISTS` on `profiles` ใน policy → ใช้ `is_staff()` / `has_role(text)` SECURITY DEFINER helpers แทน. เคยเกิดใน `20260820_staff_rls.sql` แก้ใน `20260820_fix_rls_recursion.sql`
 
+- **Overbooking at booking insert (Phase 19 fix)** — ก่อน Phase 19, `createBooking` แค่ validate `is_active + max_guests` (`app/actions/booking.ts:138-165`) — ไม่เช็ค physical inventory สำหรับช่วงวันที่เลือก. Two web bookings for same `room_type_id` + overlapping dates both succeed at DB level; conflict surfaces ตอน reception check-in เท่านั้น. Fix: `create_booking(...)` SECURITY DEFINER RPC (`db-schemas/20260904_create_booking_rpc_and_constraint.sql`) locks the room_units pool under `FOR UPDATE`, counts slot-occupying bookings (`status IN ('confirmed','checked_in')`) overlapping the date range via `daterange && daterange`, throws P0001 when `count >= pool_size`. Defense-in-depth EXCLUDE constraint `bookings_no_unit_overlap` fires at check-in when `room_unit_id` is assigned. RPC grants EXECUTE to `authenticated` + `service_role` — auth check is the server action's responsibility. Walking-in flow (`walk-in-booking.ts`) now inserts booking via admin.rpc() then flips `payment_status='paid'` + records `payments` row in a follow-up step (RPC always writes 'unpaid'). Reference: `scripts/test-phase20-overbooking.mts` (7 tests covering single insert, non-overlapping, overlapping rejection, cancel+rebook, 5-way concurrent, walk-in-vs-web, EXCLUDE constraint)
+
 - **listStub pitfall** — wiring dispatcher (`lib/data/manager.ts`) ไม่พอ — ต้องเช็ค `lib/data/supabase-*.ts` ว่า function implement จริง. ตอนนี้ `listCancellationPolicies` + `getReportsData()` analytics arrays (Phase 12) wired ครบแล้ว — เหลือแค่ fields ที่ยังไม่มี source data (เช่น `partial_refund` ที่ไม่มี write path)
 
 - **Next.js 16 server action HTTP test** — POST server action ผ่าน HTTP ต้องใช้ field `$ACTION_ID_<id>` ใน multipart body (ไม่ใช่ `Next-Action` header เหมือนเวอร์ชั่นก่อน). Reference: `scripts/test-phase10-refund-rpc.mts:106-114`
@@ -410,6 +413,48 @@ git push origin main     # specify branch
 ### Soft issues
 - `data/mock-manager.json` + `data/mock-reviews.json` ยังใช้ hardcoded test UIDs (`u-house-1`, `u-recep-1`) — `mock-housekeeper.ts` เปลี่ยนเป็น env-driven แล้ว (Phase 12) แต่ JSON files อ่าน env ไม่ได้ (pure data) — แปลงเป็น TypeScript stub ถ้าต้องการ parity
 - `scripts/check-cols.mjs` no longer holds a literal password (Phase 12 — uses `pgDirectConnectionString()` from shared helper) — **แต่ password ที่เคย leak ต้อง rotate ที่ Supabase dashboard ทันที**
+
+---
+
+## 🔭 Future Work / Backlog (Phase 19-20)
+
+**Last gap analysis**: 2026-09-03. 16 pending tasks saved in `TaskList` (IDs #17-#32). Plan file: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md`.
+
+### Phase 19 — Stripe deferred items (from Phase 18 plan tail)
+| Task | Item | Prereq |
+|---|---|---|
+| #17 | `payments.amount` backfill from `bookings.total` + CHECK (amount > 0) | none |
+| #18 | Webhook race fix for `partial_refund` (RPC preserves existing status) | none |
+| #19 | Multi-refund on same booking (aggregate refunds vs `payments.amount`) | #17 + #18 |
+| #20 | Admin Stripe settings UI (masked keys + webhook log) | new table |
+| #21 | Multi-currency wire `hotel_settings.currency` | large refactor |
+| #22 | Direct PaymentIntent + 3DS (`payment_intent.requires_action`) | defer |
+
+### Phase 20 — Production-launch blocks (Top 10 critical)
+| Task | Block | Severity | File:line |
+|---|---|---|---|
+| #23 | **Overbooking prevention** | 🔴 Critical | `app/actions/booking.ts:36-78` validateแค่ `is_active + max_guests` — ไม่เช็ค availability, 0 EXCLUDE/gist constraints |
+| #24 | **Cancellation policy enforcement** | 🔴 Critical | `app/actions/booking.ts:178-193` แค่ set `cancelled` — ignore `free_cancel_hours` + `refund_pct` ที่มีอยู่ |
+| #25 | **Email infrastructure** | 🔴 Critical | 0 hits: resend/sendgrid/nodemailer/postmark/ses — ไม่มี confirmation/receipt/refund notice |
+| #26 | **Notification layer** | 🟠 High | Staff bell `TopNavBar.tsx:34-39` dead button — ไม่มี `notifications` table |
+| #27 | **CI/CD + automated tests** | 🟠 High | 0 `.github/`; 1 unrunnable test (`lib/pricing/seasons.test.mts`); 30 manual smoke scripts |
+| #28 | **Error monitoring + analytics** | 🟠 High | 0 Sentry/PostHog/Plausible — money paths invisible |
+| #29 | **App-level rate limiting** | 🟠 High | Only Supabase built-in auth throttle — login/register/search unthrottled |
+| #30 | **Compliance + 404 fixes** | 🟠 High | No 2FA/GDPR/cookie consent + 3 live 404s (`/privacy`, `/terms`, `/about`) |
+| #31 | **Document generation (PDF/Excel)** | 🟡 Medium | Dead buttons `reports/page.tsx:26-39` — 0 jspdf/react-pdf |
+| #32 | **i18n + shift scheduling UI** | 🟡 Medium | TH/EN toggle dead (`TopNavBar.tsx:61-73`); `staff_shifts` read-only grid |
+
+### Quick wins (≤1 commit, no breaking change)
+- **#30 (404 fix only)** — add stub `/privacy`, `/terms`, `/about` pages (~30 min)
+- **#28 (Sentry only)** — install SDK + wire `global-error.tsx` (~30 min)
+- **#17 (Phase 19-A)** — SQL migration only, no code change (~15 min)
+
+### Recommended Phase 20 sequence (when resumed)
+**Block 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10** per criticality. Block 1 (overbooking) is the only correctness bug in shipped code; Block 2-3 close contractual/UX gaps; Block 4-10 are hardening for production.
+
+### Reference files (gap evidence)
+- Plan: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md` (full Top 10 + 7-category audit)
+- Phase 18 master plan: `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md` (Phase 19 deferred items)
 
 ---
 

@@ -9,6 +9,8 @@ each with their own dashboards, permissions, and server actions.
 Originally prototyped as static HTML at `Y:/Final/V1_Prototype/extracted/`, then
 rebuilt into a typed Next.js + Supabase app across 15 phases.
 
+> ✅ **Phase 19 shipped (2026-09-03)** — Overbooking prevention (Phase 20 Block 1): `create_booking` SECURITY DEFINER RPC + EXCLUDE constraint + 7 integration tests. Plan: `C:\Users\suns9\.claude\plans\project-quirky-storm.md`.
+>
 > ✅ **Phase 18 shipped (2026-09-03)** — 5 commits on `origin/main`:
 > `confirm_refund_session(text,text)` RPC + `charge.refunded` webhook handler +
 > `approveRefundAction` rewrite (Stripe call BEFORE DB flip per D5 ordering) +
@@ -326,6 +328,7 @@ Y:\Final\final\
 - **Phase 15**: ไม่มี migration — DB documentation (Word + draw.io prompt ใน `Y:\Final\db-schemas\`)
 - **Phase 17**: `20260902` (`payments` table + 3 SECURITY DEFINER RPCs + Stripe Checkout + webhook)
 - **Phase 18**: `20260903` (`confirm_refund_session(text,text)` RPC + Stripe refund wiring — `charge.refunded` webhook + `approveRefundAction` rewrite with D5 ordering + partial_refund override + audit row + 19/19 tests)
+- **Phase 19**: `20260904` (`create_booking` SECURITY DEFINER RPC + `btree_gist` extension + `bookings_no_unit_overlap` EXCLUDE constraint — overbooking prevention; web + walk-in flows refactored; 7-case integration test)
 
 | Phase | Migrations | What |
 |---|---|---|
@@ -343,6 +346,7 @@ Y:\Final\final\
 | 16 | _(no migration)_ | Refactor + clean-up pass — `lib/auth/require.ts` + `lib/errors/supabase.ts` + `lib/ids.ts` + `lib/auth/sanitize.ts`; deleted dead code + swept Phase-X comments; full plan ที่ `C:\Users\suns9\.claude\plans\nifty-chasing-raccoon.md` |
 | 17 | `20260902` | Stripe payment gateway — `payments` table + `create_payment_session` / `confirm_payment_session` / `expire_payment_session` SECURITY DEFINER RPCs + webhook + `createCheckoutSessionAction`/`markCashPaidAction`; plan: `y-final-screenshot-card-zesty-puppy.md` (Phase 17) |
 | 18 | `20260903` | Stripe refund wiring — `confirm_refund_session(text,text)` RPC + `charge.refunded` webhook + `buildRefundIdempotencyKey` + `approveRefundAction` rewrite (Stripe call BEFORE RPC per D5 ordering) + `partial_refund` override + `refund_approved` audit row + 19/19 integration tests; plan: `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md` (Phase 18) |
+| 19 | `20260904` | Overbooking prevention (Phase 20 Block 1) — `create_booking(...)` SECURITY DEFINER RPC with `FOR UPDATE` lock on room_units pool + `daterange && daterange` overlap count; defense-in-depth EXCLUDE constraint `bookings_no_unit_overlap` on `(room_unit_id, daterange)` for `confirmed`/`checked_in` rows; web + walk-in flows refactored; 7-case integration test; plan: `C:\Users\suns9\.claude\plans\project-quirky-storm.md` |
 
 **17 tables**, **11 enums**, **4 SECURITY DEFINER functions** (RLS bypass), **20+ RLS policies**
 
