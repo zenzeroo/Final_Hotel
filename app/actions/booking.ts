@@ -3,11 +3,14 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { calculatePrice, generateBookingCode } from '@/lib/pricing'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/manager'
 import { getDefaultCancellationPolicy, getPromotionByCode } from '@/lib/data/bookings'
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
+import { isUuid } from '@/lib/ids'
+import { requireRole } from '@/lib/auth/require'
 
 const createBookingSchema = z.object({
   roomTypeId: z.string().uuid(),
@@ -179,23 +182,143 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 
 /**
  * Cancel a booking (sets status to 'cancelled').
+ *
+ * Phase 20 #24 — atomic via the `cancel_booking` SECURITY DEFINER RPC.
+ * The RPC enforces the linked cancellation_policy (`free_cancel_hours`
+ * + `refund_pct`), flips booking status, and inserts a `refund_requests`
+ * row when the caller has paid AND the refund amount > 0 (manager then
+ * reviews + approves via the existing /manager/bookings flow).
+ *
+ * Return shape now includes the computed refund_amount + penalty_amount
+ * so the UI can show "คุณจะได้รับเงินคืน X บาท เสียค่าธรรมเนียม Y บาท"
+ * per the contractually-applied policy.
  */
-export async function cancelBooking(bookingId: string) {
+export interface CancelBookingResult {
+  success?: boolean
+  error?: string
+  refundAmount?: number   // amount that will be refunded (0 if no refund row created)
+  penaltyAmount?: number  // total - refundAmount
+  policyName?: string     // applied policy (e.g. "Flexible", "Strict")
+  refundRequestId?: string | null  // null when no refund row created (unpaid / penalty=0)
+}
+
+export async function cancelBooking(bookingId: string): Promise<CancelBookingResult> {
+  if (!isUuid(bookingId)) return { error: 'รหัสการจองไม่ถูกต้อง' }
+
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
 
-  const { error } = await supabase
-    .from('bookings')
-    .update({ status: 'cancelled' })
-    .eq('id', bookingId)
-    .eq('user_id', user.id)
+  const { data, error } = await supabase.rpc('cancel_booking', {
+    p_booking_id: bookingId,
+    p_staff_override: false,
+    p_refund_pct_override: null,
+  })
 
-  if (error) return { error: 'ไม่สามารถยกเลิกการจอง: ' + translateSupabaseError(error.message) }
+  if (error) {
+    // P0001 = state guard (already cancelled / past check-in / no policy)
+    // P0002 = booking not found
+    // 42501 = authorization (other user's booking)
+    const code = (error as { code?: string }).code
+    if (code === 'P0001') {
+      return { error: 'ไม่สามารถยกเลิกการจองนี้ได้: ' + translateSupabaseError(error.message) }
+    }
+    if (code === 'P0002') {
+      return { error: 'ไม่พบการจองนี้' }
+    }
+    return { error: 'ไม่สามารถยกเลิกการจอง: ' + translateSupabaseError(error.message) }
+  }
+
+  const row = Array.isArray(data) ? data[0] : data
+  const refundAmount = row ? Number(row.refund_amount) : 0
+  const penaltyAmount = row ? Number(row.penalty_amount) : 0
+  const policyName = row?.policy_name ?? ''
+  const refundRequestId = row?.refund_request_id ?? null
 
   revalidatePath('/bookings')
   revalidatePath(`/bookings/${bookingId}`)
-  return { success: true }
+  revalidatePath('/manager/bookings')
+  return {
+    success: true,
+    refundAmount,
+    penaltyAmount,
+    policyName,
+    refundRequestId,
+  }
+}
+
+/**
+ * Phase 20 #24 — staff-initiated cancellation (reception / manager / admin).
+ *
+ * Lets a staff member cancel a booking on behalf of a guest (e.g. walk-in
+ * reversal, complaint handling) and optionally override the policy's
+ * `refund_pct` (manager/admin only). The same atomic `cancel_booking` RPC
+ * is used; the override flag + numeric refund_pct pass through.
+ *
+ * - `refundPctOverride=null` → apply the policy as-is (respect free window).
+ * - `refundPctOverride=100`  → 100% goodwill refund (manager/admin only).
+ * - `refundPctOverride=0`    → keep full charge but still flip status.
+ *
+ * The RPC authorizes the override inside its body via `has_role` — the
+ * server action also gates on `requireRole` for defense-in-depth.
+ */
+export async function cancelBookingByStaff(
+  bookingId: string,
+  refundPctOverride: number | null = null,
+): Promise<CancelBookingResult> {
+  if (!isUuid(bookingId)) return { error: 'รหัสการจองไม่ถูกต้อง' }
+
+  // requireRole redirects on auth failure — only manager/admin reach the
+  // override block below. Reception can still cancel without override.
+  const session = await requireRole(
+    ['reception', 'manager', 'admin'],
+    '/reception',
+  )
+
+  if (refundPctOverride !== null) {
+    if (session.role !== 'manager' && session.role !== 'admin') {
+      return { error: 'เฉพาะผู้จัดการหรือผู้ดูแลระบบเท่านั้นที่สามารถปรับเปอร์เซ็นต์คืนเงินได้' }
+    }
+    if (refundPctOverride < 0 || refundPctOverride > 100) {
+      return { error: 'เปอร์เซ็นต์คืนเงินต้องอยู่ระหว่าง 0 ถึง 100' }
+    }
+  }
+
+  const admin = await createAdminClient()
+  const { data, error } = await admin.rpc('cancel_booking', {
+    p_booking_id: bookingId,
+    p_staff_override: true,
+    p_refund_pct_override: refundPctOverride,
+  })
+
+  if (error) {
+    const code = (error as { code?: string }).code
+    if (code === 'P0001') {
+      return { error: 'ไม่สามารถยกเลิกการจองนี้ได้: ' + translateSupabaseError(error.message) }
+    }
+    if (code === 'P0002') {
+      return { error: 'ไม่พบการจองนี้' }
+    }
+    return { error: 'ไม่สามารถยกเลิกการจอง: ' + translateSupabaseError(error.message) }
+  }
+
+  const row = Array.isArray(data) ? data[0] : data
+  const refundAmount = row ? Number(row.refund_amount) : 0
+  const penaltyAmount = row ? Number(row.penalty_amount) : 0
+  const policyName = row?.policy_name ?? ''
+  const refundRequestId = row?.refund_request_id ?? null
+
+  revalidatePath('/bookings')
+  revalidatePath(`/bookings/${bookingId}`)
+  revalidatePath('/reception/bookings')
+  revalidatePath('/manager/bookings')
+  return {
+    success: true,
+    refundAmount,
+    penaltyAmount,
+    policyName,
+    refundRequestId,
+  }
 }
