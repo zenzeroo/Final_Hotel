@@ -56,8 +56,14 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // constraint on (room_unit_id, daterange) + atomic create_booking RPC).
 // 20260905 fixes the FOR UPDATE on aggregate function bug in 20260904's
 // create_booking RPC — uses PERFORM 1 ... FOR UPDATE then a separate COUNT.
+// 20260906 adds Phase 20 #24 (cancellation policy enforcement: atomic
+// cancel_booking RPC that enforces free_cancel_hours + refund_pct, creates
+// refund_requests row if paid + refund > 0, inserts booking_events audit).
+// 20260907 fixes the auth.uid() = null rejection for service_role callers
+// in 20260906's cancel_booking RPC (admin scripts + walk-in tooling have
+// no JWT — must be allowed past the auth gate).
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05)_.*\.sql$/.test(f))
+  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 
