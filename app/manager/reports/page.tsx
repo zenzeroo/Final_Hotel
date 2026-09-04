@@ -30,13 +30,14 @@ export default async function ManagerReportsPage() {
             <MaterialIcon name="picture_as_pdf" size={18} />
             ส่งออก PDF
           </button>
-          <button
-            type="button"
+          <a
+            href="/api/manager/reports/export"
+            download
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-secondary text-body-md font-semibold"
           >
             <MaterialIcon name="table_view" size={18} />
             ส่งออก Excel
-          </button>
+          </a>
         </div>
       </header>
 
