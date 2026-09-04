@@ -62,8 +62,15 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // 20260907 fixes the auth.uid() = null rejection for service_role callers
 // in 20260906's cancel_booking RPC (admin scripts + walk-in tooling have
 // no JWT — must be allowed past the auth gate).
+// 20260908 adds Phase 20 #25 (email infrastructure: email_log table with
+// event_key UNIQUE idempotency + RLS for staff SELECT).
+// 20260909 adds Phase 19 #17 (payments_amount_positive CHECK — defense
+// against zero-amount refund/payment rows; existing rows already pass).
+// 20260910 fixes Phase 19 #18 — confirm_refund_session RPC now preserves
+// payment_status='partial_refund' instead of unconditionally clobbering to
+// 'refunded' on charge.refunded webhook arrival (action-layer override race).
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07)_.*\.sql$/.test(f))
+  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 
