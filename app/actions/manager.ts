@@ -60,12 +60,11 @@ export async function resolveDamageReportAction(formData: FormData): Promise<Act
  *      PI, declined) → actionFail + STOP. DB stays untouched so the manager
  *      can retry. NEVER flip DB before Stripe succeeds — half-refund is
  *      unrecoverable (guest sees "refunded" but card was never credited).
- *   3. Call `approve_refund` RPC to flip DB state atomically.
- *   4. If the refund is partial (`refund_requests.amount < payments.amount`),
- *      override `bookings.payment_status='partial_refund'` — the RPC always
- *      writes `'refunded'` (full-refund semantics; webhook RPC also writes
- *      'refunded' on the post-API charge.refunded event).
- *   5. Insert a `booking_events` audit row (event_type='refund_approved').
+ *   3. Call `approve_refund` RPC to flip DB state atomically. The RPC now
+ *      handles partial vs full payment_status via aggregation of ALL
+ *      approved refunds vs succeeded payments for the booking (Phase 19 #19).
+ *      No action-layer override needed — the RPC is the source of truth.
+ *   4. Insert a `booking_events` audit row (event_type='refund_approved').
  *      The `approve_refund` RPC does NOT insert this row (Phase 10
  *      oversight — fixed here per D6).
  *
@@ -125,18 +124,12 @@ export async function approveRefundAction(formData: FormData): Promise<ActionRes
       }
     }
 
-    // 4. DB flip via the existing RPC (atomically flips
-    //    refund_requests.status='approved' + bookings.payment_status='refunded').
+    // 4. DB flip via the existing RPC. As of Phase 19 #19, the RPC handles
+    //    aggregation across multiple approved refunds — no action-layer
+    //    override needed. The `partialRefund` flag above is still computed
+    //    for the Stripe call + audit row + email template, but the final
+    //    payment_status label is decided by the RPC's SUM-vs-SUM logic.
     await approveRefund({ refundId })
-
-    // 5. Partial-refund override (RPC always writes 'refunded').
-    if (partialRefund) {
-      const { error: partialErr } = await supabase
-        .from('bookings')
-        .update({ payment_status: 'partial_refund' })
-        .eq('id', rr.booking_id)
-      if (partialErr) throw partialErr
-    }
 
     // 6. Audit row. `approve_refund` RPC never inserted one (Phase 10
     //    oversight) — the action layer has `session.id` + `session.role`
