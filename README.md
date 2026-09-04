@@ -9,7 +9,17 @@ each with their own dashboards, permissions, and server actions.
 Originally prototyped as static HTML at `Y:/Final/V1_Prototype/extracted/`, then
 rebuilt into a typed Next.js + Supabase app across 15 phases.
 
-> ✅ **Phase 20 #25 shipped (2026-09-04)** — Email infrastructure (Phase 20 Block 3): Resend + React Email + `email_log` table (event_key UNIQUE idempotency) + 5 Thai templates (booking_confirmation / payment_receipt / cancellation_notice / refund_notice / checkout_thank_you) + 5 server-action / webhook hooks + 7 integration tests. Closes gap where zero transactional email existed. Plan: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md`.
+> ✅ **Phase 20 #29, #31 + Phase 19 #19 shipped (2026-09-04)** — Three production-hardening blocks on `origin/main` (commits `b4b8352`, `2b59f6a`, `23deb91`):
+>
+> - **Phase 20 #29** — App-level rate limiting (`lib/rate-limit.ts` token-bucket + LRU + 10/min login + 5/min register + 20/min OAuth callback + 10/min payments checkout). 429 + Retry-After on burst.
+> - **Phase 20 #31** — Excel export for manager reports (`app/api/manager/reports/export/route.ts` streams `getReportsData()` as 6-sheet `.xlsx`; RBAC manager/admin).
+> - **Phase 19 #19** — Multi-refund aggregation (`approve_refund` + `confirm_refund_session` SECURITY DEFINER RPCs now compute `payment_status` from `sum(approved_refunds) vs sum(succeeded_payments)`; closes gap where multiple partial refunds clobbered `partial_refund` → `refunded`).
+>
+> Plan: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md`.
+>
+> ✅ **Phase 25 shipped (2026-09-04)** — Email infrastructure (Phase 20 Block 3): Resend + React Email + `email_log` table (event_key UNIQUE idempotency) + 5 Thai templates (booking_confirmation / payment_receipt / cancellation_notice / refund_notice / checkout_thank_you) + 5 server-action / webhook hooks + 7 integration tests. Plan: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md`.
+>
+> ✅ **Phase 20 #30 (404 stubs) + Phase 20 #28 (Sentry) shipped (2026-09-04)** — Stub pages (`/privacy`, `/terms`, `/about`, `/contact`, `/careers`, branded `not-found.tsx`) + Sentry Next.js SDK (`sentry.{client,server}.config.ts` + `instrumentation.ts` + `app/global-error.tsx` + `withSentryConfig` wrapper); all optional via empty env vars.
 >
 > ✅ **Phase 19 shipped (2026-09-03)** — Overbooking prevention (Phase 20 Block 1): `create_booking` SECURITY DEFINER RPC + EXCLUDE constraint + 7 integration tests. Plan: `C:\Users\suns9\.claude\plans\project-quirky-storm.md`.
 >
@@ -32,6 +42,23 @@ rebuilt into a typed Next.js + Supabase app across 15 phases.
 - **Stripe payment gateway** (Phase 17) — `payments` table + Checkout Session +
   `charge.refunded` webhook → `confirm_refund_session` RPC + promptpay/cards ใน THB;
   webhook HMAC-verified + idempotent ผ่าน `provider_event_id` UNIQUE
+- **Multi-refund aggregation** (Phase 19 #19) — `approve_refund` + `confirm_refund_session`
+  RPCs sum `approved_refunds` vs `succeeded_payments` per booking เพื่อคำนวณ
+  `payment_status` (refunded / partial_refund); lock booking row ป้องกัน race
+- **Email infrastructure** (Phase 25) — Resend + React Email + 5 Thai templates
+  (booking confirmation / payment receipt / cancellation notice / refund notice /
+  checkout thank-you) ผ่าน `email_log` table ที่มี `event_key` UNIQUE สำหรับ idempotency
+- **App-level rate limiting** (Phase 20 #29) — token-bucket + LRU ใน `proxy.ts`
+  throttling login (10/min), register (5/min), OAuth callback (20/min), payments
+  checkout (10/min); return 429 + Retry-After บน empty bucket
+- **Excel export for reports** (Phase 20 #31) — `app/api/manager/reports/export`
+  stream `getReportsData()` เป็น 6-sheet `.xlsx` (สรุปภาพรวม + รายได้รายวัน +
+  Occupancy YoY + ห้องที่ถูกจองมากที่สุด + ประเภทห้องที่มีรายได้สูงสุด + ช่องทางการจอง)
+- **Error monitoring** (Phase 20 #28) — Sentry Next.js SDK ผ่าน `withSentryConfig`
+  + `sentry.{client,server}.config.ts` + `app/global-error.tsx` + `instrumentation.ts`;
+  optional ผ่าน empty `SENTRY_DSN` env vars
+- **404 stubs** (Phase 20 #30 subpart) — `/privacy`, `/terms`, `/about`, `/contact`,
+  `/careers` pages + branded `app/not-found.tsx` (closes 5+ live 404s)
 - **Seasonal pricing engine** (Phase 8) — `quoteStay()` รวม seasonal rate overrides,
   `min_nights_override`, คำนวณ baseSubtotal + discount + tax (7%) + resort fee (150 THB/night)
 - **Live availability + room status** — `room_units` พร้อม status enum
@@ -165,18 +192,18 @@ cp .env.example .env.local
 ### 3. Apply database migrations
 
 ```bash
-# Apply ทุก pending migrations (filtered to 202608(27|29|30|31|32|33|34) + 202609(02|03))
+# Apply ทุก pending migrations (filtered to 202608(27|29|30|31|32|33|34) + 202609(02|03|04|05|06|07|08|09|10|11|12))
 node scripts/run-migrations.mjs
 
 # Apply migration เดียว
-node scripts/run-migrations.mjs --only=20260903
+node scripts/run-migrations.mjs --only=20260912
 
 # Dry-run ดูว่าจะ apply อะไร
 node scripts/run-migrations.mjs --dry-run
 ```
 
-**Migration filter ปัจจุบัน** (`scripts/run-migrations.mjs:54`):
-`/202608(27|29|30|31|32|33|34)|202609(02|03)_.*\.sql$/` — migrations 18–26 และ 28 apply ผ่าน
+**Migration filter ปัจจุบัน** (`scripts/run-migrations.mjs:73`):
+`/202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12)_.*\.sql$/` — migrations 18–26 และ 28 apply ผ่าน
 Supabase Dashboard SQL editor ไปแล้ว
 
 **หลัง apply migration ใหม่**: copy file ไปที่ `Y:\Final\db-schemas\` (local archive)
@@ -224,11 +251,18 @@ npm run dev
 ### Test scripts (run individually)
 
 ```bash
-npx tsx scripts/test-phase11-rbac.mts          # Phase 11 — RBAC redirect matrix (48/48)
-npx tsx scripts/_rbac-fixture.mts              # Reset test user roles (idempotent)
-npx tsx scripts/test-phase10-kpi-trend.mts     # Phase 10 — KPI accuracy
-npx tsx scripts/test-phase10-refund-rpc.mts    # Phase 10 — refund RPC
-npx tsx scripts/_cleanup-test-rows.mts         # Cleanup leaked test bookings
+npx tsx scripts/test-phase11-rbac.mts           # Phase 11 — RBAC redirect matrix (48/48)
+npx tsx scripts/_rbac-fixture.mts               # Reset test user roles (idempotent)
+npx tsx scripts/test-phase10-kpi-trend.mts      # Phase 10 — KPI accuracy
+npx tsx scripts/test-phase10-refund-rpc.mts     # Phase 10 — refund RPC
+npx tsx scripts/test-phase18-stripe-refund.mts  # Phase 18 — Stripe refund wiring (19/19)
+npx tsx scripts/test-phase19-multi-refund.mts   # Phase 19 #19 — multi-refund aggregation (7/7)
+npx tsx scripts/test-phase20-overbooking.mts    # Phase 20 #23 — overbooking prevention (7/7)
+npx tsx scripts/test-phase24-cancel-policy.mts  # Phase 20 #24 — cancellation policy enforcement (7/7)
+npx tsx scripts/test-phase25-email.mts          # Phase 25 — email infrastructure (7/7)
+npx tsx scripts/test-phase29-rate-limit.mts     # Phase 20 #29 — app-level rate limiting (10/10)
+npx tsx scripts/test-phase31-xlsx-export.mts    # Phase 20 #31 — Excel export for manager reports (10/10)
+npx tsx scripts/_cleanup-test-rows.mts          # Cleanup leaked test bookings
 ```
 
 ---
@@ -294,7 +328,7 @@ Y:\Final\final\
 │   └── mock-reviews.json      # 6 reviews (approved/pending/hidden mix)
 │
 ├── supabase/                  # In .gitignore — local-only DB files
-│   ├── migrations/            # 26 numbered SQL files (20260818_*.sql → 20260903_*.sql)
+│   ├── migrations/            # 34 numbered SQL files (20260818_*.sql → 20260912_*.sql)
 │   ├── seed.sql               # doc-only — curl snippet for Auth API user creation
 │   └── seed_housekeeping.sql  # 10 tasks + 5 maintenance reports
 │
@@ -323,14 +357,19 @@ Y:\Final\final\
 
 ## 🗄️ Database (high-level)
 
-26 migrations, Phase 1 → Phase 18 (full detail ใน `db-schemas/`):
+34 migrations, Phase 1 → Phase 25 + Phase 19/20 deferred (full detail ใน `db-schemas/`):
 - **Phase 11**: ไม่มี migration ใหม่ — RBAC code-only fix (proxy.ts + layout + signIn)
 - **Phase 12**: `20260834` (bookings.channel + bookings.room_unit_id) — รองรับ walk-in booking + room assignment ตอน check-in
 - **Phase 14**: ไม่มี migration ใหม่ — Google OAuth code-only (Supabase hosted flow + error surfacing)
 - **Phase 15**: ไม่มี migration — DB documentation (Word + draw.io prompt ใน `Y:\Final\db-schemas\`)
 - **Phase 17**: `20260902` (`payments` table + 3 SECURITY DEFINER RPCs + Stripe Checkout + webhook)
 - **Phase 18**: `20260903` (`confirm_refund_session(text,text)` RPC + Stripe refund wiring — `charge.refunded` webhook + `approveRefundAction` rewrite with D5 ordering + partial_refund override + audit row + 19/19 tests)
-- **Phase 19**: `20260904` (`create_booking` SECURITY DEFINER RPC + `btree_gist` extension + `bookings_no_unit_overlap` EXCLUDE constraint — overbooking prevention; web + walk-in flows refactored; 7-case integration test)
+- **Phase 19 #23 (Phase 20 Block 1)**: `20260904` (`create_booking` SECURITY DEFINER RPC + `btree_gist` extension + `bookings_no_unit_overlap` EXCLUDE constraint — overbooking prevention; web + walk-in flows refactored; 7-case integration test). `20260905` is fix-up for FOR UPDATE on aggregate (PERFORM 1 + separate COUNT)
+- **Phase 20 #24 (Phase 20 Block 2)**: `20260906` (`cancel_booking(uuid, boolean, numeric)` RPC enforcing free_cancel_hours + refund_pct + audit + refund_requests insert). `20260907` is service_role bypass + state guard tightening
+- **Phase 25 (Phase 20 Block 3)**: `20260908` (`email_log` table — event_key UNIQUE idempotency + RLS staff SELECT + manager UPDATE; FKs to bookings/payments/refund_requests with ON DELETE SET NULL)
+- **Phase 19 #17**: `20260909` (`payments` CHECK constraint `amount > 0` — defense against zero-amount refund/payment rows)
+- **Phase 19 #18**: `20260910` (`confirm_refund_session` partial_refund guard — webhook now preserves `payment_status='partial_refund'` instead of unconditionally clobbering to 'refunded')
+- **Phase 19 #19**: `20260911` (`approve_refund` + `confirm_refund_session` aggregate logic — sum(approved_refunds) vs sum(succeeded_payments) for correct multi-refund payment_status). `20260912` is service_role bypass + enum cast fix-up
 
 | Phase | Migrations | What |
 |---|---|---|
@@ -350,6 +389,14 @@ Y:\Final\final\
 | 18 | `20260903` | Stripe refund wiring — `confirm_refund_session(text,text)` RPC + `charge.refunded` webhook + `buildRefundIdempotencyKey` + `approveRefundAction` rewrite (Stripe call BEFORE RPC per D5 ordering) + `partial_refund` override + `refund_approved` audit row + 19/19 integration tests; plan: `C:\Users\suns9\.claude\plans\y-final-screenshot-card-zesty-puppy.md` (Phase 18) |
 | 19 | `20260904`, `20260905` | Overbooking prevention (Phase 20 Block 1) — `create_booking(...)` SECURITY DEFINER RPC with `PERFORM 1 ... FOR UPDATE` row lock on room_units pool + overlapping booking rows + `daterange && daterange` overlap count; defense-in-depth EXCLUDE constraint `bookings_no_unit_overlap` on `(room_unit_id, daterange)` for `confirmed`/`checked_in` rows; web + walk-in flows refactored; 7-case integration test passes (single insert, non-overlapping, overlapping rejection, cancel+rebook, 5-way concurrent, walk-in-vs-web, EXCLUDE constraint); plan: `C:\Users\suns9\.claude\plans\project-quirky-storm.md`. `20260905` is a fix-up for the FOR UPDATE on aggregate bug shipped in `20260904` |
 | 20 | `20260906`, `20260907` | Cancellation policy enforcement (Phase 20 Block 2) — `cancel_booking(uuid, boolean, numeric)` SECURITY DEFINER RPC locks booking `FOR UPDATE`, validates `status='confirmed'`, looks up linked `cancellation_policy` (or `is_default=true` fallback), computes `refund_amount` via `free_cancel_hours` + `refund_pct` + optional staff override, flips status, inserts `refund_requests` row when paid + refund > 0, inserts `booking_events` audit. `app/actions/booking.ts` — guest `cancelBooking` + new `cancelBookingByStaff(bookingId, refundPctOverride)`; UI surfaces policy name + refund/penalty in guest + staff cancel dialogs. 7-case integration test passes (Flexible full refund, NULL-policy → default, checked-in blocked, double-cancel blocked, unpaid → no refund row, staff override 100%, audit metadata). Closes contractual gap where cancel always gave 100% refund. `20260907` is a fix-up: service_role bypass for auth.uid() + explicit `::user_role` cast + state guard tightened from `(confirmed, checked_in)` to `confirmed` only + `refund_amount=0` for `payment_status<>'paid'` |
+| 20 #29 | _(no migration)_ | App-level rate limiting (Phase 20 #29) — `lib/rate-limit.ts` token-bucket + LRU in `proxy.ts`; throttling login (10/min), register (5/min), OAuth callback (20/min), payments checkout (10/min); 429 + Retry-After; 10-case integration test passes |
+| 20 #30 (subpart) | _(no migration)_ | 404 stubs — `/privacy`, `/terms`, `/about`, `/contact`, `/careers` pages + branded `app/not-found.tsx`; closes 5+ live 404s |
+| 20 #31 | _(no migration)_ | Excel export for manager reports — `app/api/manager/reports/export/route.ts` streams `getReportsData()` as 6-sheet `.xlsx`; RBAC manager/admin; 10-case integration test passes |
+| 20 #28 | _(no migration)_ | Sentry error monitoring — `@sentry/nextjs` SDK via `withSentryConfig` + `sentry.{client,server}.config.ts` + `instrumentation.ts` + `app/global-error.tsx`; optional via empty `SENTRY_DSN` env vars |
+| 25 | `20260908` | Email infrastructure (Phase 20 Block 3) — `email_log` table with `event_key` UNIQUE idempotency; FKs to bookings/payments/refund_requests with `ON DELETE SET NULL`; RLS staff SELECT + manager UPDATE; 5 React Email templates in `lib/email/templates/` (booking_confirmation / payment_receipt / cancellation_notice / refund_notice / checkout_thank_you); Resend client in `lib/email/resend.ts` with dev fallback + PII redaction; 7-case integration test passes |
+| 19 #17 | `20260909` | `payments.amount > 0` CHECK constraint (defense-in-depth against zero-amount refund/payment rows) |
+| 19 #18 | `20260910` | `confirm_refund_session` partial_refund guard (webhook preserves `payment_status='partial_refund'` instead of unconditionally clobbering to 'refunded' — action-layer override race fix) |
+| 19 #19 | `20260911`, `20260912` | Multi-refund aggregation — `approve_refund` + `confirm_refund_session` SECURITY DEFINER RPCs now compute `payment_status` from `sum(approved_refunds)` vs `sum(succeeded_payments)` (`refunded` if sum >= paid, `partial_refund` if 0 < sum < paid); lock booking row to serialise concurrent approvals; `20260912` adds service_role bypass + enum cast fix-up |
 
 **17 tables**, **11 enums**, **4 SECURITY DEFINER functions** (RLS bypass), **20+ RLS policies**
 
@@ -359,7 +406,12 @@ Key business rules enforced in DB:
 - `room_units.status='maintenance'` auto-set เมื่อ maintenance severity=critical
 - `recalc_room_rating()` recompute avg/count จาก approved reviews เท่านั้น
 - `reviews_guard_staff_update()` BEFORE UPDATE trigger block staff แก้ review fields
-- `approve_refund(uuid)` — atomic refund decision + booking payment_status flip
+- `approve_refund(uuid)` — atomic refund decision + booking payment_status flip (Phase 19 #19: aggregates `sum(approved_refunds)` vs `sum(succeeded_payments)` for multi-refund support)
+- `create_booking(uuid,uuid,date,date,...)` — atomic overbooking-prevention RPC with `PERFORM 1 ... FOR UPDATE` row lock + daterange overlap count + defense-in-depth EXCLUDE constraint
+- `cancel_booking(uuid, boolean, numeric)` — atomic cancellation enforcing linked `cancellation_policy` (`free_cancel_hours` + `refund_pct`) with optional staff `refund_pct` override
+- `confirm_refund_session(text, text)` — webhook-driven Stripe refund confirmation with idempotency on `provider_event_id` UNIQUE + multi-refund aggregation
+- `email_log.event_key` UNIQUE — idempotency for Resend transactional emails (replay-safe)
+- `bookings_no_unit_overlap` EXCLUDE — defense-in-depth overlap constraint on `(room_unit_id, daterange)` for confirmed/checked_in rows
 
 **Documentation artifacts** (in `Y:\Final\db-schemas\`, local-only):
 - `schema-documentation.docx` — Thai Word doc (17 tables + 11 enums + 4 SECURITY DEFINER functions + business triggers + RLS summary)
@@ -398,11 +450,23 @@ Key business rules enforced in DB:
    provider ใน Supabase Dashboard (Authentication → Providers → Google) + paste
    OAuth Client ID/Secret จาก Google Cloud Console. ถ้าไม่ enable, login/register
    page จะแสดง error "Google OAuth ยังไม่ได้เปิดใช้งานในระบบ" แทน silent fail
-9. **Phase 18 working tree shipped (2026-09-03)** — 5 commits on `origin/main`
-   (`41b8202` → `77b2331`). `confirm_refund_session(text,text)` RPC + `charge.refunded`
-   webhook handler + `buildRefundIdempotencyKey` + `approveRefundAction` rewrite
-   (D5 ordering) + partial_refund override + `refund_approved` audit row + 19/19
-   integration tests. Next: Phase 19 deferred items (see plan tail).
+9. **Phase 20 #29, #31 + Phase 19 #19 shipped (2026-09-04)** — 3 commits on `origin/main`
+   (`b4b8352` rate limiting, `2b59f6a` Excel export, `23deb91` multi-refund). Token-bucket
+   rate limiting throttles mutations; Excel export streams `getReportsData()` as 6-sheet
+   `.xlsx`; `approve_refund` + `confirm_refund_session` now aggregate refunds vs payments
+   for correct `payment_status` on multi-refund bookings.
+10. **Phase 25 shipped (2026-09-04)** — Email infrastructure wired: Resend + React Email
+    + 5 Thai templates + `email_log` table. Dev fallback prints redacted metadata only
+    (no PII leak). Hooks in 5 server actions / webhook paths; `CheckInOutActions.tsx`
+    refactored from client-side supabase update → server-action call so `checkout_thank_you`
+    email can fire server-side.
+11. **Phase 19 #17, #18, #19 shipped (2026-09-04)** — Tiny correctness wins:
+    `payments.amount > 0` CHECK (`20260909`); `confirm_refund_session` partial_refund guard
+    (`20260910`); multi-refund aggregation across both RPCs (`20260911` + `20260912`
+    service_role bypass fix-up).
+12. **Phase 20 #28 (Sentry) + #30 (404 stubs) shipped (2026-09-04)** — Sentry Next.js SDK
+    via `withSentryConfig` (optional via empty `SENTRY_DSN`) + stub pages for
+    `/privacy`, `/terms`, `/about`, `/contact`, `/careers` + branded `app/not-found.tsx`.
 
 ---
 
