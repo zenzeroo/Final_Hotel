@@ -9,6 +9,8 @@ each with their own dashboards, permissions, and server actions.
 Originally prototyped as static HTML at `Y:/Final/V1_Prototype/extracted/`, then
 rebuilt into a typed Next.js + Supabase app across 15 phases.
 
+> ✅ **Phase 20 #25 shipped (2026-09-04)** — Email infrastructure (Phase 20 Block 3): Resend + React Email + `email_log` table (event_key UNIQUE idempotency) + 5 Thai templates (booking_confirmation / payment_receipt / cancellation_notice / refund_notice / checkout_thank_you) + 5 server-action / webhook hooks + 7 integration tests. Closes gap where zero transactional email existed. Plan: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md`.
+>
 > ✅ **Phase 19 shipped (2026-09-03)** — Overbooking prevention (Phase 20 Block 1): `create_booking` SECURITY DEFINER RPC + EXCLUDE constraint + 7 integration tests. Plan: `C:\Users\suns9\.claude\plans\project-quirky-storm.md`.
 >
 > ✅ **Phase 18 shipped (2026-09-03)** — 5 commits on `origin/main`:
