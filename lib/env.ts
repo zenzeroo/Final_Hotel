@@ -46,6 +46,16 @@ const envSchema = z.object({
   // Stripe (Server-only — secret key + webhook signing secret)
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
+
+  // Sentry (Phase 20 #28 — error monitoring)
+  // Both DSNs optional — empty values disable Sentry entirely (SDK
+  // checks for DSN before init). Source-map upload vars only needed in
+  // CI/CD for symbol upload.
+  SENTRY_DSN: z.string().optional(),
+  NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
+  SENTRY_ORG: z.string().optional(),
+  SENTRY_PROJECT: z.string().optional(),
+  SENTRY_AUTH_TOKEN: z.string().optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)
