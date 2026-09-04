@@ -11,6 +11,7 @@ import { getDefaultCancellationPolicy, getPromotionByCode } from '@/lib/data/boo
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
 import { isUuid } from '@/lib/ids'
 import { requireRole } from '@/lib/auth/require'
+import { sendEmail } from '@/lib/email/resend'
 
 const createBookingSchema = z.object({
   roomTypeId: z.string().uuid(),
@@ -177,6 +178,49 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   }
 
   revalidatePath('/bookings')
+
+  // Phase 20 #25 — fire booking_confirmation email. Fire-and-forget; if
+  // Resend is down we still return success to the caller (the email_log
+  // row records status='failed' for replay). Booking details are loaded
+  // for the template body — the booking was just inserted so it's local.
+  try {
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, booking_code, check_in, check_out, nights, total, currency, booker_email, booker_full_name, room_type:room_types(name)')
+      .eq('id', bookingId)
+      .single()
+    if (booking && data.bookerEmail) {
+      const roomTypeName = (booking.room_type as { name?: string } | null)?.name ?? 'ห้องพัก'
+      const { BookingConfirmationEmail } = await import(
+        '@/lib/email/templates/booking-confirmation'
+      )
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+      await sendEmail({
+        to: data.bookerEmail,
+        template: 'booking_confirmation',
+        subject: `[Zenzero] ยืนยันการจอง ${booking.booking_code} — ${booking.check_in}`,
+        react: BookingConfirmationEmail({
+          bookingCode: booking.booking_code,
+          guestName: booking.booker_full_name ?? '',
+          roomTypeName,
+          checkIn: booking.check_in,
+          checkOut: booking.check_out,
+          nights: booking.nights ?? 0,
+          total: Number(booking.total),
+          currency: booking.currency,
+          viewUrl: `${appUrl}/bookings/${booking.id}`,
+        }),
+        eventKey: `booking_confirmation:booking:${booking.id}`,
+        bookingId: booking.id,
+        metadata: { channel: 'web', nights: booking.nights },
+      })
+    }
+  } catch (e) {
+    // Email failure must not break the booking flow.
+    // eslint-disable-next-line no-console
+    console.error('[booking_confirmation] email dispatch failed:', e)
+  }
+
   return { success: true, bookingId }
 }
 
@@ -240,6 +284,19 @@ export async function cancelBooking(bookingId: string): Promise<CancelBookingRes
   revalidatePath('/bookings')
   revalidatePath(`/bookings/${bookingId}`)
   revalidatePath('/manager/bookings')
+
+  // Phase 20 #25 — cancellation_notice email (always fires — covers both
+  // the "no refund outside free window" and the "refund pending approval"
+  // cases). When refund_amount > 0 a refund_notice follows on manager
+  // approval (separate template).
+  await fireCancellationNotice({
+    bookingId,
+    policyName,
+    penaltyAmount,
+    refundAmount,
+    refundRequestId,
+  }).catch((e) => console.error('[cancellation_notice] failed:', e))
+
   return {
     success: true,
     refundAmount,
@@ -314,6 +371,17 @@ export async function cancelBookingByStaff(
   revalidatePath(`/bookings/${bookingId}`)
   revalidatePath('/reception/bookings')
   revalidatePath('/manager/bookings')
+
+  // Phase 20 #25 — same email as the guest cancel path. Staff override
+  // doesn't change the email template (guest still gets the policy notice).
+  await fireCancellationNotice({
+    bookingId,
+    policyName,
+    penaltyAmount,
+    refundAmount,
+    refundRequestId,
+  }).catch((e) => console.error('[cancellation_notice] failed:', e))
+
   return {
     success: true,
     refundAmount,
@@ -321,4 +389,49 @@ export async function cancelBookingByStaff(
     policyName,
     refundRequestId,
   }
+}
+
+/**
+ * Phase 20 #25 — internal helper. Loads the booking + guest email then
+ * fires the cancellation_notice template. Centralised because both the
+ * guest `cancelBooking` and the staff `cancelBookingByStaff` paths need
+ * the same email.
+ */
+async function fireCancellationNotice(args: {
+  bookingId: string
+  policyName: string
+  penaltyAmount: number
+  refundAmount: number
+  refundRequestId: string | null
+}): Promise<void> {
+  const supabase = await createClient()
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('id, booking_code, booker_email, booker_full_name, total, currency')
+    .eq('id', args.bookingId)
+    .single()
+  if (!booking || !booking.booker_email) return
+  const { CancellationNoticeEmail } = await import(
+    '@/lib/email/templates/cancellation-notice'
+  )
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  await sendEmail({
+    to: booking.booker_email,
+    template: 'cancellation_notice',
+    subject: `[Zenzero] ยกเลิกการจอง ${booking.booking_code} — นโยบาย ${args.policyName}`,
+    react: CancellationNoticeEmail({
+      bookingCode: booking.booking_code,
+      guestName: booking.booker_full_name ?? '',
+      policyName: args.policyName,
+      penaltyAmount: args.penaltyAmount,
+      refundAmount: args.refundAmount,
+      currency: booking.currency,
+      noRefund: args.refundAmount === 0,
+      viewUrl: `${appUrl}/bookings/${booking.id}`,
+    }),
+    eventKey: `cancellation_notice:booking:${booking.id}`,
+    bookingId: booking.id,
+    refundRequestId: args.refundRequestId,
+    metadata: { policy: args.policyName, penalty: args.penaltyAmount },
+  })
 }

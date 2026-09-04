@@ -24,6 +24,7 @@ import type Stripe from 'stripe'
 import { env, hasPaymentGateway } from '@/lib/env'
 import { stripe } from '@/lib/payments/stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail } from '@/lib/email/resend'
 
 export const dynamic = 'force-dynamic'
 
@@ -71,6 +72,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           p_payment_id: paymentIntentId,
         })
         if (error) throw error
+
+        // Phase 20 #25 — fire payment_receipt after the DB flip succeeded.
+        // The RPC wrote the payments row; load it + booking + guest for the
+        // template body. Fire-and-forget — webhook must return 200 quickly.
+        const bookingId = (session.metadata?.booking_id ?? null) as string | null
+        if (bookingId) {
+          await firePaymentReceipt(bookingId, session.id, 'card').catch((e) =>
+            console.error('[payment_receipt webhook] failed:', e),
+          )
+        }
         break
       }
 
@@ -116,4 +127,53 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   return NextResponse.json({ received: true })
+}
+
+/**
+ * Phase 20 #25 — internal helper. Loads the latest succeeded payment row
+ * for a booking and fires the payment_receipt template. Used by both the
+ * Stripe webhook (card path) and `markCashPaidAction` (walk-in cash).
+ */
+async function firePaymentReceipt(
+  bookingId: string,
+  sessionId: string,
+  method: 'card' | 'promptpay' | 'cash',
+): Promise<void> {
+  const admin = await createAdminClient()
+  const { data: booking } = await admin
+    .from('bookings')
+    .select('id, booking_code, booker_email, booker_full_name, total, currency')
+    .eq('id', bookingId)
+    .single()
+  if (!booking || !booking.booker_email) return
+  const { data: payment } = await admin
+    .from('payments')
+    .select('id, amount, paid_at')
+    .eq('booking_id', bookingId)
+    .eq('status', 'succeeded')
+    .order('paid_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (!payment) return
+
+  const { PaymentReceiptEmail } = await import('@/lib/email/templates/payment-receipt')
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  await sendEmail({
+    to: booking.booker_email,
+    template: 'payment_receipt',
+    subject: `[Zenzero] ใบเสร็จการจอง ${booking.booking_code}`,
+    react: PaymentReceiptEmail({
+      bookingCode: booking.booking_code,
+      guestName: booking.booker_full_name ?? '',
+      amount: Number(payment.amount),
+      currency: booking.currency,
+      method,
+      paidAt: payment.paid_at ?? new Date().toISOString(),
+      viewUrl: `${appUrl}/bookings/${booking.id}`,
+    }),
+    eventKey: `payment_receipt:booking:${booking.id}:${sessionId}`,
+    bookingId: booking.id,
+    paymentId: payment.id,
+    metadata: { method, session_id: sessionId },
+  })
 }

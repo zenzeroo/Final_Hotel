@@ -9,6 +9,7 @@ import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/manager'
 import { getDefaultCancellationPolicy } from '@/lib/data/bookings'
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
+import { sendEmail } from '@/lib/email/resend'
 
 /**
  * Phase 12 — Walk-in booking server action.
@@ -236,5 +237,44 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
 
   revalidatePath('/reception/bookings')
   revalidatePath('/manager')
+
+  // Phase 20 #25 — booking_confirmation email for walk-in too. The guest
+  // may have provided a bookerEmail (walk-in is sometimes pre-paid online
+  // by a third party). Fire-and-forget.
+  try {
+    const { data: booking } = await admin
+      .from('bookings')
+      .select('id, booking_code, check_in, check_out, nights, total, currency, booker_email, booker_full_name, room_type:room_types(name), payment_status')
+      .eq('id', bookingId)
+      .single()
+    if (booking && data.bookerEmail) {
+      const roomTypeName = (booking.room_type as { name?: string } | null)?.name ?? 'ห้องพัก'
+      const { BookingConfirmationEmail } = await import('@/lib/email/templates/booking-confirmation')
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+      await sendEmail({
+        to: data.bookerEmail,
+        template: 'booking_confirmation',
+        subject: `[Zenzero] ยืนยันการจอง ${booking.booking_code} — ${booking.check_in}`,
+        react: BookingConfirmationEmail({
+          bookingCode: booking.booking_code,
+          guestName: booking.booker_full_name ?? '',
+          roomTypeName,
+          checkIn: booking.check_in,
+          checkOut: booking.check_out,
+          nights: booking.nights ?? 0,
+          total: Number(booking.total),
+          currency: booking.currency,
+          viewUrl: `${appUrl}/bookings/${booking.id}`,
+        }),
+        eventKey: `booking_confirmation:booking:${booking.id}`,
+        bookingId: booking.id,
+        metadata: { channel: 'walk_in', payment_method: data.paymentMethod },
+      })
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('[walk-in booking_confirmation] email dispatch failed:', e)
+  }
+
   return { success: true, bookingId, userId: guestUserId }
 }

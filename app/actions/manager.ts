@@ -156,6 +156,43 @@ export async function approveRefundAction(formData: FormData): Promise<ActionRes
         partial: partialRefund,
       },
     })
+
+    // Phase 20 #25 — fire refund_notice AFTER the DB flip + Stripe refund
+    // succeeded (inside the try block so we can reference `rr`). Fire-and-
+    // forget — email failure must not roll back the refund approval.
+    try {
+      const adminEmail = await createAdminClient()
+      const { data: booking } = await adminEmail
+        .from('bookings')
+        .select('id, booking_code, booker_email, booker_full_name, currency')
+        .eq('id', rr.booking_id)
+        .single()
+      if (booking && booking.booker_email) {
+        const { sendEmail } = await import('@/lib/email/resend')
+        const { RefundNoticeEmail } = await import('@/lib/email/templates/refund-notice')
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+        await sendEmail({
+          to: booking.booker_email,
+          template: 'refund_notice',
+          subject: `[Zenzero] คืนเงินการจอง ${booking.booking_code}`,
+          react: RefundNoticeEmail({
+            bookingCode: booking.booking_code,
+            guestName: booking.booker_full_name ?? '',
+            refundAmount: Number(rr.amount),
+            currency: booking.currency,
+            partial: partialRefund,
+            etaDays: 7,
+            viewUrl: `${appUrl}/bookings/${booking.id}`,
+          }),
+          eventKey: `refund_notice:refund_request:${refundId}`,
+          bookingId: booking.id,
+          refundRequestId: refundId,
+          metadata: { stripe_refund_id: stripeRefundId, partial: partialRefund },
+        })
+      }
+    } catch (e) {
+      console.error('[refund_notice] email dispatch failed:', e)
+    }
   } catch (e) {
     return actionFail(e, 'Could not approve refund')
   }

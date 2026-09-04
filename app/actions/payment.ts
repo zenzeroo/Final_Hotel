@@ -208,6 +208,55 @@ export async function markCashPaidAction(
     revalidatePath(`/bookings/${booking.id}`)
     revalidatePath('/reception/bookings')
     revalidatePath('/manager')
+
+    // Phase 20 #25 — fire payment_receipt for cash payments. The
+    // webhook route has its own firePaymentReceipt helper; replicate
+    // here with a fresh admin client to keep the dependencies local.
+    try {
+      const { sendEmail } = await import('@/lib/email/resend')
+      const { PaymentReceiptEmail } = await import('@/lib/email/templates/payment-receipt')
+      const { createAdminClient } = await import('@/lib/supabase/admin')
+      const admin = await createAdminClient()
+      const { data: freshBooking } = await admin
+        .from('bookings')
+        .select('id, booking_code, booker_email, booker_full_name, total, currency')
+        .eq('id', booking.id)
+        .single()
+      if (freshBooking && freshBooking.booker_email) {
+        const { data: payment } = await admin
+          .from('payments')
+          .select('id, amount, paid_at')
+          .eq('booking_id', booking.id)
+          .eq('status', 'succeeded')
+          .order('paid_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (payment) {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+          await sendEmail({
+            to: freshBooking.booker_email,
+            template: 'payment_receipt',
+            subject: `[Zenzero] ใบเสร็จการจอง ${freshBooking.booking_code}`,
+            react: PaymentReceiptEmail({
+              bookingCode: freshBooking.booking_code,
+              guestName: freshBooking.booker_full_name ?? '',
+              amount: Number(payment.amount),
+              currency: freshBooking.currency,
+              method: 'cash',
+              paidAt: payment.paid_at ?? new Date().toISOString(),
+              viewUrl: `${appUrl}/bookings/${freshBooking.id}`,
+            }),
+            eventKey: `payment_receipt:booking:${freshBooking.id}:cash:${payment.id}`,
+            bookingId: freshBooking.id,
+            paymentId: payment.id,
+            metadata: { method: 'cash', actor_id: session.id },
+          })
+        }
+      }
+    } catch (e) {
+      console.error('[payment_receipt cash] email dispatch failed:', e)
+    }
+
     return { ok: true }
   } catch (e) {
     return actionFail(e, 'ไม่สามารถบันทึกการชำระเงินสดได้: ' + translateSupabaseError(e instanceof Error ? e.message : String(e)))
