@@ -23,9 +23,27 @@
  * Pass an empty string for `label` to keep the legacy un-prefixed
  * `Supabase: <msg>` format (used by data-layer helpers that don't yet
  * carry an operation name).
+ *
+ * Message extraction handles three shapes:
+ *   1. `Error` instance — use `.message` directly (works for most
+ *      JS exceptions + Supabase AuthError).
+ *   2. Plain object with a `.message` property — used by Supabase
+ *      PostgrestError (`{message, details, hint, code}`), GoTrueError,
+ *      and other Supabase sub-package errors. Without this branch,
+ *      `String(error)` would yield `[object Object]` and hide the real
+ *      problem (the cause of the runtime "Supabase (getOwnProfile):
+ *      [object Object]" bug in error_01.png).
+ *   3. Anything else — fall back to `String(e)`.
  */
 export function wrapSupabaseError(label: string, e: unknown): never {
-  const msg = e instanceof Error ? e.message : String(e)
+  let msg: string
+  if (e instanceof Error) {
+    msg = e.message
+  } else if (typeof e === 'object' && e !== null && 'message' in e) {
+    msg = String((e as { message: unknown }).message)
+  } else {
+    msg = String(e)
+  }
   throw new Error(label ? `Supabase (${label}): ${msg}` : `Supabase: ${msg}`)
 }
 
