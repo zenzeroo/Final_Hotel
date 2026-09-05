@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
+import type { RoomTypeName } from '@/lib/data/types'
 
 const PRICE_RANGES = [
   { value: 'under3000', label: 'ต่ำกว่า ฿3,000' },
@@ -10,15 +11,18 @@ const PRICE_RANGES = [
   { value: 'over6000', label: 'มากกว่า ฿6,000' },
 ] as const
 
-const ROOM_TYPES = [
-  { value: 'Deluxe', label: 'ดีลักซ์' },
-  { value: 'Suite', label: 'สวีท' },
-  { value: 'Villa', label: 'วิลล่า' },
-] as const
+const ROOM_TYPE_LABELS: Record<RoomTypeName, string> = {
+  Deluxe: 'ดีลักซ์',
+  Suite: 'สวีท',
+  Villa: 'วิลล่า',
+}
 
-const FLOORS = [1, 2, 3, 4] as const
+interface FilterSidebarProps {
+  roomTypes: readonly RoomTypeName[]
+  floors: readonly number[]
+}
 
-export function FilterSidebar() {
+export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
   const router = useRouter()
   const params = useSearchParams()
 
@@ -58,13 +62,13 @@ export function FilterSidebar() {
 
       <Section title="ประเภทห้องพัก">
         <div className="flex flex-col gap-2">
-          {ROOM_TYPES.map((type) => (
+          {roomTypes.map((type) => (
             <Checkbox
-              key={type.value}
-              label={type.label}
-              checked={currentType === type.value}
+              key={type}
+              label={ROOM_TYPE_LABELS[type] ?? type}
+              checked={currentType === type}
               onChange={(checked) =>
-                updateParam('type', checked ? type.value : null)
+                updateParam('type', checked ? type : null)
               }
             />
           ))}
@@ -79,7 +83,7 @@ export function FilterSidebar() {
           aria-label="เลือกชั้น"
         >
           <option value="all">ทุกชั้น</option>
-          {FLOORS.map((f) => (
+          {floors.map((f) => (
             <option key={f} value={f}>
               ชั้น {f}
             </option>

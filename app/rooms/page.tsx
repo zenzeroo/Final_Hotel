@@ -1,6 +1,6 @@
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
-import { FilterSidebar } from '@/components/search/FilterSidebar'
+import { FilterSidebarServer } from '@/components/search/FilterSidebarServer'
 import { FilterChips } from '@/components/search/FilterChips'
 import { SearchSummaryCard } from '@/components/search/SearchSummaryCard'
 import { SearchBar } from '@/components/search/SearchBar'
@@ -61,7 +61,7 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
                 checkout={filters.checkout}
                 guests={filters.guests}
               />
-              <FilterSidebar />
+              <FilterSidebarServer />
             </div>
 
             {/* Results */}
