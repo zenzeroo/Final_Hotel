@@ -10,7 +10,6 @@
  *
  * Prereqs (only for case 6):
  *  - `npm run dev` running on http://localhost:3000
- *  - `.env.local` has USE_MOCK_DATA=1
  *
  * Run: npx tsx scripts/test-pricing-engine.mts
  */
@@ -21,9 +20,6 @@ import { readFileSync, existsSync } from 'node:fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 loadEnv({ path: resolve(__dirname, '..', '.env.local') })
-
-// Force the dispatcher onto the mock layer for these tests.
-process.env.USE_MOCK_DATA = '1'
 
 import {
   getActiveSeasonalRatesForRange,

@@ -20,17 +20,14 @@
  *   5. Re-fetch the page and verify state mutated via HTML delta.
  *
  * NOTE on mock vs real:
- *   This script runs against USE_MOCK_DATA=1 (mock layer). The 9D mock seed
- *   has 5 staff members and ~10 reviews spanning pending/approved/hidden.
- *   Mock state persists for the dev server's lifetime, so tests use delta
- *   assertions and skip-if-already-mutated guards.
- *
- *   The real wiring (profiles.email + staff_shifts + RLS) is exercised by
- *   the live-DB verification step (task #89).
+ *   This script was written for the mock layer (now deleted). Assertions
+ *   that depend on the 9D mock seed (5 staff members, ~10 reviews spanning
+ *   pending/approved/hidden) may fail until the seed data is migrated to
+ *   real DB. The real wiring (profiles.email + staff_shifts + RLS) is
+ *   exercised by the live-DB verification step (task #89).
  *
  * Prereqs:
  *   - `npm run dev` is running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=1
  *
  * Run: npx tsx scripts/test-phase9-9d-actions.mts
  */

@@ -14,7 +14,7 @@
  *
  * Prereqs:
  *   - `npm run dev` is running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=0 + STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET
+ *   - `.env.local` has STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET
  *   - Migration 20260902_payments_and_rpc.sql has been applied
  *
  * Run: npx tsx scripts/test-phase17-payment-webhook.mts

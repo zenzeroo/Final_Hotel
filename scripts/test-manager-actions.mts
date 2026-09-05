@@ -20,7 +20,6 @@
  *
  * Prereqs:
  *  - `npm run dev` is running on http://localhost:3000
- *  - `.env.local` has USE_MOCK_DATA=1
  *
  * Run: npx tsx scripts/test-manager-actions.mts
  */

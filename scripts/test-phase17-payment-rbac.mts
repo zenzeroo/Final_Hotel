@@ -20,7 +20,7 @@
  *
  * Prereqs:
  *   - `npm run dev` is running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=0 + STRIPE_SECRET_KEY (test key)
+ *   - `.env.local` has STRIPE_SECRET_KEY (test key)
  *   - Migration 20260902_payments_and_rpc.sql has been applied
  *   - Seed users: admin/manager/reception/somjit/test@zenzero.com
  *

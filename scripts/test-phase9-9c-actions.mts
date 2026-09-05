@@ -5,7 +5,7 @@
  * Strategy: GET pages and verify the manager UI renders without 5xx, with
  * real-shape data flowing through from the data layer to the UI components.
  *
- * Live-DB notes (USE_MOCK_DATA=0):
+ * Live-DB notes:
  *   Live DB has only a sparse set of seeded rows (the demo seed only created
  *   3 damage_reports + 1 booking_event + a handful of room_units). Tests
  *   below check RENDER correctness (HTTP 200, labels visible, page shell OK)
@@ -15,7 +15,6 @@
  *
  * Prereqs:
  *   - `npm run dev` is running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=0 (or 1 — both work, assertions adapt)
  *
  * Run: npx tsx scripts/test-phase9-9c-actions.mts
  */

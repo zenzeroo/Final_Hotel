@@ -23,7 +23,6 @@
  *
  * Prereqs:
  *   - `npm run dev` is running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=0 (live DB required — trend reads from bookings)
  *   - `.env.local` has NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY
  *   - At least 1 profile + 1 room_type exist in DB (seeded by Phase 9)
  *

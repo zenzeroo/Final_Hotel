@@ -14,7 +14,6 @@
  *
  * Prereqs:
  *   - `npm run dev` is running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=0 (live DB required — RPC lives in Postgres)
  *   - Migration 20260833_approve_refund_rpc.sql has been applied
  *   - At least 1 pending refund_request exists (seeded by 20260830_damage_refunds.sql)
  *

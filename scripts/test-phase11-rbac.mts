@@ -20,7 +20,6 @@
  *
  * Prereqs:
  *   - `npm run dev` is running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=0 (real auth + RLS)
  *   - Seed users exist:
  *       admin@zenzero.com / AdminPass123!
  *       manager@zenzero.com / ManagerPass123!

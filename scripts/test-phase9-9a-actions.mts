@@ -17,17 +17,13 @@
  *   5. Re-fetch the page and verify state mutated via HTML delta.
  *
  * NOTE on mock vs real:
- *   This script runs against USE_MOCK_DATA=1 (mock layer). Under mocks, the
- *   dispatcher routes to mock-manager.ts which already has all writes working
- *   for both admin and manager roles. So this script primarily verifies the
- *   ACTION-LAYER wiring (Zod validation, revalidatePath, return shape) and
- *   HTML delta. The RLS policy change in 20260829 (extending `promotions
- *   admin write` to manager) is only exercised by the live-DB verification
- *   step (task #89).
+ *   This script primarily verifies the ACTION-LAYER wiring (Zod validation,
+ *   revalidatePath, return shape) and HTML delta. The RLS policy change in
+ *   20260829 (extending `promotions admin write` to manager) is only
+ *   exercised by the live-DB verification step (task #89).
  *
  * Prereqs:
  *   - `npm run dev` is running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=1
  *
  * Run: npx tsx scripts/test-phase9-9a-actions.mts
  */

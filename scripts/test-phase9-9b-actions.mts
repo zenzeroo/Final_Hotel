@@ -15,17 +15,16 @@
  *   5. Re-fetch the page and verify state mutated via HTML delta.
  *
  * NOTE on mock vs real:
- *   This script runs against USE_MOCK_DATA=1 (mock layer). The 9B mock seeds
- *   contain damageReports ("dmg-1".."dmg-4") and refundRequests ("rf-1".."rf-3").
- *   Mock state persists for the dev server's lifetime, so tests use delta
- *   assertions and skip if a record was already actioned in a previous run.
+ *   This script was written for the mock layer (now deleted). The 9B mock
+ *   seeds contained damageReports ("dmg-1".."dmg-4") and refundRequests
+ *   ("rf-1".."rf-3"); those IDs no longer exist. Tests using delta
+ *   assertions and skip-if-already-mutated guards remain correct in spirit.
  *
  *   The new tables (damage_reports, refund_requests) and their RLS policies
  *   are explicitly exercised by the live-DB verification step (task #89).
  *
  * Prereqs:
  *   - `npm run dev` is running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=1
  *
  * Run: npx tsx scripts/test-phase9-9b-actions.mts
  */
@@ -212,7 +211,7 @@ await step('Discover server-action IDs', async () => {
 
 // ── Discover live UUIDs from the database (mock IDs no longer apply) ───────
 //
-// Under USE_MOCK_DATA=0 the data layer hits real PostgREST. The action layer
+// The data layer hits real PostgREST. The action layer
 // accepts any string id, but the underlying UPDATE matches by id — so the test
 // must look up real damage_report.id and refund_request.id values.
 

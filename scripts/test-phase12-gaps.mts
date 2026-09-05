@@ -20,7 +20,6 @@
  *
  * Prereqs:
  *   - `npm run dev` running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=0
  *   - Migration 20260834 already applied
  *   - Seeded data: ≥1 profile, ≥1 room_type, ≥1 room_unit, ≥1 booking
  *

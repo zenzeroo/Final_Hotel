@@ -8,12 +8,6 @@ const envSchema = z.object({
   // App
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
 
-  // Data Layer Toggle
-  USE_MOCK_DATA: z
-    .string()
-    .default('1')
-    .transform((v) => v !== '0'),
-
   // Supabase (Public — client-safe)
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
@@ -68,7 +62,6 @@ if (!parsed.success) {
 export const env = parsed.data
 
 // Convenience flags
-export const isUsingMockData = env.USE_MOCK_DATA
 export const hasSupabase = Boolean(env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 export const hasR2 = Boolean(env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY)
 export const hasPaymentGateway = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET)

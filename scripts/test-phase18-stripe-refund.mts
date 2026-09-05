@@ -21,8 +21,7 @@
  *
  * Prereqs:
  *   - `npm run dev` is running on http://localhost:3000
- *   - `.env.local` has USE_MOCK_DATA=0 + STRIPE_SECRET_KEY (test key) +
- *     STRIPE_WEBHOOK_SECRET
+ *   - `.env.local` has STRIPE_SECRET_KEY (test key) + STRIPE_WEBHOOK_SECRET
  *   - Migrations 20260902_payments_and_rpc.sql + 20260903_confirm_refund_rpc.sql
  *     applied
  *   - PostgREST schema cache reloaded: `NOTIFY pgrst, 'reload schema';`
