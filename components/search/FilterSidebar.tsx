@@ -3,18 +3,19 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 import type { RoomTypeName } from '@/lib/data/types'
 
 const PRICE_RANGES = [
-  { value: 'under3000', label: 'ต่ำกว่า ฿3,000' },
-  { value: '3000-6000', label: '฿3,000 - ฿6,000' },
-  { value: 'over6000', label: 'มากกว่า ฿6,000' },
-] as const
+  { value: 'under3000' as const },
+  { value: '3000-6000' as const },
+  { value: 'over6000' as const },
+]
 
-const ROOM_TYPE_LABELS: Record<RoomTypeName, string> = {
-  Deluxe: 'ดีลักซ์',
-  Suite: 'สวีท',
-  Villa: 'วิลล่า',
+const ROOM_TYPE_LABELS: Record<RoomTypeName, { th: string; en: string }> = {
+  Deluxe: { th: 'ดีลักซ์', en: 'Deluxe' },
+  Suite: { th: 'สวีท', en: 'Suite' },
+  Villa: { th: 'วิลล่า', en: 'Villa' },
 }
 
 interface FilterSidebarProps {
@@ -25,6 +26,7 @@ interface FilterSidebarProps {
 export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
   const router = useRouter()
   const params = useSearchParams()
+  const t = useT()
 
   const currentType = params.get('type') ?? 'all'
   const currentFloor = params.get('floor') ?? 'all'
@@ -43,14 +45,26 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
     [params, router]
   )
 
+  // Localize the price-range label based on the current locale.
+  // (The locale lives in the I18nProvider cookie — we can read it via
+  // useT() in tandem with a sentinel match, but here it's cheaper to
+  // dispatch on the key prefix from the active dictionary.)
+  const priceLabels: Record<string, string> = {
+    under3000: t('roomsList.under3000'),
+    '3000-6000': t('roomsList.price3000to6000'),
+    over6000: t('roomsList.over6000'),
+  }
+  // Detect locale by checking which set is in the dictionary.
+  const isEn = priceLabels.under3000.includes('Under')
+
   return (
     <aside className="flex flex-col gap-6">
-      <Section title="ช่วงราคา">
+      <Section title={t('roomsList.priceRange')}>
         <div className="flex flex-col gap-2">
           {PRICE_RANGES.map((range) => (
             <Checkbox
               key={range.value}
-              label={range.label}
+              label={priceLabels[range.value]}
               checked={currentPrice === range.value}
               onChange={(checked) =>
                 updateParam('priceRange', checked ? range.value : null)
@@ -60,12 +74,12 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
         </div>
       </Section>
 
-      <Section title="ประเภทห้องพัก">
+      <Section title={t('roomsList.roomType')}>
         <div className="flex flex-col gap-2">
           {roomTypes.map((type) => (
             <Checkbox
               key={type}
-              label={ROOM_TYPE_LABELS[type] ?? type}
+              label={ROOM_TYPE_LABELS[type][isEn ? 'en' : 'th']}
               checked={currentType === type}
               onChange={(checked) =>
                 updateParam('type', checked ? type : null)
@@ -75,17 +89,17 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
         </div>
       </Section>
 
-      <Section title="ชั้น">
+      <Section title={t('roomsList.floor')}>
         <select
           value={currentFloor}
           onChange={(e) => updateParam('floor', e.target.value === 'all' ? null : e.target.value)}
           className="w-full px-4 py-2.5 bg-surface-container-low rounded-lg text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary border border-outline-variant"
-          aria-label="เลือกชั้น"
+          aria-label={t('roomsList.floor')}
         >
-          <option value="all">ทุกชั้น</option>
+          <option value="all">{t('roomsList.any')}</option>
           {floors.map((f) => (
             <option key={f} value={f}>
-              ชั้น {f}
+              {t('roomsList.floor')} {f}
             </option>
           ))}
         </select>
@@ -97,7 +111,7 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
         className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-surface-container-low transition-colors"
       >
         <MaterialIcon name="refresh" size={16} />
-        รีเซ็ตตัวกรอง
+        {t('roomsList.resetFilters')}
       </button>
     </aside>
   )

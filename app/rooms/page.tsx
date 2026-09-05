@@ -7,12 +7,15 @@ import { SearchBar } from '@/components/search/SearchBar'
 import { FloorGroupSection } from '@/components/room/FloorGroupSection'
 import { searchRooms } from '@/lib/data/rooms'
 import type { SearchFilters } from '@/lib/data/types'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 // Server-render on demand (Supabase data + searchParams)
 export const dynamic = 'force-dynamic'
 
 export default async function RoomsPage(props: PageProps<'/rooms'>) {
   const searchParams = await props.searchParams
+  const t = getT(await getLocale())
 
   const filters: SearchFilters = {
     checkin: typeof searchParams.checkin === 'string' ? searchParams.checkin : undefined,
@@ -67,9 +70,9 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
             {/* Results */}
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h1 className="font-display text-3xl text-primary">ห้องพักที่ว่าง</h1>
+                <h1 className="font-display text-3xl text-primary">{t('roomsList.title')}</h1>
                 <span className="text-body-md text-on-surface-variant">
-                  แสดง {total} ห้อง
+                  {t('roomsList.resultsCount', { count: total })}
                 </span>
               </div>
 

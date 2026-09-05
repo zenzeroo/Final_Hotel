@@ -10,12 +10,17 @@ import { RatingStars } from '@/components/room/RatingStars'
 import { BookingWidget } from '@/components/room/BookingWidget'
 import { ReviewList } from '@/components/room/ReviewList'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 // Server-render on demand (Supabase data + dynamic params)
 export const dynamic = 'force-dynamic'
 
 export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
   const { id } = await props.params
+  const locale = await getLocale()
+  const t = getT(locale)
+  const isEn = locale === 'en'
   const room = await getRoomBySlug(id)
   // Phase parity — pass live tax + resort fee to the BookingWidget so its
   // preview totals match `/bookings/new`. Without this, the widget falls
@@ -46,49 +51,49 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
                   {room.size_sqm && (
                     <span className="inline-flex items-center gap-2">
                       <MaterialIcon name="square_foot" size={18} />
-                      {room.size_sqm} ตร.ม.
+                      {room.size_sqm} {t('roomDetail.size')}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-2">
                     <MaterialIcon name="group" size={18} />
-                    สูงสุด {room.max_guests} ท่าน
+                    {t('roomDetail.maxGuests', { count: room.max_guests })}
                   </span>
                   <span className="inline-flex items-center gap-2">
                     <MaterialIcon name="bed" size={18} />
-                    {bedTypeLabel(room.bed_type)}
+                    {bedTypeLabel(room.bed_type, locale)}
                   </span>
                   {room.view_label && (
                     <span className="inline-flex items-center gap-2">
                       <MaterialIcon name="landscape" size={18} />
-                      {room.view_label}
+                      {t('roomDetail.view')}: {room.view_label}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-2">
                     <MaterialIcon name="stairs" size={18} />
-                    ชั้น {room.floor}
+                    {t('roomDetail.floor')} {room.floor}
                   </span>
                 </div>
               </div>
 
               {/* Amenities */}
               <section>
-                <h2 className="font-display text-2xl text-primary mb-4">สิ่งอำนวยความสะดวก</h2>
+                <h2 className="font-display text-2xl text-primary mb-4">{t('roomDetail.amenities')}</h2>
                 <AmenityGrid amenitySlugs={room.amenities} />
               </section>
 
               {/* Description */}
               <section>
-                <h2 className="font-display text-2xl text-primary mb-4">เกี่ยวกับห้องนี้</h2>
+                <h2 className="font-display text-2xl text-primary mb-4">{t('roomDetail.description')}</h2>
                 <p className="text-body-lg text-on-surface leading-relaxed">{room.description}</p>
               </section>
 
               {/* Reviews */}
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-display text-2xl text-primary">รีวิวจากผู้เข้าพัก</h2>
+                  <h2 className="font-display text-2xl text-primary">{t('roomDetail.reviews')}</h2>
                   <span className="inline-flex items-center gap-2 text-body-md text-on-surface-variant">
                     <RatingStars value={room.rating_avg} size={16} showValue={true} />
-                    <span className="text-caption">({room.rating_count} รีวิว)</span>
+                    <span className="text-caption">({t('roomDetail.reviewCount', { count: room.rating_count })})</span>
                   </span>
                 </div>
                 <ReviewList roomTypeId={room.id} />
@@ -107,8 +112,9 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
 
 export async function generateMetadata(props: PageProps<'/rooms/[id]'>) {
   const { id } = await props.params
+  const t = getT(await getLocale())
   const room = await getRoomBySlug(id)
-  if (!room) return { title: 'ไม่พบห้องพัก | Zenzero Hotel' }
+  if (!room) return { title: `${t('roomDetail.roomNotFound')} | Zenzero Hotel` }
   return {
     title: `${room.name} | Zenzero Hotel`,
     description: room.short_desc,

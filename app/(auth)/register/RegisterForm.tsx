@@ -6,6 +6,7 @@ import { signUp, signInWithGoogle, type AuthState } from '@/app/actions/auth'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { GoogleLogo } from '@/components/ui/GoogleLogo'
+import { useT } from '@/lib/i18n/useT'
 
 interface RegisterFormProps {
   next: string
@@ -24,6 +25,7 @@ interface RegisterFormProps {
 
 function SubmitButton() {
   const { pending } = useFormStatus()
+  const t = useT()
   return (
     <button
       type="submit"
@@ -33,10 +35,10 @@ function SubmitButton() {
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-          กำลังสมัครสมาชิก…
+          {t('auth.signUp')}…
         </>
       ) : (
-        'สมัครสมาชิก'
+        t('auth.signUp')
       )}
     </button>
   )
@@ -46,13 +48,11 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
   const [state, formAction] = useActionState<AuthState | null, FormData>(signUp, null)
   const [googleError, setGoogleError] = useState<string | undefined>()
   const [googlePending, startGoogleTransition] = useTransition()
+  const t = useT()
 
   const handleGoogle = () => {
     startGoogleTransition(async () => {
       const result = await signInWithGoogle(next)
-      // Success: `redirect()` throws server-side, Next.js navigates the
-      // browser, `result` resolves as undefined — we never see it.
-      // Failure: action returns { error } — surface in the form banner.
       if (result?.error) setGoogleError(result.error)
     })
   }
@@ -69,7 +69,6 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
         </div>
       )}
 
-      {/* Phase 26 — info banner for bounced signUp (e.g. check_email). */}
       {infoMessage && (
         <div className="px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg text-body-md inline-flex items-start gap-2">
           <MaterialIcon name="mark_email_read" className="mt-0.5 shrink-0" />
@@ -79,7 +78,7 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
 
       {/* Full name */}
       <label className="flex flex-col gap-1.5">
-        <span className="text-label-md text-on-surface">ชื่อ-นามสกุล</span>
+        <span className="text-label-md text-on-surface">{t('auth.fullName')}</span>
         <div className="relative">
           <MaterialIcon
             name="person"
@@ -89,7 +88,7 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
           <input
             type="text"
             name="full_name"
-            placeholder="คุณสมชาย ใจดี"
+            placeholder={t('auth.namePlaceholder')}
             required
             autoComplete="name"
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
@@ -99,7 +98,7 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
 
       {/* Email */}
       <label className="flex flex-col gap-1.5">
-        <span className="text-label-md text-on-surface">อีเมล</span>
+        <span className="text-label-md text-on-surface">{t('auth.email')}</span>
         <div className="relative">
           <MaterialIcon
             name="mail"
@@ -109,7 +108,7 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
           <input
             type="email"
             name="email"
-            placeholder="เช่น yourname@email.com"
+            placeholder={t('auth.emailPlaceholder')}
             required
             autoComplete="email"
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
@@ -119,9 +118,7 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
 
       {/* Phone */}
       <label className="flex flex-col gap-1.5">
-        <span className="text-label-md text-on-surface">
-          เบอร์โทรศัพท์ <span className="text-on-surface-variant normal-case font-normal">(ไม่บังคับ)</span>
-        </span>
+        <span className="text-label-md text-on-surface">{t('auth.phone')}</span>
         <div className="relative">
           <MaterialIcon
             name="phone"
@@ -131,7 +128,7 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
           <input
             type="tel"
             name="phone"
-            placeholder="08X-XXX-XXXX"
+            placeholder={t('auth.phonePlaceholder')}
             autoComplete="tel"
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
           />
@@ -140,10 +137,10 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
 
       {/* Password */}
       <label className="flex flex-col gap-1.5">
-        <span className="text-label-md text-on-surface">รหัสผ่าน</span>
+        <span className="text-label-md text-on-surface">{t('auth.password')}</span>
         <PasswordInput
           name="password"
-          placeholder="อย่างน้อย 8 ตัวอักษร"
+          placeholder={t('auth.passwordMinLength')}
           required
           minLength={8}
           autoComplete="new-password"
@@ -152,7 +149,7 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
 
       {/* Confirm password */}
       <label className="flex flex-col gap-1.5">
-        <span className="text-label-md text-on-surface">ยืนยันรหัสผ่าน</span>
+        <span className="text-label-md text-on-surface">{t('auth.confirmPassword')}</span>
         <PasswordInput
           name="confirm_password"
           placeholder="••••••••"
@@ -167,13 +164,11 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
       {/* Divider */}
       <div className="flex items-center gap-3 my-2">
         <div className="flex-1 h-px bg-outline-variant" />
-        <span className="text-caption text-on-surface-variant uppercase tracking-wider">หรือ</span>
+        <span className="text-caption text-on-surface-variant uppercase tracking-wider">OR</span>
         <div className="flex-1 h-px bg-outline-variant" />
       </div>
 
-      {/* Google signup — same handler as LoginForm. OAuth doesn't distinguish
-          sign-in vs sign-up; the callback route handles both (existing email
-          → sign-in, new email → trigger creates profile with role='user'). */}
+      {/* Google signup — same handler as LoginForm. */}
       <button
         type="button"
         onClick={handleGoogle}
@@ -183,12 +178,12 @@ export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormPr
         {googlePending ? (
           <>
             <span className="inline-block w-4 h-4 border-2 border-on-surface border-t-transparent rounded-full animate-spin" />
-            กำลังเชื่อมต่อกับ Google…
+            {t('auth.signInWithGoogle')}…
           </>
         ) : (
           <>
             <GoogleLogo />
-            สมัครสมาชิกด้วย Google
+            {t('auth.signUpWithGoogle')}
           </>
         )}
       </button>

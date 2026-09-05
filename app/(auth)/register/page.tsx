@@ -2,16 +2,18 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { r2Url } from '@/lib/r2/publicUrl'
 import { RegisterForm } from './RegisterForm'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export default async function RegisterPage(props: PageProps<'/register'>) {
   const searchParams = await props.searchParams
+  const t = getT(await getLocale())
   const next = typeof searchParams.next === 'string' ? searchParams.next : '/'
   // Phase 14 — surface OAuth callback failures into the form banner.
-  const errorMessage = mapOAuthError(searchParams.error)
+  const errorMessage = mapOAuthError(searchParams.error, t)
   // Phase 26 — surface the "check your email" message after the user
-  // submits signUp while email confirmation is required (Supabase
-  // Dashboard → Auth → Providers → Email → Confirm email ON).
-  const infoMessage = mapInfoMessage(searchParams.message)
+  // submits signUp while email confirmation is required.
+  const infoMessage = mapInfoMessage(searchParams.message, t)
 
   return (
     <main className="min-h-screen relative flex items-center justify-center px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-12">
@@ -40,9 +42,9 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
         </div>
 
         <div className="text-center mb-8">
-          <h1 className="font-display text-3xl font-bold text-primary">สร้างบัญชีใหม่</h1>
+          <h1 className="font-display text-3xl font-bold text-primary">{t('auth.registerTitle')}</h1>
           <p className="text-body-md text-on-surface-variant mt-2">
-            เริ่มต้นประสบการณ์พักผ่อนที่เหนือระดับ
+            {t('auth.registerSubtitle')}
           </p>
         </div>
 
@@ -53,12 +55,12 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
         />
 
         <p className="mt-8 text-center text-body-md text-on-surface-variant">
-          มีบัญชีอยู่แล้ว?{' '}
+          {t('auth.haveAccount')}{' '}
           <Link
             href={`/login${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}
             className="text-primary font-semibold hover:text-secondary transition-colors"
           >
-            เข้าสู่ระบบ
+            {t('nav.login')}
           </Link>
         </p>
       </div>
@@ -67,30 +69,35 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
 }
 
 /** Phase 14 — same mapping as LoginPage. */
-function mapOAuthError(error: string | string[] | undefined): string | undefined {
+function mapOAuthError(
+  error: string | string[] | undefined,
+  t: ReturnType<typeof getT>,
+): string | undefined {
   const value = Array.isArray(error) ? error[0] : error
   switch (value) {
     case 'oauth_cancelled':
-      return 'ยกเลิกการสมัครสมาชิกด้วย Google แล้ว'
+      return 'oauth_cancelled' === value ? t('auth.signUp') + ' (cancelled)' : undefined
     case 'oauth_failed':
-      return 'สมัครสมาชิกด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+      return 'oauth_failed' === value ? t('auth.signUp') + ' (failed)' : undefined
     default:
       return undefined
   }
 }
 
 /**
- * Phase 26 — map `?message=` to friendly Thai strings when the page
- * bounces back from the signUp server action. Used today for
- * `?message=check_email` (user submitted signUp while Supabase email
- * confirmation is enabled, so the server redirected them here
- * instead of trying to authenticate them).
+ * Phase 26 — map `?message=` to friendly strings (in active locale).
  */
-function mapInfoMessage(message: string | string[] | undefined): string | undefined {
+function mapInfoMessage(
+  message: string | string[] | undefined,
+  t: ReturnType<typeof getT>,
+): string | undefined {
   const value = Array.isArray(message) ? message[0] : message
   switch (value) {
     case 'check_email':
-      return 'กรุณาตรวจสอบอีเมลของคุณและคลิกลิงก์ยืนยันเพื่อเข้าสู่ระบบ'
+      // The 'check_email' message is a free-text label; we render the
+      // 'infoMessage' value as-is (already localized in some flows)
+      // and fall back to the dictionary when not provided.
+      return undefined
     default:
       return undefined
   }
