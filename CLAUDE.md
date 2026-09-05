@@ -97,7 +97,7 @@ Rules ละเอียดเต็มอยู่ใน `Rule.md` ที่ ro
 - **Pages**: `app/<route>/page.tsx` — lowercase, kebab-case for nested dirs
 - **Layouts**: `app/<route>/layout.tsx` — same as page
 - **Server actions**: `app/actions/<topic>.ts` หรือ `app/actions/admin/<topic>.ts` — every file starts with `'use server'`
-- **Data wrappers**: `lib/data/<domain>.ts` — toggle layer, exports from `mock-<domain>.ts` OR `supabase-<domain>.ts`
+- **Data wrappers**: `lib/data/<domain>.ts` — thin re-export from `supabase-<domain>.ts` (mock layer deleted)
 - **Components**: `components/<domain>/<Name>.tsx` — PascalCase, organized by domain (ui/, room/, manager/, admin/, housekeeping/, search/, layout/, feedback/, landing/, review/)
 
 ### TypeScript
@@ -138,11 +138,8 @@ replaces the 11 inline `requireXxx` helpers that used to live in each action fil
 `actionFail(e, fallback)` lives in `lib/errors/supabase.ts` and surfaces
 `e.message` to the user instead of relying on browser `console.error`.
 
-### Mock vs real data toggle
-3 patterns in use:
-1. **Pattern A** (`manager.ts`, `reviews.ts`, `housekeeper.ts`) — `useMock` evaluated at top of file, every export is `useMock ? mock.X : real.X`
-2. **Pattern B** (`rooms.ts`) — uses `isUsingMockData` from `lib/env.ts`, per-call ternary
-3. **Pattern C** (`bookings.ts`, `staff.ts`) — **no toggle**, always hits Supabase via `createClient()`
+### Mock vs real data
+Mock layer deleted. Every `lib/data/<domain>.ts` is a thin re-export from `supabase-<domain>.ts`. To debug a function, go straight to the Supabase impl. The catalog of amenity slugs that `AmenityGrid` renders lives in `lib/data/supabase-rooms.ts:getApprovedAmenities` (was `data/mock-amenities.json`).
 
 ### Component patterns
 - **Server Components** for data fetching + tables + forms with no interactivity
@@ -291,7 +288,7 @@ npm run db:migrate        # alias for run-migrations.mjs (no flags)
 npx tsx scripts/test-phase10-kpi-trend.mts       # Phase 10 KPI accuracy (live DB)
 npx tsx scripts/test-phase10-refund-rpc.mts      # Phase 10 refund RPC (live DB)
 npx tsx scripts/_cleanup-test-rows.mts           # Cleanup leaked test bookings
-# All other test-phase*-*.mts are Phase 6–9 (mostly USE_MOCK_DATA=1)
+# All other test-phase*-*.mts are Phase 6–9 (live DB; mock layer deleted)
 ```
 
 ### R2 — git
@@ -324,10 +321,6 @@ git push origin main     # specify branch
 - ใช้ `is_staff()` หรือ `has_role(text)` SECURITY DEFINER helper แทน
 - **ทุก UPDATE policy ต้องมีทั้ง `USING` และ `WITH CHECK` clauses**
 - ใช้ `(select auth.uid())` (subquery) แทน `auth.uid()` ใน policies — ช่วยให้ RLS cache ได้
-
-### Mock/real toggle
-- `USE_MOCK_DATA` evaluate **at module load** — เปลี่ยน env แล้วต้อง restart `npm run dev`
-- ถ้า `USE_MOCK_DATA=1` + Supabase ไม่ config → `bookings.ts` + `staff.ts` (Supabase-only) จะ throw
 
 ### Commit hygiene
 - Per R2: ต้องถามก่อน `git commit` / `git push` เสมอ
@@ -364,13 +357,11 @@ git push origin main     # specify branch
 
 - **Migration runner skip-on-rerun** — `scripts/run-migrations.mjs:60` regex filters files by number AND tracks applied names in `_applied_migrations`. Re-applying a migration = no-op (not an error). To FORCE a re-apply (e.g. fix-up to a shipped function), the canonical pattern is a new migration file (`20260907_*`) that does `drop function if exists ...` + `create or replace function ...` — NOT a manual drop on the live DB. Caught during Phase 24: first apply of `20260906` was buggy, second attempt was a silent skip; fix was `20260907_fix_cancel_booking_auth.sql` (counted in regex + carries the full body). When iterating on a freshly-shipped RPC, prefer the fix-up migration path
 
-- **listStub pitfall** — wiring dispatcher (`lib/data/manager.ts`) ไม่พอ — ต้องเช็ค `lib/data/supabase-*.ts` ว่า function implement จริง. ตอนนี้ `listCancellationPolicies` + `getReportsData()` analytics arrays (Phase 12) wired ครบแล้ว — เหลือแค่ fields ที่ยังไม่มี source data (เช่น `partial_refund` ที่ไม่มี write path)
+- **listStub pitfall** — historically: wiring the dispatcher (`lib/data/manager.ts`) wasn't enough — had to also check `lib/data/supabase-*.ts` for `return []` stubs. With the mock layer deleted, the dispatcher is now a thin re-export, so the real impl is the only impl. Still relevant: when adding a new function, write the Supabase implementation directly (the wrapper will re-export it).
 
 - **Next.js 16 server action HTTP test** — POST server action ผ่าน HTTP ต้องใช้ field `$ACTION_ID_<id>` ใน multipart body (ไม่ใช่ `Next-Action` header เหมือนเวอร์ชั่นก่อน). Reference: `scripts/test-phase10-refund-rpc.mts:106-114`
 
 - **SSR HTML comment split** — React SSR แทรก HTML comment ระหว่าง text nodes, e.g. `+<!-- -->12.5<!-- -->%` — regex parse ตัวเลขต้อง `.replace(/<!--[^>]*-->/g, '')` ก่อน. Reference: `scripts/test-phase10-kpi-trend.mts:115-116`
-
-- **USE_MOCK_DATA wrapper** — `useMock` evaluate at module load. แก้ env แล้ว **ต้อง restart dev server** ไม่งั้นทุก action ไป mock-manager.ts (in-memory state, no DB writes) — symptom: HTTP 200 + ไม่มี DB change
 
 - **Admin RLS blocks DELETE on bookings** — admin มีแค่ UPDATE grant (staff policy), ไม่มี DELETE → cleanup test rows ด้วย admin client silent fail. ใช้ `createServiceClient(BASE, SUPABASE_SERVICE_ROLE_KEY)` แทนสำหรับ DELETE step
 
@@ -380,7 +371,7 @@ git push origin main     # specify branch
 
 - **Hardcoded manager UID** ใน `scripts/promote-manager.mjs` — Phase 12 รองรับ `MANAGER_ID` env var (direct) หรือ `MANAGER_EMAIL` env var (resolve ผ่าน `auth.users` lookup). ถ้าไม่ตั้งค่าเลย จะ fall back ไปใช้ legacy literal `ba4b825d-3dec-4db0-b604-82f20c8cb165`
 
-- **`getRoomTypes` + `getFloors` ใน `rooms.ts:27,31` ใช้ mock เสมอ** — ถึงแม้ `USE_MOCK_DATA=0`. Filter dropdown + floor dropdown break ถ้าไม่มี mock data
+- ~~**`getRoomTypes` + `getFloors` ใช้ mock เสมอ**~~ — fixed: now `SELECT DISTINCT type/floor FROM room_types WHERE is_active = true` in `lib/data/supabase-rooms.ts:130,142`
 
 - **RBAC redirect target (Phase 11 fix)** — `redirect('/')` ใน wrong-role guard ทำให้ staff ตกไปที่ User homepage แล้ว browse User pages ได้. ทุก wrong-role redirect ต้องใช้ `roleHomePath(session.role)` จาก `lib/supabase/getSession.ts` เสมอ — admin → `/admin`, manager → `/manager`, reception → `/reception`, housekeeper → `/housekeeper`, user → `/`. ใช้แล้วใน: `proxy.ts:72-93,99-104`, 4 staff portal layouts, 10 `requireXxx` helpers ใน `app/actions/*`, `(booking)/layout.tsx` (User-only gate). เพิ่ม role ใหม่หรือหน้าใหม่ต้อง update `roleHomePath()` + เพิ่ม route ใน proxy.ts `staffPaths` (หรือสร้าง role-specific layout).
 
@@ -445,7 +436,7 @@ git push origin main     # specify branch
 4. **Phase 7/8 admin pages** still have some pages that may not have all CRUD wired — verify before extending
 
 ### Soft issues
-- `data/mock-manager.json` + `data/mock-reviews.json` ยังใช้ hardcoded test UIDs (`u-house-1`, `u-recep-1`) — `mock-housekeeper.ts` เปลี่ยนเป็น env-driven แล้ว (Phase 12) แต่ JSON files อ่าน env ไม่ได้ (pure data) — แปลงเป็น TypeScript stub ถ้าต้องการ parity
+- ~~`data/mock-manager.json` + `data/mock-reviews.json` ยังใช้ hardcoded test UIDs~~ — fixed: all `data/mock-*.json` deleted with mock layer
 - `scripts/check-cols.mjs` no longer holds a literal password (Phase 12 — uses `pgDirectConnectionString()` from shared helper) — **แต่ password ที่เคย leak ต้อง rotate ที่ Supabase dashboard ทันที**
 
 ---
@@ -501,7 +492,7 @@ Saved memories in `~/.claude/projects/Y--Final/memory/`:
 - `zenzero-liststub-pitfall.md` — check supabase-*.ts for `return []` stubs
 - `zenzero-rls-recursion-fix.md` — use is_staff()/has_role() helpers
 - `zenzero-phase9-live-verified.md` — 43/43 smoke tests passed
-- `zenzero-usemock-data-wrapper.md` — env change needs dev server restart
+- ~~`zenzero-usemock-data-wrapper.md`~~ — obsolete; mock layer deleted
 - `zenzero-test-cleanup-needs-service-role.md` — admin RLS blocks DELETE
 
 ---

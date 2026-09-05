@@ -1,8 +1,7 @@
 /**
  * Supabase implementation of the Reviews & Ratings data layer.
  *
- * Avatar background classes and initials are derived in JS to keep parity
- * with the mock layer's shape (modulo slight palette differences).
+ * Avatar background classes and initials are derived in JS.
  */
 
 import { wrapSupabaseError } from '@/lib/errors/supabase'
@@ -16,7 +15,7 @@ import type {
 } from './types'
 
 // =========================================================
-// Shape helpers — mirror mock-reviews.ts
+// Shape helpers
 // =========================================================
 
 const AVATAR_BG = [

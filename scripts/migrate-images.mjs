@@ -8,7 +8,6 @@
  * Output:
  *   - Uploads all images to R2 bucket
  *   - Writes scripts/image-map.json (URL → key)
- *   - Updates data/mock-rooms.json if needed (placeholders)
  */
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
