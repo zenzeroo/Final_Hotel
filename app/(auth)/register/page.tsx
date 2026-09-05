@@ -8,6 +8,10 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
   const next = typeof searchParams.next === 'string' ? searchParams.next : '/'
   // Phase 14 — surface OAuth callback failures into the form banner.
   const errorMessage = mapOAuthError(searchParams.error)
+  // Phase 26 — surface the "check your email" message after the user
+  // submits signUp while email confirmation is required (Supabase
+  // Dashboard → Auth → Providers → Email → Confirm email ON).
+  const infoMessage = mapInfoMessage(searchParams.message)
 
   return (
     <main className="min-h-screen relative flex items-center justify-center px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-12">
@@ -42,7 +46,11 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
           </p>
         </div>
 
-        <RegisterForm next={next} errorMessage={errorMessage} />
+        <RegisterForm
+          next={next}
+          errorMessage={errorMessage}
+          infoMessage={infoMessage}
+        />
 
         <p className="mt-8 text-center text-body-md text-on-surface-variant">
           มีบัญชีอยู่แล้ว?{' '}
@@ -66,6 +74,23 @@ function mapOAuthError(error: string | string[] | undefined): string | undefined
       return 'ยกเลิกการสมัครสมาชิกด้วย Google แล้ว'
     case 'oauth_failed':
       return 'สมัครสมาชิกด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+    default:
+      return undefined
+  }
+}
+
+/**
+ * Phase 26 — map `?message=` to friendly Thai strings when the page
+ * bounces back from the signUp server action. Used today for
+ * `?message=check_email` (user submitted signUp while Supabase email
+ * confirmation is enabled, so the server redirected them here
+ * instead of trying to authenticate them).
+ */
+function mapInfoMessage(message: string | string[] | undefined): string | undefined {
+  const value = Array.isArray(message) ? message[0] : message
+  switch (value) {
+    case 'check_email':
+      return 'กรุณาตรวจสอบอีเมลของคุณและคลิกลิงก์ยืนยันเพื่อเข้าสู่ระบบ'
     default:
       return undefined
   }

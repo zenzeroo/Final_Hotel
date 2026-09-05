@@ -26,6 +26,13 @@ export async function signIn(prevState: AuthState | null, formData: FormData): P
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
+    // Surface the real reason (e.g. "email not confirmed" → Thai via
+    // translateSupabaseError at translate.ts:31). Falls back to the
+    // generic wrong-password message only when Supabase's error message
+    // isn't in the known map — keeps the legacy "swallow everything"
+    // behaviour for unrecognised shapes while exposing real states.
+    const thai = translateSupabaseError(error.message)
+    if (thai) return { error: thai }
     return { error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }
   }
 
@@ -67,6 +74,9 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
   const password = String(formData.get('password') ?? '')
   const confirmPassword = String(formData.get('confirm_password') ?? '')
   const phone = String(formData.get('phone') ?? '').trim()
+  // Read + sanitize the `next` deep-link so a confirmed user resumes
+  // their booking instead of always landing on `/`.
+  const next = sanitizeNext(String(formData.get('next') ?? '/'))
 
   // Validation
   if (!fullName || !email || !password) {
@@ -79,7 +89,9 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
     return { error: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' }
   }
 
-  const { error } = await supabase.auth.signUp({
+  const origin = await getOrigin()
+
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -87,15 +99,32 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
         full_name: fullName,
         phone: phone || null,
       },
+      // Tell Supabase where to send the user after they click the
+      // confirmation link in their email. `emailRedirectTo` is ignored
+      // when the Dashboard "Confirm email" toggle is OFF, but always
+      // setting it keeps the contract stable across both modes.
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   })
 
   if (error) {
-    return { error: translateSupabaseError(error.message) }
+    const thai = translateSupabaseError(error.message)
+    return { error: thai ?? 'สมัครสมาชิกไม่สำเร็จ' }
   }
 
+  // Email confirmation is enabled in the Supabase Dashboard → Auth →
+  // Providers → Email. In that mode `data.session` is null until the
+  // user clicks the confirmation link; we must NOT `redirect('/')` —
+  // that would silently land them on the homepage logged-out with no
+  // explanation. Instead, bounce them back to /register with an info
+  // banner that tells them to check their inbox.
+  if (!data.session) {
+    redirect(`/register?message=check_email&next=${encodeURIComponent(next)}`)
+  }
+
+  // Auto-confirm path (Dashboard toggle off, or auto-confirm via OAuth).
   revalidatePath('/', 'layout')
-  redirect('/')
+  redirect(next)
 }
 
 /**

@@ -14,6 +14,12 @@ interface RegisterFormProps {
    * Same display path as the email/password error above.
    */
   errorMessage?: string
+  /**
+   * Phase 26 — info banner surfaced from `?message=` in the URL when
+   * the signUp server action redirects back here (e.g. `check_email`
+   * when Supabase email confirmation is enabled).
+   */
+  infoMessage?: string
 }
 
 function SubmitButton() {
@@ -36,7 +42,7 @@ function SubmitButton() {
   )
 }
 
-export function RegisterForm({ next, errorMessage }: RegisterFormProps) {
+export function RegisterForm({ next, errorMessage, infoMessage }: RegisterFormProps) {
   const [state, formAction] = useActionState<AuthState | null, FormData>(signUp, null)
   const [googleError, setGoogleError] = useState<string | undefined>()
   const [googlePending, startGoogleTransition] = useTransition()
@@ -60,6 +66,14 @@ export function RegisterForm({ next, errorMessage }: RegisterFormProps) {
       {displayError && (
         <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
           {displayError}
+        </div>
+      )}
+
+      {/* Phase 26 — info banner for bounced signUp (e.g. check_email). */}
+      {infoMessage && (
+        <div className="px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg text-body-md inline-flex items-start gap-2">
+          <MaterialIcon name="mark_email_read" className="mt-0.5 shrink-0" />
+          <span>{infoMessage}</span>
         </div>
       )}
 
