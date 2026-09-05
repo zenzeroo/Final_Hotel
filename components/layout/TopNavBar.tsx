@@ -94,14 +94,15 @@ function UserMenu({ session }: { session: NonNullable<Awaited<ReturnType<typeof 
   return (
     <div className="flex items-center gap-3">
       <span className="hidden md:inline-block text-body-md text-on-surface-variant">
-        สวัสดี, {session.fullName ?? 'ผู้ใช้'}
+        {session.fullName ?? 'ผู้ใช้'}
       </span>
-      <div
-        className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary font-semibold text-label-md"
-        aria-label={`ผู้ใช้: ${session.fullName ?? session.email}`}
+      <Link
+        href="/account/profile"
+        aria-label="โปรไฟล์ของฉัน"
+        className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary font-semibold text-label-md hover:bg-primary-container transition-colors"
       >
         {initials || 'U'}
-      </div>
+      </Link>
       <form action={signOut}>
         <button
           type="submit"
