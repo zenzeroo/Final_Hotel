@@ -140,7 +140,7 @@ export function calculatePrice(
  * Format THB amount for display.
  * Example: 12500 → "฿12,500" (th-TH) or "฿12,500" (en-US, en keeps ฿)
  */
-export function formatTHB(amount: number, locale: 'th-TH' | 'en-US' = 'th-TH'): string {
+export function formatTHB(amount: number, locale: string = 'th-TH'): string {
   return `฿${new Intl.NumberFormat(locale).format(amount)}`
 }
 

@@ -8,7 +8,9 @@ import { cancelBooking } from '@/app/actions/booking'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
+import { useT, useLocale } from '@/lib/i18n/useT'
 import type { Booking } from '@/lib/data/bookings'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
 
 interface BookingHistoryProps {
   bookings: Booking[]
@@ -16,8 +18,8 @@ interface BookingHistoryProps {
 
 type Tab = 'active' | 'cancelled'
 
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat('th-TH', {
+function formatDate(iso: string, localeBcp: string) {
+  return new Intl.DateTimeFormat(localeBcp, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -25,11 +27,17 @@ function formatDate(iso: string) {
   }).format(new Date(iso))
 }
 
-function statusLabel(status: Booking['status'], paymentStatus: Booking['payment_status']) {
-  if (status === 'cancelled') return 'ยกเลิกแล้ว'
-  if (status === 'checked_out') return 'เช็คเอาท์แล้ว'
-  if (paymentStatus === 'paid') return 'ยืนยันแล้ว'
-  return 'รอชำระเงิน'
+function statusLabel(
+  status: Booking['status'],
+  paymentStatus: Booking['payment_status'],
+  t: ReturnType<typeof useT>,
+) {
+  if (status === 'cancelled') return t('bookings.statusCancelled')
+  if (status === 'checked_out') return t('bookings.statusCheckedOut')
+  if (status === 'checked_in') return t('bookings.statusCheckedIn')
+  if (paymentStatus === 'paid') return t('bookings.statusPaid')
+  if (paymentStatus === 'refunded') return t('bookings.statusRefunded')
+  return t('bookings.statusPending')
 }
 
 function statusClass(status: Booking['status'], paymentStatus: Booking['payment_status']) {
@@ -43,6 +51,9 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
   const [tab, setTab] = useState<Tab>('active')
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const t = useT()
+  const locale = useLocale()
+  const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
 
   const activeBookings = bookings.filter((b) => b.status !== 'cancelled')
   const cancelledBookings = bookings.filter((b) => b.status === 'cancelled')
@@ -50,22 +61,20 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
   const visible = tab === 'active' ? activeBookings : cancelledBookings
 
   const handleCancel = (bookingId: string) => {
-    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้?')) return
+    if (!confirm(t('bookingDetail.cancelConfirm'))) return
     startTransition(async () => {
       const result = await cancelBooking(bookingId)
       if (result?.error) {
         alert(result.error)
         return
       }
-      // Phase 20 #24 — mirror the policy summary from ConfirmationActions
-      // so the guest sees the same refund/penalty breakdown here.
       const refund = Number(result.refundAmount ?? 0)
       const penalty = Number(result.penaltyAmount ?? 0)
-      const policy = result.policyName ?? 'นโยบาย'
+      const policy = result.policyName ?? t('bookingDetail.cancellationPolicy')
       const summary =
         refund > 0
-          ? `ยกเลิกสำเร็จ (${policy}) — จะคืนเงิน ${refund.toLocaleString('th-TH')} บาท, เสียค่าธรรมเนียม ${penalty.toLocaleString('th-TH')} บาท`
-          : 'ยกเลิกสำเร็จ — ไม่มีการคืนเงินตามนโยบาย'
+          ? `${t('bookingDetail.cancelSuccess')} (${policy}) — ${t('bookingDetail.refundAmount')}: ${refund.toLocaleString(localeBcp)} ${t('bookingDetail.penalty')}: ${penalty.toLocaleString(localeBcp)}`
+          : `${t('bookingDetail.cancelSuccess')} — ${t('bookingDetail.refundAmount')}: 0`
       alert(summary)
       router.refresh()
     })
@@ -76,13 +85,13 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-outline-variant mb-6">
         <TabButton
-          label="การจองทั้งหมด"
+          label={t('bookings.title')}
           count={activeBookings.length}
           active={tab === 'active'}
           onClick={() => setTab('active')}
         />
         <TabButton
-          label="ยกเลิกแล้ว"
+          label={t('bookings.statusCancelled')}
           count={cancelledBookings.length}
           active={tab === 'cancelled'}
           onClick={() => setTab('cancelled')}
@@ -92,12 +101,19 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
       {/* List */}
       {visible.length === 0 ? (
         <p className="text-body-md text-on-surface-variant text-center py-12">
-          {tab === 'active' ? 'ไม่มีการจองที่กำลังใช้งาน' : 'ไม่มีการจองที่ยกเลิก'}
+          {tab === 'active' ? t('bookings.title') : t('bookings.statusCancelled')}
         </p>
       ) : (
         <div className="flex flex-col gap-4">
           {visible.map((b) => (
-            <BookingRow key={b.id} booking={b} onCancel={handleCancel} isPending={isPending} />
+            <BookingRow
+              key={b.id}
+              booking={b}
+              onCancel={handleCancel}
+              isPending={isPending}
+              t={t}
+              localeBcp={localeBcp}
+            />
           ))}
         </div>
       )}
@@ -138,10 +154,14 @@ function BookingRow({
   booking,
   onCancel,
   isPending,
+  t,
+  localeBcp,
 }: {
   booking: Booking
   onCancel: (id: string) => void
   isPending: boolean
+  t: ReturnType<typeof useT>
+  localeBcp: string
 }) {
   const isCancelled = booking.status === 'cancelled'
   const isCheckedOut = booking.status === 'checked_out'
@@ -170,33 +190,33 @@ function BookingRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
             <h3 className="font-display text-lg text-primary truncate">
-              {booking.room_type?.name_th ?? 'ห้องพัก'}
+              {booking.room_type?.name_th ?? t('bookings.roomName')}
             </h3>
             <span
               className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-caption font-semibold ${statusClass(booking.status, booking.payment_status)}`}
             >
-              {statusLabel(booking.status, booking.payment_status)}
+              {statusLabel(booking.status, booking.payment_status, t)}
             </span>
           </div>
           <p className="text-caption text-on-surface-variant font-mono mb-2">
-            รหัส #{booking.booking_code}
+            {t('bookings.bookingCode')} #{booking.booking_code}
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body-md text-on-surface-variant">
             <span className="inline-flex items-center gap-1.5">
               <MaterialIcon name="event" size={16} />
-              {formatDate(booking.check_in)} – {formatDate(booking.check_out)}
+              {formatDate(booking.check_in, localeBcp)} – {formatDate(booking.check_out, localeBcp)}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <MaterialIcon name="group" size={16} />
-              {booking.guests} ท่าน
+              {t('bookings.guestsCount', { count: booking.guests })}
             </span>
           </div>
         </div>
 
         {/* Total */}
         <div className="md:text-right shrink-0">
-          <p className="text-caption text-on-surface-variant uppercase tracking-wider">รวม</p>
-          <p className="text-xl font-display font-bold text-primary">{formatTHB(booking.total)}</p>
+          <p className="text-caption text-on-surface-variant uppercase tracking-wider">{t('bookings.total')}</p>
+          <p className="text-xl font-display font-bold text-primary">{formatTHB(booking.total, localeBcp)}</p>
         </div>
       </Link>
 
@@ -209,7 +229,7 @@ function BookingRow({
               className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
             >
               <MaterialIcon name="credit_card" size={16} />
-              ชำระเงิน
+              {t('bookings.statusPending')}
             </Link>
           )}
           <button
@@ -222,7 +242,7 @@ function BookingRow({
             className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-error text-error rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-error hover:text-on-primary transition-colors disabled:opacity-60"
           >
             <MaterialIcon name="cancel" size={16} />
-            ขอยกเลิก
+            {t('bookings.cancelBooking')}
           </button>
         </div>
       )}

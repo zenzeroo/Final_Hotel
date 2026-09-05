@@ -156,6 +156,7 @@ export const en: Dictionary = {
     title: 'My Bookings',
     noBookings: 'You have no bookings yet',
     noBookingsHint: 'Start by booking your dream room',
+    guestsCount: '{count} guests',
     browseRooms: 'Browse rooms',
     bookingCode: 'Booking code',
     roomName: 'Room',

@@ -151,7 +151,8 @@ export const th = {
   bookings: {
     title: 'ประวัติการจอง',
     noBookings: 'คุณยังไม่มีการจอง',
-    noBookingsHint: 'เริ่มต้นจองห้องพักในฝันของคุณ',
+    noBookingsHint: 'เริ่มต้นจองห้องพักในฝันของคุ�น',
+    guestsCount: '{count} ท่าน',
     browseRooms: 'เลือกดูห้องพัก',
     bookingCode: 'รหัสการจอง',
     roomName: 'ห้องพัก',

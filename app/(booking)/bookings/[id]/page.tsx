@@ -9,12 +9,15 @@ import { WriteReviewPrompt } from './WriteReviewPrompt'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
 import Image from 'next/image'
 
 export const dynamic = 'force-dynamic'
 
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat('th-TH', {
+function formatDate(iso: string, localeBcp: string) {
+  return new Intl.DateTimeFormat(localeBcp, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -22,7 +25,15 @@ function formatDate(iso: string) {
   }).format(new Date(iso))
 }
 
-function StatusBadge({ status, paymentStatus }: { status: string; paymentStatus: string }) {
+function StatusBadge({
+  status,
+  paymentStatus,
+  t,
+}: {
+  status: string
+  paymentStatus: string
+  t: ReturnType<typeof getT>
+}) {
   const isPaid = paymentStatus === 'paid'
   const isCancelled = status === 'cancelled'
   const isCheckedOut = status === 'checked_out'
@@ -31,7 +42,7 @@ function StatusBadge({ status, paymentStatus }: { status: string; paymentStatus:
     return (
       <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold uppercase tracking-wider">
         <MaterialIcon name="cancel" size={16} />
-        ยกเลิกแล้ว
+        {t('bookings.statusCancelled')}
       </span>
     )
   }
@@ -39,7 +50,7 @@ function StatusBadge({ status, paymentStatus }: { status: string; paymentStatus:
     return (
       <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-label-md font-semibold uppercase tracking-wider">
         <MaterialIcon name="verified" size={16} />
-        ชำระเงินแล้ว
+        {t('bookings.statusPaid')}
       </span>
     )
   }
@@ -47,14 +58,14 @@ function StatusBadge({ status, paymentStatus }: { status: string; paymentStatus:
     return (
       <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant text-label-md font-semibold uppercase tracking-wider">
         <MaterialIcon name="logout" size={16} />
-        เช็คเอาท์แล้ว
+        {t('bookings.statusCheckedOut')}
       </span>
     )
   }
   return (
     <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/20 text-secondary text-label-md font-semibold uppercase tracking-wider">
       <MaterialIcon name="schedule" size={16} />
-      รอชำระเงิน
+      {t('bookings.statusPending')}
     </span>
   )
 }
@@ -62,6 +73,9 @@ function StatusBadge({ status, paymentStatus }: { status: string; paymentStatus:
 export default async function BookingConfirmationPage(props: PageProps<'/bookings/[id]'>) {
   const { id } = await props.params
   const sp = await props.searchParams
+  const locale = await getLocale()
+  const t = getT(locale)
+  const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
   // Phase 17 — Stripe redirects back here with these query params.
   //   ?session_id=cs_test_…  → success (webhook flips payment_status='paid')
   //   ?cancelled=1           → user bailed at the Stripe-hosted page
@@ -74,7 +88,7 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
       <>
         <TopNavBar />
         <main className="flex-1 flex items-center justify-center p-8">
-          <p className="text-body-lg text-on-surface-variant">กรุณาเข้าสู่ระบบ</p>
+          <p className="text-body-lg text-on-surface-variant">{t('error.unauthorized')}</p>
         </main>
         <Footer />
       </>
@@ -91,18 +105,18 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
         <TransactionalHeader backHref="/bookings" />
         <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="font-display text-3xl text-primary">การจองของคุณ</h1>
-            <StatusBadge status={booking.status} paymentStatus={booking.payment_status} />
+            <h1 className="font-display text-3xl text-primary">{t('bookingDetail.title')}</h1>
+            <StatusBadge status={booking.status} paymentStatus={booking.payment_status} t={t} />
           </div>
           <p className="text-body-md text-on-surface-variant mb-8">
-            รหัสการจอง: <span className="font-mono font-semibold">#{booking.booking_code}</span>
+            {t('bookingDetail.bookingCode')}: <span className="font-mono font-semibold">#{booking.booking_code}</span>
           </p>
 
           {cancelledByUser && (
             <div className="mb-6 px-4 py-3 bg-warning/10 border border-warning/30 rounded-lg flex items-center gap-3">
               <MaterialIcon name="info" size={20} />
               <p className="text-body-md text-on-surface">
-                การชำระเงินถูกยกเลิก — การจองของคุณยังไม่ได้ชำระ สามารถลองชำระใหม่ได้ด้านล่าง
+                {t('bookingDetail.cancelSuccess')}
               </p>
             </div>
           )}
@@ -125,19 +139,19 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                 </div>
                 <div className="flex-1">
                   <h2 className="font-display text-xl text-primary">
-                    {booking.room_type?.name_th ?? 'ห้องพัก'}
+                    {booking.room_type?.name_th ?? t('bookings.roomName')}
                   </h2>
                   <p className="text-caption text-on-surface-variant uppercase tracking-wider mt-1">
-                    {booking.nights} คืน · {booking.guests} ท่าน
+                    {t('bookingDetail.nights', { count: booking.nights })} · {t('bookings.guestsCount', { count: booking.guests })}
                   </p>
                   <div className="mt-3 grid grid-cols-2 gap-3 text-body-md">
                     <div>
-                      <p className="text-caption text-on-surface-variant uppercase tracking-wider">เช็คอิน</p>
-                      <p className="font-medium text-on-surface">{formatDate(booking.check_in)}</p>
+                      <p className="text-caption text-on-surface-variant uppercase tracking-wider">{t('bookingDetail.checkInDate')}</p>
+                      <p className="font-medium text-on-surface">{formatDate(booking.check_in, localeBcp)}</p>
                     </div>
                     <div>
-                      <p className="text-caption text-on-surface-variant uppercase tracking-wider">เช็คเอาท์</p>
-                      <p className="font-medium text-on-surface">{formatDate(booking.check_out)}</p>
+                      <p className="text-caption text-on-surface-variant uppercase tracking-wider">{t('bookingDetail.checkOutDate')}</p>
+                      <p className="font-medium text-on-surface">{formatDate(booking.check_out, localeBcp)}</p>
                     </div>
                   </div>
                 </div>
@@ -145,15 +159,15 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
 
               {/* Booker info */}
               <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-                <h2 className="font-display text-xl text-primary mb-4">ข้อมูลผู้จอง</h2>
+                <h2 className="font-display text-xl text-primary mb-4">{t('bookingDetail.guestInfo')}</h2>
                 <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DataRow label="ชื่อ-นามสกุล" value={booking.booker_full_name} />
-                  <DataRow label="อีเมล" value={booking.booker_email} />
-                  <DataRow label="เบอร์โทรศัพท์" value={booking.booker_phone ?? '—'} />
+                  <DataRow label={t('auth.fullName')} value={booking.booker_full_name} />
+                  <DataRow label={t('auth.email')} value={booking.booker_email} />
+                  <DataRow label={t('auth.phone')} value={booking.booker_phone ?? '—'} />
                 </dl>
                 {booking.special_request && (
                   <div className="mt-4 pt-4 border-t border-outline-variant">
-                    <p className="text-caption text-on-surface-variant uppercase tracking-wider mb-1">คำขอพิเศษ</p>
+                    <p className="text-caption text-on-surface-variant uppercase tracking-wider mb-1">Special request</p>
                     <p className="text-body-md text-on-surface">{booking.special_request}</p>
                   </div>
                 )}
@@ -161,9 +175,9 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
 
               {/* Cancellation policy */}
               <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-                <h2 className="font-display text-xl text-primary mb-4">นโยบายการยกเลิก</h2>
+                <h2 className="font-display text-xl text-primary mb-4">{t('bookingDetail.cancellationPolicy')}</h2>
                 <p className="text-body-md text-on-surface">
-                  ยกเลิกฟรีภายใน 24 ชั่วโมงก่อนเช็คอิน หลังจากนั้นจะถูกเรียกเก็บค่าห้องพัก 1 คืน
+                  {t('bookingDetail.totalPrice')}
                 </p>
               </section>
 
@@ -180,23 +194,23 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
             {/* RIGHT: Price summary + actions */}
             <div className="lg:sticky lg:top-24 lg:self-start">
               <div className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient-lg) border border-outline-variant p-6">
-                <h2 className="font-display text-xl text-primary mb-4">สรุปการชำระเงิน</h2>
+                <h2 className="font-display text-xl text-primary mb-4">{t('bookingDetail.priceBreakdown')}</h2>
 
                 <div className="flex flex-col gap-2 text-body-md">
-                  <PriceRow label="ค่าห้องพัก" value={formatTHB(booking.base_subtotal)} />
+                  <PriceRow label={t('bookingDetail.basePrice')} value={formatTHB(booking.base_subtotal, localeBcp)} />
                   {Number(booking.discount_total) > 0 && (
                     <PriceRow
-                      label="ส่วนลด"
-                      value={`-${formatTHB(booking.discount_total)}`}
+                      label={t('bookingDetail.discount')}
+                      value={`-${formatTHB(booking.discount_total, localeBcp)}`}
                       discount
                     />
                   )}
-                  <PriceRow label="ภาษี" value={formatTHB(booking.tax_total)} />
-                  <PriceRow label="ค่าบริการรีสอร์ท" value={formatTHB(booking.fee_total)} />
+                  <PriceRow label={t('bookingDetail.tax')} value={formatTHB(booking.tax_total, localeBcp)} />
+                  <PriceRow label={t('bookingDetail.serviceFee')} value={formatTHB(booking.fee_total, localeBcp)} />
                 </div>
 
                 <div className="my-4 border-t border-outline-variant" />
-                <PriceRow label="รวมทั้งสิ้น" value={formatTHB(booking.total)} emphasis />
+                <PriceRow label={t('bookingDetail.totalPrice')} value={formatTHB(booking.total, localeBcp)} emphasis />
 
                 <ConfirmationActions
                   bookingId={booking.id}
