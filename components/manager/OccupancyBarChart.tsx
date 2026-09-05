@@ -12,6 +12,7 @@ import {
 } from 'chart.js'
 import type { OccupancyMonthPoint } from '@/lib/data/types'
 import { chartColors, chartFont } from '@/lib/chart-theme'
+import { EmptyState } from '@/components/feedback/EmptyState'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
@@ -20,6 +21,21 @@ interface OccupancyBarChartProps {
 }
 
 export function OccupancyBarChart({ data }: OccupancyBarChartProps) {
+  // Empty branch — guard against silent blank chart on first-year install.
+  // getReportsData returns occupancyYoY=[] when priorCount === 0.
+  if (data.length === 0) {
+    return (
+      <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
+        <h3 className="font-headline-sm text-headline-sm text-primary mb-4">อัตราการเข้าพักเทียบปีก่อน</h3>
+        <EmptyState
+          icon="show_chart"
+          title="ยังไม่มีข้อมูลเทียบปีก่อน"
+          description="ต้องมีข้อมูลการจองอย่างน้อย 1 ปี ก่อนจะแสดง Occupancy YoY ได้"
+        />
+      </div>
+    )
+  }
+
   const labels = data.map((d) => d.month)
   const last = data.map((d) => d.last)
   const current = data.map((d) => d.current)

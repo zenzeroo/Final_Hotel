@@ -75,7 +75,12 @@ export async function GET() {
     { header: 'ปีก่อน (%)', key: 'last', width: 14 },
     { header: 'ปีนี้ (%)', key: 'current', width: 14 },
   ]
-  occupancy.addRows(data.occupancyYoY)
+  // Empty branch — add placeholder row when getReportsData returns []
+  if (data.occupancyYoY.length === 0) {
+    occupancy.addRow({ month: 'ไม่มีข้อมูล (ต้องมีการจองอย่างน้อย 1 ปี)', last: '', current: '' })
+  } else {
+    occupancy.addRows(data.occupancyYoY)
+  }
   styleSheet(occupancy)
   // Percent columns: format with %
   occupancy.getColumn('last').numFmt = '0.0"%"'
@@ -87,7 +92,12 @@ export async function GET() {
     { header: 'ประเภทห้อง', key: 'name', width: 32 },
     { header: 'จำนวนการจอง', key: 'count', width: 16 },
   ]
-  mostBooked.addRows(data.mostBookedRooms)
+  // Empty branch — placeholder when no bookings in window
+  if (data.mostBookedRooms.length === 0) {
+    mostBooked.addRow({ name: 'ไม่มีข้อมูล (ต้องมีการจองอย่างน้อย 1 รายการ)', count: '' })
+  } else {
+    mostBooked.addRows(data.mostBookedRooms)
+  }
   styleSheet(mostBooked)
 
   // ---------- Highest Revenue Room Types ----------
@@ -96,7 +106,12 @@ export async function GET() {
     { header: 'ประเภทห้อง', key: 'name', width: 32 },
     { header: 'รายได้ (THB)', key: 'revenue', width: 18 },
   ]
-  highestRev.addRows(data.highestRevenueRoomTypes)
+  // Empty branch — placeholder when no bookings in window
+  if (data.highestRevenueRoomTypes.length === 0) {
+    highestRev.addRow({ name: 'ไม่มีข้อมูล (ต้องมีการจองอย่างน้อย 1 รายการ)', revenue: '' })
+  } else {
+    highestRev.addRows(data.highestRevenueRoomTypes)
+  }
   styleSheet(highestRev)
   styleMoneyColumn(highestRev, 1, 'revenue')
 
@@ -106,7 +121,12 @@ export async function GET() {
     { header: 'ช่องทาง', key: 'label', width: 20 },
     { header: 'สัดส่วน (%)', key: 'percent', width: 14 },
   ]
-  channels.addRows(data.channels)
+  // Empty branch — placeholder when no bookings in window
+  if (data.channels.length === 0) {
+    channels.addRow({ label: 'ไม่มีข้อมูล (ต้องมีการจองอย่างน้อย 1 รายการ)', percent: '' })
+  } else {
+    channels.addRows(data.channels)
+  }
   styleSheet(channels)
   channels.getColumn('percent').numFmt = '0.0"%"'
 

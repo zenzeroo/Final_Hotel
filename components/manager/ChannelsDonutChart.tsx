@@ -8,6 +8,7 @@ import {
   type ChartOptions,
 } from 'chart.js'
 import type { ChannelSlice } from '@/lib/data/types'
+import { EmptyState } from '@/components/feedback/EmptyState'
 
 ChartJS.register(ArcElement, Tooltip)
 
@@ -16,6 +17,21 @@ interface ChannelsDonutChartProps {
 }
 
 export function ChannelsDonutChart({ channels }: ChannelsDonutChartProps) {
+  // Empty branch — guard against silent blank donut on no-bookings DB.
+  // getReportsData returns channels=[] when zero bookings in the window.
+  if (channels.length === 0) {
+    return (
+      <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
+        <h3 className="font-headline-sm text-headline-sm text-primary mb-4">ช่องทางการจอง</h3>
+        <EmptyState
+          icon="donut_large"
+          title="ยังไม่มีข้อมูลช่องทาง"
+          description="ต้องมีข้อมูลการจองก่อนจะแสดงสัดส่วนช่องทางการจองได้"
+        />
+      </div>
+    )
+  }
+
   const chartData = {
     labels: channels.map((c) => c.label),
     datasets: [

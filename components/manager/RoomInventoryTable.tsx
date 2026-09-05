@@ -2,6 +2,7 @@ import type { RoomUnitWithType, RoomUnitStatus } from '@/lib/data/types'
 import { formatTHB } from '@/lib/pricing'
 import { CloseRoomButton } from './CloseRoomButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { EmptyState } from '@/components/feedback/EmptyState'
 
 interface RoomInventoryTableProps {
   units: RoomUnitWithType[]
@@ -41,6 +42,17 @@ const STATUS_LABEL: Record<RoomUnitStatus, { th: string; icon: string; chip: str
 }
 
 export function RoomInventoryTable({ units }: RoomInventoryTableProps) {
+  // Empty branch — guard against silent blank space on no-room-units DB.
+  if (units.length === 0) {
+    return (
+      <EmptyState
+        icon="hotel"
+        title="ยังไม่มีห้องพักในระบบ"
+        description="เมื่อมีห้องพักในระบบ รายการจะแสดงที่นี่"
+      />
+    )
+  }
+
   // Group by floor
   const floors = Array.from(new Set(units.map((u) => u.floor))).sort((a, b) => a - b)
   const grouped = floors.map((floor) => ({

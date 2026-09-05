@@ -1,5 +1,6 @@
 import type { StaffMember, ShiftSlot } from '@/lib/data/types'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { EmptyState } from '@/components/feedback/EmptyState'
 
 interface ShiftScheduleProps {
   staff: StaffMember[]
@@ -22,6 +23,17 @@ function formatDayHeader(dateStr: string): { weekday: string; day: string } {
 }
 
 export function ShiftSchedule({ staff, shifts }: ShiftScheduleProps) {
+  // Empty branch — guard against silent empty-table on no-staff / no-shifts DB.
+  if (staff.length === 0) {
+    return (
+      <EmptyState
+        icon="event"
+        title="ยังไม่มีตารางเวร"
+        description="ต้องมีพนักงานในระบบและตารางเวรถึงจะแสดงได้"
+      />
+    )
+  }
+
   // Build unique date list (sorted)
   const dates = Array.from(new Set(shifts.map((s) => s.date))).sort()
   const slotsByKey = new Map<string, ShiftSlot>()

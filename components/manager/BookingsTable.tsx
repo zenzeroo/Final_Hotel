@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import type { BookingOversightRow } from '@/lib/data/types'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { EmptyState } from '@/components/feedback/EmptyState'
 
 interface BookingsTableProps {
   bookings: BookingOversightRow[]
@@ -30,61 +31,71 @@ export function BookingsTable({ bookings, activeCount }: BookingsTableProps) {
           แสดง {bookings.length} จาก {activeCount} รายการที่ใช้งานอยู่
         </span>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-body-md">
-          <thead className="text-label-md uppercase tracking-wider text-on-surface-variant border-b border-outline-variant">
-            <tr>
-              <th className="py-3 pr-4">รหัส</th>
-              <th className="py-3 pr-4">แขก</th>
-              <th className="py-3 pr-4">ห้อง / ประเภท</th>
-              <th className="py-3 pr-4">วันที่</th>
-              <th className="py-3 pr-4">สถานะ</th>
-              <th className="py-3 pr-4">ดำเนินการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bookings.map((b) => (
-              <tr key={b.id} className="border-b border-outline-variant last:border-b-0">
-                <td className="py-3 pr-4 font-semibold text-primary">{b.code}</td>
-                <td className="py-3 pr-4">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-flex items-center justify-center w-9 h-9 rounded-full text-caption font-semibold ${b.avatarBgClass}`}
-                    >
-                      {b.guestInitials}
-                    </span>
-                    <span className="text-on-surface">{b.guestName}</span>
-                  </div>
-                </td>
-                <td className="py-3 pr-4 text-on-surface">
-                  <span className="font-semibold">ห้อง {b.roomNumber}</span>
-                  <span className="block text-caption text-on-surface-variant">{b.roomType}</span>
-                </td>
-                <td className="py-3 pr-4 text-on-surface-variant">
-                  {format(new Date(b.checkIn), 'd MMM')} – {format(new Date(b.checkOut), 'd MMM')}
-                  <span className="block text-caption">{b.nights} คืน</span>
-                </td>
-                <td className="py-3 pr-4">
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-caption ${STATUS_CLASS[b.status]}`}
-                  >
-                    {STATUS_LABEL[b.status]}
-                  </span>
-                </td>
-                <td className="py-3 pr-4">
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 text-caption text-primary hover:text-secondary"
-                    title="แก้ไขพิเศษ"
-                  >
-                    <MaterialIcon name="edit" size={16} />
-                  </button>
-                </td>
+      {/* Empty branch — guard against silent empty tbody on no-bookings DB.
+          Previously rendered <table> with header + empty <tbody>. */}
+      {bookings.length === 0 ? (
+        <EmptyState
+          icon="event_busy"
+          title="ยังไม่มีการจองที่ใช้งานอยู่"
+          description="เมื่อมีแขกจองห้องพัก รายการจะปรากฏที่นี่"
+        />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-body-md">
+            <thead className="text-label-md uppercase tracking-wider text-on-surface-variant border-b border-outline-variant">
+              <tr>
+                <th className="py-3 pr-4">รหัส</th>
+                <th className="py-3 pr-4">แขก</th>
+                <th className="py-3 pr-4">ห้อง / ประเภท</th>
+                <th className="py-3 pr-4">วันที่</th>
+                <th className="py-3 pr-4">สถานะ</th>
+                <th className="py-3 pr-4">ดำเนินการ</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {bookings.map((b) => (
+                <tr key={b.id} className="border-b border-outline-variant last:border-b-0">
+                  <td className="py-3 pr-4 font-semibold text-primary">{b.code}</td>
+                  <td className="py-3 pr-4">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`inline-flex items-center justify-center w-9 h-9 rounded-full text-caption font-semibold ${b.avatarBgClass}`}
+                      >
+                        {b.guestInitials}
+                      </span>
+                      <span className="text-on-surface">{b.guestName}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 pr-4 text-on-surface">
+                    <span className="font-semibold">ห้อง {b.roomNumber}</span>
+                    <span className="block text-caption text-on-surface-variant">{b.roomType}</span>
+                  </td>
+                  <td className="py-3 pr-4 text-on-surface-variant">
+                    {format(new Date(b.checkIn), 'd MMM')} – {format(new Date(b.checkOut), 'd MMM')}
+                    <span className="block text-caption">{b.nights} คืน</span>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-caption ${STATUS_CLASS[b.status]}`}
+                    >
+                      {STATUS_LABEL[b.status]}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-caption text-primary hover:text-secondary"
+                      title="แก้ไขพิเศษ"
+                    >
+                      <MaterialIcon name="edit" size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
