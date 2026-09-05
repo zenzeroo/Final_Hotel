@@ -14,26 +14,30 @@ export interface AuthState {
 
 export async function signIn(prevState: AuthState | null, formData: FormData): Promise<AuthState> {
   const supabase = await createClient()
+  const { cookies } = await import('next/headers')
+  const { LOCALE_COOKIE, toLocale } = await import('@/lib/i18n/config')
+  const cookieStore = await cookies()
+  const locale = toLocale(cookieStore.get(LOCALE_COOKIE)?.value)
 
   const email = String(formData.get('email') ?? '').trim()
   const password = String(formData.get('password') ?? '')
   const next = String(formData.get('next') ?? '/')
 
   if (!email || !password) {
-    return { error: 'กรุณากรอกอีเมลและรหัสผ่าน' }
+    return { error: locale === 'en' ? 'Please enter email and password' : 'กรุณากรอกอีเมลและรหัสผ่าน' }
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    // Surface the real reason (e.g. "email not confirmed" → Thai via
-    // translateSupabaseError at translate.ts:31). Falls back to the
-    // generic wrong-password message only when Supabase's error message
-    // isn't in the known map — keeps the legacy "swallow everything"
-    // behaviour for unrecognised shapes while exposing real states.
-    const thai = translateSupabaseError(error.message)
-    if (thai) return { error: thai }
-    return { error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }
+    // Surface the real reason in the active locale (e.g. "email not
+    // confirmed" → localized). Falls back to the generic wrong-password
+    // message only when Supabase's error message isn't in the known map.
+    const localized = translateSupabaseError(error.message, locale)
+    if (localized) return { error: localized }
+    return {
+      error: locale === 'en' ? 'Invalid email or password' : 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+    }
   }
 
   // Auto-redirect based on role. Phase 11: staff ALWAYS land on their own
@@ -108,8 +112,13 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
   })
 
   if (error) {
-    const thai = translateSupabaseError(error.message)
-    return { error: thai ?? 'สมัครสมาชิกไม่สำเร็จ' }
+    const { cookies } = await import('next/headers')
+    const { LOCALE_COOKIE, toLocale } = await import('@/lib/i18n/config')
+    const cookieStore = await cookies()
+    const locale = toLocale(cookieStore.get(LOCALE_COOKIE)?.value)
+    return {
+      error: translateSupabaseError(error.message, locale) ?? 'สมัครสมาชิกไม่สำเร็จ',
+    }
   }
 
   // Email confirmation is enabled in the Supabase Dashboard → Auth →
