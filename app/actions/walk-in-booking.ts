@@ -32,7 +32,10 @@ const walkInSchema = z.object({
   guests: z.coerce.number().int().min(1).max(10),
   bookerFullName: z.string().min(1).max(120),
   bookerEmail: z.string().email(),
-  bookerPhone: z.string().max(40).optional().nullable(),
+  bookerPhone: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{10}$/, 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก ห้ามมีขีดหรือช่องว่าง'),
   specialRequest: z.string().max(500).optional().nullable(),
   promoCode: z.string().max(40).optional().nullable(),
   // Phase 17 — replaces the boolean `markAsPaid`. `card` will redirect to
@@ -145,7 +148,7 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
       email_confirm: true,
       user_metadata: {
         full_name: data.bookerFullName,
-        phone: data.bookerPhone ?? null,
+        phone: data.bookerPhone,
       },
     })
     if (createErr || !created.user) {
@@ -183,7 +186,7 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
     p_cancellation_policy_id: policy?.id ?? null,
     p_booker_full_name: data.bookerFullName,
     p_booker_email: data.bookerEmail,
-    p_booker_phone: data.bookerPhone ?? null,
+    p_booker_phone: data.bookerPhone,
     p_special_request: data.specialRequest ?? null,
     p_channel: 'walk_in',
     p_booking_code: bookingCode,

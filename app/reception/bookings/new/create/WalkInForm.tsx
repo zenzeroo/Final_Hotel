@@ -70,7 +70,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
         guests,
         bookerFullName: fullName,
         bookerEmail: email,
-        bookerPhone: phone || undefined,
+        bookerPhone: phone,
         specialRequest: specialRequest || undefined,
         paymentMethod,
       })
@@ -115,13 +115,22 @@ export function WalkInForm({ room }: WalkInFormProps) {
                 className="input"
               />
             </Field>
-            <Field label="เบอร์โทรศัพท์">
+            <Field label="เบอร์โทรศัพท์" required>
               <input
                 type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                minLength={10}
+                required
+                pattern="[0-9]{10}"
+                placeholder="08xxxxxxxx"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="input"
               />
+              <p className="font-caption text-caption text-on-surface-variant">
+                ต้องเป็นตัวเลข 10 หลักเท่านั้น (ไม่มีขีด ไม่มีช่องว่าง)
+              </p>
             </Field>
           </div>
         </div>

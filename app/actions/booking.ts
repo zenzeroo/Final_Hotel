@@ -20,7 +20,10 @@ const createBookingSchema = z.object({
   guests: z.coerce.number().int().min(1).max(10),
   bookerFullName: z.string().min(1).max(120),
   bookerEmail: z.string().email(),
-  bookerPhone: z.string().max(40).optional().nullable(),
+  bookerPhone: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{10}$/, 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก ห้ามมีขีดหรือช่องว่าง'),
   specialRequest: z.string().max(500).optional().nullable(),
   promoCode: z.string().max(40).optional().nullable(),
 })
@@ -161,7 +164,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     p_cancellation_policy_id: policy?.id ?? null,
     p_booker_full_name: data.bookerFullName,
     p_booker_email: data.bookerEmail,
-    p_booker_phone: data.bookerPhone ?? null,
+    p_booker_phone: data.bookerPhone,
     p_special_request: data.specialRequest ?? null,
     p_channel: 'web',
     p_booking_code: bookingCode,

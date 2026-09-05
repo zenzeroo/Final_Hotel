@@ -109,7 +109,7 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, m
         guests,
         bookerFullName: fullName,
         bookerEmail: email,
-        bookerPhone: phone || undefined,
+        bookerPhone: phone,
         specialRequest: specialRequest || undefined,
         promoCode: promoCode || undefined,
       })
@@ -163,13 +163,22 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, m
                 className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
               />
             </Field>
-            <Field label="เบอร์โทรศัพท์">
+            <Field label="เบอร์โทรศัพท์" required>
               <input
                 type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                minLength={10}
+                required
+                pattern="[0-9]{10}"
+                placeholder="08xxxxxxxx"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
               />
+              <p className="font-caption text-caption text-on-surface-variant">
+                ต้องเป็นตัวเลข 10 หลักเท่านั้น (ไม่มีขีด ไม่มีช่องว่าง)
+              </p>
             </Field>
             <Field label="คำขอพิเศษ (ไม่บังคับ)">
               <textarea
