@@ -1,9 +1,9 @@
-import type { RoomType, SearchFilters, SearchResult } from './types'
+import type { Amenity, RoomType, SearchFilters, SearchResult } from './types'
 import { hasSupabase } from '../env'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
 
 /**
- * Supabase implementation — used when USE_MOCK_DATA=0.
+ * Supabase implementation — the only data layer (mock layer deleted).
  * Tables expected: room_types.
  *
  * Uses the server client (reads cookies) so authenticated writes
@@ -121,4 +121,53 @@ export async function updateRoomType(args: {
     .single()
   if (error) wrapSupabaseError('', error)
   return data as RoomType
+}
+
+/**
+ * Distinct active room types (`type` column) for filter dropdowns.
+ * `rooms.ts` previously fell through to mock here.
+ */
+export async function getRoomTypes(): Promise<RoomType['type'][]> {
+  const supabase = await getClient()
+  const { data, error } = await supabase
+    .from('room_types')
+    .select('type')
+    .eq('is_active', true)
+  if (error) wrapSupabaseError('', error)
+  return [...new Set((data ?? []).map((r) => r.type))]
+}
+
+/**
+ * Distinct active floors for filter dropdowns.
+ * `rooms.ts` previously fell through to mock here.
+ */
+export async function getFloors(): Promise<number[]> {
+  const supabase = await getClient()
+  const { data, error } = await supabase
+    .from('room_types')
+    .select('floor')
+    .eq('is_active', true)
+  if (error) wrapSupabaseError('', error)
+  return [...new Set((data ?? []).map((r) => r.floor))].sort((a, b) => a - b)
+}
+
+/**
+ * Catalog of amenity slugs the UI knows how to render.
+ * Catalog moved here from data/mock-amenities.json when the mock layer was deleted.
+ * Slug set is the canonical set used by `room_types.amenities` — add new slugs here when adding rows.
+ */
+const AMENITY_CATALOG: Amenity[] = [
+  { slug: 'wifi', name: 'High-Speed Wi-Fi', name_th: 'Wi-Fi ความเร็วสูง', icon: 'wifi', category: 'tech' },
+  { slug: 'climate_control', name: 'Climate Control', name_th: 'ปรับอากาศอัตโนมัติ', icon: 'ac_unit', category: 'comfort' },
+  { slug: 'smart_tv', name: 'Smart TV', name_th: 'สมาร์ททีวี', icon: 'tv', category: 'tech' },
+  { slug: 'soaking_tub', name: 'Soaking Tub', name_th: 'อ่างอาบน้ำ', icon: 'bathtub', category: 'comfort' },
+  { slug: 'espresso_machine', name: 'Espresso Machine', name_th: 'เครื่องชงกาแฟ', icon: 'coffee', category: 'service' },
+  { slug: 'private_balcony', name: 'Private Balcony', name_th: 'ระเบียงส่วนตัว', icon: 'deck', category: 'comfort' },
+  { slug: 'room_service', name: '24/7 Room Service', name_th: 'รูมเซอร์วิส 24 ชม.', icon: 'room_service', category: 'service' },
+  { slug: 'valet_laundry', name: 'Valet Laundry', name_th: 'บริการซักรีด', icon: 'dry_cleaning', category: 'service' },
+]
+
+export async function getApprovedAmenities(slugs: readonly string[]): Promise<Amenity[]> {
+  const set = new Set(slugs)
+  return AMENITY_CATALOG.filter((a) => set.has(a.slug))
 }
