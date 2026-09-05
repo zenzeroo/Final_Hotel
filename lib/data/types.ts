@@ -35,6 +35,24 @@ export interface Amenity {
   category: 'comfort' | 'tech' | 'service'
 }
 
+// =====================================================
+// Account (User profile) types — Phase 26
+// =====================================================
+export type AccountRole = StaffRole | 'user'
+
+export interface AccountProfile {
+  id: string
+  full_name: string | null
+  phone: string | null
+  birthdate: string | null // YYYY-MM-DD or null
+  avatar_key: string | null
+  email: string | null
+  created_at: string
+  role: AccountRole
+  is_active: boolean
+  locale: string | null
+}
+
 export interface SearchFilters {
   checkin?: string // ISO date YYYY-MM-DD
   checkout?: string
