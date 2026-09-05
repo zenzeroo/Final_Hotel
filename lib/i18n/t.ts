@@ -29,9 +29,9 @@ export type Widen<T> = T extends string
       ? { [K in keyof T]: Widen<T[K]> }
       : T
 
-export type TKey = DeepJoin<Widen<typeof th>, '', []>
+export type TKey = DeepJoin<Widen<typeof th>, ''>
 
-type DeepJoin<T, Prefix extends string> = {
+export type DeepJoin<T, Prefix extends string> = {
   [K in keyof T]: T[K] extends string
     ? `${Prefix}${string & K}`
     : T[K] extends object
