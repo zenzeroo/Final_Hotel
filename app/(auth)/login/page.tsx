@@ -2,14 +2,17 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { r2Url } from '@/lib/r2/publicUrl'
 import { LoginForm } from './LoginForm'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export default async function LoginPage(props: PageProps<'/login'>) {
   const searchParams = await props.searchParams
   const next = typeof searchParams.next === 'string' ? searchParams.next : '/'
+  const t = getT(await getLocale())
 
   // Phase 14 — surface OAuth callback failures (?error=oauth_cancelled |
   // oauth_failed) into the form's red banner.
-  const errorMessage = mapOAuthError(searchParams.error)
+  const errorMessage = mapOAuthError(searchParams.error, t)
 
   return (
     <main className="min-h-screen relative flex items-center justify-center px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-12">
@@ -38,21 +41,21 @@ export default async function LoginPage(props: PageProps<'/login'>) {
         </div>
 
         <div className="text-center mb-8">
-          <h1 className="font-display text-3xl font-bold text-primary">ยินดีต้อนรับกลับมา</h1>
+          <h1 className="font-display text-3xl font-bold text-primary">{t('auth.loginTitle')}</h1>
           <p className="text-body-md text-on-surface-variant mt-2">
-            เข้าสู่ระบบเพื่อจัดการการจองของคุณ
+            {t('auth.loginSubtitle')}
           </p>
         </div>
 
         <LoginForm next={next} errorMessage={errorMessage} />
 
         <p className="mt-8 text-center text-body-md text-on-surface-variant">
-          ยังไม่มีบัญชี?{' '}
+          {t('auth.noAccount')}{' '}
           <Link
             href={`/register${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}
             className="text-primary font-semibold hover:text-secondary transition-colors"
           >
-            สมัครสมาชิก
+            {t('auth.signUp')}
           </Link>
         </p>
       </div>
@@ -63,9 +66,13 @@ export default async function LoginPage(props: PageProps<'/login'>) {
 /**
  * Phase 14 — Translate the OAuth callback's `?error=` flag into a Thai
  * message the LoginForm banner can render. Returns `undefined` for no error
- * (so the banner stays hidden).
+ * (so the banner stays hidden). (Not in i18n dictionary yet — server-side
+ * error banner, out of scope for minimal viable.)
  */
-function mapOAuthError(error: string | string[] | undefined): string | undefined {
+function mapOAuthError(
+  error: string | string[] | undefined,
+  _t: ReturnType<typeof getT>,
+): string | undefined {
   const value = Array.isArray(error) ? error[0] : error
   switch (value) {
     case 'oauth_cancelled':

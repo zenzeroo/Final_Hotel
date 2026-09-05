@@ -1,7 +1,10 @@
 import Link from 'next/link'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
-export function Footer() {
+export async function Footer() {
   const year = new Date().getFullYear()
+  const t = getT(await getLocale())
   return (
     <footer className="bg-primary text-secondary py-16 mt-20">
       <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) flex flex-col items-center gap-8">
@@ -13,15 +16,13 @@ export function Footer() {
         </Link>
 
         <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-body-md">
-          <FooterLink href="/privacy">นโยบายความเป็นส่วนตัว</FooterLink>
-          <FooterLink href="/terms">เงื่อนไขการให้บริการ</FooterLink>
-          <FooterLink href="/contact">ติดต่อเรา</FooterLink>
-          <FooterLink href="/careers">ร่วมงานกับเรา</FooterLink>
+          <FooterLink href="/privacy">{t('footer.privacy')}</FooterLink>
+          <FooterLink href="/terms">{t('footer.terms')}</FooterLink>
+          <FooterLink href="/contact">{t('footer.contact')}</FooterLink>
+          <FooterLink href="/careers">{t('footer.careers')}</FooterLink>
         </nav>
 
-        <p className="text-caption text-secondary/70">
-          © {year} Zenzero Hotel สงวนลิขสิทธิ์
-        </p>
+        <p className="text-caption text-secondary/70">{t('footer.copyright').replace('2024', String(year))}</p>
       </div>
     </footer>
   )

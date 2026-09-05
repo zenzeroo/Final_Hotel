@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
+import { getLocale } from "@/lib/i18n/getLocale";
+import { I18nProvider } from "@/lib/i18n/I18nProvider";
 
 const playfair = Playfair_Display({
   variable: "--font-display",
@@ -22,10 +24,11 @@ export const metadata: Metadata = {
     "ค้นหาห้องพักในฝันของคุณ — ประสบการณ์พักผ่อนที่เป็นธรรมชาติและหรูหรา",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale()
   return (
     <html
-      lang="th"
+      lang={locale}
       className={`${playfair.variable} ${inter.variable} h-full antialiased`}
     >
       <head>
@@ -36,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-on-surface">
-        {children}
+        <I18nProvider locale={locale}>{children}</I18nProvider>
       </body>
     </html>
   );

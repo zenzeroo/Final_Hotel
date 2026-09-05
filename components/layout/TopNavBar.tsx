@@ -4,10 +4,15 @@ import { signOut } from '@/app/actions/auth'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { ScrollNavIsland } from './ScrollNavIsland'
 import { UserDropdownMenu } from './UserDropdownMenu'
+import { LanguageToggle } from './LanguageToggle'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export async function TopNavBar() {
   const session = await getSession()
   const isAuthed = Boolean(session)
+  const locale = await getLocale()
+  const t = getT(locale)
 
   return (
     <ScrollNavIsland>
@@ -24,29 +29,29 @@ export async function TopNavBar() {
 
             {/* Nav Links */}
             <nav className="hidden md:flex items-center gap-8">
-              <NavLink href="/">หน้าแรก</NavLink>
-              <NavLink href="/rooms">ห้องพัก</NavLink>
-              <NavLink href="/bookings">ประวัติการจอง</NavLink>
-              <NavLink href="/about">เกี่ยวกับโรงแรม</NavLink>
+              <NavLink href="/">{t('nav.home')}</NavLink>
+              <NavLink href="/rooms">{t('nav.rooms')}</NavLink>
+              <NavLink href="/bookings">{t('nav.bookings')}</NavLink>
+              <NavLink href="/about">{t('nav.about')}</NavLink>
             </nav>
 
             {/* Actions */}
             <div className="flex items-center gap-4">
               <button
                 className="hidden md:inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-low transition-colors"
-                aria-label="การแจ้งเตือน"
+                aria-label={t('nav.notification')}
               >
                 <MaterialIcon name="notifications" size={22} />
               </button>
-              <LanguageToggle />
+              <LanguageToggle currentLocale={locale} />
               {isAuthed && session ? (
                 session.role === 'user' ? (
                   <UserDropdownMenu session={session} />
                 ) : (
-                  <UserMenu session={session} />
+                  <UserMenu session={session} t={t} />
                 )
               ) : (
-                <LoginButton />
+                <LoginButton label={t('nav.login')} />
               )}
             </div>
           </div>
@@ -67,32 +72,24 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   )
 }
 
-function LanguageToggle() {
-  return (
-    <div className="hidden md:inline-flex items-center gap-1 text-label-md">
-      <button className="px-2 py-1 text-primary font-semibold" aria-label="ภาษาไทย">
-        TH
-      </button>
-      <span className="text-outline-variant">|</span>
-      <button className="px-2 py-1 text-on-surface-variant hover:text-primary" aria-label="English">
-        EN
-      </button>
-    </div>
-  )
-}
-
-function LoginButton() {
+function LoginButton({ label }: { label: string }) {
   return (
     <Link
       href="/login"
       className="inline-flex items-center justify-center h-10 px-5 rounded-full bg-primary text-secondary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
     >
-      เข้าสู่ระบบ
+      {label}
     </Link>
   )
 }
 
-function UserMenu({ session }: { session: NonNullable<Awaited<ReturnType<typeof getSession>>> }) {
+function UserMenu({
+  session,
+  t,
+}: {
+  session: NonNullable<Awaited<ReturnType<typeof getSession>>>
+  t: ReturnType<typeof getT>
+}) {
   const initials = (session.fullName ?? session.email)
     .split(' ')
     .map((s) => s[0])
@@ -107,7 +104,7 @@ function UserMenu({ session }: { session: NonNullable<Awaited<ReturnType<typeof 
       </span>
       <Link
         href="/account/profile"
-        aria-label="โปรไฟล์ของฉัน"
+        aria-label={t('nav.greeting')}
         className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary font-semibold text-label-md hover:bg-primary-container transition-colors"
       >
         {initials || 'U'}
@@ -118,7 +115,7 @@ function UserMenu({ session }: { session: NonNullable<Awaited<ReturnType<typeof 
           className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md text-on-surface hover:bg-surface-container-low transition-colors"
         >
           <MaterialIcon name="logout" size={16} />
-          ออกจากระบบ
+          {t('nav.logout')}
         </button>
       </form>
     </div>

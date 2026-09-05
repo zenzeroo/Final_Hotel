@@ -5,12 +5,15 @@ import { Footer } from '@/components/layout/Footer'
 import { HeroSection } from '@/components/landing/HeroSection'
 import { RoomCard } from '@/components/room/RoomCard'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 // Server-render on demand (Supabase data, no static prerender)
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const rooms = await getFeaturedRooms()
+  const t = getT(await getLocale())
 
   return (
     <>
@@ -24,17 +27,17 @@ export default async function HomePage() {
             <div className="flex items-end justify-between mb-10">
               <div>
                 <span className="text-label-md text-secondary font-semibold uppercase tracking-wider">
-                  แนะนำ
+                  {t('home.featuredRooms')}
                 </span>
                 <h2 className="font-display text-3xl md:text-4xl text-primary mt-2">
-                  ห้องพักแนะนำ
+                  {t('home.featuredRooms')}
                 </h2>
               </div>
               <Link
                 href="/rooms"
                 className="hidden md:inline-flex items-center gap-2 text-label-md text-primary font-semibold uppercase tracking-wider hover:text-secondary transition-colors"
               >
-                ดูห้องพักทั้งหมด
+                {t('roomsList.title')}
                 <MaterialIcon name="arrow_forward" size={18} />
               </Link>
             </div>
@@ -50,7 +53,7 @@ export default async function HomePage() {
                 href="/rooms"
                 className="inline-flex items-center gap-2 text-label-md text-primary font-semibold uppercase tracking-wider"
               >
-                ดูห้องพักทั้งหมด
+                {t('roomsList.title')}
                 <MaterialIcon name="arrow_forward" size={18} />
               </Link>
             </div>

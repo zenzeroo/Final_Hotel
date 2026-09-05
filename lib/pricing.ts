@@ -138,10 +138,10 @@ export function calculatePrice(
 
 /**
  * Format THB amount for display.
- * Example: 12500 → "฿12,500"
+ * Example: 12500 → "฿12,500" (th-TH) or "฿12,500" (en-US, en keeps ฿)
  */
-export function formatTHB(amount: number): string {
-  return `฿${new Intl.NumberFormat('th-TH').format(amount)}`
+export function formatTHB(amount: number, locale: 'th-TH' | 'en-US' = 'th-TH'): string {
+  return `฿${new Intl.NumberFormat(locale).format(amount)}`
 }
 
 /**
