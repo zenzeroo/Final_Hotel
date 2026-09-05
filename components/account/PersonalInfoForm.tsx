@@ -129,19 +129,21 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
                 />
               </div>
             </Field>
-            <Field label="เบอร์โทรศัพท์">
+            <Field label="เบอร์โทรศัพท์" required>
               <input
                 name="phone"
                 type="tel"
                 inputMode="numeric"
                 maxLength={10}
-                pattern="[0-9]{9,10}"
-                placeholder="08x-xxx-xxxx"
+                minLength={10}
+                required
+                pattern="[0-9]{10}"
+                placeholder="08xxxxxxxx"
                 defaultValue={profile.phone ?? ''}
                 className={inputClass}
               />
               <p className="font-caption text-caption text-on-surface-variant">
-                ต้องเป็นตัวเลข 9-10 หลักเท่านั้น
+                ต้องเป็นตัวเลข 10 หลักเท่านั้น (ไม่มีขีด ไม่มีช่องว่าง)
               </p>
             </Field>
           </div>

@@ -26,10 +26,7 @@ const updateProfileSchema = z.object({
   phone: z
     .string()
     .trim()
-    .refine(
-      (v) => v === '' || /^[0-9]{9,10}$/.test(v),
-      'เบอร์โทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก',
-    ),
+    .regex(/^[0-9]{10}$/, 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก ห้ามมีขีดหรือช่องว่าง'),
   birthdate: z
     .string()
     .trim()
@@ -57,7 +54,7 @@ export async function updateProfileAction(
   try {
     await updateOwnProfile({
       fullName: parsed.data.fullName,
-      phone: parsed.data.phone === '' ? null : parsed.data.phone,
+      phone: parsed.data.phone,
       birthdate: parsed.data.birthdate === '' ? null : parsed.data.birthdate,
     })
     revalidatePath('/', 'layout')
