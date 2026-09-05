@@ -69,9 +69,23 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
         aria-label="เมนูผู้ใช้"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary font-semibold text-label-md hover:bg-primary-container transition-colors"
+        className="flex items-center gap-2 px-1 py-1 rounded-full hover:bg-surface-container-low transition-colors"
       >
-        {initials || 'U'}
+        <span
+          className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary font-semibold text-label-md"
+          aria-hidden
+        >
+          {initials || 'U'}
+        </span>
+        <span className="hidden md:inline text-body-md text-on-surface truncate max-w-[120px]">
+          {session.fullName ?? 'ผู้ใช้'}
+        </span>
+        <MaterialIcon
+          name={open ? 'expand_less' : 'expand_more'}
+          size={20}
+          className="text-on-surface-variant"
+          aria-hidden
+        />
       </button>
 
       {open && (
@@ -89,10 +103,15 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
             </p>
           </div>
 
+          {/* NOTE — intentionally NO onClick={() => setOpen(false)} on the
+              Link. Calling setState before Next.js Link's internal
+              router.push can unmount the <a> mid-navigation, causing
+              the click to be silently dropped. The dropdown closes
+              naturally because the page navigates away (parent
+              component unmounts). */}
           <Link
             href="/account/profile"
             role="menuitem"
-            onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-surface-container-low transition-colors"
           >
             <MaterialIcon name="person" size={20} className="text-on-surface-variant" />
