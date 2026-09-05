@@ -3,7 +3,6 @@ import { getSession } from '@/lib/supabase/getSession'
 import { signOut } from '@/app/actions/auth'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { ScrollNavIsland } from './ScrollNavIsland'
-import { UserDropdownMenu } from './UserDropdownMenu'
 
 export async function TopNavBar() {
   const session = await getSession()
@@ -39,15 +38,7 @@ export async function TopNavBar() {
                 <MaterialIcon name="notifications" size={22} />
               </button>
               <LanguageToggle />
-              {isAuthed && session ? (
-                session.role === 'user' ? (
-                  <UserDropdownMenu session={session} />
-                ) : (
-                  <UserMenu session={session} />
-                )
-              ) : (
-                <LoginButton />
-              )}
+              {isAuthed && session ? <UserMenu session={session} /> : <LoginButton />}
             </div>
           </div>
         </div>
