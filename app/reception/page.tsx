@@ -2,11 +2,14 @@ import Link from 'next/link'
 import { getTodayStats, getRecentBookings, getRoomsStatus } from '@/lib/data/staff'
 import { formatTHB } from '@/lib/pricing'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
 
 export const dynamic = 'force-dynamic'
 
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat('th-TH', {
+function formatDate(iso: string, localeBcp: string) {
+  return new Intl.DateTimeFormat(localeBcp, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -14,6 +17,9 @@ function formatDate(iso: string) {
 }
 
 export default async function ReceptionDashboard() {
+  const locale = await getLocale()
+  const t = getT(locale)
+  const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
   const [stats, recent, rooms] = await Promise.all([
     getTodayStats(),
     getRecentBookings(5),
@@ -30,34 +36,34 @@ export default async function ReceptionDashboard() {
   return (
     <div className="p-6 md:p-8">
       <div className="mb-8">
-        <h1 className="font-display text-3xl text-primary">แดชบอร์ด</h1>
+        <h1 className="font-display text-3xl text-primary">{t('reception.title')}</h1>
         <p className="text-body-md text-on-surface-variant mt-1">
-          ข้อมูลภาพรวมของโรงแรม ณ วันนี้
+          {t('reception.subtitle')}
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
-          label="เช็คอินวันนี้"
+          label={t('reception.todayCheckIns')}
           value={stats.todayCheckIns}
           icon="login"
           color="primary"
         />
         <StatCard
-          label="เช็คเอาท์วันนี้"
+          label={t('reception.todayCheckOuts')}
           value={stats.todayCheckOuts}
           icon="logout"
           color="secondary"
         />
         <StatCard
-          label="แขกที่พักอยู่"
+          label={t('reception.inHouse')}
           value={stats.inHouse}
           icon="group"
           color="primary"
         />
         <StatCard
-          label="รอชำระเงิน"
+          label={t('reception.pendingPayment')}
           value={stats.pendingPayment}
           icon="credit_card"
           color="error"
@@ -68,16 +74,16 @@ export default async function ReceptionDashboard() {
         {/* Recent Bookings */}
         <section className="lg:col-span-2 bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-xl text-primary">การจองล่าสุด</h2>
+            <h2 className="font-display text-xl text-primary">{t('reception.bookingsPage.title')}</h2>
             <Link
               href="/reception/bookings"
               className="text-label-md text-primary font-semibold uppercase tracking-wider hover:text-secondary"
             >
-              ดูทั้งหมด
+              {t('reception.bookingsPage.addBooking')}
             </Link>
           </div>
           {recent.length === 0 ? (
-            <p className="text-body-md text-on-surface-variant text-center py-8">ยังไม่มีการจอง</p>
+            <p className="text-body-md text-on-surface-variant text-center py-8">{t('bookings.noBookings')}</p>
           ) : (
             <div className="flex flex-col">
               {recent.map((b) => (
@@ -91,7 +97,7 @@ export default async function ReceptionDashboard() {
                       {b.booker_full_name}
                     </p>
                     <p className="text-caption text-on-surface-variant">
-                      {b.room_type?.name_th} · {formatDate(b.check_in)} – {formatDate(b.check_out)}
+                      {b.room_type?.name_th} · {formatDate(b.check_in, localeBcp)} – {formatDate(b.check_out, localeBcp)}
                     </p>
                   </div>
                   <span
@@ -100,7 +106,7 @@ export default async function ReceptionDashboard() {
                     {statusLabel(b.status, b.payment_status)}
                   </span>
                   <span className="shrink-0 text-body-md font-semibold text-primary">
-                    {formatTHB(b.total)}
+                    {formatTHB(b.total, localeBcp)}
                   </span>
                 </Link>
               ))}
@@ -110,18 +116,18 @@ export default async function ReceptionDashboard() {
 
         {/* Room Status */}
         <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <h2 className="font-display text-xl text-primary mb-4">สถานะห้องพัก</h2>
+          <h2 className="font-display text-xl text-primary mb-4">{t('reception.roomsPage.title')}</h2>
           <div className="flex flex-col gap-3">
-            <RoomStat label="ว่าง" value={roomStats.available} total={rooms.length} color="primary" />
-            <RoomStat label="มีแขก" value={roomStats.occupied} total={rooms.length} color="secondary" />
-            <RoomStat label="รอทำความสะอาด" value={roomStats.cleaning} total={rooms.length} color="tertiary" />
-            <RoomStat label="ปรับปรุง" value={roomStats.maintenance} total={rooms.length} color="error" />
+            <RoomStat label={t('reception.available')} value={roomStats.available} total={rooms.length} color="primary" />
+            <RoomStat label={t('reception.occupied')} value={roomStats.occupied} total={rooms.length} color="secondary" />
+            <RoomStat label={t('reception.cleaning')} value={roomStats.cleaning} total={rooms.length} color="tertiary" />
+            <RoomStat label={t('reception.maintenance')} value={roomStats.maintenance} total={rooms.length} color="error" />
           </div>
           <Link
             href="/reception/rooms"
             className="mt-4 inline-flex items-center gap-2 text-label-md text-primary font-semibold uppercase tracking-wider hover:text-secondary"
           >
-            ดูรายละเอียด
+            {t('reception.roomsPage.byFloor')}
             <MaterialIcon name="arrow_forward" size={16} />
           </Link>
         </section>
@@ -196,12 +202,12 @@ function RoomStat({
 }
 
 function statusLabel(status: string, paymentStatus: string) {
-  if (status === 'cancelled') return 'ยกเลิก'
-  if (status === 'checked_in') return 'เข้าพัก'
-  if (status === 'checked_out') return 'เช็คเอาท์'
-  if (paymentStatus === 'paid') return 'ชำระแล้ว'
-  if (status === 'confirmed') return 'รอชำระ'
-  return 'รอดำเนินการ'
+  if (status === 'cancelled') return 'Cancelled'
+  if (status === 'checked_in') return 'Checked in'
+  if (status === 'checked_out') return 'Checked out'
+  if (paymentStatus === 'paid') return 'Paid'
+  if (status === 'confirmed') return 'Pending payment'
+  return 'Pending'
 }
 
 function statusClass(status: string, paymentStatus: string) {

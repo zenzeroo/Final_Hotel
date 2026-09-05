@@ -211,6 +211,11 @@ export const en: Dictionary = {
   // Manager dashboard
   manager: {
     title: 'Manager Dashboard',
+    subtitle: 'Zenzero Hotel performance overview',
+    greetingMorning: 'Good morning',
+    greetingAfternoon: 'Good afternoon',
+    greetingEvening: 'Good evening',
+    vsYesterday: 'vs yesterday',
     revenue: 'Revenue',
     todayRevenue: "Today's revenue",
     revenueTrend: 'Revenue trend',

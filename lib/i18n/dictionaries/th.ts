@@ -207,6 +207,11 @@ export const th = {
   // Manager dashboard
   manager: {
     title: 'แดชบอร์ดผู้จัดการ',
+    subtitle: 'ภาพรวมการดำเนินงาน Zenzero Hotel',
+    greetingMorning: 'สวัสดีตอนเช้า',
+    greetingAfternoon: 'สวัสดีตอนบ่าย',
+    greetingEvening: 'สวัสดีตอนเย็น',
+    vsYesterday: 'เทียบเมื่อวาน',
     revenue: 'รายได้',
     todayRevenue: 'รายได้วันนี้',
     revenueTrend: 'แนวโน้มรายได้',

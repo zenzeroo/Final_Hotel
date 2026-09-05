@@ -5,11 +5,14 @@ import { RevenueBarChart } from '@/components/manager/RevenueBarChart'
 import { AlertsPanel } from '@/components/manager/AlertsPanel'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
 
 export const dynamic = 'force-dynamic'
 
-function today() {
-  return new Date().toLocaleDateString('th-TH', {
+function today(localeBcp: string) {
+  return new Date().toLocaleDateString(localeBcp, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -17,47 +20,50 @@ function today() {
   })
 }
 
-function greeting(): string {
+function greeting(t: ReturnType<typeof getT>): string {
   const h = new Date().getHours()
-  if (h < 12) return 'สวัสดีตอนเช้า'
-  if (h < 18) return 'สวัสดีตอนบ่าย'
-  return 'สวัสดีตอนเย็น'
+  if (h < 12) return t('manager.greetingMorning')
+  if (h < 18) return t('manager.greetingAfternoon')
+  return t('manager.greetingEvening')
 }
 
 export default async function ManagerDashboard() {
+  const locale = await getLocale()
+  const t = getT(locale)
+  const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
   const session = await getSession()
   const stats = await getManagerDashboardStats()
-  const name = session?.fullName ?? 'ผู้จัดการ'
+  const name = session?.fullName ?? t('nav.greeting')
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            {greeting()}, {name}
+            {greeting(t)}, {name}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            ภาพรวมการดำเนินงาน Zenzero Hotel · {today()}
+            {t('manager.subtitle')} · {today(localeBcp)}
           </p>
         </div>
         <div className="inline-flex items-center gap-2 text-body-md text-on-surface-variant bg-surface-container-low rounded-full px-4 py-2">
           <MaterialIcon name="calendar_today" size={18} />
-          {today()}
+          {today(localeBcp)}
         </div>
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-        <KpiCard label="รายได้วันนี้" icon="payments">
+        <KpiCard label={t('manager.todayRevenue')} icon="payments">
           <p className="font-display-lg text-display-lg-mobile text-primary">
-            {formatTHB(stats.revenueToday)}
+            {formatTHB(stats.revenueToday, localeBcp)}
           </p>
           <div className="flex items-center gap-1 mt-2 text-caption text-secondary">
             <MaterialIcon name="trending_up" size={14} />
-            +{stats.revenueTrendPct.toFixed(1)}% เทียบเมื่อวาน
+            +{stats.revenueTrendPct.toFixed(1)}% {t('manager.vsYesterday')}
           </div>
         </KpiCard>
 
-        <KpiCard label="อัตราเข้าพัก" icon="hotel">
+        <KpiCard label={t('manager.occupancy')} icon="hotel">
           <div className="flex items-center gap-3">
             <p className="font-display-lg text-display-lg-mobile text-primary">
               {stats.occupancyRatePct}%
@@ -74,34 +80,34 @@ export default async function ManagerDashboard() {
           </div>
         </KpiCard>
 
-        <KpiCard label="เช็คอิน / เช็คเอาท์" icon="swap_horiz">
+        <KpiCard label={t('manager.checkIns') + ' / ' + t('manager.checkOuts')} icon="swap_horiz">
           <div className="flex items-center gap-4">
             <div>
               <p className="font-display-lg text-display-lg-mobile text-primary">
                 {stats.checkInsToday}
               </p>
-              <p className="text-caption text-on-surface-variant">เข้า</p>
+              <p className="text-caption text-on-surface-variant">{t('manager.checkIns')}</p>
             </div>
             <div className="w-px h-10 bg-outline-variant" />
             <div>
               <p className="font-display-lg text-display-lg-mobile text-primary">
                 {stats.checkOutsToday}
               </p>
-              <p className="text-caption text-on-surface-variant">ออก</p>
+              <p className="text-caption text-on-surface-variant">{t('manager.checkOuts')}</p>
             </div>
           </div>
         </KpiCard>
 
-        <KpiCard label="การจองใหม่วันนี้" icon="bookmark_added" tone="gold">
+        <KpiCard label={t('manager.newBookings')} icon="bookmark_added" tone="gold">
           <p className="font-display-lg text-display-lg-mobile text-on-secondary-container">
             {stats.newBookingsToday}
           </p>
           <div className="flex items-center gap-3 mt-2 text-caption text-on-secondary-container">
             <span className="inline-flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-primary" /> เว็บ {stats.webBookings}
+              <span className="w-2 h-2 rounded-full bg-primary" /> {t('manager.webBookings')} {stats.webBookings}
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-tertiary" /> Walk-in {stats.walkInBookings}
+              <span className="w-2 h-2 rounded-full bg-tertiary" /> {t('manager.walkInBookings')} {stats.walkInBookings}
             </span>
           </div>
         </KpiCard>

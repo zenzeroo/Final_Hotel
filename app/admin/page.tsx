@@ -7,11 +7,14 @@ import {
 } from '@/lib/data/manager'
 import { KpiCard } from '@/components/manager/KpiCard'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
 
 export const dynamic = 'force-dynamic'
 
-function today() {
-  return new Date().toLocaleDateString('en-US', {
+function today(localeBcp: string) {
+  return new Date().toLocaleDateString(localeBcp, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -20,6 +23,9 @@ function today() {
 }
 
 export default async function AdminDashboard() {
+  const locale = await getLocale()
+  const t = getT(locale)
+  const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
   const session = await getSession()
   const [stats, bookingsOversight, units, staff] = await Promise.all([
     getManagerDashboardStats(),
@@ -41,21 +47,21 @@ export default async function AdminDashboard() {
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            ภาพรวมผู้บริหาร
+            {t('admin.title')}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            สวัสดี {name} · ภาพรวมการดำเนินงานของโรงแรม · {today()}
+            {t('nav.greeting')} {name} · {t('admin.title')} · {today(localeBcp)}
           </p>
         </div>
         <div className="inline-flex items-center gap-2 text-body-md text-on-surface-variant bg-surface-container-low rounded-full px-4 py-2">
           <MaterialIcon name="shield_person" size={18} />
-          พอร์ทัลผู้ดูแลระบบ
+          {t('admin.title')}
         </div>
       </header>
 
       {/* 4 KPI tiles */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-        <KpiCard label="อัตราเข้าพัก" icon="hotel">
+        <KpiCard label={t('manager.occupancy')} icon="hotel">
           <div className="flex items-center gap-3">
             <p className="font-display-lg text-display-lg-mobile text-primary">
               {occupancyPct}%
@@ -71,42 +77,42 @@ export default async function AdminDashboard() {
             </div>
           </div>
           <div className="text-caption text-on-surface-variant mt-2">
-            {occupied} / {totalRooms} ห้อง
+            {occupied} / {totalRooms} {t('manager.bookingsPage.title')}
           </div>
         </KpiCard>
 
-        <KpiCard label="การจองที่ใช้งานอยู่" icon="bookmark">
+        <KpiCard label={t('bookings.title')} icon="bookmark">
           <p className="font-display-lg text-display-lg-mobile text-primary">
             {bookingsOversight.activeCount}
           </p>
           <div className="text-caption text-on-surface-variant mt-2">
-            รอคืนเงิน {pendingRefunds} รายการ
+            {pendingRefunds} {t('manager.bookingsPage.noRefunds')}
           </div>
         </KpiCard>
 
-        <KpiCard label="พนักงานที่ปฏิบัติงาน" icon="badge">
+        <KpiCard label={t('manager.staffPage.title')} icon="badge">
           <p className="font-display-lg text-display-lg-mobile text-primary">
             {activeStaff}
           </p>
           <div className="text-caption text-on-surface-variant mt-2">
-            จากทั้งหมด {staff.length} คน
+            {staff.length} {t('manager.staffPage.active')}
           </div>
         </KpiCard>
 
-        <KpiCard label="เช็คอิน / เช็คเอาท์วันนี้" icon="swap_horiz">
+        <KpiCard label={`${t('manager.checkIns')} / ${t('manager.checkOuts')}`} icon="swap_horiz">
           <div className="flex items-center gap-4">
             <div>
               <p className="font-display-lg text-display-lg-mobile text-primary">
                 {stats.checkInsToday}
               </p>
-              <p className="text-caption text-on-surface-variant">เข้า</p>
+              <p className="text-caption text-on-surface-variant">{t('manager.checkIns')}</p>
             </div>
             <div className="w-px h-10 bg-outline-variant" />
             <div>
               <p className="font-display-lg text-display-lg-mobile text-primary">
                 {stats.checkOutsToday}
               </p>
-              <p className="text-caption text-on-surface-variant">ออก</p>
+              <p className="text-caption text-on-surface-variant">{t('manager.checkOuts')}</p>
             </div>
           </div>
         </KpiCard>
@@ -115,11 +121,11 @@ export default async function AdminDashboard() {
       {/* Recent activity */}
       <section className="mb-12">
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          กิจกรรมล่าสุด
+          Recent Activity
         </h2>
         {recentActivity.length === 0 ? (
           <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-8 text-center text-on-surface-variant">
-            ยังไม่มีกิจกรรม
+            {t('bookings.noBookings')}
           </div>
         ) : (
           <div className="bg-surface-container-lowest rounded-lg shadow-level-1 overflow-hidden">
@@ -127,13 +133,13 @@ export default async function AdminDashboard() {
               <thead>
                 <tr className="border-b border-outline-variant">
                   <th className="px-4 py-3 text-left text-label-md uppercase tracking-wider text-on-surface-variant font-medium">
-                    เวลา
+                    When
                   </th>
                   <th className="px-4 py-3 text-left text-label-md uppercase tracking-wider text-on-surface-variant font-medium">
-                    รหัสเจ้าหน้าที่
+                    Staff
                   </th>
                   <th className="px-4 py-3 text-left text-label-md uppercase tracking-wider text-on-surface-variant font-medium">
-                    การกระทำ
+                    Action
                   </th>
                 </tr>
               </thead>
@@ -144,7 +150,7 @@ export default async function AdminDashboard() {
                     className="border-b border-outline-variant last:border-b-0"
                   >
                     <td className="px-4 py-3 text-body-md text-on-surface">
-                      {new Date(entry.timestamp).toLocaleString('th-TH', {
+                      {new Date(entry.timestamp).toLocaleString(localeBcp, {
                         dateStyle: 'short',
                         timeStyle: 'short',
                       })}
