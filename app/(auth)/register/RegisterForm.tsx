@@ -8,6 +8,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { GoogleLogo } from '@/components/ui/GoogleLogo'
 import { CheckEmailModal } from '@/components/auth/register/CheckEmailModal'
 import { useT } from '@/lib/i18n/useT'
+import { maxBirthdateIso } from '@/lib/dates'
 
 interface RegisterFormProps {
   next: string
@@ -114,7 +115,9 @@ export function RegisterForm({ next, errorMessage, showCheckEmailModal }: Regist
 
         {/* Phone */}
         <label className="flex flex-col gap-1.5">
-          <span className="text-label-md text-on-surface">{t('auth.phone')}</span>
+          <span className="text-label-md text-on-surface">
+            {t('auth.phone')} <span className="text-error">*</span>
+          </span>
           <div className="relative">
             <MaterialIcon
               name="phone"
@@ -126,9 +129,41 @@ export function RegisterForm({ next, errorMessage, showCheckEmailModal }: Regist
               name="phone"
               placeholder={t('auth.phonePlaceholder')}
               autoComplete="tel"
+              required
+              inputMode="numeric"
+              maxLength={10}
+              minLength={10}
+              pattern="[0-9]{10}"
               className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
             />
           </div>
+          <p className="font-caption text-caption text-on-surface-variant">
+            ต้องเป็นตัวเลข 10 หลักเท่านั้น (ไม่มีขีด ไม่มีช่องว่าง)
+          </p>
+        </label>
+
+        {/* Birthdate */}
+        <label className="flex flex-col gap-1.5">
+          <span className="text-label-md text-on-surface">
+            {t('auth.birthdate')} <span className="text-error">*</span>
+          </span>
+          <div className="relative">
+            <MaterialIcon
+              name="cake"
+              size={20}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+            />
+            <input
+              type="date"
+              name="birthdate"
+              required
+              max={maxBirthdateIso()}
+              className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
+            />
+          </div>
+          <p className="font-caption text-caption text-on-surface-variant">
+            {t('auth.birthdateMinAge')}
+          </p>
         </label>
 
         {/* Password */}

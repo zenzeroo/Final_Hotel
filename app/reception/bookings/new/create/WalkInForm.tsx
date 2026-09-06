@@ -243,7 +243,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
 
           <button
             type="submit"
-            disabled={isPending || nights === 0 || !fullName || !email}
+            disabled={isPending || nights === 0 || !fullName || !email || !phone}
             className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60"
           >
             {isPending ? (

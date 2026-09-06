@@ -3,9 +3,33 @@
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { sanitizeNext } from '@/lib/auth/sanitize'
-import { translateSupabaseError } from '@/lib/errors/translate'
+import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
+import { isOver18 } from '@/lib/dates'
+
+// Sign-up schema — same phone regex used by BookingForm / WalkInForm /
+// PersonalInfoForm (10 ASCII digits, no dashes/spaces). Server-side gate so
+// even direct callers (bypass HTML5 required + pattern) get a clear error.
+const signUpSchema = z.object({
+  fullName: z.string().trim().min(1, 'กรุณากรอกชื่อ-นามสกุล').max(120),
+  email: z.string().trim().email('อีเมลไม่ถูกต้อง'),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{10}$/, 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก ห้ามมีขีดหรือช่องว่าง'),
+  birthdate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'วันเกิดต้องอยู่ในรูปแบบ YYYY-MM-DD')
+    .refine(isOver18, 'ต้องมีอายุ 18 ปีขึ้นไป'),
+  password: z.string().min(8, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร').max(72),
+  confirmPassword: z.string(),
+  next: z.string(),
+}).refine((d) => d.password === d.confirmPassword, {
+  path: ['confirmPassword'],
+  message: 'รหัสผ่านยืนยันไม่ตรงกัน',
+})
 
 export interface AuthState {
   error?: string
@@ -78,30 +102,36 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
   const password = String(formData.get('password') ?? '')
   const confirmPassword = String(formData.get('confirm_password') ?? '')
   const phone = String(formData.get('phone') ?? '').trim()
+  const birthdate = String(formData.get('birthdate') ?? '').trim()
   // Read + sanitize the `next` deep-link so a confirmed user resumes
   // their booking instead of always landing on `/`.
   const next = sanitizeNext(String(formData.get('next') ?? '/'))
 
-  // Validation
-  if (!fullName || !email || !password) {
-    return { error: 'กรุณากรอกข้อมูลให้ครบถ้วน' }
+  // Validation — Zod schema enforces required + regex on phone (server-side
+  // mirror of RegisterForm.tsx HTML5 required + pattern). Error message
+  // localized via the same pattern signIn uses for Supabase errors.
+  const parsed = signUpSchema.safeParse({ fullName, email, phone, birthdate, password, confirmPassword, next })
+  if (!parsed.success) {
+    const { cookies } = await import('next/headers')
+    const { LOCALE_COOKIE, toLocale } = await import('@/lib/i18n/config')
+    const cookieStore = await cookies()
+    const locale = toLocale(cookieStore.get(LOCALE_COOKIE)?.value)
+    return {
+      error: 'ข้อมูลไม่ถูกต้อง: ' + translateZodIssues(parsed.error.issues, locale),
+    }
   }
-  if (password !== confirmPassword) {
-    return { error: 'รหัสผ่านยืนยันไม่ตรงกัน' }
-  }
-  if (password.length < 8) {
-    return { error: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' }
-  }
+  const formDataParsed = parsed.data
 
   const origin = await getOrigin()
 
   const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
+    email: formDataParsed.email,
+    password: formDataParsed.password,
     options: {
       data: {
-        full_name: fullName,
-        phone: phone || null,
+        full_name: formDataParsed.fullName,
+        phone: formDataParsed.phone,
+        birthdate: formDataParsed.birthdate,
       },
       // Tell Supabase where to send the user after they click the
       // confirmation link in their email. `emailRedirectTo` is ignored
