@@ -7,13 +7,15 @@ import { RoomCard } from '@/components/room/RoomCard'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
+import { roomTypeLabel } from '@/lib/format/roomType'
 
 // Server-render on demand (Supabase data, no static prerender)
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
+  const locale = await getLocale()
+  const t = getT(locale)
   const rooms = await getFeaturedRooms()
-  const t = getT(await getLocale())
 
   return (
     <>
@@ -48,7 +50,13 @@ export default async function HomePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {rooms.map((room) => (
-                <RoomCard key={room.id} room={room} variant="featured" />
+                <RoomCard
+                  key={room.id}
+                  room={room}
+                  variant="featured"
+                  typeLabel={roomTypeLabel(room.type, locale)}
+                  maxGuestsLabel={t('roomCard.maxGuests', { count: room.max_guests })}
+                />
               ))}
             </div>
 

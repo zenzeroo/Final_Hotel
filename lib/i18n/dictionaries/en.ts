@@ -88,6 +88,11 @@ export const en: Dictionary = {
     writeReview: 'Write a review',
   },
 
+  // Room card (homepage featured grid)
+  roomCard: {
+    maxGuests: 'Up to {count} guests',
+  },
+
   // Auth
   auth: {
     loginTitle: 'Sign in',

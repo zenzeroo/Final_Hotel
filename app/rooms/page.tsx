@@ -15,7 +15,8 @@ export const dynamic = 'force-dynamic'
 
 export default async function RoomsPage(props: PageProps<'/rooms'>) {
   const searchParams = await props.searchParams
-  const t = getT(await getLocale())
+  const locale = await getLocale()
+  const t = getT(locale)
 
   const filters: SearchFilters = {
     checkin: typeof searchParams.checkin === 'string' ? searchParams.checkin : undefined,
@@ -78,7 +79,7 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
 
               <FilterChips />
 
-              <FloorGroupSection rooms={rooms} />
+              <FloorGroupSection rooms={rooms} locale={locale} />
             </div>
           </div>
         </div>

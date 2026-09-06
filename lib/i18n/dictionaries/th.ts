@@ -84,6 +84,11 @@ export const th = {
     writeReview: 'เขียนรีวิว',
   },
 
+  // Room card (homepage featured grid)
+  roomCard: {
+    maxGuests: 'สูงสุด {count} ท่าน',
+  },
+
   // Auth
   auth: {
     loginTitle: 'เข้าสู่ระบบ',

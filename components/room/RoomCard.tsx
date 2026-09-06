@@ -8,9 +8,13 @@ import { MaterialIcon } from '../ui/MaterialIcon'
 interface RoomCardProps {
   room: RoomType
   variant?: 'default' | 'featured'
+  /** Pre-localised room-type label (e.g. 'ดีลักซ์' / 'Deluxe'). Passed from parent to keep this a Server Component. */
+  typeLabel: string
+  /** Pre-localised max-occupancy label (e.g. 'สูงสุด 4 ท่าน'). Passed from parent. */
+  maxGuestsLabel: string
 }
 
-export function RoomCard({ room, variant = 'default' }: RoomCardProps) {
+export function RoomCard({ room, variant = 'default', typeLabel, maxGuestsLabel }: RoomCardProps) {
   const isFeatured = variant === 'featured'
 
   return (
@@ -40,6 +44,18 @@ export function RoomCard({ room, variant = 'default' }: RoomCardProps) {
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-display text-xl text-primary font-semibold">{room.name_th}</h3>
         </div>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-on-surface-variant">
+          <span className="inline-flex items-center gap-1.5">
+            <MaterialIcon name="hotel" size={14} />
+            {typeLabel}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <MaterialIcon name="group" size={14} />
+            {maxGuestsLabel}
+          </span>
+        </div>
+
         <p className="text-body-md text-on-surface-variant line-clamp-2 flex-1 mb-0">{room.short_desc}</p>
 
         <div className="flex items-center justify-between mt-2">

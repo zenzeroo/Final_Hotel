@@ -1,11 +1,16 @@
 import type { RoomType } from '@/lib/data/types'
+import { getT } from '@/lib/i18n/t'
+import type { Locale } from '@/lib/i18n/config'
+import { roomTypeLabel } from '@/lib/format/roomType'
 import { RoomCard } from './RoomCard'
 
 interface FloorGroupSectionProps {
   rooms: RoomType[]
+  locale: Locale
 }
 
-export function FloorGroupSection({ rooms }: FloorGroupSectionProps) {
+export function FloorGroupSection({ rooms, locale }: FloorGroupSectionProps) {
+  const t = getT(locale)
   // Group by floor
   const grouped = rooms.reduce<Record<number, RoomType[]>>((acc, room) => {
     const floor = room.floor
@@ -54,7 +59,12 @@ export function FloorGroupSection({ rooms }: FloorGroupSectionProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {grouped[floor].map((room) => (
-              <RoomCard key={room.id} room={room} />
+              <RoomCard
+                key={room.id}
+                room={room}
+                typeLabel={roomTypeLabel(room.type, locale)}
+                maxGuestsLabel={t('roomCard.maxGuests', { count: room.max_guests })}
+              />
             ))}
           </div>
         </section>

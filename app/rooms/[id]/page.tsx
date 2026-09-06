@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getRoomBySlug } from '@/lib/data/rooms'
 import { getPricingConstants } from '@/lib/data/manager'
 import { bedTypeLabel } from '@/lib/format/bedType'
+import { roomTypeLabel } from '@/lib/format/roomType'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { RoomGallery } from '@/components/room/RoomGallery'
@@ -48,6 +49,10 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
                   <RatingStars value={room.rating_avg} count={room.rating_count} size={20} />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-body-md text-on-surface-variant">
+                  <span className="inline-flex items-center gap-2">
+                    <MaterialIcon name="hotel" size={18} />
+                    {roomTypeLabel(room.type, locale)}
+                  </span>
                   {room.size_sqm && (
                     <span className="inline-flex items-center gap-2">
                       <MaterialIcon name="square_foot" size={18} />
