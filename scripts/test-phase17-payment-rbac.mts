@@ -230,6 +230,7 @@ await step('Seed fixture: ownBooking (user) + otherBooking (admin)', async () =>
       payment_status: 'unpaid',
       booker_full_name: 'Phase 17 RBAC Test',
       booker_email: TEST_EMAIL,
+      booker_phone: '0890000008',
       channel: 'web',
     })
     .select('id')
@@ -255,6 +256,7 @@ await step('Seed fixture: ownBooking (user) + otherBooking (admin)', async () =>
       payment_status: 'unpaid',
       booker_full_name: 'Phase 17 RBAC Other',
       booker_email: ROLES.admin.email,
+      booker_phone: '0890000009',
       channel: 'web',
     })
     .select('id')

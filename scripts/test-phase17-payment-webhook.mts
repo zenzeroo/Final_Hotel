@@ -140,6 +140,7 @@ await step('Seed fixture: owner + unpaid booking + pending payments row', async 
       payment_status: 'unpaid',
       booker_full_name: 'Phase 17 Test',
       booker_email: TEST_EMAIL,
+      booker_phone: '0890000010',
       channel: 'web',
     })
     .select('id')

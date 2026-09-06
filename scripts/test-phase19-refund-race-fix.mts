@@ -134,7 +134,7 @@ async function createBooking(checkIn: string, checkOut: string): Promise<string>
     p_cancellation_policy_id: flexPolicy?.id ?? null,
     p_booker_full_name: 'Race Fix Test',
     p_booker_email: 'test@zenzero.com',
-    p_booker_phone: null,
+    p_booker_phone: '0890000006',
     p_special_request: null,
     p_channel: 'web',
     p_booking_code: code,

@@ -197,6 +197,7 @@ await step('Insert walk-in booking (channel=walk_in) via service role', async ()
       payment_status: 'paid',
       booker_full_name: 'Phase12 Walk-in Guest',
       booker_email: 'phase12-walkin-' + Date.now() + '@test.local',
+      booker_phone: '0890000007',
       channel: 'walk_in',
     })
     .select('id')

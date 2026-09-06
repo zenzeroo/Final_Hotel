@@ -224,6 +224,7 @@ await step('Insert 2 control bookings (prior 100k + current 50k)', async () => {
       payment_status: 'paid' as const,
       booker_full_name: 'Phase10 Prior Control',
       booker_email: 'phase10-prior@test.local',
+      booker_phone: '0890000014',
       created_at: priorCreated,
     },
     {
@@ -244,6 +245,7 @@ await step('Insert 2 control bookings (prior 100k + current 50k)', async () => {
       payment_status: 'paid' as const,
       booker_full_name: 'Phase10 Current Control',
       booker_email: 'phase10-curr@test.local',
+      booker_phone: '0890000015',
       created_at: currentCreated,
     },
   ]

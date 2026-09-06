@@ -134,7 +134,7 @@ async function createBooking(opts: {
     p_cancellation_policy_id: opts.policyId ?? flexPolicy.id,
     p_booker_full_name: 'Policy Test',
     p_booker_email: 'test@zenzero.com',
-    p_booker_phone: null,
+    p_booker_phone: '0890000004',
     p_special_request: null,
     p_channel: 'web' as const,
     p_booking_code: code,

@@ -139,7 +139,7 @@ function bookingParams(ci: string, co: string, channel: 'web' | 'walk_in' = 'web
     p_cancellation_policy_id: null,
     p_booker_full_name: 'Overbooking Test',
     p_booker_email: 'test@zenzero.com',
-    p_booker_phone: null,
+    p_booker_phone: '0890000001',
     p_special_request: null,
     p_channel: channel,
     p_booking_code: `${PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

@@ -272,6 +272,7 @@ await step('Webhook fixture: booking + succeeded Stripe payment', async () => {
       payment_status: 'paid',
       booker_full_name: 'Phase 18 Webhook Test',
       booker_email: 'phase18-webhook@zenzero.com',
+      booker_phone: '0890000011',
       channel: 'web',
     })
     .select('id')
@@ -537,6 +538,7 @@ await step('Action fixture: real Stripe PI + refund_request', async () => {
       payment_status: 'paid',
       booker_full_name: 'Phase 18 Action Test',
       booker_email: 'phase18-action@zenzero.com',
+      booker_phone: '0890000012',
       channel: 'web',
     })
     .select('id')
@@ -671,6 +673,7 @@ await step('Cash fixture: walk-in booking + cash payment + refund request', asyn
       payment_status: 'paid',
       booker_full_name: 'Phase 18 Cash Test',
       booker_email: 'phase18-cash@zenzero.com',
+      booker_phone: '0890000013',
       channel: 'walk_in',
     })
     .select('id')
