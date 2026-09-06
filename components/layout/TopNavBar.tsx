@@ -65,7 +65,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="text-body-md text-on-surface hover:text-primary transition-colors"
+      className="px-3 py-2 rounded-md text-body-md text-on-surface hover:bg-surface-container-low hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
     >
       {children}
     </Link>
