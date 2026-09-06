@@ -9,6 +9,16 @@ each with their own dashboards, permissions, and server actions.
 Originally prototyped as static HTML at `Y:/Final/V1_Prototype/extracted/`, then
 rebuilt into a typed Next.js + Supabase app across 15 phases.
 
+> ✅ **Phase 26 shipped (2026-09-05)** — i18n (TH/EN) + UI polish + /account profile + validation + email confirmation. 21 commits on `origin/main` (commits `44c9f14` → `10472c7`):
+>
+> - **i18n full coverage** — `lib/i18n/{config,getLocale,t,I18nProvider,useT}.ts` + `dictionaries/{th,en}.ts` (600+ strings across 12 namespaces). `setLocaleAction` server action + `NEXT_LOCALE` cookie + `LanguageToggle` client island. 36 pages + 5 email templates + XLSX export headers + `lib/errors/translate.ts` all threaded through `t()`.
+> - **/account profile page** (Role User) — `app/account/profile/page.tsx` + 6 client components (ProfileCard, AvatarUploader, PersonalInfoForm, ChangePasswordForm, DeactivateAccountSection, AccountQuickLinks) + `app/actions/account.ts` with R2 avatar upload + soft-delete.
+> - **UI polish** — sitewide `prefers-reduced-motion` a11y rule, `<Card>` lift variant, hover transitions + focus rings on 13 admin/manager icon buttons, chevron/arrow slide, standardized tab durations.
+> - **Validation** — `bookerPhone` regex `/^[0-9]{10}$/` enforced on booking + account + walk-in + register actions.
+> - **Supabase email confirmation** — signUp redirects to `/register?message=check_email&next=…` with `emailRedirectTo` set to `/auth/callback?next=…`. Requires Dashboard toggle: Auth → Providers → Email → Confirm email = ON.
+>
+> Plan: `C:\Users\suns9\.claude\plans\database-swirling-hoare.md`.
+>
 > ✅ **Phase 20 #29, #31 + Phase 19 #19 shipped (2026-09-04)** — Three production-hardening blocks on `origin/main` (commits `b4b8352`, `2b59f6a`, `23deb91`):
 >
 > - **Phase 20 #29** — App-level rate limiting (`lib/rate-limit.ts` token-bucket + LRU + 10/min login + 5/min register + 20/min OAuth callback + 10/min payments checkout). 429 + Retry-After on burst.
@@ -68,6 +78,13 @@ rebuilt into a typed Next.js + Supabase app across 15 phases.
   `status/moderated_by/moderated_at`, แตะ field อื่นโดน `reviews_guard_staff_update()` block
 - **Cloudflare R2 image storage** — room images เก็บใน R2, URLs build
   ผ่าน `lib/r2/publicUrl.ts`
+- **TH/EN language switcher** (Phase 26) — click "EN" ใน nav เพื่อสลับภาษา
+  ทั้ง UI + email templates + XLSX export headers; cookie persistence
+  + `profiles.locale` persistence + `hotel_settings.locale_default`
+  fallback
+- **/account profile page (Role User)** — avatar upload (R2) + personal
+  info (TH/EN) + password change + soft-delete with email confirmation
+  flow
 - **Stacked RLS policies** — public read + self-only + staff via
   `is_staff()` / `has_role(text)` SECURITY DEFINER helpers (ห้าม inline EXISTS
   — เกิด Postgres 42P17 recursion)
@@ -94,6 +111,8 @@ rebuilt into a typed Next.js + Supabase app across 15 phases.
 | Validation | Zod 3.25.76 |
 | Date math | date-fns 3.6.0 |
 | Charts | chart.js 4.x + react-chartjs-2 5.x |
+| Email | **Resend** + `@react-email/components` — 5 transactional templates |
+| Excel export | `exceljs` |
 | Auth flow | Next.js 16 `proxy.ts` (replaces `middleware.ts`) — Supabase SSR cookies |
 
 **Node version requirement**: ไม่ pin ใน `package.json` — แนะนำ Node ≥ 20.x (จาก Next.js 16 requirements) [ต้องยืนยัน]

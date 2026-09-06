@@ -64,8 +64,13 @@ Rules ละเอียดเต็มอยู่ใน `Rule.md` ที่ ro
 | 29 — App-level rate limiting (Phase 20) | ✓ | `lib/rate-limit.ts` — in-memory token bucket + LRU cache (10k cap, 1h idle TTL); `checkRateLimit(ip, route)` returns `{allowed, remaining/limit}` or `{allowed: false, retryAfterSeconds, limit}`; per-route config: `/login` 10/min, `/register` 5/min, `/auth/callback` 20/min, `/api/payments/checkout` 10/min, default 60/min; `getClientIp(request)` parses `X-Forwarded-For` → `X-Real-IP` → `'unknown'`. `proxy.ts` checks all mutations (POST/PUT/PATCH/DELETE) BEFORE delegating to `updateSession`; returns 429 + `Retry-After` header + Thai message on empty bucket. `scripts/test-phase29-rate-limit.mts` — 10 smoke cases (fresh bucket, burst exhaustion, retry-after, per-IP + per-route isolation, refill timing, IP header parsing). Defense-in-depth on top of Supabase built-in auth throttle. Single-process LRU — swap to Upstash for multi-instance prod (API stays identical). Plan: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md`. |
 | 31 — Excel export for manager reports (Phase 20) | ✓ | `npm i exceljs` + `app/api/manager/reports/export/route.ts` — GET handler streaming `getReportsData()` as `.xlsx` (6 sheets: สรุปภาพรวม, รายได้รายวัน, Occupancy YoY, ห้องที่ถูกจองมากที่สุด, ประเภทห้องที่มีรายได้สูงสุด, ช่องทางการจอง); bold frozen header row + per-column numFmt (`#,##0` for THB, `0.0"%"` for percent); RBAC via inline session check (manager/admin only — 401/403 otherwise). `app/manager/reports/page.tsx` "ส่งออก Excel" button changed `<button>` → `<a href="/api/manager/reports/export" download>` for native browser download. `scripts/test-phase31-xlsx-export.mts` — 10 smoke cases (ZIP signature, sheet names + counts, value round-trip, Thai UTF-8, bold + freeze styling). Closes gap where dead export button `reports/page.tsx:33-39` did nothing. Plan: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md`. |
 | 19 — Multi-refund aggregation (Phase 19 #19) | ✓ | `supabase/migrations/20260911_approve_refund_aggregate.sql` — replaces `approve_refund(uuid)` + `confirm_refund_session(text,text)` SECURITY DEFINER RPCs with aggregate logic: `sum(approved_refunds) >= sum(succeeded_payments)` → `'refunded'`, else `'partial_refund'`. Locks booking row via `PERFORM 1 ... FOR UPDATE` to serialise concurrent approvals. `supabase/migrations/20260912_fix_approve_refund_service_role.sql` — fix-up mirroring cancel_booking pattern: `coalesce(auth.role(),'') <> 'service_role'` auth bypass for admin scripts + integration tests; also fixes 42804 enum cast (`text → payment_status`). `app/actions/manager.ts:127-132` — removed action-layer override block (RPC is now source of truth); kept `partialRefund` flag for Stripe call + audit row + email template (per-refund label, not per-booking aggregate). `scripts/test-phase19-multi-refund.mts` — 7 cases pass: single full, single partial, two summing to full, two summing to partial, third tipping to full, idempotency double-decision, webhook aggregation with pre-existing refund. Closes gap where multiple partial refunds on same booking clobbered `'partial_refund'` back to `'refunded'` because old RPC wrote `'refunded'` unconditionally. Plan: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md`. |
+| 26 — /account profile page (Role User) | ✓ | New `app/account/profile/page.tsx` + `app/(account)/layout.tsx` + `lib/i18n/I18nProvider.tsx` + 6 client components in `components/account/` (ProfileCard, AvatarUploader, PersonalInfoForm, ChangePasswordForm, DeactivateAccountSection, AccountQuickLinks). Server actions in `app/actions/account.ts` (`updateProfileAction` / `changePasswordAction` / `deactivateAccountAction` / `uploadAvatarAction`) with R2 avatar upload + Supabase email-确认-then-soft-delete. `lib/data/supabase-account.ts` + `lib/data/account.ts` thin-re-export. `app/account/profile/page.tsx` features the 4-section profile (avatar + camera, personal info, password, danger zone) wrapped in TopNavBar/Footer with the same 2-column dashboard layout as staff pages. `accountTitle` + 12 sub-keys added to the `account` namespace in both dictionaries. `scripts/test-account-rls.mts` is out of scope (no automated test yet — visual smoke per CLAUDE.md R1). 4 commits on `origin/main` (2026-09-05). Plan: `C:\Users\suns9\.claude\plans\database-swirling-hoare.md`. |
+| 26 — i18n (TH/EN) full coverage | ✓ | `lib/i18n/` infrastructure: `config.ts` (Locale union, LOCALE_COOKIE), `dictionaries/th.ts`+`en.ts` (Widen<typeof th> pattern with mirrored shape, 600+ lines of localized strings across 12 namespaces), `t.ts` (getT server helper with placeholder substitution), `getLocale.ts` (precedence: cookie → profiles.locale → hotel_settings.locale_default → 'th'), `I18nProvider.tsx` + `useT.ts` (client context + hook). `setLocaleAction` server action (NEXT_LOCALE cookie + profiles.locale persistence + revalidate). `LanguageToggle` client component (2 forms, one per locale, aria-pressed). All 36 pages + 5 email templates + XLSX export headers + `lib/errors/translate.ts` threaded through `t()` or parallel maps. 12 commits on `origin/main` (2026-09-05). Plan: `C:\Users\suns9\.claude\plans\database-swirling-hoare.md`. |
+| 26 — UI polish: hover transitions + a11y | ✓ | Sitewide `@media (prefers-reduced-motion: reduce)` rule in `app/globals.css` (fixes 16 spinners + 87 transitions for WCAG 2.3.3). `<Card>` component extended with `lift` prop. Hover lift applied to 5 dashboard card files. Transition-colors duration-200 + focus-visible rings on 13 admin/manager icon buttons. Chevron/arrow slide on AccountQuickLinks + homepage. Standardized tab/pill transition durations. 6 commits on `origin/main` (2026-09-05). |
+| 26 — Account + booking validation | ✓ | `app/actions/account.ts:updateProfileAction` requires `bookerPhone` regex `/^[0-9]{10}$/` (was 9-10). `app/actions/booking.ts:createBookingSchema` + `app/actions/walk-in-booking.ts:walkInSchema` require `bookerPhone: regex /^[0-9]{10}$/`. `app/actions/auth.ts:signUp` already wrote to `profiles.locale`. 3 commits on `origin/main` (2026-09-05). |
+| 26 — Supabase email confirmation (Register) | ✓ | `app/actions/auth.ts:signUp` detects `data.session === null` (Supabase email confirmation required) and redirects to `/register?message=check_email&next=…` with `emailRedirectTo` set to `${origin}/auth/callback?next=…`. `app/(auth)/register/page.tsx` `mapInfoMessage()` reads `?message=` and passes an `infoMessage` prop to the form (banner is rendered above the form fields). Requires Supabase Dashboard toggle: Auth → Providers → Email → Confirm email = ON. The user's `profiles.locale` is updated by the OAuth-style callback on confirmation click. Single commit on `origin/main` (2026-09-05). |
 
-**Current HEAD**: TBD on `main` (Phase 19 #19 shipped — multi-refund aggregation; #29 + #31 also shipped earlier. Next: Phase 20 #26 notifications + #32 i18n.)
+**Current HEAD**: `10472c7` on `main` — Phase 26 (i18n + UI polish + /account + validation + email confirmation) shipped. 19+ new commits since Phase 19 #19. Next: Phase 27 backlog (notifications + shift scheduling UI + Stripe admin settings + Recharts migration).
 
 ---
 
@@ -83,6 +88,8 @@ Rules ละเอียดเต็มอยู่ใน `Rule.md` ที่ ro
 | Validation | `zod` | `3.25.76` | Input validation in server actions |
 | Date math | `date-fns` | `3.6.0` | Used in `lib/pricing.ts:calculateNights` |
 | Charts | `chart.js` + `react-chartjs-2` | `^4.5.1` / `^5.3.1` | Server-rendered charts (manager dashboard) |
+| Email | `resend` + `@react-email/components` | (latest) | Transactional email — booking confirm/receipt/cancel/refund/thank-you. `lib/email/resend.ts` writes `email_log` row first, then sends. Dev fallback: `console.log` when `RESEND_API_KEY` empty. |
+| Export | `exceljs` | (latest) | `app/api/manager/reports/export/route.ts` — streams `getReportsData()` as 6-sheet `.xlsx`. |
 | Dev | `eslint` | `^9` | Flat config + Next.js presets |
 | Dev | `pg` | `^8.23.0` | Direct Postgres for migration runner |
 | Dev | `dotenv` | `^16.6.1` | `.env.local` loading for scripts |
@@ -377,6 +384,28 @@ git push origin main     # specify branch
 
 - **Migration runner regex** — `scripts/run-migrations.mjs:54` มี alternation literal ของหมายเลข migration ที่อนุญาต (`/202608(27|29|30|31|32|33|34)_.*\.sql$/`). Migration ใหม่ที่หมายเลขอยู่นอก alternation จะถูก silently skip — `node scripts/run-migrations.mjs` exit 0 แต่ไม่ apply อะไร. ต้องเพิ่มหมายเลขใน regex ก่อนสร้างไฟล์ migration ใหม่เสมอ
 
+- **i18n dictionary mirror shape (Phase 26 lesson)** — `lib/i18n/dictionaries/en.ts` must mirror `th.ts` exactly. The structural type is `Widen<typeof th>` so adding a NEW key to `th.ts` without the matching `en.ts` entry surfaces a `Widen<...>`-related TS error at typecheck. **Pattern A (good):** both files use `as const` + identical namespacing — typecheck catches drift. **Pattern B (avoid):** `Record<string, string>` lets the EN dict silently miss keys. The `t()` helper falls back to the key string itself (`namespace.key`) when a key is missing in the active locale, so missing EN keys would render `home.heroTitle` literally in the UI — dev-friendly, but a real i18n hole. Always update BOTH dicts in the same commit.
+
+- **Widen<typeof th> vs DeepJoin (Phase 26 gotcha)** — `Widen<T>` recursively widens string literals to `string`, but the `DeepJoin` helper that walks the type must use the same param count as the call site. If you see `TS2314: Generic type 'DeepJoin' requires 2 type argument(s)`, check that `export type TKey = DeepJoin<Widen<typeof th>, ''>` (2 args) matches `type DeepJoin<T, Prefix extends string>` (2 params). Adding a 3rd unused param (e.g. `_Path: string[]`) breaks the call site until you remove it.
+
+- **`useT()` requires `<I18nProvider>` (Phase 26)** — any client component calling `useT()` must be inside an `<I18nProvider locale={…}>` in the React tree. Currently `app/layout.tsx` mounts the provider at the root with locale from `getLocale()`. If a future client component throws `useT() must be used inside <I18nProvider>`, it means the provider is missing from its parent chain (likely a new client-only layout that bypasses `app/layout.tsx`).
+
+- **`mapInfoMessage` was a dead-code trap (Phase 26 lesson)** — `app/(auth)/register/page.tsx:mapInfoMessage` was wired end-to-end (the `?message=check_email` URL param → `infoMessage` prop → banner in `RegisterForm.tsx`) but the `case 'check_email'` branch returned `undefined`. The form's banner block was dead code. Always verify end-to-end flows: the path from URL param to UI render. If a user-facing function is hooked up but always returns a falsy value, the symptom is silent (no crash, just a missing affordance). Fixed in `18c403d` — now returns the literal string `'check_email'` so the banner actually shows.
+
+- **`prefer-reduced-motion` is one global rule (Phase 26 commit `2a6492d`)** — a single `@media` block in `app/globals.css` covers every `transition-*` and `animate-spin` sitewide because Tailwind utilities are CSS classes. Future contributors adding new transitions do NOT need to remember to add the reduced-motion guard. If you need opt-out (e.g. for an essential loading indicator), wrap that specific element in a CSS module that overrides the rule (`@media (prefers-reduced-motion: reduce) { .my-loader { animation: none; } }`).
+
+- **Locale precedence is cookie → profile → hotel (Phase 26)** — `getLocale()` precedence: 1) `NEXT_LOCALE` cookie (set by `setLocaleAction`), 2) `profiles.locale` (authed user), 3) `hotel_settings.locale_default` (admin-configured), 4) `'th'` fallback. If a user switches language and the cookie is set, the cookie wins for 1 year — even after sign-out. To "forget" the preference, sign-out should also `cookieStore.delete(LOCALE_COOKIE)`. Currently we don't, so an anonymous user on a shared device keeps the last user's preference.
+
+- **XLSX column headers + sheet names come from inline EN/TH maps, NOT from the dictionary (Phase 26 commit `2663118`)** — `app/api/manager/reports/export/route.ts` keeps its own `XLSX_LABELS: Record<Locale, Record<string, string>>` map because ExcelJS column objects are server-side data, not React tree nodes that `t()` can read. If you add a new column/sheet, update BOTH the TH and EN branches of that map in the same commit.
+
+- **Dead `#` placeholder links in `components/account/AccountQuickLinks.tsx`** — the 'favorite rooms' and 'my promotions' items render as `<a href="#">`. They have full hover/click affordance but do nothing. UX-confusing. Either remove them (with a TODO comment) or stub the routes. Currently both items remain placeholders awaiting Phase 27 (loyalty + user-promotions features per the Phase 20 #20 backlog).
+
+- **Staff dashboard sub-pages still mostly Thai (Phase 26 deferred)** — `app/manager/{bookings,housekeeping,reports,reviews,settings,staff,promotions,rates}/page.tsx` + 8 reception sub-pages + 4 housekeeper sub-pages + 5 admin sub-pages are still Thai-only. The 4 main dashboards (manager/reception/housekeeper/admin root pages) are localized but most detail/sub-pages aren't. Recipe from Phase 26 commit 4 applies — pass `getLocale()` + `t()` to each page and swap literals. This is a follow-up batch; estimated 30-50 more commits of mechanical class additions.
+
+- **Email templates (4 of 5) not yet locale-aware (Phase 26 commit `2663118` only touched `booking-confirmation`)** — `lib/email/templates/payment-receipt.tsx`, `cancellation-notice.tsx`, `refund-notice.tsx`, `checkout-thank-you.tsx` still hardcode Thai. Same recipe: add `locale?: Locale` prop, EN/TH `Strings` map per template, `<Html lang={LOCALE_BCP47[locale]}>`, formatted currency. Server actions that call `sendEmail()` need to read locale from cookie and pass it in. Same `email.*` dictionary keys already exist in the `en.ts` mirror.
+
+- **Server actions in `app/actions/{booking,walk-in-booking,account}` still pass Thai fallback only (Phase 26 deferred)** — `signIn` was localized (commit `2bf4e31`); `signUp` + `updateProfileAction` + `changePasswordAction` + `deactivateAccountAction` + `uploadAvatarAction` still use hardcoded Thai strings for inline validation. Recipe: read `cookies()`, call `translateSupabaseError(error.message, locale)`, pass `locale` to all the `t()` calls in inline validation.
+
 - **Backing booking columns (Phase 12)** — `bookings.channel` (default `'web'`, check constraint web/walk_in/phone/ota) และ `bookings.room_unit_id` (nullable FK → `room_units`) ต้องการ migration `20260834_bookings_channel_and_unit.sql`. Reception check-in ต้อง select unit จาก `<select>` ก่อน update — ถ้าไม่ใส่ `room_unit_id` ตอน check-in, `/manager/bookings` จะแสดง "—" แทน unit label. ตัว service-role action `createWalkInBooking` ตั้ง `channel='walk_in'`, `createBooking` ตั้ง `channel='web'`; ถ้ามี OTA/phone channel ต้องเพิ่มเส้นทาง insert ใหม่
 
 - **Pricing defaults vs DB (Phase 12 + Phase 16)** — `lib/pricing.ts:DEFAULT_PRICING` คงค่า 0.07 / 150 ไว้เป็น fallback สำหรับ client preview (BookingWidget, WalkInForm). ทุก server-action caller ใหม่ของ `calculatePrice` ต้อง pass `settings` จาก `getHotelSettings()` เสมอ — ใช้ `getPricingConstants()` ใน `lib/data/manager.ts` แทน extract block เอง (Phase 16 extracted). Wired แล้วใน: `app/actions/booking.ts`, `app/actions/walk-in-booking.ts`, `app/(booking)/bookings/new/page.tsx` → `BookingForm`. `BookingForm` แสดง label เป็น `${Math.round(settings.taxRate * 100)}%` และ `${formatTHB(settings.resortFeePerNight)}/คืน` — ห้าม hardcode "ภาษี 7%" กลับเข้าไป
@@ -430,10 +459,19 @@ git push origin main     # specify branch
 **No `TODO`/`FIXME`/`HACK`/`XXX` markers found** ใน `app/`, `components/`, `lib/`, `data/`, `supabase/migrations/`, `scripts/`, หรือ config files (verified by grep 2026-08-25)
 
 ### Known gaps (documented in code as comments)
-1. **`partial_refund`** enum value exists but no code path writes it
+1. ~~**`partial_refund`** enum value exists but no code path writes it~~ — fixed in Phase 19 #19 (commit `23deb91`); aggregate RPC writes `partial_refund` when sum(approved) < sum(succeeded)
 2. **`no_show`** was added to `booking_status` enum live (DB), not in migration file
-3. **`refund_requests` no INSERT policy** — created by booking cancel flow (out of scope for Phase 9)
+3. ~~**`refund_requests` no INSERT policy**~~ — fixed in Phase 20 #24; `cancel_booking()` RPC inserts directly with service_role bypass
 4. **Phase 7/8 admin pages** still have some pages that may not have all CRUD wired — verify before extending
+
+### Phase 26 deferred (i18n + UI polish follow-ups — covered by the 6 i18n commits + 5 polish commits already shipped)
+1. **4 of 5 email templates** still hardcode Thai (Phase 26 commit `2663118` only touched `booking-confirmation`); see Common Pitfalls above
+2. **Server actions** in `app/actions/{booking,walk-in-booking,account}` still pass Thai fallback only (Phase 26 deferred)
+3. **Staff dashboard sub-pages** still mostly Thai — only the 4 main dashboards were localized
+4. **`AccountQuickLinks`** has 2 dead `#` placeholder links (favorite rooms, my promotions) awaiting Phase 27 features
+5. **Locale cookie is never deleted on sign-out** — anonymous user on shared device keeps last user's preference
+6. **No `<Modal>` primitive** — 4 hand-rolled dialogs (`DeleteReviewButton`, `HideReviewButton`, `ResolveDamageButton`, `MaintenanceReportModal`) + 1 new (`CheckEmailModal`) share near-identical backdrop markup. Refactor to a reusable primitive when a 6th dialog lands.
+7. **No toast / snackbar system** — closest precedent is the inline banner pattern. Awaiting Phase 27 notification system (CLAUDE.md gap #26).
 
 ### Soft issues
 - ~~`data/mock-manager.json` + `data/mock-reviews.json` ยังใช้ hardcoded test UIDs~~ — fixed: all `data/mock-*.json` deleted with mock layer
@@ -458,24 +496,35 @@ git push origin main     # specify branch
 ### Phase 20 — Production-launch blocks (Top 10 critical)
 | Task | Block | Severity | File:line |
 |---|---|---|---|
-| #23 | **Overbooking prevention** | 🔴 Critical | `app/actions/booking.ts:36-78` validateแค่ `is_active + max_guests` — ไม่เช็ค availability, 0 EXCLUDE/gist constraints |
-| #24 | **Cancellation policy enforcement** | 🔴 Critical | `app/actions/booking.ts:178-193` แค่ set `cancelled` — ignore `free_cancel_hours` + `refund_pct` ที่มีอยู่ |
-| #25 | **Email infrastructure** | 🔴 Critical | 0 hits: resend/sendgrid/nodemailer/postmark/ses — ไม่มี confirmation/receipt/refund notice |
+| #23 | **Overbooking prevention** | 🔴 Critical | ✅ Done in Phase 19 — `create_booking(...)` SECURITY DEFINER RPC + `bookings_no_unit_overlap` EXCLUDE constraint + 7 tests. See Phase 19 #19 row above. |
+| #24 | **Cancellation policy enforcement** | 🔴 Critical | ✅ Done in Phase 20 — `cancel_booking(uuid, boolean, numeric)` RPC + 7 tests. See Phase 20 row above. |
+| #25 | **Email infrastructure** | 🔴 Critical | ✅ Done in Phase 20 #25 — Resend + 5 React Email templates + `email_log` table. See Phase 25 row above. |
 | #26 | **Notification layer** | 🟠 High | Staff bell `TopNavBar.tsx:34-39` dead button — ไม่มี `notifications` table |
 | #27 | **CI/CD + automated tests** | 🟠 High | 0 `.github/`; 1 unrunnable test (`lib/pricing/seasons.test.mts`); 30 manual smoke scripts |
 | #28 | **Error monitoring + analytics** | 🟠 High | 0 Sentry/PostHog/Plausible — money paths invisible |
-| #29 | **App-level rate limiting** | 🟠 High | Only Supabase built-in auth throttle — login/register/search unthrottled |
-| #30 | **Compliance + 404 fixes** | 🟠 High | No 2FA/GDPR/cookie consent + 3 live 404s (`/privacy`, `/terms`, `/about`) |
-| #31 | **Document generation (PDF/Excel)** | 🟡 Medium | Dead buttons `reports/page.tsx:26-39` — 0 jspdf/react-pdf |
-| #32 | **i18n + shift scheduling UI** | 🟡 Medium | TH/EN toggle dead (`TopNavBar.tsx:61-73`); `staff_shifts` read-only grid |
+| #29 | **App-level rate limiting** | 🟠 High | ✅ Done in Phase 20 — `lib/rate-limit.ts` token bucket + `proxy.ts` enforcement + 10 tests |
+| #30 | **Compliance + 404 fixes** | 🟠 High | Partially done (Phase 20 #30 = stub pages) — 2FA / GDPR / cookie consent still TODO |
+| #31 | **Document generation (PDF/Excel)** | 🟡 Medium | Excel done in Phase 20 #31 — PDF still TODO |
+| #32 | **i18n + shift scheduling UI** | 🟡 Medium | i18n done (Phase 26) — `staff_shifts` write UI still TODO |
+
+### Phase 27 — Backlog (next round of work, after Phase 26 polish)
+1. **Phase 27.A** — Modal primitive (`components/ui/Modal.tsx`) — consolidate the 5 hand-rolled dialogs
+2. **Phase 27.B** — Toast / snackbar system — replace all `alert(...)` calls in client components
+3. **Phase 27.C** — Server actions in `app/actions/{booking,walk-in-booking,account}` thread `locale` into `t()` + `translateSupabaseError`
+4. **Phase 27.D** — Remaining 4 email templates + locale-aware server actions that call `sendEmail()`
+5. **Phase 27.E** — Staff dashboard sub-pages (8 manager + 8 reception + 4 housekeeper + 5 admin sub-pages) — bulk i18n pass
+6. **Phase 27.F** — `AccountQuickLinks` remove dead `#` placeholders OR implement favorite rooms + user promotions features
+7. **Phase 27.G** — Locale cookie deletion on sign-out
+8. **Phase 27.H** — Replace `alert()` calls + a few inline error toasts with the new toast system
 
 ### Quick wins (≤1 commit, no breaking change)
-- **#30 (404 fix only)** — add stub `/privacy`, `/terms`, `/about` pages (~30 min)
+- **#30 (404 fix only)** — ✅ Done in Phase 20 #30 — stub pages
 - **#28 (Sentry only)** — install SDK + wire `global-error.tsx` (~30 min)
-- **#17 (Phase 19-A)** — SQL migration only, no code change (~15 min)
+- **#17 (Phase 19-A)** — ✅ Done in Phase 19 #19 — multi-refund aggregation (commit `23deb91`)
+- **#32 (i18n only)** — ✅ Done in Phase 26 — 12 commits shipped
 
-### Recommended Phase 20 sequence (when resumed)
-**Block 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10** per criticality. Block 1 (overbooking) is the only correctness bug in shipped code; Block 2-3 close contractual/UX gaps; Block 4-10 are hardening for production.
+### Recommended Phase 27 sequence (when resumed)
+27.A (1-2h, 1 commit) → 27.C (1-2h, 1 commit) → 27.D (1-2h, 1 commit) → 27.B (3-4h, 2 commits) → 27.E (4-6h, bulk i18n across 25 files) → 27.F (cleanup, 30 min) → 27.G (10 min) → 27.H (30 min)
 
 ### Reference files (gap evidence)
 - Plan: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md` (full Top 10 + 7-category audit)
@@ -489,11 +538,12 @@ Saved memories in `~/.claude/projects/Y--Final/memory/`:
 - `nextjs16-call-server-action-via-http.md` — `$ACTION_ID_<id>` field pattern
 - `zenzero-gitignore-pushed.md` — .gitignore now committed (since 2026-08-22)
 - `zenzero-local-only-files.md` — list of files kept in working tree only
-- `zenzero-liststub-pitfall.md` — check supabase-*.ts for `return []` stubs
+- `zenzero-liststub-pitfall.md` — ~~check supabase-*.ts for `return []` stubs~~ obsolete; mock layer deleted, dispatcher is direct re-export
 - `zenzero-rls-recursion-fix.md` — use is_staff()/has_role() helpers
 - `zenzero-phase9-live-verified.md` — 43/43 smoke tests passed
 - ~~`zenzero-usemock-data-wrapper.md`~~ — obsolete; mock layer deleted
 - `zenzero-test-cleanup-needs-service-role.md` — admin RLS blocks DELETE
+- `zenzero-stripe-test-fixture-pitfalls.md` — PI must be confirmed before refund; refunds.list() .data is the array; server actions HTTP 200 ≠ success
 
 ---
 
@@ -508,20 +558,27 @@ Saved memories in `~/.claude/projects/Y--Final/memory/`:
 | Pricing logic | `lib/pricing.ts`, `lib/pricing/seasons.ts` |
 | Supabase clients | `lib/supabase/server.ts`, `client.ts`, `proxy.ts`, `admin.ts`, `getSession.ts` |
 | **RBAC `requireRole` helper** | `lib/auth/require.ts` (consolidates 11 `requireXxx` — Phase 16) |
-| **Supabase error helpers** | `lib/errors/supabase.ts` (`wrapSupabaseError` + `actionFail` — Phase 16) |
+| **Supabase error helpers** | `lib/errors/supabase.ts` (`wrapSupabaseError` + `actionFail` — Phase 16 + Phase 26 EN map) |
 | **Shared UUID validator** | `lib/ids.ts` (`UUID_RE` + `isUuid` — Phase 16, replaces 2 duplicate defs) |
 | **`sanitizeNext` helper** | `lib/auth/sanitize.ts` (relocated from `app/auth/next-utils.ts` — Phase 16) |
+| **i18n infrastructure** | `lib/i18n/{config,getLocale,t,I18nProvider,useT}.ts` + `dictionaries/{th,en}.ts` (Phase 26) |
+| **Language toggle** | `components/layout/LanguageToggle.tsx` (client island) + `app/actions/locale.ts:setLocaleAction` |
+| **Email + R2 helpers** | `lib/email/resend.ts` (sendEmail + email_log) + `lib/r2/client.ts` (R2 SDK) + `lib/r2/publicUrl.ts` (URL builder) |
 | **Refactor plan file** | `C:\Users\suns9\.claude\plans\nifty-chasing-raccoon.md` (9-commit execution log + deferred items) |
-| Mock data toggle | `lib/data/manager.ts:4`, `lib/data/rooms.ts:2`, `lib/env.ts` |
+| **i18n plan file** | `C:\Users\suns9\.claude\plans\database-swirling-hoare.md` (full coverage: 6 commits + deferred items) |
+| Mock data toggle | (obsolete — mock layer deleted) `lib/data/manager.ts:4` re-exports Supabase impl |
 | R2 image URLs | `lib/r2/publicUrl.ts` |
 | Design tokens | `app/globals.css` (`@theme {}`) |
+| **i18n style token** | `bg-secondary-container`, `rounded-2xl`, `shadow-level-1/2` Tailwind v4 design tokens used by all modals |
 | Migration runner | `scripts/run-migrations.mjs:53-55` (filter regex) |
 | RLS helpers | `db-schemas/20260820_fix_rls_recursion.sql:7-34` |
 | Refund RPC | `db-schemas/20260833_approve_refund_rpc.sql:18` |
+| Cancel-booking RPC | `db-schemas/20260906_cancel_booking_rpc.sql` |
 | Booking constraint | `db-schemas/20260819_bookings.sql:47` (`chk_dates`) |
 | Housekeeping trigger | `db-schemas/20260821_housekeeping_tasks.sql:28` |
 | **RBAC test suite** | `scripts/test-phase11-rbac.mts` (48/48 passing) |
 | **RBAC fixture setup** | `scripts/_rbac-fixture.mts` (idempotent — resets test user roles + creates missing staff users) |
-| **OAuth callback route** | `app/auth/callback/route.ts` (exchange code → set session cookie → redirect by role) |
+| **OAuth callback route** | `app/auth/callback/route.ts` (exchange code → set session cookie → redirect by role; handles BOTH OAuth and email-confirmation links) |
 | **Google sign-in server action** | `app/actions/auth.ts:signInWithGoogle()` + LoginForm/RegisterForm `handleGoogle` |
 | **Google OAuth provider setup** | Supabase Dashboard → Authentication → Providers → Google (toggle ON + paste OAuth Client ID/Secret จาก Google Cloud Console) |
+| **Supabase email-confirmation setting** | Supabase Dashboard → Auth → Providers → Email → "Confirm email" ON |
