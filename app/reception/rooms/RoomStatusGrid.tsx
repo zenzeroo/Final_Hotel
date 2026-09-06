@@ -63,7 +63,7 @@ export function RoomStatusGrid({ rooms, statusMeta }: RoomStatusGridProps) {
             type="button"
             onClick={() => handleStatusChange(room.id, room.status)}
             disabled={isPending}
-            className={`text-left p-4 rounded-2xl border-2 ${meta.bgColor} transition-all hover:shadow-(--shadow-ambient) disabled:opacity-50`}
+            className={`text-left p-4 rounded-2xl border-2 ${meta.bgColor} transition-all duration-300 hover:shadow-(--shadow-ambient) disabled:opacity-50`}
           >
             <div className="flex items-center justify-between mb-2">
               <span className={`font-mono text-body-md font-bold ${meta.color}`}>
