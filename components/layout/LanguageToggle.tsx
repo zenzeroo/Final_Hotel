@@ -58,7 +58,7 @@ function SubmitButton({ active, label }: { active: boolean; label: string }) {
       className={
         active
           ? 'px-2 py-1 text-primary font-semibold'
-          : 'px-2 py-1 text-on-surface-variant hover:text-primary disabled:opacity-100'
+          : 'px-2 py-1 text-on-surface-variant hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary rounded disabled:opacity-100'
       }
     >
       {label}

@@ -69,7 +69,7 @@ export default function PrivacyPage() {
                   <li>ขอให้โอนย้ายข้อมูล (Data Portability)</li>
                 </ul>
                 <p>
-                  ติดต่อเราได้ที่ <a href="mailto:privacy@zenzero.com" className="text-primary hover:text-secondary">privacy@zenzero.com</a>
+                  ติดต่อเราได้ที่ <a href="mailto:privacy@zenzero.com" className="text-primary hover:text-secondary transition-colors duration-200">privacy@zenzero.com</a>
                 </p>
               </Section>
 

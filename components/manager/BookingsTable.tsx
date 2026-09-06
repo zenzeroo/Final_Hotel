@@ -84,7 +84,7 @@ export function BookingsTable({ bookings, activeCount }: BookingsTableProps) {
                   <td className="py-3 pr-4">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 text-caption text-primary hover:text-secondary"
+                      className="inline-flex items-center gap-1 text-caption text-primary hover:text-secondary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary rounded-md"
                       title="แก้ไขพิเศษ"
                     >
                       <MaterialIcon name="edit" size={16} />

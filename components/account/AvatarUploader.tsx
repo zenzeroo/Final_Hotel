@@ -65,7 +65,7 @@ export function AvatarUploader({ avatarKey, fullName }: AvatarUploaderProps) {
         type="button"
         aria-label="เปลี่ยนรูปโปรไฟล์"
         onClick={handlePick}
-        className="absolute bottom-0 right-0 bg-primary text-secondary-container w-9 h-9 rounded-full flex items-center justify-center border-2 border-surface-container-lowest hover:bg-primary-container transition-colors"
+        className="absolute bottom-0 right-0 bg-primary text-secondary-container w-9 h-9 rounded-full flex items-center justify-center border-2 border-surface-container-lowest hover:bg-primary-container transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         <MaterialIcon name="photo_camera" size={18} />
       </button>

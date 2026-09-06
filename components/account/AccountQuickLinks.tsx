@@ -21,7 +21,7 @@ export function AccountQuickLinks() {
       {links.map((link) => {
         const isPlaceholder = link.href === '#'
         const className =
-          'flex items-center justify-between py-3 first:pt-0 last:pb-0 text-on-surface hover:text-primary transition-colors'
+          'group flex items-center justify-between py-3 first:pt-0 last:pb-0 text-on-surface hover:text-primary transition-colors duration-200'
         const content = (
           <>
             <span className="flex items-center gap-3 font-body-md text-body-md">
@@ -30,7 +30,7 @@ export function AccountQuickLinks() {
             </span>
             <MaterialIcon
               name="chevron_right"
-              className="text-on-surface-variant"
+              className="text-on-surface-variant transition-transform duration-200 group-hover:translate-x-1"
               size={18}
             />
           </>

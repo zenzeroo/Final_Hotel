@@ -31,7 +31,7 @@ export function DeleteReviewButton({ reviewId, guestName }: DeleteReviewButtonPr
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-caption text-error hover:bg-error-container disabled:opacity-50"
+        className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-caption text-error hover:bg-error-container transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-error disabled:opacity-50"
       >
         <MaterialIcon name="delete" size={14} />
         ลบถาวร
@@ -68,7 +68,7 @@ export function DeleteReviewButton({ reviewId, guestName }: DeleteReviewButtonPr
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={pending}
-                className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-surface-container-low disabled:opacity-50"
+                className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50"
               >
                 ยกเลิก
               </button>

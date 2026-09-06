@@ -62,7 +62,7 @@ export function MaintenanceReportModal({ roomUnits }: { roomUnits: RoomUnitBasic
           <div className="bg-surface-container-lowest rounded-xl shadow-level-2 max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-headline-sm text-headline-sm text-primary">แจ้งปัญหาการซ่อมบำรุง</h2>
-              <button onClick={() => setIsOpen(false)} className="p-1 rounded-md hover:bg-surface-container">
+              <button onClick={() => setIsOpen(false)} className="p-1 rounded-md hover:bg-surface-container transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary">
                 <MaterialIcon name="close" size={20} />
               </button>
             </div>
@@ -100,8 +100,8 @@ export function MaintenanceReportModal({ roomUnits }: { roomUnits: RoomUnitBasic
               </div>
               {error && <p className="text-body-md text-error">{error}</p>}
               <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setIsOpen(false)} className="flex-1 px-4 py-2 border border-outline-variant rounded-md text-body-md text-primary hover:bg-surface-container">ยกเลิก</button>
-                <button type="submit" disabled={isPending} className="flex-1 px-4 py-2 bg-primary text-secondary rounded-md text-caption uppercase tracking-wider hover:bg-primary-container disabled:opacity-50">
+                <button type="button" onClick={() => setIsOpen(false)} className="flex-1 px-4 py-2 border border-outline-variant rounded-md text-body-md text-primary hover:bg-surface-container transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary">ยกเลิก</button>
+                <button type="submit" disabled={isPending} className="flex-1 px-4 py-2 bg-primary text-secondary rounded-md text-caption uppercase tracking-wider hover:bg-primary-container transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50">
                   {isPending ? 'กำลังส่ง...' : 'ส่ง'}
                 </button>
               </div>

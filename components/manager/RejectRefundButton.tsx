@@ -31,7 +31,7 @@ export function RejectRefundButton({ refundId }: RejectRefundButtonProps) {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-outline text-caption text-primary hover:bg-surface-container-low"
+        className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-outline text-caption text-primary hover:bg-surface-container-low transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         ปฏิเสธ
       </button>
@@ -60,7 +60,7 @@ export function RejectRefundButton({ refundId }: RejectRefundButtonProps) {
         <button
           type="submit"
           disabled={pending || !reason.trim()}
-          className="px-2 py-1 rounded-md bg-error text-on-error text-caption font-semibold disabled:opacity-50"
+          className="px-2 py-1 rounded-md bg-error text-on-error text-caption font-semibold hover:bg-error/90 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-error disabled:opacity-50"
         >
           {pending ? '...' : 'ยืนยัน'}
         </button>
@@ -72,7 +72,7 @@ export function RejectRefundButton({ refundId }: RejectRefundButtonProps) {
             setError(null)
           }}
           disabled={pending}
-          className="px-2 py-1 rounded-md text-caption text-on-surface-variant hover:bg-surface-container-low disabled:opacity-50"
+          className="px-2 py-1 rounded-md text-caption text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50"
         >
           ยกเลิก
         </button>
