@@ -69,8 +69,13 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // 20260910 fixes Phase 19 #18 — confirm_refund_session RPC now preserves
 // payment_status='partial_refund' instead of unconditionally clobbering to
 // 'refunded' on charge.refunded webhook arrival (action-layer override race).
+// 20260913 enforces NOT NULL on profiles.phone and bookings.booker_phone
+// (backfilled to '0000000000'); updates handle_new_user() to insert sentinel
+// for OAuth users missing phone in metadata.
+// 20260914 updates handle_new_user() to copy birthdate from
+// raw_user_meta_data (NULL when missing — OAuth path stays nullable).
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12)_.*\.sql$/.test(f))
+  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 
