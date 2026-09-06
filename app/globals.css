@@ -181,3 +181,19 @@ h2.display-lg {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-outline);
 }
+
+/* Phase 26 — a11y. Honor the OS-level reduced-motion preference so users
+ * with vestibular disorders (or who simply prefer minimal animation)
+ * don't get spinners spinning or transitions sliding. Sitewide because
+ * 16 spinners + ~87 transition/hover declarations all live as Tailwind
+ * utility classes; one global rule covers everything. WCAG 2.3.3. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
