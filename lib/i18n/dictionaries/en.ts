@@ -116,6 +116,8 @@ export const en: Dictionary = {
     confirmPassword: 'Confirm password',
     passwordMinLength: 'At least 8 characters',
     passwordMismatch: 'Passwords do not match',
+    birthdate: 'Date of birth',
+    birthdateMinAge: 'Must be at least 18 years old',
     forgotPassword: 'Forgot password?',
     termsAgree: 'I agree to the Terms of Service',
     checkEmailModalTitle: 'Verification email sent',

@@ -112,6 +112,8 @@ export const th = {
     confirmPassword: 'ยืนยันรหัสผ่าน',
     passwordMinLength: 'อย่างน้อย 8 ตัวอักษร',
     passwordMismatch: 'รหัสผ่านยืนยันไม่ตรงกัน',
+    birthdate: 'วันเกิด',
+    birthdateMinAge: 'ต้องเป็นผู้มีอายุ 18 ปีขึ้นไป',
     forgotPassword: 'ลืมรหัสผ่าน?',
     termsAgree: 'ฉันยอมรับเงื่อนไขการให้บริการ',
     checkEmailModalTitle: 'ส่งอีเมลยืนยันแล้ว',

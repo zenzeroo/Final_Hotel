@@ -242,6 +242,7 @@ function fieldLabelLocalized(field: string, locale: Locale): string {
     bookerEmail: { th: 'อีเมล', en: 'email' },
     bookerPhone: { th: 'เบอร์โทรศัพท์', en: 'phone number' },
     phone: { th: 'เบอร์โทรศัพท์', en: 'phone number' },
+    birthdate: { th: 'วันเกิด', en: 'date of birth' },
     checkIn: { th: 'วันเช็คอิน', en: 'check-in date' },
     checkOut: { th: 'วันเช็คเอาท์', en: 'check-out date' },
     guests: { th: 'จำนวนผู้เข้าพัก', en: 'number of guests' },
