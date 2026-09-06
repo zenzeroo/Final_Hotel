@@ -113,6 +113,10 @@ export const en: Dictionary = {
     passwordMismatch: 'Passwords do not match',
     forgotPassword: 'Forgot password?',
     termsAgree: 'I agree to the Terms of Service',
+    checkEmailModalTitle: 'Verification email sent',
+    checkEmailModalBody: 'We\'ve sent a confirmation email to the email you used to register. Please check your inbox and click the link to activate your account.',
+    checkEmailModalOk: 'Got it',
+    checkEmailModalSpam: 'If you don\'t see the email, please check your spam folder.',
   },
 
   // Profile

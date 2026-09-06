@@ -11,9 +11,9 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
   const next = typeof searchParams.next === 'string' ? searchParams.next : '/'
   // Phase 14 — surface OAuth callback failures into the form banner.
   const errorMessage = mapOAuthError(searchParams.error, t)
-  // Phase 26 — surface the "check your email" message after the user
+  // Phase 26 — show the "check your email" modal after the user
   // submits signUp while email confirmation is required.
-  const infoMessage = mapInfoMessage(searchParams.message, t)
+  const showCheckEmailModal = mapInfoMessage(searchParams.message) === 'check_email'
 
   return (
     <main className="min-h-screen relative flex items-center justify-center px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-12">
@@ -51,7 +51,7 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
         <RegisterForm
           next={next}
           errorMessage={errorMessage}
-          infoMessage={infoMessage}
+          showCheckEmailModal={showCheckEmailModal}
         />
 
         <p className="mt-8 text-center text-body-md text-on-surface-variant">
@@ -85,19 +85,18 @@ function mapOAuthError(
 }
 
 /**
- * Phase 26 — map `?message=` to friendly strings (in active locale).
+ * Phase 26 — map `?message=` to a marker string. Returns the literal
+ * 'check_email' when the user just submitted signUp while Supabase
+ * email confirmation is enabled, so the calling page can decide to
+ * mount the CheckEmailModal.
  */
 function mapInfoMessage(
   message: string | string[] | undefined,
-  t: ReturnType<typeof getT>,
 ): string | undefined {
   const value = Array.isArray(message) ? message[0] : message
   switch (value) {
     case 'check_email':
-      // The 'check_email' message is a free-text label; we render the
-      // 'infoMessage' value as-is (already localized in some flows)
-      // and fall back to the dictionary when not provided.
-      return undefined
+      return 'check_email'
     default:
       return undefined
   }

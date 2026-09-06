@@ -109,6 +109,10 @@ export const th = {
     passwordMismatch: 'รหัสผ่านยืนยันไม่ตรงกัน',
     forgotPassword: 'ลืมรหัสผ่าน?',
     termsAgree: 'ฉันยอมรับเงื่อนไขการให้บริการ',
+    checkEmailModalTitle: 'ส่งอีเมลยืนยันแล้ว',
+    checkEmailModalBody: 'เราได้ส่งลิงก์ยืนยันไปยังอีเมลที่คุณใช้สมัครแล้ว กรุณาตรวจสอบกล่องข้อความและคลิกลิงก์เพื่อเปิดใช้งานบัญชี',
+    checkEmailModalOk: 'รับทราบ',
+    checkEmailModalSpam: 'หากไม่พบอีเมล กรุณาตรวจสอบในโฟลเดอร์สแปม',
   },
 
   // Profile
