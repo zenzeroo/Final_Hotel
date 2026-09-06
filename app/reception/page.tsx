@@ -154,7 +154,7 @@ function StatCard({
       ? 'bg-secondary/20 text-secondary'
       : 'bg-error/10 text-error'
   return (
-    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-(--shadow-ambient) border border-outline-variant">
+    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-(--shadow-ambient) border border-outline-variant transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1">
       <div className="flex items-center justify-between mb-3">
         <span className="text-caption text-on-surface-variant uppercase tracking-wider">{label}</span>
         <div className={`inline-flex items-center justify-center w-10 h-10 rounded-full ${colorClass}`}>

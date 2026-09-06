@@ -15,7 +15,7 @@ const ISSUE_LABELS: Record<string, string> = {
 export function MaintenanceReportCard({ report }: { report: MaintenanceReport }) {
   const unit = report.room_unit
   return (
-    <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5 border border-outline-variant/30">
+    <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5 border border-outline-variant/30 transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1">
       <div className="flex items-start justify-between mb-2">
         <h4 className="font-headline-sm text-headline-sm text-primary">{report.title}</h4>
         <SeverityBadge severity={report.severity} />

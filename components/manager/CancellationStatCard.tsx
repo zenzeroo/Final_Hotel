@@ -13,7 +13,7 @@ export function CancellationStatCard({
 }: CancellationStatCardProps) {
   const isDown = trendPct < 0
   return (
-    <div className="relative bg-primary text-secondary rounded-lg shadow-level-1 p-6 overflow-hidden">
+    <div className="relative bg-primary text-secondary rounded-lg shadow-level-1 p-6 overflow-hidden transition-all duration-300 hover:shadow-(--shadow-ambient-lg) hover:-translate-y-1">
       <div
         className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20"
         style={{

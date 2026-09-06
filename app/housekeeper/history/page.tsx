@@ -41,21 +41,21 @@ export default async function WorkHistoryPage({ searchParams }: { searchParams: 
       </nav>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
+        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6 transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1">
           <p className="text-label-md text-on-surface-variant uppercase tracking-wider mb-2">ห้องที่ทำความสะอาดแล้ว</p>
           <p className="font-display-lg text-display-lg text-primary">{data.roomsCleaned}</p>
         </div>
-        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
+        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6 transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1">
           <p className="text-label-md text-on-surface-variant uppercase tracking-wider mb-2">เวลาเฉลี่ย</p>
           <p className="font-display-lg text-display-lg text-primary">
             {data.avgMinutes !== null ? `${data.avgMinutes} นาที` : '—'}
           </p>
         </div>
-        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
+        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6 transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1">
           <p className="text-label-md text-on-surface-variant uppercase tracking-wider mb-2">วันนี้</p>
           <p className="font-display-lg text-display-lg text-primary">{data.tasksToday}</p>
         </div>
-        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
+        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6 transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1">
           <p className="text-label-md text-on-surface-variant uppercase tracking-wider mb-2">สัปดาห์นี้</p>
           <p className="font-display-lg text-display-lg text-primary">{data.tasksThisWeek}</p>
         </div>
