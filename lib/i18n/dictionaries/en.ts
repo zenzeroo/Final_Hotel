@@ -126,6 +126,19 @@ export const en: Dictionary = {
     checkEmailModalSpam: 'If you don\'t see the email, please check your spam folder.',
   },
 
+  // Payment success modal (Stripe Checkout redirect)
+  paymentSuccess: {
+    title: 'Payment successful',
+    body: 'Your payment has been completed. Thank you for choosing us.',
+    goHome: 'Go to home',
+    viewHistory: 'View booking history',
+    processingTitle: 'Verifying payment',
+    processingBody: 'Please wait while we confirm your payment.',
+    timeoutTitle: 'Taking longer than expected',
+    timeoutBody: 'Verification is taking longer than usual. Please try again.',
+    retry: 'Retry',
+  },
+
   // Profile
   profile: {
     title: 'My Profile',
@@ -211,6 +224,8 @@ export const en: Dictionary = {
     actions: 'Actions',
     cancelBooking: 'Cancel booking',
     cancelConfirm: 'Are you sure you want to cancel this booking?',
+    requestRefund: 'Request refund',
+    refundConfirm: 'Are you sure you want to request a refund?',
     cancelSuccess: 'Booking cancelled',
     cancellationPolicy: 'Cancellation policy',
     refundAmount: 'Refund amount',

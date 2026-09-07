@@ -122,6 +122,19 @@ export const th = {
     checkEmailModalSpam: 'หากไม่พบอีเมล กรุณาตรวจสอบในโฟลเดอร์สแปม',
   },
 
+  // Payment success modal (Stripe Checkout redirect)
+  paymentSuccess: {
+    title: 'ชำระเงินสำเร็จแล้ว',
+    body: 'การชำระเงินของคุณเสร็จเรียบร้อยแล้ว ขอบคุณที่ใช้บริการ',
+    goHome: 'ไปหน้าหลัก',
+    viewHistory: 'ไปดูประวัติการจอง',
+    processingTitle: 'กำลังยืนยันการชำระเงิน',
+    processingBody: 'กรุณารอสักครู่ ระบบกำลังตรวจสอบการชำระเงินของคุณ',
+    timeoutTitle: 'ใช้เวลานานผิดปกติ',
+    timeoutBody: 'การตรวจสอบใช้เวลานาน กรุณาลองใหม่อีกครั้ง',
+    retry: 'ลองใหม่',
+  },
+
   // Profile
   profile: {
     title: 'โปรไฟล์ของฉัน',
@@ -207,6 +220,8 @@ export const th = {
     actions: 'การดำเนินการ',
     cancelBooking: 'ยกเลิกการจอง',
     cancelConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้?',
+    requestRefund: 'ขอเงินคืน',
+    refundConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการขอเงินคืน?',
     cancelSuccess: 'ยกเลิกการจองเรียบร้อย',
     cancellationPolicy: 'นโยบายการยกเลิก',
     refundAmount: 'จำนวนเงินคืน',
