@@ -6,6 +6,7 @@ import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { ConfirmationActions } from './ConfirmationActions'
 import { WriteReviewPrompt } from './WriteReviewPrompt'
+import { PaymentSuccessModal } from '@/components/payment/PaymentSuccessModal'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
@@ -82,6 +83,8 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
   // The page is `force-dynamic`, so the fresh fetch already reflects the
   // webhook's payment_status flip on the success path — no extra RPC needed.
   const cancelledByUser = sp.cancelled === '1'
+  const stripeSuccess =
+    typeof sp.session_id === 'string' && sp.session_id.startsWith('cs_')
   const session = await getSession()
   if (!session) {
     return (
@@ -101,6 +104,17 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
   return (
     <>
       <TopNavBar />
+      {/* Stripe success modal — mounts when ?session_id=cs_… is in the
+          URL. Modal handles webhook race internally: polls every 2s
+          for up to 30s waiting for payment_status='paid' before
+          showing success content (Phase 27 — see PaymentSuccessModal
+          and pollBookingPaymentStatusAction in app/actions/payment.ts). */}
+      {stripeSuccess && (
+        <PaymentSuccessModal
+          bookingId={booking.id}
+          initialPaymentStatus={booking.payment_status}
+        />
+      )}
       <main className="flex-1 bg-background">
         <TransactionalHeader backHref="/bookings" />
         <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">

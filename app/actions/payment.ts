@@ -29,7 +29,9 @@ import {
   createPaymentSession,
   updatePaymentSessionId,
 } from '@/lib/data/payments'
+import { getBookingPaymentStatus } from '@/lib/data/bookings'
 import { UUID_RE } from '@/lib/ids'
+import { getSession } from '@/lib/supabase/getSession'
 import { translateSupabaseError } from '@/lib/errors/translate'
 
 export type ActionResult<T = void> =
@@ -261,4 +263,36 @@ export async function markCashPaidAction(
   } catch (e) {
     return actionFail(e, 'ไม่สามารถบันทึกการชำระเงินสดได้: ' + translateSupabaseError(e instanceof Error ? e.message : String(e)))
   }
+}
+
+/**
+ * Phase 27 — lightweight polling action for the Stripe success modal
+ * (components/payment/PaymentSuccessModal.tsx). Called from the client
+ * every 2s after Stripe redirects the user to
+ * /bookings/[id]?session_id=cs_… because the webhook may not have
+ * flipped bookings.payment_status to 'paid' yet at the time the page
+ * server-renders — the polling loop waits for that DB flip before
+ * swapping the modal from "processing" to "success".
+ *
+ * RLS-safe via the user-context createClient() — only returns data
+ * for bookings the caller owns. Returns null when the booking
+ * doesn't exist OR the user doesn't own it (RLS denies); the caller
+ * keeps polling until max-attempts (30s) and shows the timeout view.
+ */
+export async function pollBookingPaymentStatusAction(
+  bookingId: string,
+): Promise<
+  ActionResult<{
+    paymentStatus: 'unpaid' | 'paid' | 'refunded' | 'partial_refund' | null
+  }>
+> {
+  if (!bookingId || !UUID_RE.test(bookingId)) {
+    return { ok: false, error: 'รหัสการจองไม่ถูกต้อง' }
+  }
+  const session = await getSession()
+  if (!session) {
+    return { ok: false, error: 'กรุณาเข้าสู่ระบบ' }
+  }
+  const status = await getBookingPaymentStatus(bookingId, session.id)
+  return { ok: true, data: { paymentStatus: status } }
 }

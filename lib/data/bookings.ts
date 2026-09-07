@@ -107,6 +107,35 @@ export async function getBookingById(
 }
 
 /**
+ * Lightweight RLS-safe payment_status fetch used by the Stripe success
+ * modal polling (app/actions/payment.ts:pollBookingPaymentStatusAction).
+ * Selects only the payment_status column — no joins — so the modal
+ * can poll every 2s without heavy DB load.
+ *
+ * Returns null when the booking doesn't exist OR the user doesn't own
+ * it (RLS denies) — both are indistinguishable to the caller, which
+ * is fine for UX (just keep polling / show timeout).
+ */
+export async function getBookingPaymentStatus(
+  bookingId: string,
+  userId: string,
+): Promise<'unpaid' | 'paid' | 'refunded' | 'partial_refund' | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('bookings')
+    .select('payment_status')
+    .eq('id', bookingId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  return (data?.payment_status as
+    | 'unpaid'
+    | 'paid'
+    | 'refunded'
+    | 'partial_refund'
+    | null) ?? null
+}
+
+/**
  * Get default cancellation policy.
  */
 export async function getDefaultCancellationPolicy(): Promise<CancellationPolicy | null> {
