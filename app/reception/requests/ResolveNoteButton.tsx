@@ -1,8 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { AlertModal } from '@/components/ui/AlertModal'
 
 interface ResolveNoteButtonProps {
   noteId: string
@@ -11,6 +12,7 @@ interface ResolveNoteButtonProps {
 export function ResolveNoteButton({ noteId }: ResolveNoteButtonProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [alertMessage, setAlertMessage] = useState<string | null>(null)
 
   const handleClick = () => {
     startTransition(async () => {
@@ -23,7 +25,7 @@ export function ResolveNoteButton({ noteId }: ResolveNoteButtonProps) {
         .eq('id', noteId)
 
       if (error) {
-        alert('ไม่สามารถอัปเดต: ' + error.message)
+        setAlertMessage('ไม่สามารถอัปเดต: ' + error.message)
         return
       }
 
@@ -32,18 +34,23 @@ export function ResolveNoteButton({ noteId }: ResolveNoteButtonProps) {
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={isPending}
-      className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-secondary text-caption font-semibold uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60"
-    >
-      {isPending ? (
-        <span className="inline-block w-3 h-3 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-      ) : (
-        <MaterialIcon name="check" size={14} />
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={isPending}
+        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-secondary text-caption font-semibold uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60"
+      >
+        {isPending ? (
+          <span className="inline-block w-3 h-3 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <MaterialIcon name="check" size={14} />
+        )}
+        ปิดงาน
+      </button>
+      {alertMessage && (
+        <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
       )}
-      ปิดงาน
-    </button>
+    </>
   )
 }

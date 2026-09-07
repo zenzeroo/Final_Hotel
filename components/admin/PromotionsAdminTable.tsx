@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import type { Promotion } from '@/lib/data/types'
 import { formatDiscount } from '@/lib/pricing'
 import { TogglePromotionButton } from '@/components/manager/TogglePromotionButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { deletePromotionAction } from '@/app/actions/promotions'
 
 interface PromotionsAdminTableProps {
@@ -31,26 +32,56 @@ function isUpcoming(p: Promotion, now: Date): boolean {
 
 function DeleteButton({ id, code }: { id: string; code: string }) {
   const [pending, startTransition] = useTransition()
+  const [confirmMessage, setConfirmMessage] = useState<string | null>(null)
+
+  async function handleConfirm() {
+    const fd = new FormData()
+    fd.set('id', id)
+    setConfirmMessage(null)
+    startTransition(async () => {
+      await deletePromotionAction(fd)
+    })
+  }
+
   return (
-    <form
-      action={(fd) => {
-        if (!confirm(`ลบโปรโมชั่น "${code}"? การกระทำนี้ไม่สามารถยกเลิกได้`)) return
-        startTransition(async () => {
-          await deletePromotionAction(fd)
-        })
-      }}
-      className="inline"
-    >
-      <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        disabled={pending}
-        title={`ลบ ${code}`}
-        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-error hover:bg-error-container transition-colors disabled:opacity-60"
+    <>
+      <form
+        action={(fd) => {
+          // Form action kept for keyboard/screen-reader submission; in
+          // practice the CenterModal/ConfirmModal path runs first.
+          void fd
+          setConfirmMessage(
+            `ลบโปรโมชั่น "${code}"? การกระทำนี้ไม่สามารถยกเลิกได้`,
+          )
+        }}
+        className="inline"
       >
-        <MaterialIcon name="delete" size={18} />
-      </button>
-    </form>
+        <input type="hidden" name="id" value={id} />
+        <button
+          type="button"
+          onClick={() =>
+            setConfirmMessage(
+              `ลบโปรโมชั่น "${code}"? การกระทำนี้ไม่สามารถยกเลิกได้`,
+            )
+          }
+          disabled={pending}
+          title={`ลบ ${code}`}
+          className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-error hover:bg-error-container transition-colors disabled:opacity-60"
+        >
+          <MaterialIcon name="delete" size={18} />
+        </button>
+      </form>
+      {confirmMessage && (
+        <ConfirmModal
+          open
+          body={confirmMessage}
+          variant="danger"
+          okLabel="ลบ"
+          onCancel={() => setConfirmMessage(null)}
+          onConfirm={handleConfirm}
+        />
+      )}
+    </>
   )
 }
 

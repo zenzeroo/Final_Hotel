@@ -6,6 +6,8 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { cancelBooking } from '@/app/actions/booking'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { AlertModal } from '@/components/ui/AlertModal'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
 import { useT, useLocale } from '@/lib/i18n/useT'
@@ -54,18 +56,26 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
   const t = useT()
   const locale = useLocale()
   const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
+  const [confirmBookingId, setConfirmBookingId] = useState<string | null>(null)
+  const [alertMessage, setAlertMessage] = useState<string | null>(null)
 
   const activeBookings = bookings.filter((b) => b.status !== 'cancelled')
   const cancelledBookings = bookings.filter((b) => b.status === 'cancelled')
 
   const visible = tab === 'active' ? activeBookings : cancelledBookings
 
-  const handleCancel = (bookingId: string) => {
-    if (!confirm(t('bookingDetail.cancelConfirm'))) return
+  function handleCancel(bookingId: string) {
+    setConfirmBookingId(bookingId)
+  }
+
+  function handleConfirm() {
+    const bookingId = confirmBookingId
+    setConfirmBookingId(null)
+    if (!bookingId) return
     startTransition(async () => {
       const result = await cancelBooking(bookingId)
       if (result?.error) {
-        alert(result.error)
+        setAlertMessage(result.error)
         return
       }
       const refund = Number(result.refundAmount ?? 0)
@@ -75,13 +85,13 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
         refund > 0
           ? `${t('bookingDetail.cancelSuccess')} (${policy}) — ${t('bookingDetail.refundAmount')}: ${refund.toLocaleString(localeBcp)} ${t('bookingDetail.penalty')}: ${penalty.toLocaleString(localeBcp)}`
           : `${t('bookingDetail.cancelSuccess')} — ${t('bookingDetail.refundAmount')}: 0`
-      alert(summary)
+      setAlertMessage(summary)
       router.refresh()
     })
   }
 
   return (
-    <div>
+    <>
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-outline-variant mb-6">
         <TabButton
@@ -117,7 +127,21 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
           ))}
         </div>
       )}
-    </div>
+
+      {confirmBookingId && (
+        <ConfirmModal
+          open
+          body={t('bookingDetail.cancelConfirm')}
+          variant="danger"
+          okLabel={t('bookings.cancelBooking')}
+          onCancel={() => setConfirmBookingId(null)}
+          onConfirm={handleConfirm}
+        />
+      )}
+      {alertMessage && (
+        <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
+      )}
+    </>
   )
 }
 

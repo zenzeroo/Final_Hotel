@@ -1,7 +1,8 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { updateRoomStatus } from '@/app/actions/housekeeping'
+import { AlertModal } from '@/components/ui/AlertModal'
 
 export function RoomStatusDropdown({
   unitId,
@@ -11,6 +12,7 @@ export function RoomStatusDropdown({
   currentStatus: 'cleaning' | 'available'
 }) {
   const [isPending, startTransition] = useTransition()
+  const [alertMessage, setAlertMessage] = useState<string | null>(null)
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const newStatus = e.target.value as 'cleaning' | 'available'
@@ -18,21 +20,26 @@ export function RoomStatusDropdown({
     startTransition(async () => {
       const result = await updateRoomStatus(unitId, newStatus)
       if (!result.ok) {
-        alert(result.error)
+        setAlertMessage(result.error)
         e.target.value = currentStatus
       }
     })
   }
 
   return (
-    <select
-      defaultValue={currentStatus}
-      onChange={handleChange}
-      disabled={isPending}
-      className="px-3 py-1.5 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-primary font-medium focus:outline-none focus:ring-2 focus:ring-secondary disabled:opacity-50"
-    >
-      <option value="cleaning">กำลังทำความสะอาด</option>
-      <option value="available">ว่าง</option>
-    </select>
+    <>
+      <select
+        defaultValue={currentStatus}
+        onChange={handleChange}
+        disabled={isPending}
+        className="px-3 py-1.5 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-primary font-medium focus:outline-none focus:ring-2 focus:ring-secondary disabled:opacity-50"
+      >
+        <option value="cleaning">กำลังทำความสะอาด</option>
+        <option value="available">ว่าง</option>
+      </select>
+      {alertMessage && (
+        <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
+      )}
+    </>
   )
 }
