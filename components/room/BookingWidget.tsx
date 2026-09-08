@@ -18,6 +18,12 @@ interface BookingWidgetProps {
   room: RoomType
   /** Phase parity — live tax + resort fee from `getPricingConstants()` */
   settings: PricingSettings
+  /** Pre-fill from the /rooms search (lowercase `checkin` URL param). */
+  defaultCheckIn?: string
+  /** Pre-fill from the /rooms search (lowercase `checkout` URL param). */
+  defaultCheckOut?: string
+  /** Pre-fill from the /rooms search (`guests` URL param). */
+  defaultGuests?: number
 }
 
 function getTodayIso() {
@@ -30,15 +36,18 @@ function getTomorrowIso() {
   return d.toISOString().slice(0, 10)
 }
 
-export function BookingWidget({ room, settings }: BookingWidgetProps) {
+/** Tomorrow + 1 day (i.e. 2 nights out) — the historical default checkout. */
+function getTomorrowPlusOneIso() {
+  const d = new Date()
+  d.setDate(d.getDate() + 2)
+  return d.toISOString().slice(0, 10)
+}
+
+export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut, defaultGuests }: BookingWidgetProps) {
   const router = useRouter()
-  const [checkIn, setCheckIn] = useState(getTomorrowIso)
-  const [checkOut, setCheckOut] = useState(() => {
-    const d = new Date()
-    d.setDate(d.getDate() + 2)
-    return d.toISOString().slice(0, 10)
-  })
-  const [guests, setGuests] = useState(2)
+  const [checkIn, setCheckIn] = useState(() => defaultCheckIn ?? getTomorrowIso())
+  const [checkOut, setCheckOut] = useState(() => defaultCheckOut ?? getTomorrowPlusOneIso())
+  const [guests, setGuests] = useState(() => defaultGuests ?? 2)
 
   // Phase parity — capture full QuoteResult so calculatePrice uses the
   // seasonal-aware baseSubtotal. Also drives the appliedRates banner.

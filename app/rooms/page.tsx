@@ -73,7 +73,7 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
 
               <FilterChips />
 
-              <FloorGroupSection rooms={rooms} locale={locale} />
+              <FloorGroupSection rooms={rooms} locale={locale} searchParams={searchParams} />
             </div>
           </div>
         </div>

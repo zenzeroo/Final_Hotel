@@ -12,14 +12,21 @@ interface RoomCardProps {
   typeLabel: string
   /** Pre-localised max-occupancy label (e.g. 'สูงสุด 4 ท่าน'). Passed from parent. */
   maxGuestsLabel: string
+  /**
+   * Current page's searchParams (Next.js 16 shape). Threaded onto the
+   * Link so clicking a card preserves checkin+checkout+guests and the
+   * destination `/rooms/[slug]` BookingWidget can pre-fill from them.
+   */
+  searchParams?: Record<string, string | string[] | undefined>
 }
 
-export function RoomCard({ room, variant = 'default', typeLabel, maxGuestsLabel }: RoomCardProps) {
+export function RoomCard({ room, variant = 'default', typeLabel, maxGuestsLabel, searchParams }: RoomCardProps) {
   const isFeatured = variant === 'featured'
+  const href = buildRoomHref(room.slug, searchParams)
 
   return (
     <Link
-      href={`/rooms/${room.slug}`}
+      href={href}
       className="group flex flex-col bg-surface-container-lowest rounded-2xl overflow-hidden shadow-(--shadow-ambient) transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1"
     >
       {/* Image */}
@@ -78,4 +85,31 @@ export function RoomCard({ room, variant = 'default', typeLabel, maxGuestsLabel 
       </div>
     </Link>
   )
+}
+
+/**
+ * Build the room detail href, appending the current /rooms page's
+ * searchParams (lowercase checkin/checkout/guests) so BookingWidget on
+ * the destination page can pre-fill from them. Returns the bare path
+ * when no relevant params are present.
+ */
+function buildRoomHref(
+  slug: string,
+  searchParams?: Record<string, string | string[] | undefined>,
+): string {
+  const base = `/rooms/${slug}`
+  if (!searchParams) return base
+  const checkin = pickParam(searchParams.checkin)
+  const checkout = pickParam(searchParams.checkout)
+  const guests = pickParam(searchParams.guests)
+  if (!checkin && !checkout && !guests) return base
+  const params = new URLSearchParams()
+  if (checkin) params.set('checkin', checkin)
+  if (checkout) params.set('checkout', checkout)
+  if (guests) params.set('guests', guests)
+  return `${base}?${params.toString()}`
+}
+
+function pickParam(v: string | string[] | undefined): string | undefined {
+  return typeof v === 'string' ? v : Array.isArray(v) ? v[0] : undefined
 }

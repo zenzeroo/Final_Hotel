@@ -19,6 +19,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
   const { id } = await props.params
+  const searchParams = await props.searchParams
   const locale = await getLocale()
   const t = getT(locale)
   const isEn = locale === 'en'
@@ -27,6 +28,14 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
   // preview totals match `/bookings/new`. Without this, the widget falls
   // back to the hardcoded DEFAULT_PRICING (0.07 / 150).
   const pricingSettings = await getPricingConstants()
+
+  // Forward the dates+guests that the user picked in /rooms so the
+  // BookingWidget pre-fills instead of resetting to defaults. Casing is
+  // lowercase `checkin/checkout` to match the SearchBar writer (see
+  // components/search/SearchBar.tsx:36-44).
+  const defaultCheckIn = typeof searchParams.checkin === 'string' ? searchParams.checkin : undefined
+  const defaultCheckOut = typeof searchParams.checkout === 'string' ? searchParams.checkout : undefined
+  const defaultGuests = searchParams.guests ? parseInt(String(searchParams.guests), 10) : undefined
 
   if (!room) {
     notFound()
@@ -106,7 +115,13 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
             </article>
 
             {/* Booking widget (Phase 2) */}
-            <BookingWidget room={room} settings={pricingSettings} />
+            <BookingWidget
+              room={room}
+              settings={pricingSettings}
+              defaultCheckIn={defaultCheckIn}
+              defaultCheckOut={defaultCheckOut}
+              defaultGuests={defaultGuests}
+            />
           </div>
         </div>
       </main>

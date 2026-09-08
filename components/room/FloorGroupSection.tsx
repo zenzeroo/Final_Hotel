@@ -7,9 +7,11 @@ import { RoomCard } from './RoomCard'
 interface FloorGroupSectionProps {
   rooms: RoomType[]
   locale: Locale
+  /** Forwarded onto `<RoomCard>` so each card's href carries checkin/checkout/guests. */
+  searchParams?: Record<string, string | string[] | undefined>
 }
 
-export function FloorGroupSection({ rooms, locale }: FloorGroupSectionProps) {
+export function FloorGroupSection({ rooms, locale, searchParams }: FloorGroupSectionProps) {
   const t = getT(locale)
   // Group by floor
   const grouped = rooms.reduce<Record<number, RoomType[]>>((acc, room) => {
@@ -64,6 +66,7 @@ export function FloorGroupSection({ rooms, locale }: FloorGroupSectionProps) {
                 room={room}
                 typeLabel={roomTypeLabel(room.type, locale)}
                 maxGuestsLabel={t('roomCard.maxGuests', { count: room.max_guests })}
+                searchParams={searchParams}
               />
             ))}
           </div>
