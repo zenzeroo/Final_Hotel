@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { signOut } from '@/app/actions/auth'
 import { useT } from '@/lib/i18n/useT'
+import { roleHomePath } from '@/lib/supabase/getSession'
 
 interface StaffSidebarProps {
   role: 'reception' | 'housekeeper' | 'manager' | 'admin'
@@ -71,7 +72,7 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
     <aside className="w-72 shrink-0 bg-primary text-secondary min-h-screen flex flex-col">
       {/* Brand */}
       <div className="px-6 py-6 border-b border-primary-container">
-        <Link href="/" className="font-display text-2xl font-bold text-secondary">
+        <Link href={roleHomePath(role)} className="font-display text-2xl font-bold text-secondary">
           Zenzero Hotel
         </Link>
         <p className="text-caption text-secondary/70 mt-1 uppercase tracking-wider">
