@@ -13,7 +13,7 @@ import {
 import { getSeasonalRatesAction } from '@/app/actions/seasonal-rates'
 import type { AppliedRate, QuoteResult } from '@/lib/pricing/seasons'
 import type { RoomType } from '@/lib/data/types'
-import { getLocalIsoDate, getTodayLocalIso, getTomorrowLocalIso } from '@/lib/dates'
+import { getLocalIsoDate, getMinCheckInLocalIso, getTomorrowLocalIso, addDaysLocalIso } from '@/lib/dates'
 
 interface BookingWidgetProps {
   room: RoomType
@@ -36,7 +36,12 @@ function getTomorrowPlusOneIso() {
 
 export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut, defaultGuests }: BookingWidgetProps) {
   const router = useRouter()
-  const [checkIn, setCheckIn] = useState(() => defaultCheckIn ?? getTomorrowLocalIso())
+  // Hotels require ≥ 1 day advance booking — clamp URL-provided checkIn
+  // so a stale `?checkIn=2026-09-08` link (today) doesn't strand the user.
+  const [checkIn, setCheckIn] = useState(() => {
+    const min = getMinCheckInLocalIso()
+    return defaultCheckIn && defaultCheckIn >= min ? defaultCheckIn : min
+  })
   const [checkOut, setCheckOut] = useState(() => defaultCheckOut ?? getTomorrowPlusOneIso())
   // Clamp initial guests into [1, max_guests] so a stale URL param (e.g.
   // ?guests=10 on a max=4 room) doesn't strand the + button in a
@@ -128,7 +133,7 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
             <input
               type="date"
               value={checkIn}
-              min={getTodayLocalIso()}
+              min={getMinCheckInLocalIso()}
               onChange={(e) => {
                 setCheckIn(e.target.value)
                 if (e.target.value >= checkOut) {
@@ -147,7 +152,7 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
             <input
               type="date"
               value={checkOut}
-              min={checkIn > getTodayLocalIso() ? checkIn : getTodayLocalIso()}
+              min={addDaysLocalIso(checkIn, 1)}
               onChange={(e) => setCheckOut(e.target.value)}
               className="w-full bg-transparent text-body-md font-medium text-on-surface focus:outline-none"
             />

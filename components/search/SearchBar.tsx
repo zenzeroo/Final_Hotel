@@ -3,7 +3,12 @@
 import { useRouter } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
-import { getLocalIsoDate, getTodayLocalIso, getTomorrowLocalIso } from '@/lib/dates'
+import {
+  getLocalIsoDate,
+  getMinCheckInLocalIso,
+  getTomorrowLocalIso,
+  addDaysLocalIso,
+} from '@/lib/dates'
 
 interface SearchBarProps {
   variant?: 'hero' | 'compact'
@@ -20,8 +25,20 @@ export function SearchBar({
 }: SearchBarProps) {
   const router = useRouter()
 
-  const [checkin, setCheckin] = useState(() => defaultCheckin ?? getTodayLocalIso())
-  const [checkout, setCheckout] = useState(() => defaultCheckout ?? getTomorrowLocalIso())
+  // Hotels require ≥ 1 day of advance booking. Clamp any URL-provided
+  // checkin to the policy minimum so an out-of-date shared link can't
+  // strand the user on a same-day check-in that the backend would reject.
+  const [checkin, setCheckin] = useState(() => {
+    const min = getMinCheckInLocalIso()
+    return defaultCheckin && defaultCheckin >= min ? defaultCheckin : min
+  })
+  const [checkout, setCheckout] = useState(() => {
+    const base = defaultCheckin ?? getMinCheckInLocalIso()
+    const proposed = defaultCheckout ?? addDaysLocalIso(base, 1)
+    // Ensure checkout is at least 1 day after the (possibly-clamped) checkin.
+    const minCheckout = addDaysLocalIso(base, 1)
+    return proposed >= minCheckout ? proposed : minCheckout
+  })
   const [guests, setGuests] = useState(defaultGuests)
 
   const handleSubmit = (e: FormEvent) => {
@@ -49,7 +66,7 @@ export function SearchBar({
       <DateField
         label="เช็คอิน"
         value={checkin}
-        min={getTodayLocalIso()}
+        min={getMinCheckInLocalIso()}
         onChange={(v) => {
           setCheckin(v)
           if (v >= checkout) {
@@ -64,7 +81,7 @@ export function SearchBar({
       <DateField
         label="เช็คเอาท์"
         value={checkout}
-        min={checkin > getTodayLocalIso() ? checkin : getTodayLocalIso()}
+        min={addDaysLocalIso(checkin, 1)}
         onChange={setCheckout}
       />
 

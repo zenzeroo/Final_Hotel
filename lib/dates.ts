@@ -90,3 +90,24 @@ export function getTomorrowLocalIso(): string {
   d.setDate(d.getDate() + 1)
   return getLocalIsoDate(d)
 }
+
+/**
+ * Add `days` (signed) to an ISO YYYY-MM-DD date and return the result
+ * in the same local-time shape. Negative values subtract. Uses
+ * `Date#setDate` (which mutates in-place) so no allocation churn.
+ */
+export function addDaysLocalIso(iso: string, days: number): string {
+  const d = new Date(iso)
+  d.setDate(d.getDate() + days)
+  return getLocalIsoDate(d)
+}
+
+/**
+ * Minimum legal check-in date in local time. Hotels require at least 1
+ * day of advance booking — same-day check-in is not allowed. Use this
+ * as both the `<input type="date" min>` attribute and the default
+ * check-in value.
+ */
+export function getMinCheckInLocalIso(): string {
+  return getTomorrowLocalIso()
+}
