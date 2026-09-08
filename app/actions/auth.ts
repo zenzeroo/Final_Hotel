@@ -172,6 +172,15 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
+
+  // Phase 27.G — clear the user's locale cookie so an anonymous user on a
+  // shared device doesn't inherit the previous user's language choice.
+  // Mirrors the locale-cookie pattern used by signIn + signUp above.
+  const { cookies } = await import('next/headers')
+  const { LOCALE_COOKIE } = await import('@/lib/i18n/config')
+  const cookieStore = await cookies()
+  cookieStore.delete(LOCALE_COOKIE)
+
   revalidatePath('/', 'layout')
   redirect('/')
 }
