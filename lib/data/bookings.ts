@@ -40,6 +40,7 @@ export interface CancellationPolicy {
   id: string
   name: string
   free_cancel_hours: number
+  refund_pct: number
   description: string
   is_default: boolean
 }
@@ -145,6 +146,25 @@ export async function getDefaultCancellationPolicy(): Promise<CancellationPolicy
     .from('cancellation_policies')
     .select('*')
     .eq('is_default', true)
+    .maybeSingle()
+
+  if (error) wrapSupabaseError('', error)
+  return (data as CancellationPolicy) ?? null
+}
+
+/**
+ * Get a cancellation policy by ID (RLS-safe read; cancellation_policies
+ * are public so any auth.uid() can read them).
+ */
+export async function getCancellationPolicyById(
+  policyId: string,
+): Promise<CancellationPolicy | null> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('cancellation_policies')
+    .select('*')
+    .eq('id', policyId)
     .maybeSingle()
 
   if (error) wrapSupabaseError('', error)

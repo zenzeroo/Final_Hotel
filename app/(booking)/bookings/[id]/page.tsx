@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getSession } from '@/lib/supabase/getSession'
-import { getBookingById } from '@/lib/data/bookings'
+import { getBookingById, getCancellationPolicyById, getDefaultCancellationPolicy } from '@/lib/data/bookings'
 import { TransactionalHeader } from '@/components/layout/TransactionalHeader'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
@@ -101,6 +101,16 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
   const booking = await getBookingById(id, session.id)
   if (!booking) notFound()
 
+  // Phase 27 — render the cancellation policy that applies to this
+  // booking (linked via cancellation_policy_id, falling back to the
+  // seeded default if the booking has no linked policy). Done
+  // server-side so the dead placeholder at the bottom of the page
+  // (was just rendering the totalPrice label) actually displays.
+  const policy =
+    (booking.cancellation_policy_id
+      ? await getCancellationPolicyById(booking.cancellation_policy_id)
+      : null) ?? (await getDefaultCancellationPolicy())
+
   return (
     <>
       <TopNavBar />
@@ -189,10 +199,25 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
 
               {/* Cancellation policy */}
               <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-                <h2 className="font-display text-xl text-primary mb-4">{t('bookingDetail.cancellationPolicy')}</h2>
-                <p className="text-body-md text-on-surface">
-                  {t('bookingDetail.totalPrice')}
-                </p>
+                <h2 className="font-display text-xl text-primary mb-2">{t('bookingDetail.cancellationPolicy')}</h2>
+                {policy ? (
+                  <div className="flex flex-col gap-2 text-body-md">
+                    <p className="font-semibold text-on-surface">{policy.name}</p>
+                    <p className="text-on-surface-variant text-body-md">
+                      {t('bookingDetail.policyWindow', {
+                        hours: policy.free_cancel_hours,
+                        pct: policy.refund_pct,
+                      })}
+                    </p>
+                    {policy.description && (
+                      <p className="text-caption text-on-surface-variant">{policy.description}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-body-md text-on-surface-variant">
+                    {t('bookingDetail.cancellationPolicy')} —
+                  </p>
+                )}
               </section>
 
               {/* Review prompt — only after checkout */}

@@ -249,6 +249,65 @@ export interface CancelBookingResult {
   refundRequestId?: string | null  // null when no refund row created (unpaid / penalty=0)
 }
 
+/**
+ * Phase 27 — Read-only cancellation preview.
+ *
+ * Calls the `preview_cancel_booking` SECURITY DEFINER RPC which mirrors
+ * the calc block of `cancel_booking` but performs NO writes (no UPDATE
+ * bookings, no INSERT refund_requests, no INSERT booking_events, no email
+ * side-effect). Lets the UI render a rich preview popup — booking date,
+ * policy rules, expected refund — BEFORE the user commits.
+ *
+ * Same auth contract as `cancelBooking`: owner OR staff. No
+ * `refund_pct_override` path — that stays in `cancelBooking` for the
+ * manager-staff flow.
+ */
+export interface PreviewCancellationResult {
+  ok?: boolean
+  error?: string
+  bookingCreatedAt?: string
+  refundAmount?: number
+  penaltyAmount?: number
+  policyName?: string
+  policyFreeHours?: number
+  policyRefundPct?: number
+  hoursUntilCheckin?: number
+}
+
+export async function previewCancellation(
+  bookingId: string,
+): Promise<PreviewCancellationResult> {
+  if (!isUuid(bookingId)) return { ok: false, error: 'รหัสการจองไม่ถูกต้อง' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('preview_cancel_booking', {
+    p_booking_id: bookingId,
+  })
+
+  if (error) {
+    return { ok: false, error: translateSupabaseError(error.message) }
+  }
+  if (!data) {
+    return { ok: false, error: 'ไม่พบข้อมูลการจอง' }
+  }
+
+  // Supabase RPC with single-row return can come back as an object or as
+  // a one-element array — normalise.
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) return { ok: false, error: 'ไม่พบข้อมูลการจอง' }
+
+  return {
+    ok: true,
+    bookingCreatedAt: String(row.booking_created_at ?? ''),
+    refundAmount: Number(row.refund_amount ?? 0),
+    penaltyAmount: Number(row.penalty_amount ?? 0),
+    policyName: String(row.policy_name ?? ''),
+    policyFreeHours: Number(row.policy_free_hours ?? 0),
+    policyRefundPct: Number(row.policy_refund_pct ?? 0),
+    hoursUntilCheckin: Number(row.hours_until_checkin ?? 0),
+  }
+}
+
 export async function cancelBooking(bookingId: string): Promise<CancelBookingResult> {
   if (!isUuid(bookingId)) return { error: 'รหัสการจองไม่ถูกต้อง' }
 

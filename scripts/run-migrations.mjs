@@ -75,7 +75,7 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // 20260914 updates handle_new_user() to copy birthdate from
 // raw_user_meta_data (NULL when missing — OAuth path stays nullable).
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14)_.*\.sql$/.test(f))
+  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 
