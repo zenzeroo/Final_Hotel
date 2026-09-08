@@ -61,7 +61,7 @@ export default async function ActionHistoryPage() {
                 icon: 'event',
               }
               return (
-                <li key={e.id} className="px-5 py-4 flex items-start gap-3 hover:bg-surface-container-low transition-colors">
+                <li key={e.id} className="px-5 py-4 flex items-start gap-3 hover:bg-primary-fixed transition-colors">
                   <div className={`shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full ${meta.color}`}>
                     <MaterialIcon name={meta.icon} size={20} />
                   </div>

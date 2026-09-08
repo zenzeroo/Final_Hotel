@@ -54,7 +54,7 @@ export function BookingsTable({ bookings, activeCount }: BookingsTableProps) {
             </thead>
             <tbody>
               {bookings.map((b) => (
-                <tr key={b.id} className="border-b border-outline-variant last:border-b-0">
+                <tr key={b.id} className="border-b border-outline-variant last:border-b-0 hover:bg-primary-fixed transition-colors">
                   <td className="py-3 pr-4 font-semibold text-primary">{b.code}</td>
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-3">
@@ -84,7 +84,7 @@ export function BookingsTable({ bookings, activeCount }: BookingsTableProps) {
                   <td className="py-3 pr-4">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 text-caption text-primary hover:text-secondary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary rounded-md"
+                      className="inline-flex items-center gap-1 text-caption text-primary hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary rounded-md"
                       title="แก้ไขพิเศษ"
                     >
                       <MaterialIcon name="edit" size={16} />

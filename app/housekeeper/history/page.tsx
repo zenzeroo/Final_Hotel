@@ -25,7 +25,7 @@ export default async function WorkHistoryPage({ searchParams }: { searchParams: 
         <a
           href="/housekeeper/history"
           className={`px-4 py-1.5 rounded-full text-caption uppercase tracking-wider transition-colors ${
-            scope === 'me' ? 'bg-primary text-secondary' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+            scope === 'me' ? 'bg-primary text-secondary' : 'bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
           }`}
         >
           ประวัติของฉัน
@@ -33,7 +33,7 @@ export default async function WorkHistoryPage({ searchParams }: { searchParams: 
         <a
           href="/housekeeper/history?scope=all"
           className={`px-4 py-1.5 rounded-full text-caption uppercase tracking-wider transition-colors ${
-            scope === 'all' ? 'bg-primary text-secondary' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+            scope === 'all' ? 'bg-primary text-secondary' : 'bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
           }`}
         >
           ทั้งโรงแรม

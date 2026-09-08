@@ -39,7 +39,7 @@ export function ResolveNoteButton({ noteId }: ResolveNoteButtonProps) {
         type="button"
         onClick={handleClick}
         disabled={isPending}
-        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-secondary text-caption font-semibold uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60"
+        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-on-primary text-caption font-semibold uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60"
       >
         {isPending ? (
           <span className="inline-block w-3 h-3 border-2 border-secondary border-t-transparent rounded-full animate-spin" />

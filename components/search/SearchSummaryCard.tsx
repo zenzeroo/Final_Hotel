@@ -46,7 +46,7 @@ export function SearchSummaryCard({ checkin, checkout, guests }: SearchSummaryCa
 
       <button
         type="button"
-        className="mt-6 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-primary text-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary hover:text-secondary transition-colors"
+        className="mt-6 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-primary text-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed transition-colors"
       >
         <MaterialIcon name="edit" size={16} />
         แก้ไขการค้นหา

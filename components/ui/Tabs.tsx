@@ -33,10 +33,11 @@ export function Tabs<T extends string>({ active, tabs }: TabsProps<T>) {
           <Link
             key={t.key}
             href={t.href}
+            aria-current={isActive ? 'page' : undefined}
             className={`inline-flex items-center gap-2 px-4 py-3 border-b-2 -mb-px transition-colors ${
               isActive
-                ? 'border-primary text-primary font-semibold'
-                : 'border-transparent text-on-surface-variant hover:text-primary'
+                ? 'border-primary bg-primary text-on-primary font-semibold'
+                : 'border-transparent text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
             }`}
           >
             {t.icon ? <MaterialIcon name={t.icon} size={18} /> : null}

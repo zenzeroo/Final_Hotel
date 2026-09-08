@@ -27,8 +27,8 @@ export function TogglePromotionButton({ promotionId, isActive }: TogglePromotion
         disabled={pending}
         className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-caption font-semibold transition-colors disabled:opacity-50 ${
           isActive
-            ? 'bg-primary-container text-on-primary-container hover:bg-primary-container/70'
-            : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+            ? 'bg-primary text-on-primary hover:bg-primary-fixed hover:text-primary'
+            : 'bg-surface-container-high text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
         }`}
         title={isActive ? 'คลิกเพื่อปิดใช้งาน' : 'คลิกเพื่อเปิดใช้งาน'}
       >

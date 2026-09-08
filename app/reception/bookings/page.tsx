@@ -72,7 +72,7 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
             </thead>
             <tbody>
               {bookings.map((b) => (
-                <tr key={b.id} className="border-t border-outline-variant hover:bg-surface-container-low">
+                <tr key={b.id} className="border-t border-outline-variant hover:bg-primary-fixed transition-colors">
                   <Td>
                     <span className="font-mono text-body-md">{b.booking_code}</span>
                   </Td>

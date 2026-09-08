@@ -68,7 +68,7 @@ export function DeleteReviewButton({ reviewId, guestName }: DeleteReviewButtonPr
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={pending}
-                className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50"
+                className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50"
               >
                 ยกเลิก
               </button>

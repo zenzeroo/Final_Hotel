@@ -115,7 +115,7 @@ export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTablePr
               const expired = isExpired(p, now)
               const upcoming = isUpcoming(p, now)
               return (
-                <tr key={p.id} className="hover:bg-surface-container-low transition-colors">
+                <tr key={p.id} className="hover:bg-primary-fixed transition-colors">
                   <td className="px-4 py-4">
                     <span className="font-mono text-body-md font-bold text-primary bg-secondary-container px-2 py-1 rounded">
                       {p.code}
@@ -168,7 +168,7 @@ export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTablePr
                       <Link
                         href={`/admin/promotions/${p.id}/edit`}
                         title="แก้ไข"
-                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-on-surface hover:bg-surface-container-high transition-colors"
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
                       >
                         <MaterialIcon name="edit" size={18} />
                       </Link>

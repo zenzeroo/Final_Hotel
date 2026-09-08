@@ -28,7 +28,7 @@ export function TaskClaimButton({ taskId }: { taskId: string }) {
       <button
         onClick={handleClick}
         disabled={isPending}
-        className="px-4 py-2 bg-primary text-secondary rounded-md text-caption uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-50 flex items-center gap-2"
+        className="px-4 py-2 bg-primary text-on-primary rounded-md text-caption uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-50 flex items-center gap-2"
       >
         <MaterialIcon name="add_task" size={18} />
         {isPending ? 'กำลังรับงาน...' : 'รับงาน'}

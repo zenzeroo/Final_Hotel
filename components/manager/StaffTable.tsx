@@ -47,7 +47,7 @@ export function StaffTable({ staff }: StaffTableProps) {
             {staff.map((member) => {
               const role = ROLE_LABEL[member.role]
               return (
-                <tr key={member.id} className="hover:bg-surface-container-low transition-colors">
+                <tr key={member.id} className="hover:bg-primary-fixed transition-colors">
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       <span

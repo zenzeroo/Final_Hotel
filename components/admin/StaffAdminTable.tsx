@@ -54,7 +54,7 @@ function ToggleActiveButton({
         type="submit"
         disabled={disabled}
         title={isSelf ? 'ไม่สามารถปิดใช้งานบัญชีตัวเองได้' : label}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body-md rounded-lg border border-outline-variant hover:bg-surface-container-low transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body-md rounded-lg border border-outline-variant hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <MaterialIcon name={icon} size={16} />
         {pending ? '...' : label}
@@ -99,7 +99,7 @@ export function StaffAdminTable({ staff, currentUserId }: StaffAdminTableProps) 
             {staff.map((s) => {
               const isSelf = s.id === currentUserId
               return (
-                <tr key={s.id} className="hover:bg-surface-container-low transition-colors">
+                <tr key={s.id} className="hover:bg-primary-fixed transition-colors">
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-primary text-secondary inline-flex items-center justify-center font-semibold text-body-md shrink-0">
@@ -143,7 +143,7 @@ export function StaffAdminTable({ staff, currentUserId }: StaffAdminTableProps) 
                     <div className="inline-flex items-center gap-2 justify-end">
                       <Link
                         href={`/admin/staff/${s.id}/edit`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body-md rounded-lg border border-outline-variant hover:bg-surface-container-low transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body-md rounded-lg border border-outline-variant hover:bg-primary-fixed hover:text-primary transition-colors"
                       >
                         <MaterialIcon name="edit" size={16} />
                         แก้ไข

@@ -54,7 +54,7 @@ export function PromotionsTable({ promotions, now }: PromotionsTableProps) {
               const expired = isExpired(p, now)
               const upcoming = isUpcoming(p, now)
               return (
-                <tr key={p.id} className="hover:bg-surface-container-low transition-colors">
+                <tr key={p.id} className="hover:bg-primary-fixed transition-colors">
                   <td className="px-4 py-4">
                     <span className="font-mono text-body-md font-bold text-primary bg-secondary-container px-2 py-1 rounded">
                       {p.code}

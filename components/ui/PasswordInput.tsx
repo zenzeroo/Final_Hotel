@@ -55,7 +55,7 @@ export function PasswordInput({ className, ...rest }: PasswordInputProps) {
         onClick={() => setVisible((v) => !v)}
         aria-label={visible ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
         aria-pressed={visible}
-        className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-8 h-8 rounded-md text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-1"
+        className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-8 h-8 rounded-md text-on-surface-variant hover:text-primary hover:bg-primary-fixed transition-colors focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-1"
       >
         <MaterialIcon name={visible ? 'visibility_off' : 'visibility'} size={20} />
       </button>

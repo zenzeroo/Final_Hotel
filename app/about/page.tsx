@@ -64,7 +64,7 @@ export default function AboutPage() {
                   และยกเลิกได้ตามนโยบายที่เลือก
                 </p>
                 <p>
-                  <Link href="/rooms" className="text-primary hover:text-secondary font-semibold">
+                  <Link href="/rooms" className="text-primary px-2 py-1 rounded hover:bg-primary-fixed hover:text-primary font-semibold">
                     ดูห้องพักทั้งหมด →
                   </Link>
                 </p>

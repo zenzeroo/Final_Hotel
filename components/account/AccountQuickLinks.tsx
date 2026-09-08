@@ -18,7 +18,7 @@ export function AccountQuickLinks() {
     <div className="bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container flex flex-col divide-y divide-surface-container">
       {links.map((link) => {
         const className =
-          'group flex items-center justify-between py-3 first:pt-0 last:pb-0 text-on-surface hover:text-primary transition-colors duration-200'
+          'group flex items-center justify-between py-3 first:pt-0 last:pb-0 text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors duration-200'
         const content = (
           <>
             <span className="flex items-center gap-3 font-body-md text-body-md">

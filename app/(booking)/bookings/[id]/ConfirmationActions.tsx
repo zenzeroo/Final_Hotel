@@ -138,7 +138,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
           disabled={isPending}
           className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-label-md uppercase tracking-wider transition-colors disabled:opacity-60 ${
             isPaid
-              ? 'border border-primary text-primary hover:bg-primary hover:text-secondary'
+              ? 'border border-primary text-primary hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed'
               : 'border border-error text-error hover:bg-error hover:text-on-primary'
           }`}
         >

@@ -62,7 +62,7 @@ export function ConfirmModal({
   const okClass =
     variant === 'danger'
       ? 'flex-1 px-6 py-3 bg-error text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-error/90 transition-colors'
-      : 'flex-1 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors'
+      : 'flex-1 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors'
 
   return (
     <CenterModal open={open} onClose={onCancel} ariaLabelledBy={showTitle ? titleId : undefined}>
@@ -88,7 +88,7 @@ export function ConfirmModal({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 px-6 py-3 border border-outline text-on-surface rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-surface-container transition-colors"
+            className="flex-1 px-6 py-3 border border-outline text-on-surface rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
           >
             {cancelLabel}
           </button>

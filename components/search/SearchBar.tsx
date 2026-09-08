@@ -90,7 +90,7 @@ export function SearchBar({
           <button
             type="button"
             onClick={() => setGuests((g) => Math.max(1, g - 1))}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-surface-container-low transition-colors"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
             aria-label="ลดจำนวนผู้เข้าพัก"
           >
             <MaterialIcon name="remove" size={16} />
@@ -99,7 +99,7 @@ export function SearchBar({
           <button
             type="button"
             onClick={() => setGuests((g) => Math.min(10, g + 1))}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-surface-container-low transition-colors"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
             aria-label="เพิ่มจำนวนผู้เข้าพัก"
           >
             <MaterialIcon name="add" size={16} />
@@ -112,9 +112,9 @@ export function SearchBar({
         type="submit"
         className={`inline-flex items-center justify-center gap-2 ${
           isHero
-            ? 'md:rounded-full bg-primary text-secondary px-6 py-3 md:py-2 rounded-xl'
-            : 'rounded-xl bg-primary text-secondary px-6 py-3'
-        } font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors`}
+            ? 'md:rounded-full bg-primary text-on-primary px-6 py-3 md:py-2 rounded-xl'
+            : 'rounded-xl bg-primary text-on-primary px-6 py-3'
+        } font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors`}
       >
         <MaterialIcon name="search" size={20} />
         <span>ค้นหาห้องพัก</span>

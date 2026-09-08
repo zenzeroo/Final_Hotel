@@ -60,7 +60,7 @@ export function AlertModal({
         <button
           type="button"
           onClick={onClose}
-          className="w-full mt-2 inline-flex items-center justify-center px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+          className="w-full mt-2 inline-flex items-center justify-center px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
         >
           {okLabel}
         </button>

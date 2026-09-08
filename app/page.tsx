@@ -37,7 +37,7 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/rooms"
-                className="group hidden md:inline-flex items-center gap-2 text-label-md text-primary font-semibold uppercase tracking-wider hover:text-secondary transition-colors duration-200"
+                className="group hidden md:inline-flex items-center gap-2 text-label-md text-primary font-semibold uppercase tracking-wider hover:bg-primary-fixed px-2 py-1 rounded transition-colors duration-200"
               >
                 {t('roomsList.title')}
                 <MaterialIcon

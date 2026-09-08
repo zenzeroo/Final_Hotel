@@ -17,7 +17,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="bg-primary text-secondary-container px-6 py-2 rounded-full font-label-md text-label-md hover:bg-primary-container transition-colors disabled:opacity-60 flex items-center gap-2"
+      className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-md text-label-md hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60 flex items-center gap-2"
     >
       {pending ? (
         <>
@@ -57,7 +57,7 @@ export function ChangePasswordForm() {
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="bg-transparent border border-primary text-primary px-6 py-2 rounded-full font-label-md text-label-md hover:bg-surface-container-low transition-colors"
+          className="bg-transparent border border-primary text-primary px-6 py-2 rounded-full font-label-md text-label-md hover:bg-primary-fixed hover:border-primary-fixed transition-colors"
         >
           แก้ไขรหัสผ่าน
         </button>
@@ -117,7 +117,7 @@ export function ChangePasswordForm() {
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="bg-transparent border border-outline-variant text-on-surface-variant px-6 py-2 rounded-full font-label-md text-label-md hover:bg-surface-container-low transition-colors"
+            className="bg-transparent border border-outline-variant text-on-surface-variant px-6 py-2 rounded-full font-label-md text-label-md hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
           >
             ยกเลิก
           </button>

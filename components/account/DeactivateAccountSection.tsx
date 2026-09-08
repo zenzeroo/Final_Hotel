@@ -76,7 +76,7 @@ export function DeactivateAccountSection({ fullName }: DeactivateAccountSectionP
           <button
             type="submit"
             disabled={!isConfirmable}
-            className="bg-transparent border border-error text-error px-6 py-2 rounded-full font-label-md text-label-md hover:bg-error hover:text-on-error transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+            className="bg-transparent border border-error text-error px-6 py-2 rounded-full font-label-md text-label-md hover:bg-error-container hover:text-error hover:border-error transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <MaterialIcon name="delete_forever" size={18} />
             {submitting ? 'กำลังลบ…' : 'ลบบัญชีของฉัน'}

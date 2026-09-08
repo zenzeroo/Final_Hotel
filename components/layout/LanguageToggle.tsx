@@ -57,8 +57,8 @@ function SubmitButton({ active, label }: { active: boolean; label: string }) {
       aria-label={label === 'TH' ? 'ภาษาไทย' : 'English'}
       className={
         active
-          ? 'px-2 py-1 text-primary font-semibold'
-          : 'px-2 py-1 text-on-surface-variant hover:bg-surface-container-low hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary rounded disabled:opacity-100'
+          ? 'px-2 py-1 bg-primary text-on-primary font-semibold rounded'
+          : 'px-2 py-1 text-on-surface-variant hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary rounded disabled:opacity-100'
       }
     >
       {label}

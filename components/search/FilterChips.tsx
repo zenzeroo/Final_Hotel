@@ -40,7 +40,7 @@ export function FilterChips() {
         <button
           key={chip.key}
           onClick={() => removeChip(chip.key)}
-          className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary text-secondary rounded-full text-label-md font-semibold hover:bg-primary-container transition-colors duration-200"
+          className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary text-on-primary rounded-full text-label-md font-semibold hover:bg-primary-container transition-colors duration-200"
         >
           <span>{chip.label}</span>
           <MaterialIcon name="close" size={14} />

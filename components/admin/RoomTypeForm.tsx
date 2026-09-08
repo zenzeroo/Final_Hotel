@@ -368,7 +368,7 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
         <SubmitButton label={mode === 'create' ? 'สร้างประเภทห้อง' : 'บันทึกการแก้ไข'} />
         <a
           href="/admin/rates"
-          className="inline-flex items-center justify-center px-6 py-3 bg-surface-container-low border border-outline-variant rounded-lg font-medium text-body-md hover:bg-surface-container-high transition-colors"
+          className="inline-flex items-center justify-center px-6 py-3 bg-surface-container-low border border-outline-variant rounded-lg font-medium text-body-md hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
         >
           ยกเลิก
         </a>

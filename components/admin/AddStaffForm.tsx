@@ -84,7 +84,7 @@ export function AddStaffForm() {
         </div>
         <a
           href="/admin/staff"
-          className="inline-flex items-center gap-2 text-body-md text-primary hover:text-secondary"
+          className="inline-flex items-center gap-2 px-2 py-1 rounded text-body-md text-primary hover:bg-primary-fixed hover:text-primary"
         >
           <MaterialIcon name="arrow_back" size={18} />
           กลับไปหน้ารายชื่อพนักงาน

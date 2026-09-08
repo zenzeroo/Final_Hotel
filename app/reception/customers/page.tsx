@@ -40,7 +40,7 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
             </thead>
             <tbody>
               {customers.map((c) => (
-                <tr key={c.id} className="border-t border-outline-variant hover:bg-surface-container-low">
+                <tr key={c.id} className="border-t border-outline-variant hover:bg-primary-fixed transition-colors">
                   <Td>
                     <p className="text-body-md font-medium text-on-surface">{c.full_name ?? '—'}</p>
                     <p className="text-caption text-on-surface-variant font-mono">#{c.id.slice(0, 8)}</p>
@@ -60,7 +60,7 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
                   <Td align="right">
                     <a
                       href={`/reception/bookings?q=${encodeURIComponent(c.full_name ?? '')}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary text-primary text-caption font-semibold uppercase tracking-wider hover:bg-primary hover:text-secondary transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary text-primary text-caption font-semibold uppercase tracking-wider hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
                     >
                       <MaterialIcon name="bookmark" size={14} />
                       ดูการจอง

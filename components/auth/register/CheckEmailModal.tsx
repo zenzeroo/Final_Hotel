@@ -55,7 +55,7 @@ export function CheckEmailModal() {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="w-full mt-2 inline-flex items-center justify-center px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+            className="w-full mt-2 inline-flex items-center justify-center px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
           >
             {t('auth.checkEmailModalOk')}
           </button>

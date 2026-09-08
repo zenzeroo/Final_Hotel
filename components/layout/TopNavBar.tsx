@@ -38,7 +38,7 @@ export async function TopNavBar() {
             {/* Actions */}
             <div className="flex items-center gap-4">
               <button
-                className="hidden md:inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-low transition-colors"
+                className="hidden md:inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-primary-fixed transition-colors"
                 aria-label={t('nav.notification')}
               >
                 <MaterialIcon name="notifications" size={22} />
@@ -65,7 +65,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="px-3 py-2 rounded-md text-body-md text-on-surface hover:bg-surface-container-low hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+      className="px-3 py-2 rounded-md text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
     >
       {children}
     </Link>
@@ -76,7 +76,7 @@ function LoginButton({ label }: { label: string }) {
   return (
     <Link
       href="/login"
-      className="inline-flex items-center justify-center h-10 px-5 rounded-full bg-primary text-secondary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+      className="inline-flex items-center justify-center h-10 px-5 rounded-full bg-primary text-on-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
     >
       {label}
     </Link>
@@ -105,14 +105,14 @@ function UserMenu({
       <Link
         href="/account/profile"
         aria-label={t('nav.greeting')}
-        className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary font-semibold text-label-md hover:bg-primary-container transition-colors"
+        className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-on-primary font-semibold text-label-md hover:bg-primary-container transition-colors"
       >
         {initials || 'U'}
       </Link>
       <form action={signOut}>
         <button
           type="submit"
-          className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md text-on-surface hover:bg-surface-container-low transition-colors"
+          className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
         >
           <MaterialIcon name="logout" size={16} />
           {t('nav.logout')}

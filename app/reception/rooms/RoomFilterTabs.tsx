@@ -27,10 +27,11 @@ export function RoomFilterTabs({ current, counts, statusMeta }: RoomFilterTabsPr
           <a
             key={tab.value}
             href={`/reception/rooms?status=${tab.value}`}
+            aria-current={isActive ? 'page' : undefined}
             className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md font-semibold transition-colors ${
               isActive
-                ? 'bg-primary text-secondary'
-                : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container'
+                ? 'bg-primary text-on-primary'
+                : 'bg-surface-container-lowest text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
             }`}
           >
             {meta && <MaterialIcon name={meta.icon} size={16} />}

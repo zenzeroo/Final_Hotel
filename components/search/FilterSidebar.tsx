@@ -108,7 +108,7 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
       <button
         type="button"
         onClick={() => router.replace('/rooms', { scroll: false })}
-        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-surface-container-low transition-colors"
+        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed transition-colors"
       >
         <MaterialIcon name="refresh" size={16} />
         {t('roomsList.resetFilters')}
@@ -140,7 +140,7 @@ function Checkbox({
       <span
         className={`inline-flex items-center justify-center w-5 h-5 rounded border-2 transition-colors ${
           checked
-            ? 'bg-primary border-primary text-secondary'
+            ? 'bg-primary border-primary text-on-primary'
             : 'border-outline group-hover:border-primary'
         }`}
         aria-hidden

@@ -77,7 +77,7 @@ export default async function ReceptionDashboard() {
             <h2 className="font-display text-xl text-primary">{t('reception.bookingsPage.title')}</h2>
             <Link
               href="/reception/bookings"
-              className="text-label-md text-primary font-semibold uppercase tracking-wider hover:text-secondary"
+              className="text-label-md text-primary px-2 py-1 rounded font-semibold uppercase tracking-wider hover:bg-primary-fixed hover:text-primary"
             >
               {t('reception.bookingsPage.addBooking')}
             </Link>
@@ -90,7 +90,7 @@ export default async function ReceptionDashboard() {
                 <Link
                   key={b.id}
                   href={`/reception/bookings`}
-                  className="flex items-center gap-4 py-3 border-b border-outline-variant last:border-0 hover:bg-surface-container-low transition-colors -mx-2 px-2 rounded-lg"
+                  className="flex items-center gap-4 py-3 border-b border-outline-variant last:border-0 hover:bg-primary-fixed transition-colors -mx-2 px-2 rounded-lg"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-body-md font-semibold text-on-surface truncate">
@@ -125,7 +125,7 @@ export default async function ReceptionDashboard() {
           </div>
           <Link
             href="/reception/rooms"
-            className="mt-4 inline-flex items-center gap-2 text-label-md text-primary font-semibold uppercase tracking-wider hover:text-secondary"
+            className="mt-4 inline-flex items-center gap-2 text-label-md text-primary px-2 py-1 rounded font-semibold uppercase tracking-wider hover:bg-primary-fixed hover:text-primary"
           >
             {t('reception.roomsPage.byFloor')}
             <MaterialIcon name="arrow_forward" size={16} />

@@ -162,8 +162,8 @@ function TabButton({
       onClick={onClick}
       className={`inline-flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
         active
-          ? 'border-secondary text-primary font-semibold'
-          : 'border-transparent text-on-surface-variant hover:text-primary'
+          ? 'border-secondary bg-primary text-on-primary font-semibold'
+          : 'border-transparent text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
       }`}
     >
       <span className="text-label-md uppercase tracking-wider">{label}</span>
@@ -195,7 +195,7 @@ function BookingRow({
     <article className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-hidden">
       <Link
         href={`/bookings/${booking.id}`}
-        className="flex flex-col md:flex-row gap-4 p-4 md:p-6 hover:bg-surface-container-low transition-colors"
+        className="flex flex-col md:flex-row gap-4 p-4 md:p-6 hover:bg-primary-fixed transition-colors"
       >
         {/* Thumbnail */}
         <div className="relative w-full md:w-40 h-40 md:h-28 rounded-xl overflow-hidden bg-surface-container shrink-0">
@@ -250,7 +250,7 @@ function BookingRow({
           {!isPaid && (
             <Link
               href={`/bookings/${booking.id}`}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
             >
               <MaterialIcon name="credit_card" size={16} />
               {t('bookings.statusPending')}

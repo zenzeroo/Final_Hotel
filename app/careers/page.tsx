@@ -63,7 +63,7 @@ export default function CareersPage() {
               </p>
               <a
                 href="mailto:careers@zenzero.com?subject=สมัครงาน%20Zenzero%20Hotel"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-secondary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-on-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
               >
                 careers@zenzero.com
               </a>

@@ -90,7 +90,7 @@ export function SeasonalRatesAdminTable({ rates }: SeasonalRatesAdminTableProps)
             {sorted.map((r) => {
               const status = statusOf(r)
               return (
-                <tr key={r.id} className="hover:bg-surface-container-low transition-colors">
+                <tr key={r.id} className="hover:bg-primary-fixed transition-colors">
                   <td className="px-4 py-4">
                     <p className="text-body-md font-medium text-primary">{r.label}</p>
                     {r.min_nights_override != null && (
@@ -123,7 +123,7 @@ export function SeasonalRatesAdminTable({ rates }: SeasonalRatesAdminTableProps)
                       <Link
                         href={`/admin/rates/seasonal-rates/${r.id}/edit`}
                         title="แก้ไข"
-                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-on-surface hover:bg-surface-container-high transition-colors"
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
                       >
                         <MaterialIcon name="edit" size={18} />
                       </Link>

@@ -53,7 +53,7 @@ export default async function LoginPage(props: PageProps<'/login'>) {
           {t('auth.noAccount')}{' '}
           <Link
             href={`/register${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}
-            className="text-primary font-semibold hover:text-secondary transition-colors"
+            className="text-primary px-2 py-1 rounded font-semibold hover:bg-primary-fixed hover:text-primary transition-colors"
           >
             {t('auth.signUp')}
           </Link>

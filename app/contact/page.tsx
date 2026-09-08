@@ -63,18 +63,18 @@ export default function ContactPage() {
               <div className="space-y-3 text-body-md text-on-surface-variant">
                 <p>
                   <strong className="text-on-surface">สำหรับการจอง:</strong>{' '}
-                  <Link href="/rooms" className="text-primary hover:text-secondary transition-colors duration-200">จองผ่านเว็บไซต์</Link>
+                  <Link href="/rooms" className="text-primary px-1 py-0.5 rounded hover:bg-primary-fixed hover:text-primary transition-colors duration-200">จองผ่านเว็บไซต์</Link>
                   {' '}หรือโทร 02-XXX-XXXX
                 </p>
                 <p>
                   <strong className="text-on-surface">สำหรับปัญหาการชำระเงิน:</strong>{' '}
-                  <a href="mailto:billing@zenzero.com" className="text-primary hover:text-secondary transition-colors duration-200">
+                  <a href="mailto:billing@zenzero.com" className="text-primary px-1 py-0.5 rounded hover:bg-primary-fixed hover:text-primary transition-colors duration-200">
                     billing@zenzero.com
                   </a>
                 </p>
                 <p>
                   <strong className="text-on-surface">สำหรับคำขอส่วนบุคคล (PDPA):</strong>{' '}
-                  <a href="mailto:privacy@zenzero.com" className="text-primary hover:text-secondary transition-colors duration-200">
+                  <a href="mailto:privacy@zenzero.com" className="text-primary px-1 py-0.5 rounded hover:bg-primary-fixed hover:text-primary transition-colors duration-200">
                     privacy@zenzero.com
                   </a>
                 </p>

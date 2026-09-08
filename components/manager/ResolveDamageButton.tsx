@@ -31,7 +31,7 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-caption text-primary underline underline-offset-4 hover:text-secondary"
+        className="inline-flex items-center gap-1 px-2 py-1 rounded text-caption text-primary underline underline-offset-4 hover:bg-primary-fixed"
       >
         เรียกเก็บเงินลูกค้า
         <MaterialIcon name="arrow_forward" size={14} />
@@ -92,14 +92,14 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={pending}
-                className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-surface-container-low disabled:opacity-50"
+                className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-primary-fixed hover:text-primary disabled:opacity-50"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 disabled={pending}
-                className="px-4 py-2 rounded-md bg-primary text-secondary text-body-md font-semibold disabled:opacity-50"
+                className="px-4 py-2 rounded-md bg-primary text-on-primary text-body-md font-semibold disabled:opacity-50"
               >
                 {pending ? 'กำลังบันทึก...' : 'ยืนยันการแก้ไข'}
               </button>

@@ -28,14 +28,14 @@ export default async function NotFound() {
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-secondary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-on-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
               >
                 <MaterialIcon name="home" size={18} />
                 {t('notFound.goHome')}
               </Link>
               <Link
                 href="/rooms"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-outline-variant text-primary font-semibold text-label-md uppercase tracking-wider hover:bg-surface-container-low transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-outline-variant text-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
               >
                 <MaterialIcon name="hotel" size={18} />
                 {t('nav.rooms')}

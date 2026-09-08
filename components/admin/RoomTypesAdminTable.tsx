@@ -34,7 +34,7 @@ export function RoomTypesAdminTable({ roomTypes }: RoomTypesAdminTableProps) {
           </thead>
           <tbody className="divide-y divide-outline-variant">
             {roomTypes.map((r) => (
-              <tr key={r.id} className="hover:bg-surface-container-low transition-colors">
+              <tr key={r.id} className="hover:bg-primary-fixed transition-colors">
                 <td className="px-4 py-4">
                   <p className="text-body-md font-medium text-primary">{r.name}</p>
                   <p className="text-caption text-on-surface-variant">{r.name_th}</p>
@@ -67,7 +67,7 @@ export function RoomTypesAdminTable({ roomTypes }: RoomTypesAdminTableProps) {
                 <td className="px-4 py-4 text-right">
                   <Link
                     href={`/admin/rates/room-types/${r.id}/edit`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body-md rounded-lg border border-outline-variant hover:bg-surface-container-low transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body-md rounded-lg border border-outline-variant hover:bg-primary-fixed hover:text-primary transition-colors"
                   >
                     <MaterialIcon name="edit" size={16} />
                     แก้ไข

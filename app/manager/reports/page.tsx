@@ -25,7 +25,7 @@ export default async function ManagerReportsPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-outline text-body-md text-primary hover:bg-surface-container-low transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-outline text-body-md text-primary hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
           >
             <MaterialIcon name="picture_as_pdf" size={18} />
             ส่งออก PDF

@@ -116,7 +116,7 @@ export function BookingWidget({ room, settings }: BookingWidgetProps) {
       {/* Date + guest picker */}
       <div className="border border-outline-variant rounded-xl overflow-hidden mb-4">
         <div className="grid grid-cols-2 divide-x divide-outline-variant">
-          <label className="block p-3 cursor-pointer hover:bg-surface-container-low transition-colors">
+          <label className="block p-3 cursor-pointer hover:bg-primary-fixed transition-colors">
             <span className="text-caption text-on-surface-variant uppercase tracking-wider block">
               เช็คอิน
             </span>
@@ -135,7 +135,7 @@ export function BookingWidget({ room, settings }: BookingWidgetProps) {
               className="w-full bg-transparent text-body-md font-medium text-on-surface focus:outline-none"
             />
           </label>
-          <label className="block p-3 cursor-pointer hover:bg-surface-container-low transition-colors">
+          <label className="block p-3 cursor-pointer hover:bg-primary-fixed transition-colors">
             <span className="text-caption text-on-surface-variant uppercase tracking-wider block">
               เช็คเอาท์
             </span>
@@ -162,7 +162,7 @@ export function BookingWidget({ room, settings }: BookingWidgetProps) {
               <button
                 type="button"
                 onClick={() => setGuests((g) => Math.max(1, g - 1))}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-surface-container transition-colors"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
                 aria-label="ลดจำนวนผู้เข้าพัก"
               >
                 <MaterialIcon name="remove" size={16} />
@@ -171,7 +171,7 @@ export function BookingWidget({ room, settings }: BookingWidgetProps) {
               <button
                 type="button"
                 onClick={() => setGuests((g) => Math.min(room.max_guests, g + 1))}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-surface-container transition-colors"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
                 aria-label="เพิ่มจำนวนผู้เข้าพัก"
               >
                 <MaterialIcon name="add" size={16} />
@@ -224,7 +224,7 @@ export function BookingWidget({ room, settings }: BookingWidgetProps) {
         type="button"
         onClick={handleReserve}
         disabled={nights === 0 || minNightsBlocked}
-        className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <MaterialIcon name="bookmark" size={18} />
         ยืนยันการจอง

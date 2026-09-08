@@ -244,7 +244,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
           <button
             type="submit"
             disabled={isPending || nights === 0 || !fullName || !email || !phone}
-            className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60"
+            className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60"
           >
             {isPending ? (
               <>
@@ -312,7 +312,7 @@ function PaymentOption({
       className={`flex items-start gap-3 px-3 py-3 rounded-lg border cursor-pointer transition-colors ${
         selected
           ? 'border-primary bg-primary/5'
-          : 'border-outline-variant hover:bg-surface-container-low'
+          : 'border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed'
       }`}
     >
       <input

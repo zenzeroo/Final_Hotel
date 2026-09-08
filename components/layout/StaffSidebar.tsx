@@ -106,10 +106,11 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                 isActive
                   ? 'bg-primary-container text-secondary font-semibold'
-                  : 'text-secondary/80 hover:bg-primary-container/50 hover:text-secondary'
+                  : 'text-secondary/80 hover:bg-primary-fixed hover:text-primary'
               }`}
             >
               <MaterialIcon name={item.icon} size={20} filled={isActive} />
@@ -127,7 +128,7 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
         <form action={signOut}>
           <button
             type="submit"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary/80 hover:bg-primary-container/50 hover:text-secondary transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary/80 hover:bg-primary-fixed hover:text-primary transition-colors"
           >
             <MaterialIcon name="logout" size={20} />
             <span className="text-body-md">{t('nav.logout')}</span>

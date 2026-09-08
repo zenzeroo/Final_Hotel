@@ -88,7 +88,7 @@ export function RoomInventoryTable({ units }: RoomInventoryTableProps) {
                   const isClosed =
                     unit.status === 'maintenance' || unit.status === 'out_of_order'
                   return (
-                    <tr key={unit.id} className="hover:bg-surface-container-low transition-colors">
+                    <tr key={unit.id} className="hover:bg-primary-fixed transition-colors">
                       <td className="px-4 py-4">
                         <span className="font-mono text-body-md font-bold text-primary">
                           {unit.unit_label}

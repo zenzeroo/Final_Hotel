@@ -23,7 +23,7 @@ export default async function EditStaffPage({
     <div className="p-8 lg:p-12 max-w-3xl">
       <Link
         href="/admin/staff"
-        className="inline-flex items-center gap-2 text-body-md text-primary hover:text-secondary mb-4"
+        className="inline-flex items-center gap-2 px-2 py-1 rounded text-body-md text-primary hover:bg-primary-fixed hover:text-primary mb-4"
       >
         <MaterialIcon name="arrow_back" size={18} />
         กลับไปหน้ารายชื่อพนักงาน

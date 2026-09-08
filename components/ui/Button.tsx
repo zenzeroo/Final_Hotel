@@ -19,11 +19,11 @@ type ButtonProps = ButtonAsButton | ButtonAsLink
 
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary text-secondary border border-primary hover:bg-primary-container hover:border-primary-container',
+    'bg-primary text-on-primary border border-primary hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed',
   secondary:
-    'bg-transparent text-primary border border-primary hover:bg-primary hover:text-secondary',
+    'bg-transparent text-primary border border-primary hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed',
   ghost:
-    'bg-transparent text-on-surface hover:bg-surface-container-low',
+    'bg-transparent text-on-surface hover:bg-primary-fixed hover:text-primary',
 }
 
 const SIZE_STYLES: Record<ButtonSize, string> = {

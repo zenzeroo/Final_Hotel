@@ -44,7 +44,7 @@ export function TaskActions({
           <button
             onClick={() => setConfirmAction('start')}
             disabled={isPending}
-            className="px-3 py-1.5 bg-primary text-secondary rounded-md text-caption uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-50 flex items-center gap-1"
+            className="px-3 py-1.5 bg-primary text-on-primary rounded-md text-caption uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-50 flex items-center gap-1"
           >
             <MaterialIcon name="play_arrow" size={16} />
             เริ่ม
@@ -54,7 +54,7 @@ export function TaskActions({
           <button
             onClick={() => setConfirmAction('complete')}
             disabled={isPending}
-            className="px-3 py-1.5 bg-secondary text-primary rounded-md text-caption uppercase tracking-wider hover:bg-secondary/90 transition-colors disabled:opacity-50 flex items-center gap-1"
+            className="px-3 py-1.5 bg-secondary-container text-on-secondary-container rounded-md text-caption uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-50 flex items-center gap-1"
           >
             <MaterialIcon name="check" size={16} />
             เสร็จสิ้น

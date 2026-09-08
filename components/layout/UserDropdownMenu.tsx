@@ -69,7 +69,7 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
         aria-label="เมนูผู้ใช้"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-2 px-1 py-1 rounded-full hover:bg-surface-container-low transition-colors"
+        className="flex items-center gap-2 px-1 py-1 rounded-full hover:bg-primary-fixed transition-colors"
       >
         <span
           className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary font-semibold text-label-md"
@@ -112,7 +112,7 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
           <Link
             href="/account/profile"
             role="menuitem"
-            className="flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-surface-container-low transition-colors"
+            className="flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
           >
             <MaterialIcon name="person" size={20} className="text-on-surface-variant" />
             ดูโปรไฟล์ของฉัน
@@ -122,7 +122,7 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
             <button
               type="submit"
               role="menuitem"
-              className="w-full flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-surface-container-low transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors text-left"
             >
               <MaterialIcon name="logout" size={20} className="text-on-surface-variant" />
               ออกจากระบบ

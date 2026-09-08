@@ -45,7 +45,7 @@ export function CloseRoomButton({ unitId, isClosed }: CloseRoomButtonProps) {
         type="button"
         onClick={handleClick}
         disabled={pending}
-        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-caption font-semibold transition-colors disabled:opacity-50 hover:bg-surface-container-low ${tone}`}
+        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-caption font-semibold transition-colors disabled:opacity-50 hover:bg-primary-fixed hover:text-primary ${tone}`}
         title={label}
       >
         <MaterialIcon name={icon} size={14} />

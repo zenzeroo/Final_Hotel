@@ -17,7 +17,7 @@ export function TransactionalHeader({ backHref, title }: TransactionalHeaderProp
         <div className="flex items-center justify-between h-16">
           <Link
             href={backHref}
-            className="inline-flex items-center gap-2 text-body-md text-on-surface hover:text-primary transition-colors"
+            className="inline-flex items-center gap-2 px-2 py-1 rounded text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
           >
             <MaterialIcon name="arrow_back" size={20} />
             <span>ย้อนกลับ</span>

@@ -47,7 +47,7 @@ export function HideReviewButton({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-outline-variant text-caption font-semibold text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50"
+          className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-outline-variant text-caption font-semibold text-on-surface-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50"
         >
           <MaterialIcon name="visibility_off" size={14} />
           {pending ? '...' : 'ซ่อน'}
@@ -97,7 +97,7 @@ export function HideReviewButton({
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={pending}
-                className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-surface-container-low disabled:opacity-50"
+                className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-primary-fixed hover:text-primary disabled:opacity-50"
               >
                 ยกเลิก
               </button>
@@ -137,7 +137,7 @@ export function HideReviewButton({
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={pending}
-                className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-surface-container-low disabled:opacity-50"
+                className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-primary-fixed hover:text-primary disabled:opacity-50"
               >
                 ยกเลิก
               </button>

@@ -119,7 +119,7 @@ export function PaymentSuccessModal({
               <button
                 type="button"
                 onClick={() => router.push('/bookings')}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 border border-primary text-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary hover:text-secondary transition-colors"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 border border-primary text-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
               >
                 <MaterialIcon name="history" size={18} />
                 {t('paymentSuccess.viewHistory')}
@@ -127,7 +127,7 @@ export function PaymentSuccessModal({
               <button
                 type="button"
                 onClick={() => router.push('/')}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
               >
                 <MaterialIcon name="home" size={18} />
                 {t('paymentSuccess.goHome')}
@@ -170,7 +170,7 @@ export function PaymentSuccessModal({
             <button
               type="button"
               onClick={() => setViewState('processing')}
-              className="w-full mt-2 inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+              className="w-full mt-2 inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
             >
               <MaterialIcon name="refresh" size={18} />
               {t('paymentSuccess.retry')}

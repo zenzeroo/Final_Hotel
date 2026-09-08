@@ -20,7 +20,7 @@ export function EmptyState({ icon, title, description, ctaLabel, ctaHref }: Empt
       {ctaLabel && ctaHref && (
         <Link
           href={ctaHref}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
         >
           {ctaLabel}
           <MaterialIcon name="arrow_forward" size={18} />

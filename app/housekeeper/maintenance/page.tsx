@@ -38,7 +38,7 @@ export default async function MaintenanceReportsPage({ searchParams }: { searchP
             className={`px-4 py-1.5 rounded-full text-caption uppercase tracking-wider transition-colors ${
               filter === f
                 ? 'bg-primary text-secondary'
-                : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                : 'bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
             }`}
           >
             {STATUS_FILTER_LABELS[f]}

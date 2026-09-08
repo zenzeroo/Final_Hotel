@@ -49,10 +49,11 @@ export function BookingFilters({ initialStatus, initialSearch }: BookingFiltersP
               key={opt.value}
               type="button"
               onClick={() => updateStatus(opt.value)}
+              aria-pressed={isActive}
               className={`shrink-0 px-3 py-1.5 rounded-full text-label-md font-semibold transition-colors ${
                 isActive
-                  ? 'bg-primary text-secondary'
-                  : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                  ? 'bg-primary text-on-primary'
+                  : 'bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
               }`}
             >
               {opt.label}
