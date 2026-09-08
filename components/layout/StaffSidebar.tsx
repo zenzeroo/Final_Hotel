@@ -69,7 +69,7 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
   const navItems = NAV_BY_ROLE[role] ?? []
 
   return (
-    <aside className="w-72 shrink-0 bg-primary text-secondary min-h-screen flex flex-col">
+    <aside className="w-72 shrink-0 self-start sticky top-0 z-30 bg-primary text-secondary h-screen flex flex-col">
       {/* Brand */}
       <div className="px-6 py-6 border-b border-primary-container">
         <Link href={roleHomePath(role)} className="font-display text-2xl font-bold text-secondary">
@@ -81,7 +81,7 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+      <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = !item.disabled && (
             pathname === item.href ||
