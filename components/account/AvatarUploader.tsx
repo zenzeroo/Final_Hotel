@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { r2Url } from '@/lib/r2/publicUrl'
 import { uploadAvatarAction } from '@/app/actions/account'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
@@ -20,6 +21,7 @@ interface AvatarUploaderProps {
  * TopNavBar avatar pattern).
  */
 export function AvatarUploader({ avatarKey, fullName }: AvatarUploaderProps) {
+  const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -76,6 +78,11 @@ export function AvatarUploader({ avatarKey, fullName }: AvatarUploaderProps) {
         onSuccess={() => {
           setError(null)
           setPreview(null)
+          // Re-fetch Server Components so TopNavBar re-reads getSession()
+          // and renders the new avatar immediately. revalidatePath
+          // ('/', 'layout') in uploadAvatarAction already invalidated
+          // the route cache; this just consumes the new data.
+          router.refresh()
         }}
       />
       {error && (

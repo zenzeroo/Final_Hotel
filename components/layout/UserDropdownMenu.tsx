@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { signOut } from '@/app/actions/auth'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { r2Url } from '@/lib/r2/publicUrl'
 import type { SessionUser } from '@/lib/supabase/getSession'
 
 interface UserDropdownMenuProps {
@@ -71,12 +72,21 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
         aria-expanded={open}
         className="flex items-center gap-2 px-1 py-1 rounded-full hover:bg-primary-fixed transition-colors"
       >
-        <span
-          className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary font-semibold text-label-md"
-          aria-hidden
-        >
-          {initials || 'U'}
-        </span>
+        {session.avatarKey ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={r2Url(session.avatarKey)}
+            alt={session.fullName ?? 'avatar'}
+            className="w-10 h-10 rounded-full object-cover bg-primary text-transparent"
+          />
+        ) : (
+          <span
+            className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary font-semibold text-label-md"
+            aria-hidden
+          >
+            {initials || 'U'}
+          </span>
+        )}
         <span className="hidden md:inline text-body-md text-on-surface truncate max-w-[120px]">
           {session.fullName ?? 'ผู้ใช้'}
         </span>

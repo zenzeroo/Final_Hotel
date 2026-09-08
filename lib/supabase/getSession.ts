@@ -8,6 +8,8 @@ export interface SessionUser {
   fullName: string | null
   phone: string | null
   role: UserRole
+  /** R2 object key for the user's avatar image, or null if not set. */
+  avatarKey: string | null
 }
 
 /**
@@ -48,7 +50,7 @@ export async function getSession(): Promise<SessionUser | null> {
   // Fetch profile
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, phone, role')
+    .select('full_name, phone, role, avatar_key')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -58,6 +60,7 @@ export async function getSession(): Promise<SessionUser | null> {
     fullName: profile?.full_name ?? null,
     phone: profile?.phone ?? null,
     role: (profile?.role as UserRole) ?? 'user',
+    avatarKey: profile?.avatar_key ?? null,
   }
 }
 

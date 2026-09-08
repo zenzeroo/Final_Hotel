@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getSession } from '@/lib/supabase/getSession'
 import { signOut } from '@/app/actions/auth'
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { r2Url } from '@/lib/r2/publicUrl'
 import { ScrollNavIsland } from './ScrollNavIsland'
 import { UserDropdownMenu } from './UserDropdownMenu'
 import { LanguageToggle } from './LanguageToggle'
@@ -95,9 +96,18 @@ function UserMenu({
       <Link
         href="/account/profile"
         aria-label={t('nav.greeting')}
-        className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-on-primary font-semibold text-label-md hover:bg-primary-container transition-colors"
+        className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-on-primary font-semibold text-label-md hover:bg-primary-container transition-colors overflow-hidden"
       >
-        {initials || 'U'}
+        {session.avatarKey ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={r2Url(session.avatarKey)}
+            alt={session.fullName ?? 'avatar'}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          initials || 'U'
+        )}
       </Link>
       <form action={signOut}>
         <button
