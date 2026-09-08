@@ -62,6 +62,7 @@ export const en: Dictionary = {
     guests: 'Guests',
     any: 'Any',
     viewDetails: 'View details',
+    seeAll: 'See all',
   },
 
   // Room detail

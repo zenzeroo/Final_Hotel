@@ -58,6 +58,7 @@ export const th = {
     guests: 'ผู้เข้าพัก',
     any: 'ทั้งหมด',
     viewDetails: 'ดูรายละเอียด',
+    seeAll: 'ดูทั้งหมด',
   },
 
   // Room detail

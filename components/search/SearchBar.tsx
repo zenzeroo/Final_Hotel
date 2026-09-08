@@ -1,7 +1,7 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useState, type FormEvent } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useRef, useState, type FormEvent } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import {
   getLocalIsoDate,
@@ -9,6 +9,7 @@ import {
   getTomorrowLocalIso,
   addDaysLocalIso,
 } from '@/lib/dates'
+import { useT } from '@/lib/i18n/useT'
 
 interface SearchBarProps {
   variant?: 'hero' | 'compact'
@@ -24,6 +25,8 @@ export function SearchBar({
   defaultGuests = 2,
 }: SearchBarProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const t = useT()
 
   // Hotels require ≥ 1 day of advance booking. Clamp any URL-provided
   // checkin to the policy minimum so an out-of-date shared link can't
@@ -41,17 +44,105 @@ export function SearchBar({
   })
   const [guests, setGuests] = useState(defaultGuests)
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    const params = new URLSearchParams({
-      checkin,
-      checkout,
-      guests: String(guests),
-    })
-    router.push(`/rooms?${params.toString()}`)
+  const isHero = variant === 'hero'
+
+  // Compact variant only — realtime auto-search. Hero variant still
+  // requires explicit Submit because every change on `/` would
+  // otherwise navigate the homepage away before the user is done.
+  const isCompact = !isHero
+
+  /**
+   * Merge our local state with the current page's searchParams (so
+   * FilterSidebar's type/floor/priceRange are preserved) and navigate
+   * to the merged URL. `router.replace` keeps history clean — each
+   * field change shouldn't push a new entry. `{ scroll: false }`
+   * preserves the user's scroll position in the results list.
+   */
+  function navigateWith(opts: { checkin?: string; checkout?: string; guests?: number }) {
+    if (!isCompact) return
+    const params = new URLSearchParams(searchParams.toString())
+    if (opts.checkin !== undefined) {
+      if (opts.checkin) params.set('checkin', opts.checkin)
+      else params.delete('checkin')
+    }
+    if (opts.checkout !== undefined) {
+      if (opts.checkout) params.set('checkout', opts.checkout)
+      else params.delete('checkout')
+    }
+    if (opts.guests !== undefined) {
+      if (opts.guests) params.set('guests', String(opts.guests))
+      else params.delete('guests')
+    }
+    const qs = params.toString()
+    router.replace(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
   }
 
-  const isHero = variant === 'hero'
+  // Inline ~350ms debounce for the guests +/- buttons. A rapid burst
+  // of clicks coalesces into a single navigation. Date fields don't
+  // need debouncing (one change = one nav).
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncedNavigate = (nextGuests: number) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      navigateWith({ guests: nextGuests })
+    }, 350)
+  }
+
+  function handleCheckinChange(v: string) {
+    setCheckin(v)
+    let nextCheckout = checkout
+    // If the new check-in lands on/after the current checkout, bump
+    // checkout to check-in + 1 (read post-bump value for navigation).
+    if (v >= checkout) {
+      nextCheckout = addDaysLocalIso(v, 1)
+      setCheckout(nextCheckout)
+    }
+    navigateWith({ checkin: v, checkout: nextCheckout })
+  }
+
+  function handleCheckoutChange(v: string) {
+    setCheckout(v)
+    navigateWith({ checkout: v })
+  }
+
+  function handleGuestsChange(delta: number) {
+    const next = Math.max(1, Math.min(10, guests + delta))
+    setGuests(next)
+    debouncedNavigate(next)
+  }
+
+  // Compact-only: navigate without the guests param so the server
+  // filter (`if (filters.guests > 0) gte('max_guests', guests)`) is
+  // skipped — shows every room type matching the date range.
+  function handleSeeAll() {
+    if (!isCompact) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('guests')
+    if (checkin) params.set('checkin', checkin)
+    else params.delete('checkin')
+    if (checkout) params.set('checkout', checkout)
+    else params.delete('checkout')
+    const qs = params.toString()
+    router.replace(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
+  }
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    // Hero: explicit search action (push, not replace, so the user's
+    // history reflects the navigation away from the homepage).
+    // Compact: this fires when the user presses Enter on a date field
+    // (no Submit button rendered in compact). Same merged semantics.
+    const params = new URLSearchParams(
+      isCompact ? searchParams.toString() : '',
+    )
+    if (checkin) params.set('checkin', checkin)
+    if (checkout) params.set('checkout', checkout)
+    if (guests) params.set('guests', String(guests))
+    const qs = params.toString()
+    router[isCompact ? 'replace' : 'push'](`/rooms${qs ? `?${qs}` : ''}`, {
+      scroll: false,
+    })
+  }
 
   return (
     <form
@@ -67,14 +158,7 @@ export function SearchBar({
         label="เช็คอิน"
         value={checkin}
         min={getMinCheckInLocalIso()}
-        onChange={(v) => {
-          setCheckin(v)
-          if (v >= checkout) {
-            const next = new Date(v)
-            next.setDate(next.getDate() + 1)
-            setCheckout(getLocalIsoDate(next))
-          }
-        }}
+        onChange={handleCheckinChange}
       />
 
       {/* Check-out */}
@@ -82,7 +166,7 @@ export function SearchBar({
         label="เช็คเอาท์"
         value={checkout}
         min={addDaysLocalIso(checkin, 1)}
-        onChange={setCheckout}
+        onChange={handleCheckoutChange}
       />
 
       {/* Guests */}
@@ -97,7 +181,7 @@ export function SearchBar({
         <div className="flex items-center gap-3 ml-auto">
           <button
             type="button"
-            onClick={() => setGuests((g) => Math.max(1, g - 1))}
+            onClick={() => handleGuestsChange(-1)}
             className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
             aria-label="ลดจำนวนผู้เข้าพัก"
           >
@@ -106,7 +190,7 @@ export function SearchBar({
           <span className="text-body-md font-semibold w-6 text-center">{guests}</span>
           <button
             type="button"
-            onClick={() => setGuests((g) => Math.min(10, g + 1))}
+            onClick={() => handleGuestsChange(+1)}
             className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
             aria-label="เพิ่มจำนวนผู้เข้าพัก"
           >
@@ -115,18 +199,25 @@ export function SearchBar({
         </div>
       </div>
 
-      {/* Submit */}
-      <button
-        type="submit"
-        className={`inline-flex items-center justify-center gap-2 ${
-          isHero
-            ? 'md:rounded-full bg-primary text-on-primary px-6 py-3 md:py-2 rounded-xl'
-            : 'rounded-xl bg-primary text-on-primary px-6 py-3'
-        } font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors`}
-      >
-        <MaterialIcon name="search" size={20} />
-        <span>ค้นหาห้องพัก</span>
-      </button>
+      {/* Actions — compact: See All + (no Submit, realtime already navigates). Hero: Submit button. */}
+      {isHero ? (
+        <button
+          type="submit"
+          className="md:rounded-full bg-primary text-on-primary px-6 py-3 md:py-2 rounded-xl font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
+        >
+          <MaterialIcon name="search" size={20} />
+          <span>ค้นหาห้องพัก</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={handleSeeAll}
+          className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-primary text-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
+        >
+          <MaterialIcon name="grid_view" size={18} />
+          <span>{t('roomsList.seeAll')}</span>
+        </button>
+      )}
     </form>
   )
 }
