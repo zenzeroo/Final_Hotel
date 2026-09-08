@@ -2,7 +2,6 @@ import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { FilterSidebarServer } from '@/components/search/FilterSidebarServer'
 import { FilterChips } from '@/components/search/FilterChips'
-import { SearchSummaryCard } from '@/components/search/SearchSummaryCard'
 import { SearchBar } from '@/components/search/SearchBar'
 import { FloorGroupSection } from '@/components/room/FloorGroupSection'
 import { searchRooms } from '@/lib/data/rooms'
@@ -58,13 +57,8 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
 
         <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-10">
           <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8">
-            {/* Sidebar (filters + search summary) */}
+            {/* Sidebar (filters) */}
             <div className="flex flex-col gap-6">
-              <SearchSummaryCard
-                checkin={filters.checkin}
-                checkout={filters.checkout}
-                guests={filters.guests}
-              />
               <FilterSidebarServer />
             </div>
 

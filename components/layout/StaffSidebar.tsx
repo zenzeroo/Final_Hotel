@@ -109,7 +109,7 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
               aria-current={isActive ? 'page' : undefined}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                 isActive
-                  ? 'bg-primary-container text-secondary font-semibold'
+                  ? 'bg-primary text-on-primary font-semibold'
                   : 'text-secondary/80 hover:bg-primary-fixed hover:text-primary'
               }`}
             >

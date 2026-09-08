@@ -5,6 +5,7 @@ import { MaterialIcon } from '../ui/MaterialIcon'
 import { ScrollNavIsland } from './ScrollNavIsland'
 import { UserDropdownMenu } from './UserDropdownMenu'
 import { LanguageToggle } from './LanguageToggle'
+import { NavLink } from './NavLink'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
@@ -58,17 +59,6 @@ export async function TopNavBar() {
         </div>
       </header>
     </ScrollNavIsland>
-  )
-}
-
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="px-3 py-2 rounded-md text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
-    >
-      {children}
-    </Link>
   )
 }
 
