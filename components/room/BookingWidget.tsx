@@ -13,6 +13,7 @@ import {
 import { getSeasonalRatesAction } from '@/app/actions/seasonal-rates'
 import type { AppliedRate, QuoteResult } from '@/lib/pricing/seasons'
 import type { RoomType } from '@/lib/data/types'
+import { getLocalIsoDate, getTodayLocalIso, getTomorrowLocalIso } from '@/lib/dates'
 
 interface BookingWidgetProps {
   room: RoomType
@@ -26,26 +27,16 @@ interface BookingWidgetProps {
   defaultGuests?: number
 }
 
-function getTodayIso() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function getTomorrowIso() {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
-}
-
 /** Tomorrow + 1 day (i.e. 2 nights out) — the historical default checkout. */
 function getTomorrowPlusOneIso() {
   const d = new Date()
   d.setDate(d.getDate() + 2)
-  return d.toISOString().slice(0, 10)
+  return getLocalIsoDate(d)
 }
 
 export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut, defaultGuests }: BookingWidgetProps) {
   const router = useRouter()
-  const [checkIn, setCheckIn] = useState(() => defaultCheckIn ?? getTomorrowIso())
+  const [checkIn, setCheckIn] = useState(() => defaultCheckIn ?? getTomorrowLocalIso())
   const [checkOut, setCheckOut] = useState(() => defaultCheckOut ?? getTomorrowPlusOneIso())
   // Clamp initial guests into [1, max_guests] so a stale URL param (e.g.
   // ?guests=10 on a max=4 room) doesn't strand the + button in a
@@ -137,13 +128,13 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
             <input
               type="date"
               value={checkIn}
-              min={getTodayIso()}
+              min={getTodayLocalIso()}
               onChange={(e) => {
                 setCheckIn(e.target.value)
                 if (e.target.value >= checkOut) {
                   const next = new Date(e.target.value)
                   next.setDate(next.getDate() + 1)
-                  setCheckOut(next.toISOString().slice(0, 10))
+                  setCheckOut(getLocalIsoDate(next))
                 }
               }}
               className="w-full bg-transparent text-body-md font-medium text-on-surface focus:outline-none"
@@ -156,7 +147,7 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
             <input
               type="date"
               value={checkOut}
-              min={checkIn > getTodayIso() ? checkIn : getTodayIso()}
+              min={checkIn > getTodayLocalIso() ? checkIn : getTodayLocalIso()}
               onChange={(e) => setCheckOut(e.target.value)}
               className="w-full bg-transparent text-body-md font-medium text-on-surface focus:outline-none"
             />

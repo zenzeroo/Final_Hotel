@@ -3,22 +3,13 @@
 import { useRouter } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { getLocalIsoDate, getTodayLocalIso, getTomorrowLocalIso } from '@/lib/dates'
 
 interface SearchBarProps {
   variant?: 'hero' | 'compact'
   defaultCheckin?: string
   defaultCheckout?: string
   defaultGuests?: number
-}
-
-function getTodayIso() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function getTomorrowIso() {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
 }
 
 export function SearchBar({
@@ -29,8 +20,8 @@ export function SearchBar({
 }: SearchBarProps) {
   const router = useRouter()
 
-  const [checkin, setCheckin] = useState(() => defaultCheckin ?? getTodayIso())
-  const [checkout, setCheckout] = useState(() => defaultCheckout ?? getTomorrowIso())
+  const [checkin, setCheckin] = useState(() => defaultCheckin ?? getTodayLocalIso())
+  const [checkout, setCheckout] = useState(() => defaultCheckout ?? getTomorrowLocalIso())
   const [guests, setGuests] = useState(defaultGuests)
 
   const handleSubmit = (e: FormEvent) => {
@@ -58,13 +49,13 @@ export function SearchBar({
       <DateField
         label="เช็คอิน"
         value={checkin}
-        min={getTodayIso()}
+        min={getTodayLocalIso()}
         onChange={(v) => {
           setCheckin(v)
           if (v >= checkout) {
             const next = new Date(v)
             next.setDate(next.getDate() + 1)
-            setCheckout(next.toISOString().slice(0, 10))
+            setCheckout(getLocalIsoDate(next))
           }
         }}
       />
@@ -73,7 +64,7 @@ export function SearchBar({
       <DateField
         label="เช็คเอาท์"
         value={checkout}
-        min={checkin > getTodayIso() ? checkin : getTodayIso()}
+        min={checkin > getTodayLocalIso() ? checkin : getTodayLocalIso()}
         onChange={setCheckout}
       />
 

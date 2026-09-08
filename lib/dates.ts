@@ -56,3 +56,37 @@ export function isOver18(birthdateIso: string): boolean {
   if (m < 0 || (m === 0 && now.getUTCDate() < born.getUTCDate())) age--
   return age >= 18
 }
+
+/**
+ * Format a Date as ISO YYYY-MM-DD using **local time components** (not
+ * `Date#toISOString()` which always returns UTC). Use this for any
+ * `<input type="date" min=… value=…>` constraint — using UTC causes
+ * off-by-one bugs in any timezone west of UTC (e.g. a Thai user at
+ * 06:00 local sees `min= 2026-09-07` instead of their real today
+ * 2026-09-08).
+ */
+export function getLocalIsoDate(d: Date = new Date()): string {
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+/**
+ * Today in the **server's** local timezone, ISO YYYY-MM-DD. Equivalent
+ * to `getLocalIsoDate(new Date())` — provided as a named shortcut for
+ * `<input min=…>` sites.
+ */
+export function getTodayLocalIso(): string {
+  return getLocalIsoDate()
+}
+
+/**
+ * Tomorrow in the server's local timezone (today + 1 day). Use for
+ * default checkout values.
+ */
+export function getTomorrowLocalIso(): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  return getLocalIsoDate(d)
+}
