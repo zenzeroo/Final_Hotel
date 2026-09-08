@@ -9,6 +9,7 @@ import { createCheckoutSessionAction } from '@/app/actions/payment'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { AlertModal } from '@/components/ui/AlertModal'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { EmptyState } from '@/components/feedback/EmptyState'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
 import { useT, useLocale } from '@/lib/i18n/useT'
@@ -19,7 +20,7 @@ interface BookingHistoryProps {
   bookings: Booking[]
 }
 
-type Tab = 'active' | 'cancelled'
+type Tab = 'active' | 'checkedIn' | 'cancelled'
 
 function formatDate(iso: string, localeBcp: string) {
   return new Intl.DateTimeFormat(localeBcp, {
@@ -62,10 +63,30 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
   const [alertMessage, setAlertMessage] = useState<string | null>(null)
   const [payError, setPayError] = useState<string | null>(null)
 
-  const activeBookings = bookings.filter((b) => b.status !== 'cancelled')
+  const activeBookings = bookings.filter(
+    (b) => b.status === 'pending' || b.status === 'confirmed',
+  )
+  const checkedInBookings = bookings.filter(
+    (b) => b.status === 'checked_in' || b.status === 'checked_out',
+  )
   const cancelledBookings = bookings.filter((b) => b.status === 'cancelled')
 
-  const visible = tab === 'active' ? activeBookings : cancelledBookings
+  const counts = {
+    active: activeBookings.length,
+    checkedIn: checkedInBookings.length,
+    cancelled: cancelledBookings.length,
+  }
+
+  const visible = (() => {
+    switch (tab) {
+      case 'active':
+        return activeBookings
+      case 'checkedIn':
+        return checkedInBookings
+      case 'cancelled':
+        return cancelledBookings
+    }
+  })()
 
   function handleCancel(bookingId: string, isPaid: boolean) {
     setConfirmBookingId(bookingId)
@@ -111,14 +132,20 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-outline-variant mb-6">
         <TabButton
-          label={t('bookings.title')}
-          count={activeBookings.length}
+          label={t('bookings.tabActive')}
+          count={counts.active}
           active={tab === 'active'}
           onClick={() => setTab('active')}
         />
         <TabButton
+          label={t('bookings.tabCheckedIn')}
+          count={counts.checkedIn}
+          active={tab === 'checkedIn'}
+          onClick={() => setTab('checkedIn')}
+        />
+        <TabButton
           label={t('bookings.statusCancelled')}
-          count={cancelledBookings.length}
+          count={counts.cancelled}
           active={tab === 'cancelled'}
           onClick={() => setTab('cancelled')}
         />
@@ -132,9 +159,23 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
 
       {/* List */}
       {visible.length === 0 ? (
-        <p className="text-body-md text-on-surface-variant text-center py-12">
-          {tab === 'active' ? t('bookings.title') : t('bookings.statusCancelled')}
-        </p>
+        <EmptyState
+          icon={
+            tab === 'active'
+              ? 'event'
+              : tab === 'checkedIn'
+                ? 'history'
+                : 'cancel'
+          }
+          title={
+            tab === 'active'
+              ? t('bookings.emptyActive')
+              : tab === 'checkedIn'
+                ? t('bookings.emptyCheckedIn')
+                : t('bookings.statusCancelled')
+          }
+          description={t('bookings.browseRooms')}
+        />
       ) : (
         <div className="flex flex-col gap-4">
           {visible.map((b) => (
@@ -213,6 +254,7 @@ function BookingRow({
   localeBcp: string
 }) {
   const isCancelled = booking.status === 'cancelled'
+  const isCheckedIn = booking.status === 'checked_in'
   const isCheckedOut = booking.status === 'checked_out'
   const isPaid = booking.payment_status === 'paid'
 
@@ -270,7 +312,7 @@ function BookingRow({
       </Link>
 
       {/* Actions */}
-      {!isCancelled && !isCheckedOut && (
+      {!isCancelled && !isCheckedIn && !isCheckedOut && (
         <div className="flex items-center gap-2 px-4 md:px-6 pb-4">
           {!isPaid && (
             <button
