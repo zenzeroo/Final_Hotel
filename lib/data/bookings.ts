@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
+import type { RoomTypeName } from './types'
 
 export interface Booking {
   id: string
@@ -32,6 +33,7 @@ export interface Booking {
     slug: string
     name: string
     name_th: string
+    type: RoomTypeName
     hero_image_key: string
   }
 }
@@ -69,7 +71,7 @@ export async function getUserBookings(
     .from('bookings')
     .select(`
       *,
-      room_type:room_types(id, slug, name, name_th, hero_image_key)
+      room_type:room_types(id, slug, name, name_th, type, hero_image_key)
     `)
     .eq('user_id', userId)
     .order('check_in', { ascending: false })
@@ -97,7 +99,7 @@ export async function getBookingById(
     .from('bookings')
     .select(`
       *,
-      room_type:room_types(id, slug, name, name_th, hero_image_key)
+      room_type:room_types(id, slug, name, name_th, type, hero_image_key)
     `)
     .eq('id', bookingId)
     .eq('user_id', userId)

@@ -10,6 +10,7 @@ import { PaymentSuccessModal } from '@/components/payment/PaymentSuccessModal'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
+import { roomTypeLabel } from '@/lib/format/roomType'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
@@ -165,6 +166,11 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                   <h2 className="font-display text-xl text-primary">
                     {booking.room_type?.name_th ?? t('bookings.roomName')}
                   </h2>
+                  {booking.room_type?.type && (
+                    <p className="text-caption text-secondary font-semibold uppercase tracking-wider mt-1">
+                      {t('bookingDetail.roomType')}: {roomTypeLabel(booking.room_type.type, locale)}
+                    </p>
+                  )}
                   <p className="text-caption text-on-surface-variant uppercase tracking-wider mt-1">
                     {t('bookingDetail.nights', { count: booking.nights })} · {t('bookings.guestsCount', { count: booking.guests })}
                   </p>
