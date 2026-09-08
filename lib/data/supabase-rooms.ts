@@ -73,7 +73,61 @@ export async function searchRooms(filters: SearchFilters): Promise<SearchResult>
   const { data, count, error } = await query
   if (error) wrapSupabaseError('', error)
 
-  return { rooms: (data ?? []) as RoomType[], total: count ?? 0 }
+  let rooms = (data ?? []) as RoomType[]
+
+  // Phase 27.A — filter out room types whose entire physical pool is
+  // already booked for the requested date range. Mirrors Phase 19's
+  // `create_booking()` RPC overbooking logic: pool = active room_units,
+  // booked = confirmed/checked_in bookings overlapping [checkin, checkout].
+  // If booked >= pool, every physical room is occupied → hide the type.
+  if (filters.checkin && filters.checkout && rooms.length > 0) {
+    rooms = await filterByAvailability(supabase, rooms, filters.checkin, filters.checkout)
+  }
+
+  return { rooms, total: rooms.length }
+}
+
+/**
+ * Drop room types that have zero availability across the requested date
+ * range. Pool = count of active room_units per type. Booked = count of
+ * bookings in {confirmed, checked_in} overlapping [checkin, checkout]
+ * per type. Mirrors the overbooking check in `create_booking()` RPC
+ * (`db-schemas/20260904_create_booking_rpc_and_constraint.sql`).
+ */
+async function filterByAvailability(
+  supabase: Awaited<ReturnType<typeof getClient>>,
+  rooms: RoomType[],
+  checkin: string,
+  checkout: string,
+): Promise<RoomType[]> {
+  const [unitsRes, bookingsRes] = await Promise.all([
+    supabase
+      .from('room_units')
+      .select('room_type_id')
+      .eq('is_active', true),
+    supabase
+      .from('bookings')
+      .select('room_type_id')
+      .in('status', ['confirmed', 'checked_in'])
+      .lte('check_in', checkout)
+      .gte('check_out', checkin),
+  ])
+
+  const poolByType = new Map<string, number>()
+  unitsRes.data?.forEach((u) => {
+    poolByType.set(u.room_type_id, (poolByType.get(u.room_type_id) ?? 0) + 1)
+  })
+
+  const bookedByType = new Map<string, number>()
+  bookingsRes.data?.forEach((b) => {
+    bookedByType.set(b.room_type_id, (bookedByType.get(b.room_type_id) ?? 0) + 1)
+  })
+
+  return rooms.filter((r) => {
+    const pool = poolByType.get(r.id) ?? 0
+    const booked = bookedByType.get(r.id) ?? 0
+    return pool > 0 && booked < pool
+  })
 }
 
 export async function listRoomTypes(): Promise<RoomType[]> {
