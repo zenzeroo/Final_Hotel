@@ -47,7 +47,12 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
   const router = useRouter()
   const [checkIn, setCheckIn] = useState(() => defaultCheckIn ?? getTomorrowIso())
   const [checkOut, setCheckOut] = useState(() => defaultCheckOut ?? getTomorrowPlusOneIso())
-  const [guests, setGuests] = useState(() => defaultGuests ?? 2)
+  // Clamp initial guests into [1, max_guests] so a stale URL param (e.g.
+  // ?guests=10 on a max=4 room) doesn't strand the + button in a
+  // permanently-capped state.
+  const [guests, setGuests] = useState(() =>
+    Math.min(Math.max(1, defaultGuests ?? 2), room.max_guests),
+  )
 
   // Phase parity — capture full QuoteResult so calculatePrice uses the
   // seasonal-aware baseSubtotal. Also drives the appliedRates banner.
@@ -171,7 +176,8 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
               <button
                 type="button"
                 onClick={() => setGuests((g) => Math.max(1, g - 1))}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
+                disabled={guests <= 1}
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-current disabled:hover:border-outline-variant"
                 aria-label="ลดจำนวนผู้เข้าพัก"
               >
                 <MaterialIcon name="remove" size={16} />
@@ -180,7 +186,8 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
               <button
                 type="button"
                 onClick={() => setGuests((g) => Math.min(room.max_guests, g + 1))}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
+                disabled={guests >= room.max_guests}
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-current disabled:hover:border-outline-variant"
                 aria-label="เพิ่มจำนวนผู้เข้าพัก"
               >
                 <MaterialIcon name="add" size={16} />
