@@ -8,6 +8,7 @@ import { searchRooms } from '@/lib/data/rooms'
 import type { SearchFilters } from '@/lib/data/types'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
+import { getTomorrowLocalIso, addDaysLocalIso } from '@/lib/dates'
 
 // Server-render on demand (Supabase data + searchParams)
 export const dynamic = 'force-dynamic'
@@ -17,9 +18,28 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
   const locale = await getLocale()
   const t = getT(locale)
 
+  // Phase 27 — when the user arrives at /rooms without explicit dates
+  // (e.g. via navbar, homepage CTAs, about/contact links, 404), fall
+  // back to tomorrow / tomorrow+1 so the availability filter
+  // (filterByAvailability in lib/data/supabase-rooms.ts) always runs.
+  // Without this, every public entry point showed all room types —
+  // including ones already booked for the next available dates.
+  // Defaults match the compact SearchBar's visual defaults so the
+  // page's filter state and the UI's date inputs stay in sync.
+  const todayPlus1 =
+    typeof searchParams.checkin === 'string' && searchParams.checkin
+      ? searchParams.checkin
+      : getTomorrowLocalIso()
+  const todayPlus2 =
+    typeof searchParams.checkout === 'string' &&
+    searchParams.checkout &&
+    searchParams.checkout > todayPlus1
+      ? searchParams.checkout
+      : addDaysLocalIso(todayPlus1, 1)
+
   const filters: SearchFilters = {
-    checkin: typeof searchParams.checkin === 'string' ? searchParams.checkin : undefined,
-    checkout: typeof searchParams.checkout === 'string' ? searchParams.checkout : undefined,
+    checkin: todayPlus1,
+    checkout: todayPlus2,
     guests: searchParams.guests ? parseInt(String(searchParams.guests), 10) : undefined,
     type:
       typeof searchParams.type === 'string'
