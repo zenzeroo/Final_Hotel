@@ -75,37 +75,45 @@ export async function searchRooms(filters: SearchFilters): Promise<SearchResult>
 
   let rooms = (data ?? []) as RoomType[]
 
-  // Phase 27.A — filter out room types whose entire physical pool is
-  // already booked for the requested date range. Mirrors Phase 19's
-  // `create_booking()` RPC overbooking logic: pool = active room_units,
-  // booked = confirmed/checked_in bookings overlapping [checkin, checkout].
-  // If booked >= pool, every physical room is occupied → hide the type.
+  // Phase 27.A — hide room types that have ANY active booking in the
+  // requested date range. Mirrors Phase 19's `create_booking()` RPC
+  // semantics (count confirmed/checked_in overlapping the window, but
+  // global — bypasses RLS via admin client). UX hint: a search result is
+  // a shared inventory view; the RPC's own pool query is authoritative.
   if (filters.checkin && filters.checkout && rooms.length > 0) {
-    rooms = await filterByAvailability(supabase, rooms, filters.checkin, filters.checkout)
+    rooms = await filterByAvailability(rooms, filters.checkin, filters.checkout)
   }
 
   return { rooms, total: rooms.length }
 }
 
 /**
- * Drop room types that have zero availability across the requested date
- * range. Pool = count of active room_units per type. Booked = count of
- * bookings in {confirmed, checked_in} overlapping [checkin, checkout]
- * per type. Mirrors the overbooking check in `create_booking()` RPC
- * (`db-schemas/20260904_create_booking_rpc_and_constraint.sql`).
+ * Drop room types that have ANY active booking overlapping the requested
+ * date range. Pool = count of active room_units per type. Booked = count
+ * of bookings in {confirmed, checked_in} overlapping [checkin, checkout].
+ *
+ * Uses the admin client so the bookings count is globally accurate —
+ * RLS policy "booking self select" would otherwise strip every other
+ * user's bookings from the count, making two simultaneous searchers both
+ * see the room as available while the RPC's authoritative check would
+ * reject the second booking. Inventory counts are non-PII metadata.
+ *
+ * Mirrors `create_booking()` RPC (`db-schemas/20260905_fix_create_booking_lock.sql:67-97`).
  */
 async function filterByAvailability(
-  supabase: Awaited<ReturnType<typeof getClient>>,
   rooms: RoomType[],
   checkin: string,
   checkout: string,
 ): Promise<RoomType[]> {
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = await createAdminClient()
+
   const [unitsRes, bookingsRes] = await Promise.all([
-    supabase
+    admin
       .from('room_units')
       .select('room_type_id')
       .eq('is_active', true),
-    supabase
+    admin
       .from('bookings')
       .select('room_type_id')
       .in('status', ['confirmed', 'checked_in'])
@@ -126,7 +134,11 @@ async function filterByAvailability(
   return rooms.filter((r) => {
     const pool = poolByType.get(r.id) ?? 0
     const booked = bookedByType.get(r.id) ?? 0
-    return pool > 0 && booked < pool
+    // Hide the entire room type once ANY active booking overlaps the
+    // requested date range — matches the user expectation "I booked
+    // it, it's gone" and matches the RPC's authoritative semantics.
+    // The `pool > 0` guard still hides types with no physical units.
+    return pool > 0 && booked === 0
   })
 }
 
