@@ -139,7 +139,12 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
                 required
                 pattern="[0-9]{10}"
                 placeholder="08xxxxxxxx"
-                defaultValue={profile.phone ?? ''}
+                defaultValue={(profile.phone ?? '').replace(/\D/g, '').slice(0, 10)}
+                onInput={(e) => {
+                  const target = e.currentTarget
+                  const cleaned = target.value.replace(/\D/g, '').slice(0, 10)
+                  if (cleaned !== target.value) target.value = cleaned
+                }}
                 className={inputClass}
               />
               <p className="font-caption text-caption text-on-surface-variant">

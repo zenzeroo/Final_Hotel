@@ -125,7 +125,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
                 pattern="[0-9]{10}"
                 placeholder="08xxxxxxxx"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                 className="input"
               />
               <p className="font-caption text-caption text-on-surface-variant">

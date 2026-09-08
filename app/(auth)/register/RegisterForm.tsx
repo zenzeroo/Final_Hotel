@@ -134,6 +134,14 @@ export function RegisterForm({ next, errorMessage, showCheckEmailModal }: Regist
               maxLength={10}
               minLength={10}
               pattern="[0-9]{10}"
+              onInput={(e) => {
+                // Strip non-digits as the user types — server already
+                // enforces /^[0-9]{10}$/ but client UX shouldn't let
+                // letters through even momentarily.
+                const target = e.currentTarget
+                const cleaned = target.value.replace(/\D/g, '').slice(0, 10)
+                if (cleaned !== target.value) target.value = cleaned
+              }}
               className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
             />
           </div>
