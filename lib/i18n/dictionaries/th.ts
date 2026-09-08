@@ -188,6 +188,7 @@ export const th = {
     status: 'สถานะ',
     viewDetails: 'ดูรายละเอียด',
     cancelBooking: 'ยกเลิกการจอง',
+    continuePayment: 'ชำระเงินต่อ',
     statusPending: 'รอดำเนินการ',
     statusPaid: 'ชำระแล้ว',
     statusCancelled: 'ยกเลิกแล้ว',

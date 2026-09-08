@@ -192,6 +192,7 @@ export const en: Dictionary = {
     status: 'Status',
     viewDetails: 'View details',
     cancelBooking: 'Cancel booking',
+    continuePayment: 'Continue payment',
     statusPending: 'Pending',
     statusPaid: 'Paid',
     statusCancelled: 'Cancelled',

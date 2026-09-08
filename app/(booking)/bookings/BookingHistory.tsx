@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { cancelBooking } from '@/app/actions/booking'
+import { createCheckoutSessionAction } from '@/app/actions/payment'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { AlertModal } from '@/components/ui/AlertModal'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -57,15 +58,30 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
   const locale = useLocale()
   const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
   const [confirmBookingId, setConfirmBookingId] = useState<string | null>(null)
+  const [confirmIsRefund, setConfirmIsRefund] = useState(false)
   const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const [payError, setPayError] = useState<string | null>(null)
 
   const activeBookings = bookings.filter((b) => b.status !== 'cancelled')
   const cancelledBookings = bookings.filter((b) => b.status === 'cancelled')
 
   const visible = tab === 'active' ? activeBookings : cancelledBookings
 
-  function handleCancel(bookingId: string) {
+  function handleCancel(bookingId: string, isPaid: boolean) {
     setConfirmBookingId(bookingId)
+    setConfirmIsRefund(isPaid)
+  }
+
+  function handlePay(bookingId: string) {
+    setPayError(null)
+    startTransition(async () => {
+      const result = await createCheckoutSessionAction({ bookingId })
+      if (!result.ok) {
+        setPayError(result.error)
+        return
+      }
+      window.location.assign(result.data!.url)
+    })
   }
 
   function handleConfirm() {
@@ -108,6 +124,12 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
         />
       </div>
 
+      {payError && (
+        <div className="mb-4 px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
+          {payError}
+        </div>
+      )}
+
       {/* List */}
       {visible.length === 0 ? (
         <p className="text-body-md text-on-surface-variant text-center py-12">
@@ -120,6 +142,7 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
               key={b.id}
               booking={b}
               onCancel={handleCancel}
+              onPay={handlePay}
               isPending={isPending}
               t={t}
               localeBcp={localeBcp}
@@ -131,9 +154,9 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
       {confirmBookingId && (
         <ConfirmModal
           open
-          body={t('bookingDetail.cancelConfirm')}
-          variant="danger"
-          okLabel={t('bookings.cancelBooking')}
+          body={confirmIsRefund ? t('bookingDetail.refundConfirm') : t('bookingDetail.cancelConfirm')}
+          variant={confirmIsRefund ? 'default' : 'danger'}
+          okLabel={confirmIsRefund ? t('bookingDetail.requestRefund') : t('bookings.cancelBooking')}
           onCancel={() => setConfirmBookingId(null)}
           onConfirm={handleConfirm}
         />
@@ -177,12 +200,14 @@ function TabButton({
 function BookingRow({
   booking,
   onCancel,
+  onPay,
   isPending,
   t,
   localeBcp,
 }: {
   booking: Booking
-  onCancel: (id: string) => void
+  onCancel: (id: string, isPaid: boolean) => void
+  onPay: (id: string) => void
   isPending: boolean
   t: ReturnType<typeof useT>
   localeBcp: string
@@ -248,25 +273,34 @@ function BookingRow({
       {!isCancelled && !isCheckedOut && (
         <div className="flex items-center gap-2 px-4 md:px-6 pb-4">
           {!isPaid && (
-            <Link
-              href={`/bookings/${booking.id}`}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                onPay(booking.id)
+              }}
+              disabled={isPending}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60"
             >
               <MaterialIcon name="credit_card" size={16} />
-              {t('bookings.statusPending')}
-            </Link>
+              {t('bookings.continuePayment')}
+            </button>
           )}
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault()
-              onCancel(booking.id)
+              onCancel(booking.id, isPaid)
             }}
             disabled={isPending}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-error text-error rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-error hover:text-on-primary transition-colors disabled:opacity-60"
+            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-label-md uppercase tracking-wider transition-colors disabled:opacity-60 ${
+              isPaid
+                ? 'border border-primary text-primary hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed'
+                : 'border border-error text-error hover:bg-error hover:text-on-primary'
+            }`}
           >
-            <MaterialIcon name="cancel" size={16} />
-            {t('bookings.cancelBooking')}
+            <MaterialIcon name={isPaid ? 'undo' : 'cancel'} size={16} />
+            {isPaid ? t('bookingDetail.requestRefund') : t('bookings.cancelBooking')}
           </button>
         </div>
       )}
