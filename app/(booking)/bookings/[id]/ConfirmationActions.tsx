@@ -66,6 +66,11 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
   }
 
   const handleRefundConfirm = () => {
+    // Snapshot the preview data so the post-confirm success modal
+    // can render the same full breakdown (booking date + policy +
+    // hours + refund + penalty) — the user asked for all of this to
+    // be visible after confirming, not just on the preview.
+    const snapshot = preview
     setPreview(null)
     startTransition(async () => {
       const result = await cancelBooking(bookingId)
@@ -76,10 +81,17 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
       const refund = Number(result.refundAmount ?? 0)
       const penalty = Number(result.penaltyAmount ?? 0)
       const policy = result.policyName ?? t('bookingDetail.cancellationPolicy')
+      // Build a structured body so the user gets all 4 details they
+      // asked for (booking date, policy rules, refund, amount) after
+      // confirming — the bare string summary only had refund + penalty.
+      // Hardcoded 'th-TH' matches the original handleCancelUnpaidConfirm
+      // path; we don't pull in a locale hook just for this.
       const summary =
-        refund > 0
-          ? `${t('bookingDetail.cancelSuccess')} (${policy}) — ${t('bookingDetail.refundAmount')}: ${refund.toLocaleString('th-TH')} ${t('bookingDetail.penalty')}: ${penalty.toLocaleString('th-TH')}`
-          : `${t('bookingDetail.cancelSuccess')} — ${t('bookingDetail.refundAmount')}: 0`
+        snapshot && snapshot.ok
+          ? `${t('bookingDetail.cancelSuccess')} (${policy})\n${t('bookingDetail.bookingCreatedOn')}: ${formatIsoDate(snapshot.bookingCreatedAt ?? '')}\n${t('bookingDetail.cancellationPolicy')}: ${snapshot.policyName ?? '—'}\n${t('bookingDetail.hoursUntilCheckin', { hours: Math.round(snapshot.hoursUntilCheckin ?? 0) })}\n${t('bookingDetail.expectedRefund')}: ${refund.toLocaleString('th-TH')} บาท\n${t('bookingDetail.penalty')}: ${penalty.toLocaleString('th-TH')} บาท`
+          : refund > 0
+            ? `${t('bookingDetail.cancelSuccess')} (${policy}) — ${t('bookingDetail.refundAmount')}: ${refund.toLocaleString('th-TH')} ${t('bookingDetail.penalty')}: ${penalty.toLocaleString('th-TH')}`
+            : `${t('bookingDetail.cancelSuccess')} — ${t('bookingDetail.refundAmount')}: 0`
       setAlertMessage(summary)
       router.refresh()
     })
@@ -221,6 +233,11 @@ function RefundPreviewBody({
   preview: PreviewCancellationResult
   t: ReturnType<typeof useT>
 }) {
+  // Reuse module-level formatter so the post-confirm success modal can
+  // surface the booking date too. The preview's local formatDateTime is
+  // identical — we hoist it so the handleRefundConfirm closure can
+  // reference it after the snapshot is taken.
+  const formatBookingDate = formatIsoDate
   const createdAt = preview.bookingCreatedAt ?? ''
   const policyFreeHours = preview.policyFreeHours ?? 0
   const policyRefundPct = preview.policyRefundPct ?? 0
@@ -228,26 +245,11 @@ function RefundPreviewBody({
   const refundAmount = preview.refundAmount ?? 0
   const penaltyAmount = preview.penaltyAmount ?? 0
 
-  const formatDateTime = (iso: string) => {
-    if (!iso) return '—'
-    try {
-      return new Date(iso).toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch {
-      return iso
-    }
-  }
-
   return (
     <div className="flex flex-col gap-3 text-left">
       <PreviewRow
         label={t('bookingDetail.bookingCreatedOn')}
-        value={formatDateTime(createdAt)}
+        value={formatBookingDate(createdAt)}
       />
       <PreviewRow
         label={t('bookingDetail.hoursUntilCheckin', { hours: Math.round(hoursUntil) })}
@@ -313,4 +315,23 @@ function PreviewRow({
       )}
     </div>
   )
+}
+
+/**
+ * Module-level date formatter. Used by the RefundPreviewBody AND by the
+ * handleRefundConfirm closure (after cancelBooking resolves) so both
+ * the preview popup and the post-confirm success message show the
+ * booking date in the same `วัน/เดือน/ปี` shape the user asked for.
+ */
+function formatIsoDate(iso: string): string {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return iso
+  }
 }
