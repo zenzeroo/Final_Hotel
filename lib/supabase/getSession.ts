@@ -1,6 +1,10 @@
 import { createClient } from './server'
+import { roleHomePath, type UserRole } from './roles'
 
-export type UserRole = 'user' | 'reception' | 'housekeeper' | 'manager' | 'admin'
+// roleHomePath + UserRole moved to ./roles (re-exported below for
+// back-compat — 20+ server-side consumers import them from this file).
+export { roleHomePath } from './roles'
+export type { UserRole } from './roles'
 
 export interface SessionUser {
   id: string
@@ -10,29 +14,6 @@ export interface SessionUser {
   role: UserRole
   /** R2 object key for the user's avatar image, or null if not set. */
   avatarKey: string | null
-}
-
-/**
- * Single source of truth for role → home-path mapping. Used by every
- * wrong-role redirect in the codebase (proxy.ts, layouts, server actions).
- *
- * Phase 11: staff must never land on `/` (User homepage) — they go to
- * their own dashboard instead. If you add a new role, update this AND
- * add the route to proxy.ts `staffPaths` (or a role-specific layout).
- */
-export function roleHomePath(role: UserRole): string {
-  switch (role) {
-    case 'admin':
-      return '/admin'
-    case 'manager':
-      return '/manager'
-    case 'reception':
-      return '/reception'
-    case 'housekeeper':
-      return '/housekeeper'
-    case 'user':
-      return '/'
-  }
 }
 
 /**

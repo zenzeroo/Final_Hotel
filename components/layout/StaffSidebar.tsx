@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { signOut } from '@/app/actions/auth'
 import { useT } from '@/lib/i18n/useT'
-import { roleHomePath } from '@/lib/supabase/getSession'
+import { roleHomePath } from '@/lib/supabase/roles'
 
 interface StaffSidebarProps {
   role: 'reception' | 'housekeeper' | 'manager' | 'admin'
