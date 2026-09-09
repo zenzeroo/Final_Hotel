@@ -60,6 +60,9 @@ const promotionInputSchema = z.object({
   description: z.string().max(500).nullable(),
   discount_type: z.enum(['percent', 'flat']),
   discount_value: z.number().positive(),
+  // Phase 27 — optional THB cap. NULL = no cap. Only valid for
+  // discount_type='percent' (enforced in the action guard below).
+  max_discount_amount: z.number().nonnegative().nullable().optional(),
   min_nights: z.number().int().min(1).max(30),
   valid_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   valid_until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -71,6 +74,7 @@ export async function createPromotionAction(formData: FormData): Promise<ActionR
 
   const rawDiscountValue = String(formData.get('discount_value') ?? '').trim()
   const rawMinNights = String(formData.get('min_nights') ?? '').trim()
+  const rawMaxDiscount = String(formData.get('max_discount_amount') ?? '').trim()
 
   const candidate = {
     code: String(formData.get('code') ?? '').trim(),
@@ -81,6 +85,8 @@ export async function createPromotionAction(formData: FormData): Promise<ActionR
     })(),
     discount_type: String(formData.get('discount_type') ?? 'percent'),
     discount_value: Number(rawDiscountValue),
+    max_discount_amount:
+      rawMaxDiscount === '' ? null : Number(rawMaxDiscount),
     min_nights: Number(rawMinNights),
     valid_from: String(formData.get('valid_from') ?? '').trim(),
     valid_until: String(formData.get('valid_until') ?? '').trim(),
@@ -91,15 +97,29 @@ export async function createPromotionAction(formData: FormData): Promise<ActionR
   if (!parsed.success) {
     return { ok: false, error: 'Invalid promotion input: ' + parsed.error.issues[0]?.message }
   }
+  // zod .optional() leaves the field as `undefined` when omitted; coalesce
+  // to `null` to match Promotion.max_discount_amount (number | null).
+  const maxDiscount =
+    parsed.data.max_discount_amount == null ? null : parsed.data.max_discount_amount
+  const normalized = { ...parsed.data, max_discount_amount: maxDiscount }
   if (candidate.discount_type === 'percent' && parsed.data.discount_value > 100) {
     return { ok: false, error: 'Percent discount must be ≤ 100' }
+  }
+  if (
+    maxDiscount != null &&
+    parsed.data.discount_type !== 'percent'
+  ) {
+    return {
+      ok: false,
+      error: 'ส่วนลดสูงสุดใช้ได้เฉพาะประเภทเปอร์เซ็นต์',
+    }
   }
   if (parsed.data.valid_from > parsed.data.valid_until) {
     return { ok: false, error: 'valid_from must be on or before valid_until' }
   }
 
   try {
-    await createPromotion(parsed.data)
+    await createPromotion(normalized)
   } catch (e) {
     return actionFail(e, 'Could not create promotion')
   }
@@ -117,6 +137,7 @@ export async function updatePromotionAction(formData: FormData): Promise<ActionR
 
   const rawDiscountValue = String(formData.get('discount_value') ?? '').trim()
   const rawMinNights = String(formData.get('min_nights') ?? '').trim()
+  const rawMaxDiscount = String(formData.get('max_discount_amount') ?? '').trim()
 
   const candidate = {
     code: String(formData.get('code') ?? '').trim(),
@@ -127,6 +148,8 @@ export async function updatePromotionAction(formData: FormData): Promise<ActionR
     })(),
     discount_type: String(formData.get('discount_type') ?? 'percent'),
     discount_value: Number(rawDiscountValue),
+    max_discount_amount:
+      rawMaxDiscount === '' ? null : Number(rawMaxDiscount),
     min_nights: Number(rawMinNights),
     valid_from: String(formData.get('valid_from') ?? '').trim(),
     valid_until: String(formData.get('valid_until') ?? '').trim(),
@@ -137,9 +160,21 @@ export async function updatePromotionAction(formData: FormData): Promise<ActionR
   if (!parsed.success) {
     return { ok: false, error: 'Invalid promotion input: ' + parsed.error.issues[0]?.message }
   }
+  const maxDiscount =
+    parsed.data.max_discount_amount == null ? null : parsed.data.max_discount_amount
+  const normalized = { ...parsed.data, max_discount_amount: maxDiscount }
+  if (
+    maxDiscount != null &&
+    parsed.data.discount_type !== 'percent'
+  ) {
+    return {
+      ok: false,
+      error: 'ส่วนลดสูงสุดใช้ได้เฉพาะประเภทเปอร์เซ็นต์',
+    }
+  }
 
   try {
-    await updatePromotion({ id, patch: parsed.data })
+    await updatePromotion({ id, patch: normalized })
   } catch (e) {
     return actionFail(e, 'Could not update promotion')
   }

@@ -54,6 +54,8 @@ export interface Promotion {
   description: string | null
   discount_type: 'percent' | 'flat'
   discount_value: number
+  /** Phase 27 — optional THB cap on percent-type discount. */
+  max_discount_amount: number | null
   min_nights: number
 }
 

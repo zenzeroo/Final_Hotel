@@ -519,6 +519,8 @@ export const th = {
       percent: 'เปอร์เซ็นต์',
       flat: 'จำนวนคงที่',
       discountValue: 'มูลค่าส่วนลด',
+      maxDiscount: 'ส่วนลดสูงสุด (บาท)',
+      maxDiscountHelper: 'ใช้ได้เฉพาะประเภทเปอร์เซ็นต์ เช่น ลด 10% สูงสุด 300 บาท (เว้นว่างไว้ = ไม่จำกัด)',
       minNights: 'คืนขั้นต่ำ',
       validFrom: 'เริ่ม',
       validUntil: 'ถึง',

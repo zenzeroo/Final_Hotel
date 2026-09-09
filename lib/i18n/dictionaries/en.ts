@@ -523,6 +523,8 @@ export const en: Dictionary = {
       percent: 'Percent',
       flat: 'Flat',
       discountValue: 'Discount value',
+      maxDiscount: 'Max discount (THB)',
+      maxDiscountHelper: 'Only for percent discounts — e.g. 10% off, capped at 300 THB (leave empty for no cap)',
       minNights: 'Min nights',
       validFrom: 'From',
       validUntil: 'Until',

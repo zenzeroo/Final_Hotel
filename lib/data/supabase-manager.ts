@@ -1113,6 +1113,7 @@ export async function createPromotion(args: Omit<Promotion, 'id' | 'createdAt' |
     discount_type: args.discount_type,
     discount_value: args.discount_value,
     min_nights: args.min_nights,
+    max_discount_amount: args.max_discount_amount ?? null,
     valid_from: args.valid_from,
     valid_until: args.valid_until,
     is_active: args.is_active,

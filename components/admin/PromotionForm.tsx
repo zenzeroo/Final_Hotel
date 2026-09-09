@@ -124,7 +124,7 @@ export function PromotionForm({ mode, initial }: PromotionFormProps) {
         />
       </Field>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Field label="ประเภทส่วนลด" required>
           <select
             name="discount_type"
@@ -144,6 +144,18 @@ export function PromotionForm({ mode, initial }: PromotionFormProps) {
             step="0.01"
             defaultValue={initial?.discount_value ?? 10}
             required
+            className={inputClass}
+          />
+        </Field>
+
+        <Field label="ส่วนลดสูงสุด (บาท)">
+          <input
+            name="max_discount_amount"
+            type="number"
+            min="0"
+            step="1"
+            defaultValue={initial?.max_discount_amount ?? ''}
+            placeholder="เว้นว่างไว้ = ไม่จำกัด"
             className={inputClass}
           />
         </Field>

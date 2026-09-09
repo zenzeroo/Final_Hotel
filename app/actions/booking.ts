@@ -131,6 +131,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           discountType: promotion.discount_type,
           discountValue: promotion.discount_value,
           minNights: promotion.min_nights,
+          maxDiscountAmount: promotion.max_discount_amount ?? null,
         }
       : null,
     quote,

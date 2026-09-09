@@ -21,6 +21,11 @@ export interface PriceInput {
     discountType: 'percent' | 'flat'
     discountValue: number
     minNights?: number
+    /**
+     * Phase 27 — optional THB cap on percent-type discounts.
+     * When set, `min(pctOff, cap)` is used. NULL = no cap.
+     */
+    maxDiscountAmount?: number | null
   } | null
   /**
    * Optional Phase 8 nightly quote. When provided, replaces the
@@ -84,7 +89,11 @@ export function applyPromotion(
   if (promotion.minNights && nights < promotion.minNights) return 0
 
   if (promotion.discountType === 'percent') {
-    return Math.round((subtotal * promotion.discountValue) / 100)
+    const pctDiscount = Math.round((subtotal * promotion.discountValue) / 100)
+    if (promotion.maxDiscountAmount != null && promotion.maxDiscountAmount > 0) {
+      return Math.min(pctDiscount, Math.round(promotion.maxDiscountAmount))
+    }
+    return pctDiscount
   }
   if (promotion.discountType === 'flat') {
     return Math.min(subtotal, promotion.discountValue)
