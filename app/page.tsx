@@ -1,5 +1,8 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { getFeaturedRooms } from '@/lib/data/rooms'
+import { getSession } from '@/lib/supabase/getSession'
+import { roleHomePath } from '@/lib/supabase/roles'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { HeroSection } from '@/components/landing/HeroSection'
@@ -13,6 +16,17 @@ import { roomTypeLabel } from '@/lib/format/roomType'
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
+  // Phase 27 — defense-in-depth. proxy.ts already redirects staff away
+  // from `/` (lib/supabase/proxy.ts staff-redirect branch). If proxy
+  // is ever bypassed (misconfigured matcher, internal navigation in
+  // tests, etc.) this server-side guard still sends staff to their
+  // own dashboard. `getSession()` is uncached → always reflects the
+  // current Supabase auth state.
+  const session = await getSession()
+  if (session && session.role !== 'user') {
+    redirect(roleHomePath(session.role))
+  }
+
   const locale = await getLocale()
   const t = getT(locale)
   const rooms = await getFeaturedRooms()

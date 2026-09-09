@@ -95,6 +95,25 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // Phase 27 — staff landing on `/` should be redirected to their own
+  // dashboard, not the User homepage. (Phase 11 docs say staff must
+  // never land on `/` but only the wrong-role branches above were
+  // implemented; this closes the gap for the homepage itself.)
+  if (user && request.nextUrl.pathname === '/') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+    const role = (profile?.role as UserRole | undefined) ?? 'user'
+    if (role !== 'user') {
+      const url = request.nextUrl.clone()
+      url.pathname = roleHomePath(role)
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Redirect authed users away from /login and /register to their role home.
   // Phase 11: staff now land on their dashboard, not '/'.
   const authPages = ['/login', '/register']
