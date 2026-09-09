@@ -69,6 +69,11 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
   // Track valid_from so valid_until's `min` can follow it (otherwise
   // min would have to read the DOM element or be a fixed date).
   const [validFrom, setValidFrom] = useState<string>(initial?.valid_from ?? '')
+  // Phase 27 — track discount_type so labels + max-cap field can
+  // switch semantics between percent and flat.
+  const [discountType, setDiscountType] = useState<'percent' | 'flat'>(
+    initial?.discount_type ?? 'percent',
+  )
 
   // useActionState requires (state, payload) => newState signature.
   // The raw action takes only FormData, so wrap it.
@@ -135,7 +140,8 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
         <Field label="ประเภทส่วนลด" required>
           <select
             name="discount_type"
-            defaultValue={initial?.discount_type ?? 'percent'}
+            value={discountType}
+            onChange={(e) => setDiscountType(e.target.value as 'percent' | 'flat')}
             className={inputClass}
           >
             <option value="percent">เปอร์เซ็นต์ (%)</option>
@@ -143,31 +149,33 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
           </select>
         </Field>
 
-        <Field label="มูลค่า" required>
+        <Field label={discountType === 'percent' ? 'จำนวนเปอร์เซ็นต์' : 'มูลค่า'} required>
           <input
             name="discount_value"
             type="number"
             min="0.01"
             step="0.01"
-            defaultValue={initial?.discount_value ?? 10}
+            defaultValue={initial?.discount_value ?? (discountType === 'percent' ? 10 : 100)}
             required
             className={inputClass}
           />
         </Field>
 
-        <Field label="ส่วนลดสูงสุด (บาท)">
-          <input
-            name="max_discount_amount"
-            type="number"
-            min="0"
-            step="1"
-            defaultValue={initial?.max_discount_amount ?? ''}
-            placeholder="เว้นว่างไว้ = ไม่จำกัด"
-            className={inputClass}
-          />
-        </Field>
+        {discountType === 'percent' && (
+          <Field label="ส่วนลดสูงสุด (บาท)">
+            <input
+              name="max_discount_amount"
+              type="number"
+              min="0"
+              step="1"
+              defaultValue={initial?.max_discount_amount ?? ''}
+              placeholder="เว้นว่างไว้ = ไม่จำกัด"
+              className={inputClass}
+            />
+          </Field>
+        )}
 
-        <Field label="คืนขั้นต่ำ" required>
+        <Field label={discountType === 'flat' ? 'ราคารวมขั้นต่ำ (บาท)' : 'คืนขั้นต่ำ'} required>
           <input
             name="min_nights"
             type="number"
