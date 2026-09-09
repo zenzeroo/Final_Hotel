@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import type { Promotion, RoomTypeName } from '@/lib/data/types'
@@ -8,6 +9,7 @@ import {
   updatePromotionAction,
 } from '@/app/actions/promotions'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { getTodayLocalIso } from '@/lib/dates'
 
 interface PromotionFormProps {
   mode: 'create' | 'edit'
@@ -64,6 +66,10 @@ function SubmitButton({ label }: { label: string }) {
 }
 
 export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) {
+  // Track valid_from so valid_until's `min` can follow it (otherwise
+  // min would have to read the DOM element or be a fixed date).
+  const [validFrom, setValidFrom] = useState<string>(initial?.valid_from ?? '')
+
   // useActionState requires (state, payload) => newState signature.
   // The raw action takes only FormData, so wrap it.
   const wrappedAction = async (
@@ -180,7 +186,9 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
           <input
             name="valid_from"
             type="date"
+            min={getTodayLocalIso()}
             defaultValue={initial?.valid_from ?? ''}
+            onChange={(e) => setValidFrom(e.target.value)}
             required
             className={inputClass}
           />
@@ -190,6 +198,7 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
           <input
             name="valid_until"
             type="date"
+            min={validFrom || getTodayLocalIso()}
             defaultValue={initial?.valid_until ?? ''}
             required
             className={inputClass}
