@@ -129,8 +129,16 @@ export function AddStaffForm() {
           <input
             name="phone"
             type="tel"
-            placeholder="+66 81 234 5678"
-            maxLength={40}
+            inputMode="numeric"
+            maxLength={10}
+            minLength={10}
+            pattern="[0-9]{10}"
+            placeholder="0987654321"
+            onChange={(e) => {
+              const target = e.currentTarget
+              const cleaned = target.value.replace(/\D/g, '').slice(0, 10)
+              if (cleaned !== target.value) target.value = cleaned
+            }}
             className={inputClass}
           />
         </Field>

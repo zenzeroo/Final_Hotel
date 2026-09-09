@@ -127,9 +127,17 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
           <input
             name="phone"
             type="tel"
+            inputMode="numeric"
             defaultValue={settings.phone}
             required
-            maxLength={40}
+            maxLength={10}
+            minLength={10}
+            pattern="[0-9]{10}"
+            onChange={(e) => {
+              const target = e.currentTarget
+              const cleaned = target.value.replace(/\D/g, '').slice(0, 10)
+              if (cleaned !== target.value) target.value = cleaned
+            }}
             className={inputClass}
           />
         </Field>
