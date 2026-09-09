@@ -104,6 +104,7 @@ export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTablePr
               <th className="text-left px-4 py-3 font-medium">โค้ด</th>
               <th className="text-left px-4 py-3 font-medium">ชื่อ</th>
               <th className="text-left px-4 py-3 font-medium">ส่วนลด</th>
+              <th className="text-left px-4 py-3 font-medium">ใช้ได้กับ</th>
               <th className="text-left px-4 py-3 font-medium">คืนขั้นต่ำ</th>
               <th className="text-left px-4 py-3 font-medium">ช่วงเวลา</th>
               <th className="text-left px-4 py-3 font-medium">สถานะ</th>
@@ -133,6 +134,11 @@ export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTablePr
                     <span className="text-body-md font-semibold text-secondary">
                       {formatDiscount(p)}
                     </span>
+                  </td>
+                  <td className="px-4 py-4 text-caption text-on-surface-variant">
+                    {p.applies_to_room_types && p.applies_to_room_types.length > 0
+                      ? p.applies_to_room_types.join(', ')
+                      : 'ทั้งหมด'}
                   </td>
                   <td className="px-4 py-4 text-body-md text-on-surface">
                     {p.min_nights} คืน

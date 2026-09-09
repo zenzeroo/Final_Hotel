@@ -1,4 +1,5 @@
 import { listPromotions } from '@/lib/data/manager'
+import { getRoomTypes } from '@/lib/data/rooms'
 import { PromotionsAdminTable } from '@/components/admin/PromotionsAdminTable'
 import { PromotionForm } from '@/components/admin/PromotionForm'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
@@ -6,7 +7,7 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminPromotionsPage() {
-  const promotions = await listPromotions()
+  const [promotions, roomTypes] = await Promise.all([listPromotions(), getRoomTypes()])
   const now = new Date()
 
   const activeCount = promotions.filter((p) => p.is_active).length
@@ -61,7 +62,7 @@ export default async function AdminPromotionsPage() {
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
           สร้างโปรโมชั่นใหม่
         </h2>
-        <PromotionForm mode="create" />
+        <PromotionForm mode="create" roomTypes={roomTypes} />
       </section>
 
       <section>

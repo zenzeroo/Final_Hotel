@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
-import type { Promotion } from '@/lib/data/types'
+import type { Promotion, RoomTypeName } from '@/lib/data/types'
 import {
   createPromotionAction,
   updatePromotionAction,
@@ -12,6 +12,7 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 interface PromotionFormProps {
   mode: 'create' | 'edit'
   initial?: Promotion
+  roomTypes: RoomTypeName[]
 }
 
 interface FormState {
@@ -62,7 +63,7 @@ function SubmitButton({ label }: { label: string }) {
   )
 }
 
-export function PromotionForm({ mode, initial }: PromotionFormProps) {
+export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) {
   // useActionState requires (state, payload) => newState signature.
   // The raw action takes only FormData, so wrap it.
   const wrappedAction = async (
@@ -195,6 +196,34 @@ export function PromotionForm({ mode, initial }: PromotionFormProps) {
           />
         </Field>
       </div>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1">
+          ใช้ได้กับห้องพัก
+        </legend>
+        <p className="text-caption text-on-surface-variant mb-2">
+          เว้นว่างไว้ = ใช้ได้กับทุกประเภทห้อง
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {roomTypes.map((type) => (
+            <label
+              key={type}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-outline-variant cursor-pointer hover:bg-primary-fixed"
+            >
+              <input
+                type="checkbox"
+                name="applies_to_room_types"
+                value={type}
+                defaultChecked={
+                  initial?.applies_to_room_types?.includes(type) ?? false
+                }
+                className="w-4 h-4 accent-primary"
+              />
+              <span className="text-body-md text-on-surface">{type}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <Field label="สถานะ">
         <label className="inline-flex items-center gap-2 mt-2">

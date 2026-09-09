@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getPromotionById } from '@/lib/data/manager'
+import { getRoomTypes } from '@/lib/data/rooms'
 import { PromotionForm } from '@/components/admin/PromotionForm'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import Link from 'next/link'
@@ -12,7 +13,10 @@ export default async function EditPromotionPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const promotion = await getPromotionById(id)
+  const [promotion, roomTypes] = await Promise.all([
+    getPromotionById(id),
+    getRoomTypes(),
+  ])
   if (!promotion) notFound()
 
   return (
@@ -32,7 +36,7 @@ export default async function EditPromotionPage({
         <p className="text-body-lg text-on-surface-variant mt-2">{promotion.name}</p>
       </header>
 
-      <PromotionForm mode="edit" initial={promotion} />
+      <PromotionForm mode="edit" initial={promotion} roomTypes={roomTypes} />
     </div>
   )
 }

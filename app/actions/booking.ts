@@ -10,6 +10,7 @@ import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/
 import { getDefaultCancellationPolicy, getPromotionByCode } from '@/lib/data/bookings'
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
 import { isUuid } from '@/lib/ids'
+import type { RoomTypeName } from '@/lib/data/types'
 import { requireRole } from '@/lib/auth/require'
 import { sendEmail } from '@/lib/email/resend'
 
@@ -58,7 +59,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   // Get room
   const { data: room, error: roomErr } = await supabase
     .from('room_types')
-    .select('base_price, max_guests, is_active')
+    .select('base_price, max_guests, is_active, type')
     .eq('id', data.roomTypeId)
     .maybeSingle()
 
@@ -82,6 +83,16 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   if (data.promoCode) {
     promotion = await getPromotionByCode(data.promoCode)
     if (!promotion) return { error: 'รหัสโปรโมชั่นไม่ถูกต้อง' }
+    // Phase 27 — room-type scoping. applies_to_room_types === null/[] =
+    // applies to all room types (backwards-compatible). Non-empty =
+    // reject when the booking's room type isn't in the list.
+    if (
+      promotion.applies_to_room_types &&
+      promotion.applies_to_room_types.length > 0 &&
+      !promotion.applies_to_room_types.includes(room.type as RoomTypeName)
+    ) {
+      return { error: 'รหัสโปรโมชั่นนี้ไม่สามารถใช้กับประเภทห้องพักนี้ได้' }
+    }
   }
 
   // Get default cancellation policy

@@ -380,6 +380,12 @@ export interface Promotion {
    * (enforced by the createPromotionAction guard + DB CHECK).
    */
   max_discount_amount: number | null
+  /**
+   * Phase 27 — optional restrict-to list (room_type_enum[]).
+   * NULL or empty = applies to all room types (backwards-compatible).
+   * Non-empty = restrict to those enum values.
+   */
+  applies_to_room_types: RoomTypeName[] | null
   min_nights: number
   valid_from: string // YYYY-MM-DD
   valid_until: string // YYYY-MM-DD

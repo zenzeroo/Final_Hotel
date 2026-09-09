@@ -56,6 +56,8 @@ export interface Promotion {
   discount_value: number
   /** Phase 27 — optional THB cap on percent-type discount. */
   max_discount_amount: number | null
+  /** Phase 27 — optional restrict-to list (room_type_enum[]). */
+  applies_to_room_types: RoomTypeName[] | null
   min_nights: number
 }
 

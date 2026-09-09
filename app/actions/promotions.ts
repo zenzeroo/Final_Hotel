@@ -63,6 +63,11 @@ const promotionInputSchema = z.object({
   // Phase 27 — optional THB cap. NULL = no cap. Only valid for
   // discount_type='percent' (enforced in the action guard below).
   max_discount_amount: z.number().nonnegative().nullable().optional(),
+  // Phase 27 — optional restrict-to room types. Empty array = all
+  // room types (backwards-compatible). Filtered to the room_type_enum.
+  applies_to_room_types: z
+    .array(z.enum(['Deluxe', 'Suite', 'Villa']))
+    .default([]),
   min_nights: z.number().int().min(1).max(30),
   valid_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   valid_until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -87,6 +92,13 @@ export async function createPromotionAction(formData: FormData): Promise<ActionR
     discount_value: Number(rawDiscountValue),
     max_discount_amount:
       rawMaxDiscount === '' ? null : Number(rawMaxDiscount),
+    // Phase 27 — getAll() returns every checked value; filter to enum.
+    applies_to_room_types: formData
+      .getAll('applies_to_room_types')
+      .map(String)
+      .filter((v): v is 'Deluxe' | 'Suite' | 'Villa' =>
+        v === 'Deluxe' || v === 'Suite' || v === 'Villa',
+      ),
     min_nights: Number(rawMinNights),
     valid_from: String(formData.get('valid_from') ?? '').trim(),
     valid_until: String(formData.get('valid_until') ?? '').trim(),
@@ -101,7 +113,17 @@ export async function createPromotionAction(formData: FormData): Promise<ActionR
   // to `null` to match Promotion.max_discount_amount (number | null).
   const maxDiscount =
     parsed.data.max_discount_amount == null ? null : parsed.data.max_discount_amount
-  const normalized = { ...parsed.data, max_discount_amount: maxDiscount }
+  // Phase 27 — same coalesce for applies_to_room_types ([] → null
+  // means "applies to all room types" — no DB write needed).
+  const appliesTo =
+    parsed.data.applies_to_room_types && parsed.data.applies_to_room_types.length > 0
+      ? parsed.data.applies_to_room_types
+      : null
+  const normalized = {
+    ...parsed.data,
+    max_discount_amount: maxDiscount,
+    applies_to_room_types: appliesTo,
+  }
   if (candidate.discount_type === 'percent' && parsed.data.discount_value > 100) {
     return { ok: false, error: 'Percent discount must be ≤ 100' }
   }
@@ -150,6 +172,13 @@ export async function updatePromotionAction(formData: FormData): Promise<ActionR
     discount_value: Number(rawDiscountValue),
     max_discount_amount:
       rawMaxDiscount === '' ? null : Number(rawMaxDiscount),
+    // Phase 27 — getAll() returns every checked value; filter to enum.
+    applies_to_room_types: formData
+      .getAll('applies_to_room_types')
+      .map(String)
+      .filter((v): v is 'Deluxe' | 'Suite' | 'Villa' =>
+        v === 'Deluxe' || v === 'Suite' || v === 'Villa',
+      ),
     min_nights: Number(rawMinNights),
     valid_from: String(formData.get('valid_from') ?? '').trim(),
     valid_until: String(formData.get('valid_until') ?? '').trim(),
@@ -162,7 +191,17 @@ export async function updatePromotionAction(formData: FormData): Promise<ActionR
   }
   const maxDiscount =
     parsed.data.max_discount_amount == null ? null : parsed.data.max_discount_amount
-  const normalized = { ...parsed.data, max_discount_amount: maxDiscount }
+  // Phase 27 — same coalesce for applies_to_room_types ([] → null
+  // means "applies to all room types" — no DB write needed).
+  const appliesTo =
+    parsed.data.applies_to_room_types && parsed.data.applies_to_room_types.length > 0
+      ? parsed.data.applies_to_room_types
+      : null
+  const normalized = {
+    ...parsed.data,
+    max_discount_amount: maxDiscount,
+    applies_to_room_types: appliesTo,
+  }
   if (
     maxDiscount != null &&
     parsed.data.discount_type !== 'percent'
