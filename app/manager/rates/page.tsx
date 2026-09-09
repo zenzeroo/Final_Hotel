@@ -26,7 +26,7 @@ export default async function ManagerRatesPage() {
             จัดการห้องและราคา
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            ปิด/เปิดห้องพักและดูอัตราตามฤดูกาล — การแก้ไขห้องและราคาทำได้ผ่าน Admin
+            ปิด/เปิดห้องพักและดูช่วงลดราคา — การแก้ไขห้องและราคาทำได้ผ่าน Admin
           </p>
         </div>
       </header>
@@ -93,7 +93,7 @@ export default async function ManagerRatesPage() {
 
       <section className="mb-8">
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          อัตราตามฤดูกาล
+          ช่วงลดราคา
         </h2>
         <SeasonalRatesPreview rates={seasonalRates} />
       </section>

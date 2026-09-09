@@ -29,7 +29,7 @@ export function SeasonalRatesPreview({ rates }: SeasonalRatesPreviewProps) {
     return (
       <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-8 text-center">
         <MaterialIcon name="event" size={32} className="text-on-surface-variant mb-2" />
-        <p className="text-body-md text-on-surface-variant">ยังไม่มีอัตราตามฤดูกาล</p>
+        <p className="text-body-md text-on-surface-variant">ยังไม่มีช่วงลดราคา</p>
       </div>
     )
   }

@@ -27,7 +27,7 @@ export default async function EditSeasonalRatePage({
         className="inline-flex items-center gap-2 px-2 py-1 rounded text-body-md text-primary hover:bg-primary-fixed hover:text-primary mb-4"
       >
         <MaterialIcon name="arrow_back" size={18} />
-        กลับไปหน้ารายการอัตราตามฤดูกาล
+        กลับไปหน้ารายการช่วงลดราคา
       </Link>
 
       <header className="mb-8">

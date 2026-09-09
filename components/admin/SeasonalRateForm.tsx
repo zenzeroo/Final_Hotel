@@ -82,7 +82,7 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
             กรุณาสร้างประเภทห้องอย่างน้อย 1 ประเภทก่อน
           </p>
           <p className="text-caption text-on-surface-variant mt-1">
-            เพื่อผูกอัตราตามฤดูกาลกับประเภทห้อง
+            เพื่อผูกช่วงลดราคากับประเภทห้อง
           </p>
         </div>
       </div>

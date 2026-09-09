@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 const TABS = [
   { key: 'room-types', label: 'ประเภทห้อง', href: '/admin/rates/room-types', icon: 'bed' },
-  { key: 'seasonal-rates', label: 'อัตราตามฤดูกาล', href: '/admin/rates/seasonal-rates', icon: 'event' },
+  { key: 'seasonal-rates', label: 'ช่วงลดราคา', href: '/admin/rates/seasonal-rates', icon: 'event' },
 ] as const
 
 export default async function AdminRoomTypesPage() {
@@ -28,7 +28,7 @@ export default async function AdminRoomTypesPage() {
             ประเภทห้องและราคา
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            จัดการประเภทห้องและอัตราตามฤดูกาล — สร้าง / แก้ไข / เปิด-ปิด
+            จัดการประเภทห้องและช่วงลดราคา — สร้าง / แก้ไข / เปิด-ปิด
           </p>
         </div>
         <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
