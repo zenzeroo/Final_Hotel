@@ -1,13 +1,12 @@
 import { listPromotions } from '@/lib/data/manager'
-import { getRoomTypes } from '@/lib/data/rooms'
 import { PromotionsAdminTable } from '@/components/admin/PromotionsAdminTable'
-import { PromotionForm } from '@/components/admin/PromotionForm'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminPromotionsPage() {
-  const [promotions, roomTypes] = await Promise.all([listPromotions(), getRoomTypes()])
+  const promotions = await listPromotions()
   const now = new Date()
 
   const activeCount = promotions.filter((p) => p.is_active).length
@@ -29,11 +28,20 @@ export default async function AdminPromotionsPage() {
             จัดการโปรโมชั่นและส่วนลดทั้งหมด — สร้าง / แก้ไข / ลบ / เปิด-ปิด
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
-          <MaterialIcon name="sell" size={18} className="text-on-surface-variant" />
-          <span className="text-body-md text-on-surface-variant">
-            {promotions.length} รายการ
-          </span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link
+            href="/admin/promotions/new"
+            className="inline-flex items-center gap-2 bg-primary text-on-primary rounded-lg px-4 py-2 hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+          >
+            <MaterialIcon name="add" size={18} />
+            สร้างโปรโมชั่นใหม่
+          </Link>
+          <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
+            <MaterialIcon name="sell" size={18} className="text-on-surface-variant" />
+            <span className="text-body-md text-on-surface-variant">
+              {promotions.length} รายการ
+            </span>
+          </div>
         </div>
       </header>
 
@@ -56,13 +64,6 @@ export default async function AdminPromotionsPage() {
           </p>
           <p className="font-display-lg text-display-lg-mobile text-secondary">{upcomingCount}</p>
         </div>
-      </section>
-
-      <section className="mb-12">
-        <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          สร้างโปรโมชั่นใหม่
-        </h2>
-        <PromotionForm mode="create" roomTypes={roomTypes} />
       </section>
 
       <section>
