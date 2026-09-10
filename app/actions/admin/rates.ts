@@ -5,11 +5,7 @@ import { z } from 'zod'
 import { requireRole } from '@/lib/auth/require'
 import { actionFail } from '@/lib/errors/supabase'
 import { createRoomType, updateRoomType, listRoomTypes } from '@/lib/data/rooms'
-import {
-  createSeasonalRate,
-  updateSeasonalRate,
-  deleteSeasonalRate,
-} from '@/lib/data/manager'
+import { createSeasonalRate } from '@/lib/data/manager'
 import {
   uploadImageToR2,
   roomImageKey,
@@ -256,60 +252,7 @@ export async function createSeasonalRateAction(formData: FormData): Promise<Acti
     return actionFail(e, 'Could not create seasonal rate')
   }
 
-  revalidatePath('/admin/rates')
-  revalidatePath('/manager/rates')
-  return { ok: true }
-}
-
-export async function updateSeasonalRateAction(formData: FormData): Promise<ActionResult> {
-  await requireRole('admin', '/admin/rates')
-
-  const baseCandidate = {
-    id: String(formData.get('id') ?? '').trim(),
-    room_type_id: String(formData.get('room_type_id') ?? '').trim(),
-    label: String(formData.get('label') ?? '').trim(),
-    start_date: String(formData.get('start_date') ?? '').trim(),
-    end_date: String(formData.get('end_date') ?? '').trim(),
-    flat_price: parseOptionalNum(String(formData.get('flat_price') ?? '')),
-    price_multiplier: parseOptionalNum(String(formData.get('price_multiplier') ?? '')),
-    min_nights_override: parseOptionalNum(String(formData.get('min_nights_override') ?? '')),
-    is_active: formData.get('is_active') === 'true',
-    priority: Number(formData.get('priority') ?? 0),
-  }
-
-  const idSchema = z.object({ id: z.string().min(1) })
-  const idParsed = idSchema.safeParse({ id: baseCandidate.id })
-  if (!idParsed.success) return { ok: false, error: 'Missing seasonal rate id' }
-
-  const parsed = seasonalRateSchema.safeParse(baseCandidate)
-  if (!parsed.success) {
-    return { ok: false, error: 'Invalid input: ' + parsed.error.issues[0]?.message }
-  }
-
-  try {
-    await updateSeasonalRate({ id: idParsed.data.id, patch: parsed.data })
-  } catch (e) {
-    return actionFail(e, 'Could not update seasonal rate')
-  }
-
-  revalidatePath('/admin/rates')
-  revalidatePath('/manager/rates')
-  return { ok: true }
-}
-
-export async function deleteSeasonalRateAction(formData: FormData): Promise<ActionResult> {
-  await requireRole('admin', '/admin/rates')
-
-  const id = String(formData.get('id') ?? '').trim()
-  if (!id) return { ok: false, error: 'Missing seasonal rate id' }
-
-  try {
-    await deleteSeasonalRate({ id })
-  } catch (e) {
-    return actionFail(e, 'Could not delete seasonal rate')
-  }
-
-  revalidatePath('/admin/rates')
+  revalidatePath('/admin/promotions')
   revalidatePath('/manager/rates')
   return { ok: true }
 }

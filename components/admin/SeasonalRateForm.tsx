@@ -2,13 +2,11 @@
 
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
-import type { RoomType, SeasonalRate } from '@/lib/data/types'
-import { createSeasonalRateAction, updateSeasonalRateAction } from '@/app/actions/admin/rates'
+import type { RoomType } from '@/lib/data/types'
+import { createSeasonalRateAction } from '@/app/actions/admin/rates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface SeasonalRateFormProps {
-  mode: 'create' | 'edit'
-  initial?: SeasonalRate
   roomTypes: RoomType[]
 }
 
@@ -60,13 +58,12 @@ function SubmitButton({ label }: { label: string }) {
   )
 }
 
-export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormProps) {
+export function SeasonalRateForm({ roomTypes }: SeasonalRateFormProps) {
   const wrapped = async (
     _state: FormState | null,
     formData: FormData,
   ): Promise<FormState> => {
-    const rawAction = mode === 'create' ? createSeasonalRateAction : updateSeasonalRateAction
-    const result = await rawAction(formData)
+    const result = await createSeasonalRateAction(formData)
     if (!result.ok) return { error: result.error }
     return { success: true }
   }
@@ -103,12 +100,9 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
         </div>
       )}
 
-      {mode === 'edit' && initial && <input type="hidden" name="id" value={initial.id} />}
-
       <Field label="ประเภทห้อง" required>
         <select
           name="room_type_id"
-          defaultValue={initial?.room_type_id ?? ''}
           required
           className={inputClass}
         >
@@ -125,7 +119,6 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
         <input
           name="label"
           type="text"
-          defaultValue={initial?.label ?? ''}
           placeholder="High Season 2026"
           required
           maxLength={120}
@@ -138,7 +131,6 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
           <input
             name="start_date"
             type="date"
-            defaultValue={initial?.start_date ?? ''}
             required
             className={inputClass}
           />
@@ -147,7 +139,6 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
           <input
             name="end_date"
             type="date"
-            defaultValue={initial?.end_date ?? ''}
             required
             className={inputClass}
           />
@@ -161,7 +152,6 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
             type="number"
             min="0"
             step="0.01"
-            defaultValue={initial?.flat_price ?? ''}
             placeholder="เว้นว่างถ้าใช้ตัวคูณ"
             className={inputClass}
           />
@@ -172,7 +162,6 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
             type="number"
             min="0"
             step="0.01"
-            defaultValue={initial?.price_multiplier ?? ''}
             placeholder="เว้นว่างถ้าใช้ราคาคงที่"
             className={inputClass}
           />
@@ -191,7 +180,6 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
             min="1"
             max="60"
             step="1"
-            defaultValue={initial?.min_nights_override ?? ''}
             placeholder="เว้นว่างถ้าไม่กำหนด"
             className={inputClass}
           />
@@ -203,7 +191,7 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
             min="0"
             max="1000"
             step="1"
-            defaultValue={initial?.priority ?? 0}
+            defaultValue={0}
             required
             className={inputClass}
           />
@@ -216,7 +204,7 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
             type="checkbox"
             name="is_active"
             value="true"
-            defaultChecked={initial?.is_active ?? true}
+            defaultChecked
             className="w-5 h-5 rounded border-outline-variant"
           />
           <span className="text-body-md text-on-surface">เปิดใช้งานช่วงราคานี้</span>
@@ -224,9 +212,9 @@ export function SeasonalRateForm({ mode, initial, roomTypes }: SeasonalRateFormP
       </Field>
 
       <div className="flex items-center gap-3 pt-2">
-        <SubmitButton label={mode === 'create' ? 'สร้างช่วงราคา' : 'บันทึกการแก้ไข'} />
+        <SubmitButton label="สร้างช่วงราคา" />
         <a
-          href={mode === 'create' ? '/admin/rates/seasonal-rates' : `/admin/rates/seasonal-rates`}
+          href="/admin/promotions"
           className="inline-flex items-center justify-center px-6 py-3 bg-surface-container-low border border-outline-variant rounded-lg font-medium text-body-md hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
         >
           ยกเลิก

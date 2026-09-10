@@ -1,5 +1,4 @@
 import { listRoomTypes } from '@/lib/data/rooms'
-import { listSeasonalRates } from '@/lib/data/manager'
 import { Tabs } from '@/components/ui/Tabs'
 import { RoomTypeForm } from '@/components/admin/RoomTypeForm'
 import { RoomTypesAdminTable } from '@/components/admin/RoomTypesAdminTable'
@@ -9,14 +8,10 @@ export const dynamic = 'force-dynamic'
 
 const TABS = [
   { key: 'room-types', label: 'ประเภทห้อง', href: '/admin/rates/room-types', icon: 'bed' },
-  { key: 'seasonal-rates', label: 'ช่วงลดราคา', href: '/admin/rates/seasonal-rates', icon: 'event' },
 ] as const
 
 export default async function AdminRoomTypesPage() {
-  const [roomTypes, seasonalRates] = await Promise.all([
-    listRoomTypes(),
-    listSeasonalRates(),
-  ])
+  const roomTypes = await listRoomTypes()
 
   const activeRoomTypes = roomTypes.filter((r) => r.is_active).length
 
@@ -25,21 +20,21 @@ export default async function AdminRoomTypesPage() {
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            ประเภทห้องและราคา
+            ประเภทห้อง
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            จัดการประเภทห้องและช่วงลดราคา — สร้าง / แก้ไข / เปิด-ปิด
+            จัดการประเภทห้องพักและราคาฐาน — สร้าง / แก้ไข / เปิด-ปิด
           </p>
         </div>
         <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
           <MaterialIcon name="bed" size={18} className="text-on-surface-variant" />
           <span className="text-body-md text-on-surface-variant">
-            {roomTypes.length} ประเภท · {seasonalRates.length} ช่วงราคา
+            {roomTypes.length} ประเภท
           </span>
         </div>
       </header>
 
-      <Tabs<'room-types' | 'seasonal-rates'>
+      <Tabs<'room-types'>
         active="room-types"
         tabs={[...TABS]}
       />
@@ -59,9 +54,11 @@ export default async function AdminRoomTypesPage() {
         </div>
         <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
           <p className="text-label-md uppercase tracking-wider text-on-surface-variant mb-2">
-            ช่วงราคาทั้งหมด
+            ปิดให้จอง
           </p>
-          <p className="font-display-lg text-display-lg-mobile text-primary">{seasonalRates.length}</p>
+          <p className="font-display-lg text-display-lg-mobile text-error">
+            {roomTypes.length - activeRoomTypes}
+          </p>
         </div>
       </section>
 
