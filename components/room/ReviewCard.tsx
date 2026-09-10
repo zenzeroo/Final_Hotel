@@ -1,17 +1,10 @@
 import type { PublicReview } from '@/lib/data/types'
 import { RatingStars } from './RatingStars'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { formatDate } from '@/lib/dates'
 
 interface ReviewCardProps {
   review: PublicReview
-}
-
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat('th-TH', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(iso))
 }
 
 export function ReviewCard({ review }: ReviewCardProps) {

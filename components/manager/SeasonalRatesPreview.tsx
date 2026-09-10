@@ -1,17 +1,10 @@
 import type { SeasonalRate } from '@/lib/data/types'
 import { formatTHB } from '@/lib/pricing'
+import { formatDateRange } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface SeasonalRatesPreviewProps {
   rates: SeasonalRate[]
-}
-
-function formatDate(s: string): string {
-  return new Date(s).toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 function formatPricing(rate: SeasonalRate): string {
@@ -48,7 +41,7 @@ export function SeasonalRatesPreview({ rates }: SeasonalRatesPreviewProps) {
                   </span>
                 </div>
                 <p className="text-caption text-on-surface-variant">
-                  {formatDate(rate.start_date)} – {formatDate(rate.end_date)}
+                  {formatDateRange(rate.start_date, rate.end_date)}
                   {rate.min_nights_override != null && (
                     <span className="ml-2">ขั้นต่ำ {rate.min_nights_override} คืน</span>
                   )}

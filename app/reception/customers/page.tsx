@@ -1,4 +1,5 @@
 import { searchCustomers } from '@/lib/data/staff'
+import { formatDate } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { CustomerSearch } from './CustomerSearch'
 
@@ -50,11 +51,7 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
                   </Td>
                   <Td>
                     <span className="text-body-md text-on-surface-variant">
-                      {new Date(c.created_at).toLocaleDateString('th-TH', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                      {formatDate(c.created_at)}
                     </span>
                   </Td>
                   <Td align="right">

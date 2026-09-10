@@ -5,16 +5,9 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { formatDate } from '@/lib/dates'
 
 export const dynamic = 'force-dynamic'
-
-function formatDate(iso: string, localeBcp: string) {
-  return new Intl.DateTimeFormat(localeBcp, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(iso))
-}
 
 export default async function ReceptionDashboard() {
   const locale = await getLocale()

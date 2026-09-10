@@ -1,4 +1,3 @@
-import { format } from 'date-fns'
 import type { ReviewForModeration } from '@/lib/data/types'
 import { RatingStars } from '@/components/room/RatingStars'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
@@ -6,6 +5,7 @@ import { ApproveReviewButton } from './ApproveReviewButton'
 import { HideReviewButton } from './HideReviewButton'
 import { UnhideReviewButton } from './UnhideReviewButton'
 import { DeleteReviewButton } from './DeleteReviewButton'
+import { formatDate, formatDateTime } from '@/lib/dates'
 
 interface ReviewRowProps {
   review: ReviewForModeration
@@ -52,7 +52,7 @@ export function ReviewRow({ review, tab, isAdmin }: ReviewRowProps) {
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <RatingStars value={review.rating} size={14} showValue={false} />
             <span className="text-caption text-on-surface-variant">
-              {format(new Date(review.createdAt), 'd MMM yyyy')}
+              {formatDate(review.createdAt)}
             </span>
             <span className="text-caption text-on-surface-variant inline-flex items-center gap-1">
               <MaterialIcon name="hotel" size={12} />
@@ -85,7 +85,7 @@ export function ReviewRow({ review, tab, isAdmin }: ReviewRowProps) {
         <p className="text-caption text-on-surface-variant border-t border-outline-variant pt-3">
           ดำเนินการโดย {review.moderatedBy ?? '—'}{' '}
           {review.moderatedAt
-            ? `เมื่อ ${format(new Date(review.moderatedAt), 'd MMM yyyy HH:mm')}`
+            ? `เมื่อ ${formatDateTime(review.moderatedAt)}`
             : ''}
         </p>
       ) : null}

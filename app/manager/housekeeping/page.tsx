@@ -5,6 +5,7 @@ import { FloorAssignmentCard } from '@/components/manager/FloorAssignmentCard'
 import { UnassignedTaskList } from '@/components/manager/UnassignedTaskList'
 import { DamageReportTable } from '@/components/manager/DamageReportTable'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { formatDate } from '@/lib/dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,7 @@ export default async function ManagerHousekeepingPage() {
             ภาพรวมแม่บ้าน
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            การดำเนินงาน Zenzero Hotel · {new Date().toLocaleDateString('th-TH', { weekday: 'long' })}
+            การดำเนินงาน Zenzero Hotel · {formatDate(new Date().toISOString())}
           </p>
         </div>
         <button

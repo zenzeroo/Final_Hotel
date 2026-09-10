@@ -1,4 +1,5 @@
 import type { StaffMember } from '@/lib/data/types'
+import { formatDate } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface StaffTableProps {
@@ -70,11 +71,7 @@ export function StaffTable({ staff }: StaffTableProps) {
                     {member.email}
                   </td>
                   <td className="px-4 py-4 text-body-md text-on-surface-variant">
-                    {new Date(member.hired_at).toLocaleDateString('th-TH', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {formatDate(member.hired_at)}
                   </td>
                   <td className="px-4 py-4">
                     <span

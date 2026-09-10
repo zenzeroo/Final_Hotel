@@ -2,6 +2,7 @@ import { getHotelSettings, listCancellationPolicies } from '@/lib/data/manager'
 import { getSession } from '@/lib/supabase/getSession'
 import { KpiCard } from '@/components/manager/KpiCard'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { formatDateTime } from '@/lib/dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -170,7 +171,7 @@ export default async function ManagerSettingsPage() {
       </section>
 
       <p className="text-caption text-on-surface-variant text-center mt-12">
-        อัปเดตล่าสุดเมื่อ {new Date(settings.updated_at).toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' })}
+        อัปเดตล่าสุดเมื่อ {formatDateTime(settings.updated_at)}
       </p>
     </div>
   )

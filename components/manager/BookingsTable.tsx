@@ -1,7 +1,7 @@
-import { format } from 'date-fns'
 import type { BookingOversightRow } from '@/lib/data/types'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { EmptyState } from '@/components/feedback/EmptyState'
+import { formatDate } from '@/lib/dates'
 
 interface BookingsTableProps {
   bookings: BookingOversightRow[]
@@ -71,7 +71,7 @@ export function BookingsTable({ bookings, activeCount }: BookingsTableProps) {
                     <span className="block text-caption text-on-surface-variant">{b.roomType}</span>
                   </td>
                   <td className="py-3 pr-4 text-on-surface-variant">
-                    {format(new Date(b.checkIn), 'd MMM')} – {format(new Date(b.checkOut), 'd MMM')}
+                    {formatDate(b.checkIn)} – {formatDate(b.checkOut)}
                     <span className="block text-caption">{b.nights} คืน</span>
                   </td>
                   <td className="py-3 pr-4">

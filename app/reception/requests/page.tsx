@@ -1,18 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
+import { formatDateTime } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ResolveNoteButton } from './ResolveNoteButton'
 
 export const dynamic = 'force-dynamic'
-
-function formatDateTime(iso: string) {
-  return new Intl.DateTimeFormat('th-TH', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(iso))
-}
 
 const NOTE_TYPE_META: Record<string, { label: string; color: string; icon: string }> = {
   request: { label: 'คำขอ', color: 'bg-primary/10 text-primary', icon: 'help' },

@@ -1,23 +1,30 @@
 /**
  * Date formatting utilities.
+ *
+ * Note: all date+time formatters pass `calendar: 'gregory'` so the Thai
+ * locale renders AD year (2026) instead of the Buddhist year (2569) that
+ * `'th-TH'` uses by default. Thai month/day names stay intact.
  */
 
+const dateOptions: Intl.DateTimeFormatOptions = {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  calendar: 'gregory',
+}
+
+const dateTimeOptions: Intl.DateTimeFormatOptions = {
+  ...dateOptions,
+  hour: '2-digit',
+  minute: '2-digit',
+}
+
 export function formatDate(iso: string, locale = 'th-TH'): string {
-  return new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(iso))
+  return new Intl.DateTimeFormat(locale, dateOptions).format(new Date(iso))
 }
 
 export function formatDateTime(iso: string, locale = 'th-TH'): string {
-  return new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(iso))
+  return new Intl.DateTimeFormat(locale, dateTimeOptions).format(new Date(iso))
 }
 
 export function formatTime(iso: string, locale = 'th-TH'): string {
@@ -25,6 +32,20 @@ export function formatTime(iso: string, locale = 'th-TH'): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(iso))
+}
+
+/**
+ * Format a date range "from – to" with one shared locale. Eliminates the
+ * repeated `{formatDate(a)} – {formatDate(b)}` pattern at booking history
+ * tables, promotion previews, seasonal rates lists, etc.
+ */
+export function formatDateRange(
+  isoFrom: string,
+  isoTo: string,
+  locale = 'th-TH',
+): string {
+  const fmt = new Intl.DateTimeFormat(locale, dateOptions)
+  return `${fmt.format(new Date(isoFrom))} – ${fmt.format(new Date(isoTo))}`
 }
 
 /**

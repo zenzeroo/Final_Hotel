@@ -1,8 +1,8 @@
-import { format } from 'date-fns'
 import type { DamageReport as DamageReportType } from '@/lib/data/types'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ResolveDamageButton } from './ResolveDamageButton'
 import { formatTHB } from '@/lib/pricing'
+import { formatDate } from '@/lib/dates'
 
 interface DamageReportTableProps {
   reports: DamageReportType[]
@@ -80,7 +80,7 @@ export function DamageReportTable({ reports }: DamageReportTableProps) {
                 <td className="py-3 pr-4">
                   {r.resolved ? (
                     <span className="text-caption text-on-surface-variant">
-                      แก้ไขแล้ว {r.resolvedAt ? format(new Date(r.resolvedAt), 'd MMM') : ''}
+                      แก้ไขแล้ว {r.resolvedAt ? formatDate(r.resolvedAt) : ''}
                     </span>
                   ) : (
                     <ResolveDamageButton reportId={r.id} defaultCost={r.costEstimate} />

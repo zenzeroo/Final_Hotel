@@ -18,7 +18,7 @@ export const LOCALE_COOKIE = 'NEXT_LOCALE'
 /** Map Locale → BCP-47 tag used by Intl APIs (formatDate / toLocaleString). */
 export const LOCALE_BCP47: Record<Locale, string> = {
   th: 'th-TH',
-  en: 'en-US',
+  en: 'en-GB',
 }
 
 /** Narrow an arbitrary string (e.g. user input) to a known Locale. */

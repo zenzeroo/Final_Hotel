@@ -3,6 +3,7 @@ import { StatusBadge } from './StatusBadge'
 import { TaskClaimButton } from './TaskClaimButton'
 import { TaskActions } from './TaskActions'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { formatDateTime, formatTime } from '@/lib/dates'
 import type { HousekeepingTask } from '@/lib/data/types'
 
 const TASK_TYPE_LABELS: Record<string, string> = {
@@ -42,19 +43,19 @@ export function TaskCard({ task, variant = 'my' }: Props) {
           {task.started_at && (
             <span className="flex items-center gap-1">
               <MaterialIcon name="play_arrow" size={14} />
-              {new Date(task.started_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+              {formatTime(task.started_at)}
             </span>
           )}
           {task.completed_at && (
             <span className="flex items-center gap-1">
               <MaterialIcon name="check" size={14} />
-              {new Date(task.completed_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+              {formatTime(task.completed_at)}
             </span>
           )}
           {variant === 'unassigned' && (
             <span className="flex items-center gap-1">
               <MaterialIcon name="schedule" size={14} />
-              {new Date(task.created_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
+              {formatDateTime(task.created_at)}
             </span>
           )}
         </div>

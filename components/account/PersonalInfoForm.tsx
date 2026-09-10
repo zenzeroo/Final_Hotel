@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom'
 import { updateProfileAction } from '@/app/actions/account'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import type { AccountProfile } from '@/lib/data/types'
+import { formatDate } from '@/lib/dates'
 
 interface PersonalInfoFormProps {
   profile: AccountProfile
@@ -221,12 +222,7 @@ function Row({
 
 function formatThaiDate(iso: string): string {
   try {
-    const d = new Date(iso)
-    return d.toLocaleDateString('th-TH', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    })
+    return formatDate(iso)
   } catch {
     return iso
   }

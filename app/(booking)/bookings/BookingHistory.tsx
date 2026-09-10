@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
 import { useT, useLocale } from '@/lib/i18n/useT'
+import { formatDate } from '@/lib/dates'
 import type { Booking } from '@/lib/data/bookings'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
 
@@ -21,15 +22,6 @@ interface BookingHistoryProps {
 }
 
 type Tab = 'active' | 'checkedIn' | 'cancelled'
-
-function formatDate(iso: string, localeBcp: string) {
-  return new Intl.DateTimeFormat(localeBcp, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(iso))
-}
 
 function statusLabel(
   status: Booking['status'],

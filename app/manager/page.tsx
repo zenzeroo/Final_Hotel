@@ -17,6 +17,7 @@ function today(localeBcp: string) {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    calendar: 'gregory',
   })
 }
 

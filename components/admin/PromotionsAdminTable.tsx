@@ -4,6 +4,9 @@ import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import type { Promotion } from '@/lib/data/types'
 import { formatDiscount } from '@/lib/pricing'
+import { formatDateRange } from '@/lib/dates'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { useLocale } from '@/lib/i18n/useT'
 import { TogglePromotionButton } from '@/components/manager/TogglePromotionButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -12,14 +15,6 @@ import { deletePromotionAction } from '@/app/actions/promotions'
 interface PromotionsAdminTableProps {
   promotions: Promotion[]
   now: Date
-}
-
-function formatDate(s: string): string {
-  return new Date(s).toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 function isExpired(p: Promotion, now: Date): boolean {
@@ -86,6 +81,7 @@ function DeleteButton({ id, code }: { id: string; code: string }) {
 }
 
 export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTableProps) {
+  const localeBcp = LOCALE_BCP47[useLocale()]
   if (promotions.length === 0) {
     return (
       <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-12 text-center">
@@ -144,7 +140,7 @@ export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTablePr
                     {p.min_nights} คืน
                   </td>
                   <td className="px-4 py-4 text-caption text-on-surface-variant">
-                    {formatDate(p.valid_from)} – {formatDate(p.valid_until)}
+                    {formatDateRange(p.valid_from, p.valid_until, localeBcp)}
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-col gap-1 items-start">

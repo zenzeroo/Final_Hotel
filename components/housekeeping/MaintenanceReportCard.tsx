@@ -1,6 +1,7 @@
 import { SeverityBadge } from './SeverityBadge'
 import { StatusBadge } from './StatusBadge'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { formatDateTime } from '@/lib/dates'
 import type { MaintenanceReport } from '@/lib/data/types'
 
 const ISSUE_LABELS: Record<string, string> = {
@@ -41,7 +42,7 @@ export function MaintenanceReportCard({ report }: { report: MaintenanceReport })
         </span>
         <span className="flex items-center gap-1">
           <MaterialIcon name="schedule" size={14} />
-          {new Date(report.created_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
+          {formatDateTime(report.created_at)}
         </span>
       </div>
     </div>

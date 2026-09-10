@@ -9,6 +9,7 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { calculatePrice, formatTHB, type PricingSettings } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
 import type { QuoteResult } from '@/lib/pricing/seasons'
+import { formatDate } from '@/lib/dates'
 
 interface BookingFormProps {
   room: {
@@ -38,15 +39,6 @@ interface BookingFormProps {
    * server action will write into `bookings.tax_total` / `fee_total`.
    */
   settings: PricingSettings
-}
-
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat('th-TH', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(iso))
 }
 
 function SubmitButton({ disabled }: { disabled: boolean }) {

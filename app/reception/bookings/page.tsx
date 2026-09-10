@@ -1,19 +1,12 @@
 import Link from 'next/link'
 import { getAllBookings } from '@/lib/data/staff'
 import { formatTHB } from '@/lib/pricing'
+import { formatDate } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { BookingFilters } from './BookingFilters'
 import { BookingRowActions } from './BookingRowActions'
 
 export const dynamic = 'force-dynamic'
-
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat('th-TH', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(iso))
-}
 
 export default async function ReceptionBookingsPage(props: PageProps<'/reception/bookings'>) {
   const searchParams = await props.searchParams

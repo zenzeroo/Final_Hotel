@@ -9,6 +9,7 @@ import { AlertModal } from '@/components/ui/AlertModal'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useT } from '@/lib/i18n/useT'
 import { formatTHB } from '@/lib/pricing'
+import { formatDate } from '@/lib/dates'
 
 interface ConfirmationActionsProps {
   bookingId: string
@@ -326,11 +327,7 @@ function PreviewRow({
 function formatIsoDate(iso: string): string {
   if (!iso) return '—'
   try {
-    return new Date(iso).toLocaleDateString('th-TH', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    })
+    return formatDate(iso)
   } catch {
     return iso
   }

@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom'
 import type { HotelSettings } from '@/lib/data/types'
 import { updateHotelSettingsAction } from '@/app/actions/admin/settings'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { formatDateTime } from '@/lib/dates'
 
 interface HotelSettingsFormProps {
   settings: HotelSettings
@@ -242,10 +243,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
 
       <div className="text-caption text-on-surface-variant pt-4 border-t border-outline-variant">
         อัปเดตล่าสุดเมื่อ{' '}
-        {new Date(settings.updated_at).toLocaleString('th-TH', {
-          dateStyle: 'long',
-          timeStyle: 'short',
-        })}
+        {formatDateTime(settings.updated_at)}
         {settings.updated_by && ` (โดย ${settings.updated_by})`}
       </div>
     </form>

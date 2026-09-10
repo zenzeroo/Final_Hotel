@@ -1,4 +1,5 @@
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { formatDate } from '@/lib/dates'
 
 interface SearchSummaryCardProps {
   checkin?: string
@@ -7,14 +8,7 @@ interface SearchSummaryCardProps {
 }
 
 export function SearchSummaryCard({ checkin, checkout, guests }: SearchSummaryCardProps) {
-  const formatDate = (iso?: string) => {
-    if (!iso) return '—'
-    return new Intl.DateTimeFormat('th-TH', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(new Date(iso))
-  }
+  const fmt = (iso?: string) => (iso ? formatDate(iso) : '—')
 
   return (
     <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
@@ -25,14 +19,14 @@ export function SearchSummaryCard({ checkin, checkout, guests }: SearchSummaryCa
           <MaterialIcon name="calendar_today" size={20} className="text-primary mt-0.5" />
           <div className="flex-1">
             <dt className="text-caption text-on-surface-variant uppercase tracking-wider">เช็คอิน</dt>
-            <dd className="text-body-md font-medium text-on-surface">{formatDate(checkin)}</dd>
+            <dd className="text-body-md font-medium text-on-surface">{fmt(checkin)}</dd>
           </div>
         </div>
         <div className="flex items-start gap-3">
           <MaterialIcon name="event" size={20} className="text-primary mt-0.5" />
           <div className="flex-1">
             <dt className="text-caption text-on-surface-variant uppercase tracking-wider">เช็คเอาท์</dt>
-            <dd className="text-body-md font-medium text-on-surface">{formatDate(checkout)}</dd>
+            <dd className="text-body-md font-medium text-on-surface">{fmt(checkout)}</dd>
           </div>
         </div>
         <div className="flex items-start gap-3">

@@ -1,18 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatTHB } from '@/lib/pricing'
+import { formatDate } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { CheckInOutActions } from './CheckInOutActions'
 
 export const dynamic = 'force-dynamic'
-
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat('th-TH', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(iso))
-}
 
 export default async function CheckInOutPage() {
   const supabase = await createClient()

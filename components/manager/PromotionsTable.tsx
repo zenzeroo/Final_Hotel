@@ -1,19 +1,12 @@
 import type { Promotion } from '@/lib/data/types'
 import { formatDiscount } from '@/lib/pricing'
+import { formatDateRange } from '@/lib/dates'
 import { TogglePromotionButton } from './TogglePromotionButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface PromotionsTableProps {
   promotions: Promotion[]
   now: Date
-}
-
-function formatDate(s: string): string {
-  return new Date(s).toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 function isExpired(p: Promotion, now: Date): boolean {
@@ -77,7 +70,7 @@ export function PromotionsTable({ promotions, now }: PromotionsTableProps) {
                     {p.min_nights} คืน
                   </td>
                   <td className="px-4 py-4 text-caption text-on-surface-variant">
-                    {formatDate(p.valid_from)} – {formatDate(p.valid_until)}
+                    {formatDateRange(p.valid_from, p.valid_until)}
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-col gap-1 items-start">

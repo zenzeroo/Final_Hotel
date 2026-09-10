@@ -1,6 +1,7 @@
 import type { StaffMember, ShiftSlot } from '@/lib/data/types'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { EmptyState } from '@/components/feedback/EmptyState'
+import { formatDate } from '@/lib/dates'
 
 interface ShiftScheduleProps {
   staff: StaffMember[]
@@ -15,10 +16,9 @@ const POSITION_LABEL: Record<ShiftSlot['position'], { th: string; icon: string; 
 }
 
 function formatDayHeader(dateStr: string): { weekday: string; day: string } {
-  const d = new Date(dateStr)
   return {
-    weekday: d.toLocaleDateString('th-TH', { weekday: 'short' }),
-    day: d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }),
+    weekday: new Intl.DateTimeFormat('th-TH', { weekday: 'short', calendar: 'gregory' }).format(new Date(dateStr)),
+    day: formatDate(dateStr),
   }
 }
 

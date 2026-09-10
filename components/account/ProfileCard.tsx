@@ -2,6 +2,7 @@ import { signOut } from '@/app/actions/auth'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { AvatarUploader } from './AvatarUploader'
 import type { AccountProfile } from '@/lib/data/types'
+import { formatDate } from '@/lib/dates'
 
 interface ProfileCardProps {
   profile: AccountProfile
@@ -52,8 +53,7 @@ export function ProfileCard({ profile }: ProfileCardProps) {
 function formatMemberSince(iso: string): string {
   if (!iso) return '—'
   try {
-    const d = new Date(iso)
-    return d.toLocaleDateString('th-TH', { month: 'short', year: 'numeric' })
+    return formatDate(iso)
   } catch {
     return '—'
   }

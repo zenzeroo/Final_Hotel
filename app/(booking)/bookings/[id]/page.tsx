@@ -14,18 +14,10 @@ import { roomTypeLabel } from '@/lib/format/roomType'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { formatDate } from '@/lib/dates'
 import Image from 'next/image'
 
 export const dynamic = 'force-dynamic'
-
-function formatDate(iso: string, localeBcp: string) {
-  return new Intl.DateTimeFormat(localeBcp, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(iso))
-}
 
 function StatusBadge({
   status,
