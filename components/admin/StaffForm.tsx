@@ -117,10 +117,11 @@ export function StaffForm({ staff, isSelf }: StaffFormProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="เบอร์โทร">
+        <Field label="เบอร์โทร" required>
           <input
             name="phone"
             type="tel"
+            required
             inputMode="numeric"
             defaultValue={staff.phone ?? ''}
             maxLength={10}
