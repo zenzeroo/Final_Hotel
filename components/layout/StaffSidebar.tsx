@@ -113,7 +113,7 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
               aria-current={isActive ? 'page' : undefined}
               className={`group flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${
                 isActive
-                  ? 'bg-primary-container text-on-primary font-semibold border-secondary'
+                  ? 'bg-primary text-on-primary font-semibold border-secondary shadow-[-3px_0_8px_-1px_rgba(254,215,152,0.5)]'
                   : 'text-secondary/80 border-transparent hover:bg-primary-fixed hover:text-primary'
               }`}
             >
