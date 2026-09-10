@@ -72,7 +72,10 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
     <aside className="w-72 shrink-0 self-start sticky top-0 z-30 bg-primary text-secondary h-screen flex flex-col">
       {/* Brand */}
       <div className="px-6 py-6 border-b border-primary-container">
-        <Link href={roleHomePath(role)} className="font-display text-2xl font-bold text-secondary">
+        <Link
+          href={roleHomePath(role)}
+          className="font-display text-2xl font-bold text-secondary hover:text-on-primary transition-colors duration-200 rounded px-1 -mx-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+        >
           Zenzero Hotel
         </Link>
         <p className="text-caption text-secondary/70 mt-1 uppercase tracking-wider">
@@ -108,14 +111,23 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
               key={item.href}
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+              className={`group flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${
                 isActive
-                  ? 'bg-primary text-on-primary font-semibold'
-                  : 'text-secondary/80 hover:bg-primary-fixed hover:text-primary'
+                  ? 'bg-primary-container text-on-primary font-semibold border-secondary'
+                  : 'text-secondary/80 border-transparent hover:bg-primary-fixed hover:text-primary'
               }`}
             >
               <MaterialIcon name={item.icon} size={20} filled={isActive} />
               <span className="text-body-md">{navLabel(t, role, item.key)}</span>
+              <MaterialIcon
+                name="chevron_right"
+                size={18}
+                className={`ml-auto transition-transform duration-200 ${
+                  isActive
+                    ? 'opacity-100 translate-x-0'
+                    : 'opacity-0 -translate-x-1 group-hover:opacity-60 group-hover:translate-x-0'
+                }`}
+              />
             </Link>
           )
         })}
@@ -129,7 +141,7 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
         <form action={signOut}>
           <button
             type="submit"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary/80 hover:bg-primary-fixed hover:text-primary transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary/80 hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
           >
             <MaterialIcon name="logout" size={20} />
             <span className="text-body-md">{t('nav.logout')}</span>
