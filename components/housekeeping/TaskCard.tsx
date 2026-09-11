@@ -2,6 +2,7 @@ import { PriorityBadge } from './PriorityBadge'
 import { StatusBadge } from './StatusBadge'
 import { TaskClaimButton } from './TaskClaimButton'
 import { TaskActions } from './TaskActions'
+import { TaskETA } from './TaskETA'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatDateTime, formatTime } from '@/lib/dates'
 import type { HousekeepingTask } from '@/lib/data/types'
@@ -17,9 +18,11 @@ const TASK_TYPE_LABELS: Record<string, string> = {
 interface Props {
   task: HousekeepingTask
   variant?: 'my' | 'unassigned' | 'history'
+  /** Phase 30 — locale for next-check-in time formatting. */
+  localeBcp?: string
 }
 
-export function TaskCard({ task, variant = 'my' }: Props) {
+export function TaskCard({ task, variant = 'my', localeBcp }: Props) {
   const unit = task.room_unit
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5 border border-outline-variant/30 flex items-start gap-4">
@@ -39,6 +42,12 @@ export function TaskCard({ task, variant = 'my' }: Props) {
         {task.notes && (
           <p className="text-caption text-on-surface-variant mt-2 italic">&ldquo;{task.notes}&rdquo;</p>
         )}
+        {/* Phase 30 — ETA pill (estimated minutes + urgent next-check-in warning). */}
+        <TaskETA
+          estimatedMinutes={task.estimated_minutes ?? null}
+          nextCheckIn={task.next_check_in ?? null}
+          localeBcp={localeBcp}
+        />
         <div className="flex items-center gap-4 mt-3 text-caption text-on-surface-variant">
           {task.started_at && (
             <span className="flex items-center gap-1">
