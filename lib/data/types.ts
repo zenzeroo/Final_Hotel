@@ -74,6 +74,15 @@ export type HousekeepingTaskType = 'cleaning' | 'turn_down' | 'deep_clean' | 'in
 export type HousekeepingTaskStatus = 'unassigned' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
 export type HousekeepingTaskPriority = 'low' | 'normal' | 'high' | 'urgent'
 
+// Phase 29 — refund status surfaced in user UI (badges on /bookings/[id])
+export type RefundRequestStatus = 'pending' | 'approved' | 'rejected'
+export interface RefundStatusForBooking {
+  status: RefundRequestStatus
+  amount: number
+  decidedAt: string | null
+  decidedBy: string | null
+}
+
 export type RoomUnitStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance' | 'out_of_order'
 
 export interface RoomUnitBasic {
@@ -104,6 +113,10 @@ export interface HousekeepingTask {
   completed_at: string | null
   created_at: string
   updated_at: string
+  /** Phase 30: snapshot of room_types.estimated_cleaning_minutes at INSERT time. */
+  estimated_minutes?: number | null
+  /** Phase 30: earliest future check-in for the room, populated by caller. */
+  next_check_in?: string | null
   room_unit?: RoomUnitBasic
   assigned_user?: { full_name: string | null } | null
   created_user?: { full_name: string | null } | null
@@ -217,6 +230,54 @@ export interface UnassignedTask {
   urgent: boolean
 }
 
+// Phase 28 — manager housekeeping assignment UI additions
+export interface HousekeeperOption {
+  id: string
+  fullName: string
+}
+
+export interface AssignedTaskCard {
+  taskId: string
+  roomNumber: string
+  floor: number
+  taskType: HousekeepingTaskType
+  priority: HousekeepingTaskPriority
+  status: HousekeepingTaskStatus
+  createdAt: string
+  startedAt: string | null
+  notes: string | null
+  assignedToId: string
+  /** Phase 30: snapshot minutes for ETA display. */
+  estimatedMinutes?: number | null
+  /** Phase 30: earliest future check-in for the room (urgency pill). */
+  nextCheckIn?: string | null
+}
+
+export interface HousekeeperCard {
+  housekeeperId: string
+  fullName: string
+  tasks: AssignedTaskCard[]
+  /** Phase 30: total estimated minutes across this HK's tasks. */
+  totalLoadMinutes?: number
+  /** Phase 30: % of 8h shift (480 min) consumed by totalLoadMinutes. */
+  workloadPercent?: number
+}
+
+/**
+ * Phase 30 — manager dashboard workload summary per housekeeper.
+ * `capacityMinutes` = 480 when on shift, 0 when off — drives workloadPercent.
+ */
+export interface HousekeeperWorkload {
+  housekeeperId: string
+  fullName: string
+  currentLoadMinutes: number
+  capacityMinutes: number
+  taskCount: number
+  workloadPercent: number
+  isAvailable: boolean
+  floorDefaults: number[]
+}
+
 export type DamageSeverity = 'normal' | 'urgent'
 
 export interface DamageReport {
@@ -242,6 +303,10 @@ export interface HousekeepingOverviewData {
   floorAssignments: FloorAssignment[]
   unassignedTasks: UnassignedTask[]
   damageReports: DamageReport[]
+  housekeepers: HousekeeperOption[]
+  assignedByHousekeeper: HousekeeperCard[]
+  /** Phase 30: per-housekeeper workload for the manager dashboard table. */
+  housekeeperWorkloads: HousekeeperWorkload[]
 }
 
 // =====================================================

@@ -1,12 +1,14 @@
-import type { UnassignedTask } from '@/lib/data/types'
+import type { UnassignedTask, HousekeeperOption } from '@/lib/data/types'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { AssignTaskButton } from '@/components/housekeeping/AssignTaskButton'
 import { formatDistanceToNow } from 'date-fns'
 
 interface UnassignedTaskListProps {
   tasks: UnassignedTask[]
+  housekeepers: HousekeeperOption[]
 }
 
-export function UnassignedTaskList({ tasks }: UnassignedTaskListProps) {
+export function UnassignedTaskList({ tasks, housekeepers }: UnassignedTaskListProps) {
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
       <h3 className="font-headline-sm text-headline-sm text-primary mb-4">งานที่ยังไม่ได้มอบหมาย</h3>
@@ -24,12 +26,19 @@ export function UnassignedTaskList({ tasks }: UnassignedTaskListProps) {
                 size={20}
                 className={t.urgent ? 'text-error mt-0.5' : 'text-on-surface-variant mt-0.5'}
               />
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-body-md font-semibold text-primary">{t.title}</p>
                 <p className="text-caption text-on-surface-variant">
                   ห้อง {t.roomNumber} ·{' '}
                   {formatDistanceToNow(new Date(t.requestedAt), { addSuffix: true })}
                 </p>
+              </div>
+              <div className="flex-shrink-0">
+                <AssignTaskButton
+                  taskId={t.id}
+                  housekeepers={housekeepers}
+                  currentAssigneeId={null}
+                />
               </div>
             </li>
           ))}

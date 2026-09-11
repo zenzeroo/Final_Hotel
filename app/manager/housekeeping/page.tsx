@@ -1,16 +1,30 @@
 import { getHousekeepingOverview } from '@/lib/data/manager'
+import { getAllRoomUnits } from '@/lib/data/housekeeper'
 import { KpiCard } from '@/components/manager/KpiCard'
 import { FloorStatusGroup } from '@/components/manager/FloorStatusGroup'
 import { FloorAssignmentCard } from '@/components/manager/FloorAssignmentCard'
 import { UnassignedTaskList } from '@/components/manager/UnassignedTaskList'
 import { DamageReportTable } from '@/components/manager/DamageReportTable'
+import { HousekeeperCards } from '@/components/manager/HousekeeperCards'
+import { HousekeeperWorkloadTable } from '@/components/manager/HousekeeperWorkloadTable'
+import { CreateTaskModal } from '@/components/housekeeping/CreateTaskModal'
+import { RebalanceButton } from '@/components/housekeeping/RebalanceButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatDate } from '@/lib/dates'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ManagerHousekeepingPage() {
-  const data = await getHousekeepingOverview()
+  const locale = await getLocale()
+  const t = getT(locale)
+  const [data, roomUnits] = await Promise.all([
+    getHousekeepingOverview(),
+    getAllRoomUnits(),
+  ])
+
+  const availableHKs = data.housekeeperWorkloads.filter((h) => h.isAvailable).length
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
@@ -23,13 +37,21 @@ export default async function ManagerHousekeepingPage() {
             การดำเนินงาน Zenzero Hotel · {formatDate(new Date().toISOString())}
           </p>
         </div>
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 bg-primary text-secondary px-4 py-2 rounded-md text-body-md font-semibold"
-        >
-          <MaterialIcon name="print" size={18} />
-          พิมพ์รายงานประจำวัน
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Phase 30 — auto-allocation button (disabled when no tasks or no available HKs). */}
+          <RebalanceButton
+            unassignedCount={data.unassignedTasks.length}
+            availableHousekeepers={availableHKs}
+          />
+          <CreateTaskModal roomUnits={roomUnits} housekeepers={data.housekeepers} />
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 bg-primary text-secondary px-4 py-2 rounded-md text-body-md font-semibold"
+          >
+            <MaterialIcon name="print" size={18} />
+            พิมพ์รายงานประจำวัน
+          </button>
+        </div>
       </header>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
@@ -63,10 +85,18 @@ export default async function ManagerHousekeepingPage() {
           </div>
         </div>
         <div className="flex flex-col gap-6">
-          <FloorAssignmentCard assignments={data.floorAssignments} />
-          <UnassignedTaskList tasks={data.unassignedTasks} />
+          <FloorAssignmentCard
+            assignments={data.floorAssignments}
+            housekeepers={data.housekeepers}
+          />
+          <UnassignedTaskList tasks={data.unassignedTasks} housekeepers={data.housekeepers} />
         </div>
       </section>
+
+      {/* Phase 30 — workload summary table (one row per housekeeper). */}
+      <HousekeeperWorkloadTable workloads={data.housekeeperWorkloads} t={t} />
+
+      <HousekeeperCards cards={data.assignedByHousekeeper} housekeepers={data.housekeepers} />
 
       <section className="mb-12">
         <DamageReportTable reports={data.damageReports} />

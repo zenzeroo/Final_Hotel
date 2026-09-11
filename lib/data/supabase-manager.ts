@@ -32,6 +32,10 @@ import type {
   RankedRoom,
   RankedRoomTypeRevenue,
   ChannelSlice,
+  HousekeeperOption,
+  HousekeeperCard,
+  AssignedTaskCard,
+  HousekeeperWorkload,
 } from './types'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
 
@@ -352,12 +356,21 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
   const supabase = await createClient()
 
   // Parallel queries: damage reports, active rooms, open unassigned tasks,
-  // and recent in-flight housekeeping tasks for floor assignment derivation.
+  // recent in-flight housekeeping tasks for floor assignment derivation,
+  // Phase 28 additions: persisted floor_assignments, assigned/in-progress
+  // tasks grouped by housekeeper, the housekeeper picker list.
+  // Phase 30 additions: staff_shifts (workload %), v_next_checkin_per_room (ETA).
+  const today = todayIso()
   const [
     { data: damageRows, error: e1 },
     { data: rooms, error: e2 },
     { data: unassignedTasksRaw, error: e3 },
     { data: activeTasks, error: e4 },
+    { data: persistedFloors, error: e5 },
+    { data: assignedByUser, error: e6 },
+    { data: housekeepers, error: e7 },
+    { data: shifts, error: e8 },
+    { data: nextCheckins, error: e9 },
   ] = await Promise.all([
     supabase
       .from('damage_reports')
@@ -385,14 +398,57 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
       `,
       )
       .in('status', ['assigned', 'in_progress']),
+    supabase
+      .from('floor_assignments')
+      .select('floor, housekeeper_id, housekeeper:profiles!floor_assignments_housekeeper_id_fkey(full_name)'),
+    supabase
+      .from('housekeeping_tasks')
+      .select(
+        `
+        id, task_type, priority, status, created_at, started_at, notes, assigned_to, estimated_minutes,
+        room_unit_id,
+        room_unit:room_units!inner(unit_label, floor),
+        assignee:profiles!housekeeping_tasks_assigned_to_fkey(full_name)
+      `,
+      )
+      .in('status', ['assigned', 'in_progress'])
+      .not('assigned_to', 'is', null),
+    supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('role', 'housekeeper')
+      .eq('is_active', true)
+      .order('full_name', { ascending: true }),
+    supabase
+      .from('staff_shifts')
+      .select('staff_id, position')
+      .eq('shift_date', today),
+    supabase
+      .from('v_next_checkin_per_room')
+      .select('room_unit_id, next_check_in'),
   ])
   for (const [label, e] of [
     ['damageReports', e1],
     ['rooms', e2],
     ['unassignedTasks', e3],
     ['activeTasks', e4],
+    ['floorAssignments', e5],
+    ['assignedByHousekeeper', e6],
+    ['housekeepers', e7],
+    ['shifts', e8],
+    ['nextCheckins', e9],
   ] as const) {
     if (e) wrapSupabaseError(label, e)
+  }
+
+  // Phase 30 — build lookup maps for shifts + next check-in.
+  const onShiftToday = new Set<string>()
+  for (const s of shifts ?? []) {
+    if (s.position !== 'off') onShiftToday.add(s.staff_id)
+  }
+  const nextCheckInMap = new Map<string, string | null>()
+  for (const r of nextCheckins ?? []) {
+    nextCheckInMap.set(r.room_unit_id, r.next_check_in)
   }
 
   const damageReports = (damageRows ?? []).map((r) =>
@@ -432,8 +488,18 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     list.push(cell)
     floorMap.set(r.floor, list)
   }
-  // Determine per-floor assignee from active tasks.
+
+  // Phase 28: persisted floor_assignments take priority over the
+  // active-task-derived fallback. Map first; active-task loop only fills
+  // floors that have no persisted row.
   const floorAssignee = new Map<number, { id: string; name: string }>()
+  for (const f of persistedFloors ?? []) {
+    const hk = Array.isArray(f.housekeeper) ? f.housekeeper[0] : f.housekeeper
+    if (f.housekeeper_id && hk?.full_name) {
+      floorAssignee.set(f.floor, { id: f.housekeeper_id, name: hk.full_name })
+    }
+  }
+  // Fallback: derive from active tasks for floors without a persisted row.
   for (const t of activeTasks ?? []) {
     const ru = Array.isArray(t.room_unit) ? t.room_unit[0] : t.room_unit
     if (!ru || floorAssignee.has(ru.floor)) continue
@@ -454,7 +520,7 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
       }
     })
 
-  // Floor assignments: count rooms per floor + first-assigned housekeeper.
+  // Floor assignments: count rooms per floor + (persisted or derived) housekeeper.
   const floorAssignments: FloorAssignment[] = floors.map((f) => ({
     floor: f.floor,
     label: f.label,
@@ -474,6 +540,104 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     }
   })
 
+  // Phase 28: housekeeper picker (manager dashboard needs this for assign UI).
+  const housekeeperOptions: HousekeeperOption[] = (housekeepers ?? []).map((h) => ({
+    id: h.id,
+    fullName: h.full_name ?? '—',
+  }))
+
+  // Phase 28: tasks currently assigned or in-progress, grouped by housekeeper.
+  // Cards on the manager dashboard show each housekeeper's workload.
+  const cardsByUser = new Map<string, HousekeeperCard>()
+  for (const t of assignedByUser ?? []) {
+    if (!t.assigned_to) continue
+    const ru = Array.isArray(t.room_unit) ? t.room_unit[0] : t.room_unit
+    const assignee = Array.isArray(t.assignee) ? t.assignee[0] : t.assignee
+    const card: AssignedTaskCard = {
+      taskId: t.id,
+      roomNumber: ru?.unit_label ?? '—',
+      floor: ru?.floor ?? 0,
+      taskType: t.task_type,
+      priority: t.priority,
+      status: t.status,
+      createdAt: t.created_at,
+      startedAt: t.started_at ?? null,
+      notes: t.notes ?? null,
+      assignedToId: t.assigned_to,
+      // Phase 30 — ETA + urgency pill on the housekeeper card.
+      estimatedMinutes: t.estimated_minutes ?? null,
+      nextCheckIn: nextCheckInMap.get(t.room_unit_id) ?? null,
+    }
+    const existing = cardsByUser.get(t.assigned_to)
+    if (existing) {
+      existing.tasks.push(card)
+    } else {
+      cardsByUser.set(t.assigned_to, {
+        housekeeperId: t.assigned_to,
+        fullName: assignee?.full_name ?? '—',
+        tasks: [card],
+      })
+    }
+  }
+  const assignedByHousekeeper: HousekeeperCard[] = [...cardsByUser.values()].sort((a, b) =>
+    a.fullName.localeCompare(b.fullName),
+  )
+
+  // Phase 30 — populate per-card totalLoadMinutes + workloadPercent (8h = 480 min).
+  const CAPACITY_MINUTES = 480
+  for (const card of assignedByHousekeeper) {
+    const totalLoadMinutes = card.tasks.reduce(
+      (s, t) => s + (t.estimatedMinutes ?? 0),
+      0,
+    )
+    card.totalLoadMinutes = totalLoadMinutes
+    card.workloadPercent = onShiftToday.has(card.housekeeperId)
+      ? Math.min(100, Math.round((totalLoadMinutes / CAPACITY_MINUTES) * 100))
+      : 0
+  }
+
+  // Phase 30 — build housekeeperWorkloads for the WorkloadTable (includes HKs
+  // with 0 tasks who don't appear in assignedByHousekeeper).
+  const floorsByHK = new Map<string, number[]>()
+  for (const f of persistedFloors ?? []) {
+    if (!f.housekeeper_id) continue
+    const arr = floorsByHK.get(f.housekeeper_id) ?? []
+    arr.push(f.floor)
+    floorsByHK.set(f.housekeeper_id, arr)
+  }
+  const loadByHKFromTasks = new Map<string, number>()
+  const countByHKFromTasks = new Map<string, number>()
+  for (const t of assignedByUser ?? []) {
+    if (!t.assigned_to) continue
+    loadByHKFromTasks.set(
+      t.assigned_to,
+      (loadByHKFromTasks.get(t.assigned_to) ?? 0) + (t.estimated_minutes ?? 0),
+    )
+    countByHKFromTasks.set(
+      t.assigned_to,
+      (countByHKFromTasks.get(t.assigned_to) ?? 0) + 1,
+    )
+  }
+  const housekeeperWorkloads: HousekeeperWorkload[] = (housekeepers ?? [])
+    .map((h) => {
+      const isAvailable = onShiftToday.has(h.id)
+      const currentLoadMinutes = loadByHKFromTasks.get(h.id) ?? 0
+      const taskCount = countByHKFromTasks.get(h.id) ?? 0
+      return {
+        housekeeperId: h.id,
+        fullName: h.full_name ?? '—',
+        currentLoadMinutes,
+        capacityMinutes: isAvailable ? CAPACITY_MINUTES : 0,
+        taskCount,
+        workloadPercent: isAvailable
+          ? Math.min(100, Math.round((currentLoadMinutes / CAPACITY_MINUTES) * 100))
+          : 0,
+        isAvailable,
+        floorDefaults: (floorsByHK.get(h.id) ?? []).sort((a, b) => a - b),
+      }
+    })
+    .sort((a, b) => a.fullName.localeCompare(b.fullName))
+
   return {
     totalRooms,
     dirtyCount,
@@ -483,7 +647,100 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     floorAssignments,
     unassignedTasks,
     damageReports,
+    housekeepers: housekeeperOptions,
+    assignedByHousekeeper,
+    housekeeperWorkloads,
   }
+}
+
+export async function listHousekeepers(): Promise<HousekeeperOption[]> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .eq('role', 'housekeeper')
+    .eq('is_active', true)
+    .order('full_name', { ascending: true })
+  if (error) wrapSupabaseError('listHousekeepers', error)
+  return (data ?? []).map((h) => ({ id: h.id, fullName: h.full_name ?? '—' }))
+}
+
+/**
+ * Phase 30 — standalone workload summary per housekeeper (8h shift = 480 min).
+ * Reuses the same query shape as `getHousekeepingOverview`. Useful for tests
+ * and for callers that only need the workload table.
+ */
+export async function getHousekeeperWorkloads(): Promise<HousekeeperWorkload[]> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const today = todayIso()
+  const [
+    { data: hkRows, error: e1 },
+    { data: shifts, error: e2 },
+    { data: taskRows, error: e3 },
+    { data: floorRows, error: e4 },
+  ] = await Promise.all([
+    supabase.from('profiles').select('id, full_name').eq('role', 'housekeeper').eq('is_active', true).order('full_name'),
+    supabase.from('staff_shifts').select('staff_id, position').eq('shift_date', today),
+    supabase.from('housekeeping_tasks').select('assigned_to, estimated_minutes').in('status', ['assigned','in_progress']).not('assigned_to', 'is', null),
+    supabase.from('floor_assignments').select('floor, housekeeper_id'),
+  ])
+  for (const [label, e] of [['hks', e1], ['shifts', e2], ['tasks', e3], ['floors', e4]] as const) {
+    if (e) wrapSupabaseError(label, e)
+  }
+  const CAPACITY = 480
+  const shiftRows = (shifts ?? []) as Array<{ staff_id: string; position: string }>
+  const onShift = new Set(shiftRows.filter((s) => s.position !== 'off').map((s) => s.staff_id))
+  const loadByHK = new Map<string, { load: number; count: number }>()
+  for (const t of taskRows ?? []) {
+    if (!t.assigned_to) continue
+    const cur = loadByHK.get(t.assigned_to) ?? { load: 0, count: 0 }
+    cur.load += t.estimated_minutes ?? 0
+    cur.count += 1
+    loadByHK.set(t.assigned_to, cur)
+  }
+  const floorsByHK = new Map<string, number[]>()
+  for (const f of floorRows ?? []) {
+    if (!f.housekeeper_id) continue
+    const arr = floorsByHK.get(f.housekeeper_id) ?? []
+    arr.push(f.floor)
+    floorsByHK.set(f.housekeeper_id, arr)
+  }
+  const hkList = (hkRows ?? []) as Array<{ id: string; full_name: string | null }>
+  return hkList.map((h) => {
+    const stats = loadByHK.get(h.id) ?? { load: 0, count: 0 }
+    const isAvailable = onShift.has(h.id)
+    return {
+      housekeeperId: h.id,
+      fullName: h.full_name ?? '—',
+      currentLoadMinutes: stats.load,
+      capacityMinutes: isAvailable ? CAPACITY : 0,
+      taskCount: stats.count,
+      workloadPercent: isAvailable ? Math.min(100, Math.round((stats.load / CAPACITY) * 100)) : 0,
+      isAvailable,
+      floorDefaults: (floorsByHK.get(h.id) ?? []).sort((a, b) => a - b),
+    }
+  })
+}
+
+/**
+ * Phase 30 — read `v_next_checkin_per_room` for the given room unit ids.
+ * Returns a Map for O(1) lookup; missing ids map to `null`.
+ */
+export async function getNextCheckInForRooms(
+  roomUnitIds: string[],
+): Promise<Map<string, string | null>> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  if (roomUnitIds.length === 0) return new Map()
+  const { data, error } = await supabase
+    .from('v_next_checkin_per_room')
+    .select('room_unit_id, next_check_in')
+    .in('room_unit_id', roomUnitIds)
+  if (error) wrapSupabaseError('getNextCheckInForRooms', error)
+  const checkinRows = (data ?? []) as Array<{ room_unit_id: string; next_check_in: string | null }>
+  return new Map(checkinRows.map((r) => [r.room_unit_id, r.next_check_in]))
 }
 
 export async function getBookingsOversight(): Promise<BookingsOversightData> {

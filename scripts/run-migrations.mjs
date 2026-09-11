@@ -74,8 +74,33 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // for OAuth users missing phone in metadata.
 // 20260914 updates handle_new_user() to copy birthdate from
 // raw_user_meta_data (NULL when missing — OAuth path stays nullable).
+// 20260915 (×2) — preview_cancel_booking RPC + profiles.phone UNIQUE
+// (defense against duplicate-sentinel backfill regression from 20260913).
+// 20260916 caps promotions.max_discount at 100% (defense against typo).
+// 20260917 adds promotions.applies_to_room_types room_type_enum[] for
+// optional per-type promo scoping.
+// 20260918 adds Phase 28 housekeeping assignment flow: on_booking_checked_out
+// trigger (auto-create unassigned cleaning task) + floor_assignments table
+// for persisted per-floor housekeeper defaults. Closes the gap where docs
+// claimed check-out creates a cleaning task but no trigger ever shipped.
+// 20260919 adds Phase 29 refund approval hardening: tightens bookings self
+// update RLS (deny payment_status='refunded'|'partial_refund' from
+// authenticated role), new refund_requests owner-read policy so users can
+// see their own refund status badge, BEFORE UPDATE trigger that auto-stamps
+// decided_at + decided_by if RPC is bypassed, CHECK constraint requiring
+// decision_note on rejection.
+// 20260920 adds Phase 30 housekeeping allocation: room_types.estimated_cleaning_minutes
+// (Deluxe=20/Suite=30/Villa=45 per user spec), housekeeping_tasks.estimated_minutes snapshot,
+// widens room_units.status CHECK with waiting_cleaning/inspection/ready/checkout,
+// on_task_status_change rewritten for inspection + ready semantics, on_booking_checked_out
+// also flips room → waiting_cleaning + snapshots minutes, v_next_checkin_per_room view,
+// allocate_housekeeping_tasks(jsonb, boolean) SECURITY DEFINER RPC for race-safe commit of
+// TS-computed assignments.
+// 20260921 fixes 20260920 RPC + trigger to allow service_role callers (mirrors Phase 20 #24
+// pattern: auth.role()='service_role' bypass). The task INSERT inside on_booking_checked_out
+// still requires auth.uid() (created_by NOT NULL), but the room-status flip always runs.
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17)_.*\.sql$/.test(f))
+  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 
