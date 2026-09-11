@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation'
 import { getSession } from '@/lib/supabase/getSession'
-import { getBookingById, getCancellationPolicyById, getDefaultCancellationPolicy } from '@/lib/data/bookings'
+import { getBookingById, getCancellationPolicyById, getDefaultCancellationPolicy, getRefundStatusForBooking } from '@/lib/data/bookings'
 import { TransactionalHeader } from '@/components/layout/TransactionalHeader'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { ConfirmationActions } from './ConfirmationActions'
 import { WriteReviewPrompt } from './WriteReviewPrompt'
 import { PaymentSuccessModal } from '@/components/payment/PaymentSuccessModal'
+import { RefundStatusBadge } from '@/components/booking/RefundStatusBadge'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
@@ -104,6 +105,12 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
       ? await getCancellationPolicyById(booking.cancellation_policy_id)
       : null) ?? (await getDefaultCancellationPolicy())
 
+  // Phase 29 — surface refund_requests.status as a badge so the user sees
+  // pending / approved / rejected without having to wait for the eventual
+  // bookings.payment_status flip (which only happens after Stripe webhook
+  // lands, ~seconds after manager approval).
+  const refundStatus = await getRefundStatusForBooking(booking.id, session.id)
+
   return (
     <>
       <TopNavBar />
@@ -121,9 +128,16 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
       <main className="flex-1 bg-background">
         <TransactionalHeader backHref="/bookings" />
         <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
             <h1 className="font-display text-3xl text-primary">{t('bookingDetail.title')}</h1>
             <StatusBadge status={booking.status} paymentStatus={booking.payment_status} t={t} />
+            {refundStatus && (
+              <RefundStatusBadge
+                status={refundStatus.status}
+                amountFormatted={formatTHB(refundStatus.amount, localeBcp)}
+                t={t}
+              />
+            )}
           </div>
           <p className="text-body-md text-on-surface-variant mb-8">
             {t('bookingDetail.bookingCode')}: <span className="font-mono font-semibold">#{booking.booking_code}</span>

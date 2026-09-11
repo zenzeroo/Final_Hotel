@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
-import type { RoomTypeName } from './types'
+import type { RefundRequestStatus, RefundStatusForBooking, RoomTypeName } from './types'
 
 export interface Booking {
   id: string
@@ -192,4 +192,43 @@ export async function getPromotionByCode(code: string): Promise<Promotion | null
 
   if (error) wrapSupabaseError('', error)
   return (data as Promotion) ?? null
+}
+
+/**
+ * Phase 29 — read the latest refund_request for a booking. RLS-restricted:
+ * the `refund_requests owner read` policy added in
+ * `20260919_refund_approval_hardening.sql` lets the booking owner SELECT
+ * only their own refund rows. Returns null when there's no refund yet
+ * (e.g. unpaid booking, or non-cancelled booking).
+ */
+export async function getRefundStatusForBooking(
+  bookingId: string,
+  userId: string,
+): Promise<RefundStatusForBooking | null> {
+  const supabase = await createClient()
+  // First verify the booking belongs to this user — defence-in-depth on top
+  // of the RLS subquery (which already filters via bookings.user_id).
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('id')
+    .eq('id', bookingId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (!booking) return null
+
+  const { data, error } = await supabase
+    .from('refund_requests')
+    .select('status, amount, decided_at, decided_by')
+    .eq('booking_id', bookingId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) wrapSupabaseError('getRefundStatusForBooking', error)
+  if (!data) return null
+  return {
+    status: data.status as RefundRequestStatus,
+    amount: Number(data.amount),
+    decidedAt: data.decided_at ?? null,
+    decidedBy: data.decided_by ?? null,
+  }
 }
