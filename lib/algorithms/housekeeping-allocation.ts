@@ -276,14 +276,25 @@ export function allocateTasks(input: AllocationInput): AllocationOutput {
     })
   }
 
-  // 4. Build load summary + balance warning
+  // 4. Build load summary + balance warning.
+  // Quick win — B6: flag when some HKs got 0 tasks (algorithm bias —
+  // floor preferences + consistency bonuses can crowd out one HK). The
+  // original `loads.filter(n => n > 0)` excluded those HKs and hid the
+  // uneven distribution from the manager.
   const loadByHousekeeper: Record<string, number> = {}
   for (const [id, s] of hkState) loadByHousekeeper[id] = s.loadMinutes
 
-  const loads = Object.values(loadByHousekeeper).filter((n) => n > 0)
-  if (loads.length >= 2) {
-    const max = Math.max(...loads)
-    const min = Math.min(...loads)
+  const allLoads = Object.values(loadByHousekeeper)
+  const positiveLoads = allLoads.filter((n) => n > 0)
+  const idleCount = allLoads.length - positiveLoads.length
+  if (idleCount > 0) {
+    warnings.push(
+      `${idleCount} housekeeper${idleCount === 1 ? '' : 's'} got 0 tasks — manual review suggested`,
+    )
+  }
+  if (positiveLoads.length >= 2) {
+    const max = Math.max(...positiveLoads)
+    const min = Math.min(...positiveLoads)
     if (min > 0 && max / min > 1.5) {
       warnings.push(
         `Workload spread ${Math.round(max)}–${Math.round(min)} min exceeds 1.5× — manual review suggested`,

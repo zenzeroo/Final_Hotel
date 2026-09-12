@@ -379,7 +379,11 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     supabase
       .from('damage_reports')
       .select(DAMAGE_REPORT_SELECT)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      // Quick win — P3: cap to 50 newest reports. Unbounded fetch on a
+      // long-running hotel would balloon page load time. Full archive
+      // lives in the DamageReportTable page (Phase 31 follow-up: pagination).
+      .limit(50),
     supabase
       .from('room_units')
       .select('id, floor, unit_label, status')

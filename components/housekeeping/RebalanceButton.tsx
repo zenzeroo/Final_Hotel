@@ -28,6 +28,8 @@ export function RebalanceButton({ unassignedCount, availableHousekeepers }: Reba
   const [successSummary, setSuccessSummary] = useState<{
     assigned: number
     skipped: number
+    /** Quick win — U3: count by skip reason (race_lost, task_already_assigned, …). */
+    skippedReasons: Record<string, number>
     warnings: string[]
   } | null>(null)
 
@@ -54,6 +56,7 @@ export function RebalanceButton({ unassignedCount, availableHousekeepers }: Reba
         setSuccessSummary({
           assigned: result.data.assignedCount,
           skipped: result.data.skippedCount,
+          skippedReasons: result.data.skippedReasons,
           warnings: result.data.warnings,
         })
       } else if (!result.ok) {
@@ -94,6 +97,13 @@ export function RebalanceButton({ unassignedCount, availableHousekeepers }: Reba
           title={t('manager.housekeepingPage.autoAllocateComplete') as string}
           body={
             `${t('manager.housekeepingPage.autoAllocateResult', { assigned: successSummary.assigned, skipped: successSummary.skipped })}` +
+            // Quick win — U3: show *why* tasks were skipped when count > 0.
+            // Format: "race_lost: 2, task_already_assigned: 1"
+            (successSummary.skipped > 0 && Object.keys(successSummary.skippedReasons).length > 0
+              ? `\n\n• ${Object.entries(successSummary.skippedReasons)
+                  .map(([reason, count]) => `${reason}: ${count}`)
+                  .join('\n• ')}`
+              : '') +
             (successSummary.warnings.length > 0 ? `\n\n⚠️ ${successSummary.warnings.join('\n')}` : '')
           }
         />

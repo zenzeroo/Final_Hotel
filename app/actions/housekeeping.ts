@@ -442,6 +442,8 @@ export async function runAutoAllocation(): Promise<
   ActionResult<{
     assignedCount: number
     skippedCount: number
+    /** Quick win — U3: count of skipped rows grouped by `skipped_reason`. */
+    skippedReasons: Record<string, number>
     warnings: string[]
     loadByHousekeeper: Record<string, number>
   }>
@@ -464,6 +466,7 @@ export async function runAutoAllocation(): Promise<
       data: {
         assignedCount: 0,
         skippedCount: 0,
+        skippedReasons: {},
         warnings: result.warnings,
         loadByHousekeeper: result.loadByHousekeeper,
       },
@@ -475,16 +478,50 @@ export async function runAutoAllocation(): Promise<
     housekeeper_id: a.housekeeperId,
     estimated_minutes: a.estimatedMinutes,
   }))
-  const { data, error } = await supabase.rpc('allocate_housekeeping_tasks', {
-    p_assignments: payload,
-    p_dry_run: false,
-  })
-  if (error) return actionFail(error, 'Allocation RPC failed')
 
+  // Quick win — B7: caller-side retry on `task_not_found`. The RPC uses
+  // `SELECT … FOR UPDATE SKIP LOCKED` per row; if two RPCs race, one may
+  // see the row locked (returns null) before the other commits. A 50-150ms
+  // backoff retries the lost rows so the manager sees the actual final
+  // state, not a partial failure. `task_already_assigned` / `race_lost`
+  // are terminal — they mean another caller already won, so we don't
+  // retry those.
   type RpcRow = { task_id: string; housekeeper_id: string; applied: boolean; skipped_reason: string | null }
-  const rows: RpcRow[] = (data ?? []) as RpcRow[]
+  const RETRY_BACKOFFS_MS = [0, 75, 150]
+  const rows: RpcRow[] = []
+  let remainingPayload = payload
+  for (const backoffMs of RETRY_BACKOFFS_MS) {
+    if (backoffMs > 0) await new Promise((r) => setTimeout(r, backoffMs))
+    if (remainingPayload.length === 0) break
+    const { data, error } = await supabase.rpc('allocate_housekeeping_tasks', {
+      p_assignments: remainingPayload,
+      p_dry_run: false,
+    })
+    if (error) return actionFail(error, 'Allocation RPC failed')
+    const batch = (data ?? []) as RpcRow[]
+    rows.push(...batch)
+    // Only retry rows that were skipped due to a transient lock state.
+    const retryIds = new Set(
+      batch
+        .filter((r) => r.skipped_reason === 'task_not_found')
+        .map((r) => r.task_id),
+    )
+    if (retryIds.size === 0) break
+    remainingPayload = remainingPayload.filter((a) => retryIds.has(a.task_id))
+  }
+
   const applied = rows.filter((r) => r.applied).length
   const skipped = rows.length - applied
+
+  // Quick win — U3: breakdown of skip reasons so the manager sees *why*
+  // tasks weren't assigned (`race_lost`, `task_already_<status>`, etc.)
+  // instead of just "X skipped".
+  const skippedReasons: Record<string, number> = {}
+  for (const r of rows) {
+    if (r.applied) continue
+    const reason = r.skipped_reason ?? 'unknown'
+    skippedReasons[reason] = (skippedReasons[reason] ?? 0) + 1
+  }
 
   revalidatePath('/manager/housekeeping')
   revalidatePath('/housekeeper/tasks')
@@ -494,6 +531,7 @@ export async function runAutoAllocation(): Promise<
     data: {
       assignedCount: applied,
       skippedCount: skipped,
+      skippedReasons,
       warnings: result.warnings,
       loadByHousekeeper: result.loadByHousekeeper,
     },
