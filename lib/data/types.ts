@@ -83,7 +83,23 @@ export interface RefundStatusForBooking {
   decidedBy: string | null
 }
 
-export type RoomUnitStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance' | 'out_of_order'
+/**
+ * Phase 30.1 — widened to match DB CHECK constraint added in
+ * `supabase/migrations/20260920_housekeeping_allocation.sql:68-76`.
+ * The 4 new values (`waiting_cleaning`, `inspection`, `ready`, `checkout`)
+ * are written by the `on_booking_checked_out` + `on_task_status_change`
+ * triggers.
+ */
+export type RoomUnitStatus =
+  | 'available'
+  | 'occupied'
+  | 'cleaning'
+  | 'maintenance'
+  | 'out_of_order'
+  | 'waiting_cleaning'
+  | 'inspection'
+  | 'ready'
+  | 'checkout'
 
 export interface RoomUnitBasic {
   id: string
@@ -302,6 +318,10 @@ export interface HousekeepingOverviewData {
   floors: FloorStatusGroup[]
   floorAssignments: FloorAssignment[]
   unassignedTasks: UnassignedTask[]
+  /** Phase 30.1 — real total count (not capped to .limit(20) on the
+   * unassignedTasks array). Used by the Rebalance button label so the
+   * manager sees an accurate "(N)" count even when there are >20 tasks. */
+  totalUnassignedCount: number
   damageReports: DamageReport[]
   housekeepers: HousekeeperOption[]
   assignedByHousekeeper: HousekeeperCard[]

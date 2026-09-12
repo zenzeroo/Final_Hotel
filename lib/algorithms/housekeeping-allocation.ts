@@ -19,6 +19,7 @@
  *              + (isFloorAssignee ? FLOOR_BONUS : 0)              // +200
  *              + (floorInTaskSet ? FLOOR_CONSISTENCY_BONUS : 0)   // +60
  *              - (distinctFloorCount * FLOOR_DIVERSITY_PENALTY)   // -25/floor
+ *              + PRIORITY_BONUS[priority]                          // Phase 30.1 — U4
  *
  *      Tiebreakers (deterministic, in order):
  *        - smaller currentLoadMinutes
@@ -28,6 +29,11 @@
  *   4. Assign the winning HK. Update its local tracking struct.
  *
  *   5. Return assignments + per-HK load summary + warnings.
+ *
+ * Phase 30.1 — added `PRIORITY_BONUS` to the score so that an urgent task
+ * gravitates toward the most floor-aligned HK (not just the first HK by
+ * FIFO tiebreak). Sort order still respects priority (urgent first); the
+ * bonus now also nudges HK selection.
  *
  * Complexity: O(T·H·log T) where T = #tasks, H = #housekeepers.
  * For hotel scale (T ≤ ~30, H ≤ ~10) this is trivially fast.
@@ -98,6 +104,18 @@ const FLOOR_BONUS = 200
 const FLOOR_CONSISTENCY_BONUS = 60
 /** Penalty per distinct floor in this HK's current mix (reduces walking). */
 const FLOOR_DIVERSITY_PENALTY = 25
+/**
+ * Phase 30.1 — small per-task bonus weighted by priority so an urgent task
+ * gravitates toward a better-fit HK even when load/floor signals are tied.
+ * Sized to be smaller than `FLOOR_BONUS` so floor preferences still win for
+ * same-floor tasks.
+ */
+const PRIORITY_BONUS: Record<HousekeepingTaskPriority, number> = {
+  urgent: 50,
+  high: 25,
+  normal: 0,
+  low: -25,
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -203,7 +221,8 @@ export function allocateTasks(input: AllocationInput): AllocationOutput {
         -s.loadMinutes +
         (isFloorAssignee ? FLOOR_BONUS : 0) +
         (floorInTaskSet ? FLOOR_CONSISTENCY_BONUS : 0) -
-        s.distinctFloorCount * FLOOR_DIVERSITY_PENALTY
+        s.distinctFloorCount * FLOOR_DIVERSITY_PENALTY +
+        PRIORITY_BONUS[task.priority]
 
       const tiebreaker = {
         load: s.loadMinutes,
@@ -246,7 +265,8 @@ export function allocateTasks(input: AllocationInput): AllocationOutput {
       (prevCount === 0
         ? ' [new-floor]'
         : ' [floor-consistent]') +
-      (isDefaultFloor ? ' [floor-default]' : '')
+      (isDefaultFloor ? ' [floor-default]' : '') +
+      (PRIORITY_BONUS[task.priority] !== 0 ? ` [priority=${task.priority}]` : '')
 
     assignments.push({
       taskId: task.id,

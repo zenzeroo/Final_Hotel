@@ -341,6 +341,8 @@ export const en: Dictionary = {
       minutes: 'min',
       rebalance: 'Auto-allocate',
       rebalanceHint: 'LPT + Min-Load algorithm balances workload across housekeepers',
+      emptyNoTasks: 'No tasks to allocate',
+      emptyNoHKs: 'No housekeepers on shift today',
       confirmRebalance: '{count} unassigned tasks will be allocated by the algorithm. Continue?',
       autoAllocateComplete: 'Auto-allocation complete',
       autoAllocateResult: 'Assigned {assigned} tasks · skipped {skipped}',

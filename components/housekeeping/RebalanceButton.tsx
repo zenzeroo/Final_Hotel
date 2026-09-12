@@ -33,6 +33,15 @@ export function RebalanceButton({ unassignedCount, availableHousekeepers }: Reba
 
   const disabled = unassignedCount === 0 || isPending || availableHousekeepers === 0
 
+  // Phase 30.1 — U5. Explain *why* the button is disabled when no click is
+  // possible (manager might wonder). Tooltip text comes from i18n.
+  const disabledReason =
+    unassignedCount === 0
+      ? (t('manager.housekeepingPage.emptyNoTasks') as string)
+      : availableHousekeepers === 0
+        ? (t('manager.housekeepingPage.emptyNoHKs') as string)
+        : null
+
   function handleClick() {
     setConfirmOpen(true)
   }
@@ -59,7 +68,7 @@ export function RebalanceButton({ unassignedCount, availableHousekeepers }: Reba
         type="button"
         onClick={handleClick}
         disabled={disabled}
-        title={t('manager.housekeepingPage.rebalanceHint') as string}
+        title={disabledReason ?? (t('manager.housekeepingPage.rebalanceHint') as string)}
         className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-on-secondary rounded-md text-caption uppercase tracking-wider hover:bg-secondary-container hover:text-secondary transition-colors duration-200 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         <MaterialIcon name="auto_awesome" size={18} />

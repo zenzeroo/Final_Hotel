@@ -13,6 +13,11 @@ const STATUS_FILTER_LABELS: Record<'all' | RoomUnitStatus, string> = {
   cleaning: 'กำลังทำความสะอาด',
   maintenance: 'ปิดซ่อมบำรุง',
   out_of_order: 'ปิดใช้งาน',
+  // Phase 30.1 — DB CHECK widened to include these 4 new values.
+  waiting_cleaning: 'รอทำความสะอาด',
+  inspection: 'กำลังตรวจสอบ',
+  ready: 'พร้อมขาย',
+  checkout: 'เช็คเอาท์แล้ว',
 }
 
 export default async function RoomStatusOverview({ searchParams }: { searchParams: Promise<{ status?: string }> }) {

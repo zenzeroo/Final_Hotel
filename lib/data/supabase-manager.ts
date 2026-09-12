@@ -371,6 +371,10 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     { data: housekeepers, error: e7 },
     { data: shifts, error: e8 },
     { data: nextCheckins, error: e9 },
+    // Phase 30.1 — exact count for the Rebalance button label (the
+    // unassignedTasks array is capped at .limit(20) so its .length is
+    // not the true backlog size).
+    { count: totalUnassignedRaw, error: e10 },
   ] = await Promise.all([
     supabase
       .from('damage_reports')
@@ -426,6 +430,10 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     supabase
       .from('v_next_checkin_per_room')
       .select('room_unit_id, next_check_in'),
+    supabase
+      .from('housekeeping_tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'unassigned'),
   ])
   for (const [label, e] of [
     ['damageReports', e1],
@@ -437,6 +445,7 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     ['housekeepers', e7],
     ['shifts', e8],
     ['nextCheckins', e9],
+    ['totalUnassignedCount', e10],
   ] as const) {
     if (e) wrapSupabaseError(label, e)
   }
@@ -458,11 +467,18 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
   const totalRooms = (rooms ?? []).length
   // Map room_units.status → FloorRoomStatus for the floor grid.
   // `available` and `occupied` both render as 'inspected' (ready state) since
-  // the floor grid only distinguishes clean/cleaning/dirty.
+  // the floor grid only distinguishes clean/cleaning/dirty. Phase 30.1:
+  // widened to cover all 9 DB enum values (was 5 — `inspection`/`ready`/
+  // `checkout` were falling through to `?? 'dirty'` fallback, double-
+  // counting cleaned/inspected rooms as dirty in the KPI).
   const ROOM_TO_FLOOR_STATUS: Record<string, 'dirty' | 'cleaning' | 'inspected'> = {
     available: 'inspected',
     occupied: 'inspected',
     cleaning: 'cleaning',
+    inspection: 'cleaning',          // HK in-progress inspection = actively being inspected
+    ready: 'inspected',              // post-inspection ready = clean
+    waiting_cleaning: 'dirty',       // dirty queue, awaiting HK
+    checkout: 'dirty',               // guest just left, pre-clean queue
     maintenance: 'dirty',
     out_of_order: 'dirty',
   }
@@ -646,6 +662,7 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     floors,
     floorAssignments,
     unassignedTasks,
+    totalUnassignedCount: totalUnassignedRaw ?? unassignedTasks.length,
     damageReports,
     housekeepers: housekeeperOptions,
     assignedByHousekeeper,

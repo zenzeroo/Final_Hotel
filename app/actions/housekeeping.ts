@@ -354,7 +354,12 @@ export async function buildAllocationSnapshot() {
         `id, room_unit_id, task_type, priority, created_at, estimated_minutes,
          room_unit:room_units!inner(id, floor, room_type:room_types(estimated_cleaning_minutes))`,
       )
-      .eq('status', 'unassigned'),
+      .eq('status', 'unassigned')
+      // Phase 30.1 — cap to 200 rows. PostgREST default is 1000, but a
+      // backlog of 500+ tasks would make the algorithm (O(T·H·log T)) slow
+      // AND bloat the RPC payload. 200 covers hotel scale (100+ rooms × 2
+      // day backlog). Manager can re-run after the first batch clears.
+      .limit(200),
     supabase
       .from('profiles')
       .select('id, full_name')
@@ -499,6 +504,11 @@ export async function runAutoAllocation(): Promise<
  * Phase 30 — manager closes the inspection step. The task must be in
  * `assigned` or `in_progress` status. The `on_task_status_change` trigger
  * flips `room_units.status` to `ready` on completion.
+ *
+ * Phase 30.1 — B1: gate on `task_type === 'inspection'`. Without this,
+ * a manager accidentally clicking "Mark inspected" on a `cleaning` task
+ * would skip the cleaning step (room flips to `ready` without ever being
+ * `cleaning`), risking an unclean room being marked ready for sale.
  */
 export async function markInspected(taskId: string): Promise<ActionResult> {
   const session = await requireRole(['manager', 'admin'], '/manager')
@@ -511,6 +521,14 @@ export async function markInspected(taskId: string): Promise<ActionResult> {
     .eq('id', taskId)
     .single()
   if (fetchErr || !task) return { ok: false, error: 'Task not found' }
+  // Phase 30.1 — gate on inspection-only (was missing; see B1 in
+  // C:\Users\suns9\.claude\plans\role-manager-glimmering-mitten.md).
+  if (task.task_type !== 'inspection') {
+    return {
+      ok: false,
+      error: `markInspected requires task_type="inspection" (got "${task.task_type}")`,
+    }
+  }
   if (task.status !== 'in_progress' && task.status !== 'assigned') {
     return { ok: false, error: 'Task must be in progress (or assigned) to mark inspected' }
   }

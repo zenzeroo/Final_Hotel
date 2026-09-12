@@ -337,6 +337,8 @@ export const th = {
       minutes: 'นาที',
       rebalance: 'จัดสรรงานอัตโนมัติ',
       rebalanceHint: 'กระจายงานให้สมดุลด้วยอัลกอริทึม LPT + Min-Load',
+      emptyNoTasks: 'ไม่มีงานที่ต้องจัดสรร',
+      emptyNoHKs: 'ไม่มีแม่บ้านอยู่ในกะวันนี้',
       confirmRebalance: 'งานที่ยังไม่ได้มอบหมาย {count} งานจะถูกจัดสรรโดยอัลกอริทึม — ดำเนินการต่อหรือไม่?',
       autoAllocateComplete: 'จัดสรรงานอัตโนมัติเสร็จเรียบร้อย',
       autoAllocateResult: 'มอบหมาย {assigned} งาน · ข้าม {skipped} งาน',

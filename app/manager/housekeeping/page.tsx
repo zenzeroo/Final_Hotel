@@ -9,7 +9,7 @@ import { HousekeeperCards } from '@/components/manager/HousekeeperCards'
 import { HousekeeperWorkloadTable } from '@/components/manager/HousekeeperWorkloadTable'
 import { CreateTaskModal } from '@/components/housekeeping/CreateTaskModal'
 import { RebalanceButton } from '@/components/housekeeping/RebalanceButton'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { PrintDailyReportButton } from '@/components/housekeeping/PrintDailyReportButton'
 import { formatDate } from '@/lib/dates'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
@@ -38,19 +38,16 @@ export default async function ManagerHousekeepingPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Phase 30 — auto-allocation button (disabled when no tasks or no available HKs). */}
+          {/* Phase 30.1 — auto-allocation button uses `totalUnassignedCount`
+              (real DB count, not the capped .limit(20) array length). */}
           <RebalanceButton
-            unassignedCount={data.unassignedTasks.length}
+            unassignedCount={data.totalUnassignedCount}
             availableHousekeepers={availableHKs}
           />
           <CreateTaskModal roomUnits={roomUnits} housekeepers={data.housekeepers} />
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 bg-primary text-secondary px-4 py-2 rounded-md text-body-md font-semibold"
-          >
-            <MaterialIcon name="print" size={18} />
-            พิมพ์รายงานประจำวัน
-          </button>
+          {/* Phase 30.1 — B8a: previously a dead button without onClick; now
+              wired to window.print() via the client component. */}
+          <PrintDailyReportButton />
         </div>
       </header>
 

@@ -15,6 +15,11 @@ const STYLES: Record<AnyStatus, { bg: string; text: string; label: string }> = {
   cleaning: { bg: 'bg-secondary/30', text: 'text-on-secondary-container', label: 'กำลังทำความสะอาด' },
   maintenance: { bg: 'bg-error-container', text: 'text-on-error-container', label: 'ปิดซ่อมบำรุง' },
   out_of_order: { bg: 'bg-surface-container-high', text: 'text-on-surface-variant', label: 'ปิดใช้งาน' },
+  // Phase 30.1 — DB CHECK widened to include these 4 new values.
+  waiting_cleaning: { bg: 'bg-error-container', text: 'text-on-error-container', label: 'รอทำความสะอาด' },
+  inspection: { bg: 'bg-secondary/30', text: 'text-on-secondary-container', label: 'กำลังตรวจสอบ' },
+  ready: { bg: 'bg-primary-container', text: 'text-on-primary-container', label: 'พร้อมขาย' },
+  checkout: { bg: 'bg-error-container', text: 'text-on-error-container', label: 'เช็คเอาท์แล้ว' },
 }
 
 export function StatusBadge({ status }: { status: AnyStatus }) {

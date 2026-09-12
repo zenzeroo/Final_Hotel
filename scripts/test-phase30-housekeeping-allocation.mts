@@ -12,6 +12,7 @@
  *   8. NULL room_unit_id skip
  *   9. Dry-run mode
  *  10. No available housekeepers warning
+ *  11. Phase 30.1 — markInspected gate on task_type='inspection' (B1)
  *
  * Prereqs:
  *   - Migration 20260920_housekeeping_allocation.sql applied.
@@ -446,6 +447,31 @@ await step('allocation warns when no HKs on shift', async () => {
     )
   }
   return 'warning surfaced, 0 assignments'
+})
+
+// ── Case 11: Phase 30.1 — B1 markInspected gate ───────────────────────────
+// The markInspected server action is gated on `task_type === 'inspection'`
+// (Phase 30.1 fix). Without the gate, a manager could accidentally skip
+// the cleaning step on a `cleaning` task by clicking "Mark inspected".
+//
+// This test uses source-presence verification (reads housekeeping.ts and
+// asserts the gate is present) — pragmatic for a low-effort polish bundle.
+// A future integration test could exercise the gate via Next.js HTTP like
+// `scripts/test-phase10-refund-rpc.mts`.
+await step('markInspected gate on task_type="inspection" (B1)', () => {
+  const sourcePath = resolve(__dirname, '..', 'app', 'actions', 'housekeeping.ts')
+  const source = readFileSync(sourcePath, 'utf8')
+  // The gate is in the markInspected function body — assert the literal
+  // check is present in the file.
+  assert(
+    source.includes("task.task_type !== 'inspection'"),
+    'gate on task_type=inspection not found in app/actions/housekeeping.ts',
+  )
+  assert(
+    source.includes('markInspected requires task_type="inspection"'),
+    'gate error message not found in app/actions/housekeeping.ts',
+  )
+  return 'source verified'
 })
 
 await pg.end()

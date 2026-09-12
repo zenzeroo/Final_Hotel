@@ -39,6 +39,31 @@ const STATUS_LABEL: Record<RoomUnitStatus, { th: string; icon: string; chip: str
     chip: 'bg-surface-container-high text-on-surface-variant',
     dot: 'bg-on-surface-variant',
   },
+  // Phase 30.1 — DB CHECK widened to include these 4 new values.
+  waiting_cleaning: {
+    th: 'รอทำความสะอาด',
+    icon: 'hourglass_empty',
+    chip: 'bg-error-container text-on-error-container',
+    dot: 'bg-error',
+  },
+  inspection: {
+    th: 'กำลังตรวจสอบ',
+    icon: 'visibility',
+    chip: 'bg-secondary-container text-on-secondary-container',
+    dot: 'bg-secondary',
+  },
+  ready: {
+    th: 'พร้อมขาย',
+    icon: 'verified',
+    chip: 'bg-primary-container text-on-primary-container',
+    dot: 'bg-primary',
+  },
+  checkout: {
+    th: 'เช็คเอาท์แล้ว',
+    icon: 'logout',
+    chip: 'bg-error-container text-on-error-container',
+    dot: 'bg-error',
+  },
 }
 
 export function RoomInventoryTable({ units }: RoomInventoryTableProps) {
