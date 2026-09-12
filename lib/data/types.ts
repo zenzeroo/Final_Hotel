@@ -167,6 +167,13 @@ export interface DashboardStats {
   shiftProgress: number
   myTasksCount: number
   maintenanceOpenCount: number
+  /**
+   * Phase 30.2 — true total of priority tasks (urgent + high) across the
+   * hotel. `priorityTasks` array is capped at 5 for dashboard display; this
+   * count is the exact figure used for the tab badge ("5+" if > 5).
+   */
+  priorityTasksCount: number
+  /** Display slice (length ≤ 5). */
   priorityTasks: HousekeepingTask[]
   activeTasks: HousekeepingTask[]
 }

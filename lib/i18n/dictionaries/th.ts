@@ -501,6 +501,10 @@ export const th = {
     pendingMaintenance: 'งานซ่อมบำรุงที่ค้าง',
     shiftProgress: 'ความคืบหน้ากะ',
     myBookings: 'การจองที่กำลังจะมาถึง',
+    tabs: {
+      emptyUrgent: 'ไม่มีงานเร่งด่วน',
+      emptyAssigned: 'ไม่มีงานที่ได้รับมอบหมาย',
+    },
     sidebar: {
       dashboard: 'แดชบอร์ด',
       tasks: 'งาน',

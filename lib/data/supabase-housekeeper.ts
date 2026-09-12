@@ -62,7 +62,13 @@ export async function getMaintenanceReports(filters?: {
 
 export async function getMyDashboardStatsForUser(userId: string): Promise<DashboardStats> {
   const supabase = await createClient()
-  const [cleaningCount, myCount, maintCount, myTasks, priorityTasks] = await Promise.all([
+  const [
+    cleaningCount, myCount, maintCount, myTasks, priorityTasks,
+    // Phase 30.2 — exact count of priority tasks for the tab badge.
+    // The display array is capped at 5 (see `priorityTasks` below); this
+    // count is the true total so the badge can show "5+" when overflow.
+    priorityCount,
+  ] = await Promise.all([
     supabase.from('room_units').select('id', { count: 'exact', head: true }).eq('status', 'cleaning'),
     supabase.from('housekeeping_tasks').select('id', { count: 'exact', head: true })
       .eq('assigned_to', userId).in('status', ['assigned', 'in_progress']),
@@ -76,9 +82,12 @@ export async function getMyDashboardStatsForUser(userId: string): Promise<Dashbo
         room_type:room_types(id, name, name_th, hero_image_key))
     `).in('priority', ['urgent', 'high']).in('status', ['unassigned', 'assigned', 'in_progress'])
       .order('priority', { ascending: false }).limit(5),
+    supabase.from('housekeeping_tasks').select('id', { count: 'exact', head: true })
+      .in('priority', ['urgent', 'high']).in('status', ['unassigned', 'assigned', 'in_progress']),
   ])
   if (cleaningCount.error) wrapSupabaseError('', cleaningCount.error)
   if (maintCount.error) wrapSupabaseError('', maintCount.error)
+  if (priorityCount.error) wrapSupabaseError('', priorityCount.error)
 
   const today = new Date().toISOString().slice(0, 10)
   const completedTodayRes = await supabase.from('housekeeping_tasks').select('id', { count: 'exact', head: true })
@@ -91,6 +100,7 @@ export async function getMyDashboardStatsForUser(userId: string): Promise<Dashbo
     shiftProgress,
     myTasksCount: myCount.count ?? 0,
     maintenanceOpenCount: maintCount.count ?? 0,
+    priorityTasksCount: priorityCount.count ?? 0,
     priorityTasks: (priorityTasks.data ?? []) as HousekeepingTask[],
     activeTasks: (myTasks.data ?? []) as HousekeepingTask[],
   }

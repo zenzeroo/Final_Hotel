@@ -3,11 +3,13 @@ import { getMyDashboardStatsForUser, getAllRoomUnits } from '@/lib/data/housekee
 import { TaskCard } from '@/components/housekeeping/TaskCard'
 import { ShiftProgress } from '@/components/housekeeping/ShiftProgress'
 import { MaintenanceReportModal } from '@/components/housekeeping/MaintenanceReportModal'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { HousekeeperTasksTabs } from '@/components/housekeeping/HousekeeperTasksTabs'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
+
+type TasksTab = 'urgent' | 'assigned'
 
 function greeting(t: ReturnType<typeof getT>): string {
   const h = new Date().getHours()
@@ -16,7 +18,23 @@ function greeting(t: ReturnType<typeof getT>): string {
   return t('manager.greetingEvening')
 }
 
-export default async function HousekeeperDashboard() {
+/**
+ * Phase 30.2 — Converted the "Urgent" + "Assigned to me" sections from
+ * stacked `<section>` blocks to a single tabbed panel. URL search params
+ * drive the active tab (matches BookingsOversightTabs / ReviewsTabs
+ * pattern in `app/manager/**`). Default tab is `urgent` so the dashboard
+ * still surfaces priority work first thing on landing.
+ */
+export default async function HousekeeperDashboard(props: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const searchParams = await props.searchParams
+  const tab: TasksTab = (['urgent', 'assigned'] as TasksTab[]).includes(
+    (searchParams.tab as TasksTab) ?? 'urgent',
+  )
+    ? ((searchParams.tab as TasksTab) ?? 'urgent')
+    : 'urgent'
+
   const t = getT(await getLocale())
   const session = await getSession()
   const stats = await getMyDashboardStatsForUser(session!.id)
@@ -51,37 +69,45 @@ export default async function HousekeeperDashboard() {
         </div>
       </section>
 
-      <section className="mb-12">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
-            <MaterialIcon name="priority_high" size={24} className="text-error" />
-            {t('housekeeper.tasksPage.priorityUrgent')}
-          </h2>
-        </div>
-        {stats.priorityTasks.length === 0 ? (
-          <p className="text-body-md text-on-surface-variant italic">No urgent tasks right now</p>
-        ) : (
-          <div className="space-y-3">
-            {stats.priorityTasks.map(t => <TaskCard key={t.id} task={t} variant="my" />)}
-          </div>
-        )}
+      {/* Phase 30.2 — top tab strip + sibling panel pattern (mirrors
+          app/manager/bookings/page.tsx:42-72). */}
+      <HousekeeperTasksTabs
+        active={tab}
+        urgentCount={stats.priorityTasksCount}
+        assignedCount={stats.activeTasks.length}
+      />
+
+      <section>
+        {tab === 'urgent' ? (
+          stats.priorityTasks.length === 0 ? (
+            <p className="text-body-md text-on-surface-variant italic">
+              {t('housekeeper.tabs.emptyUrgent')}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {stats.priorityTasks.map((task) => (
+                <TaskCard key={task.id} task={task} variant="my" />
+              ))}
+            </div>
+          )
+        ) : null}
+
+        {tab === 'assigned' ? (
+          stats.activeTasks.length === 0 ? (
+            <p className="text-body-md text-on-surface-variant italic">
+              {t('housekeeper.tabs.emptyAssigned')}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {stats.activeTasks.map((task) => (
+                <TaskCard key={task.id} task={task} variant="my" />
+              ))}
+            </div>
+          )
+        ) : null}
       </section>
 
-      <section className="mb-12">
-        <h2 className="font-headline-sm text-headline-sm text-primary mb-4 flex items-center gap-2">
-          <MaterialIcon name="task_alt" size={24} />
-          {t('housekeeper.tasksPage.myTasks')}
-        </h2>
-        {stats.activeTasks.length === 0 ? (
-          <p className="text-body-md text-on-surface-variant italic">No active tasks</p>
-        ) : (
-          <div className="space-y-3">
-            {stats.activeTasks.map(t => <TaskCard key={t.id} task={t} variant="my" />)}
-          </div>
-        )}
-      </section>
-
-      <section className="flex justify-end">
+      <section className="flex justify-end mt-12">
         <MaintenanceReportModal roomUnits={roomUnits} />
       </section>
     </div>

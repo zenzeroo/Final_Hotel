@@ -505,6 +505,10 @@ export const en: Dictionary = {
     pendingMaintenance: 'Pending maintenance',
     shiftProgress: 'Shift progress',
     myBookings: 'Upcoming bookings',
+    tabs: {
+      emptyUrgent: 'No urgent tasks',
+      emptyAssigned: 'No tasks assigned to you',
+    },
     sidebar: {
       dashboard: 'Dashboard',
       tasks: 'Tasks',
