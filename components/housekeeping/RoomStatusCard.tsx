@@ -1,15 +1,8 @@
 import { StatusBadge } from './StatusBadge'
-import { RoomStatusDropdown } from './RoomStatusDropdown'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import type { RoomUnitBasic, RoomUnitStatus } from '@/lib/data/types'
-
-// Phase 31 — housekeeper can act on the 4 HK-domain statuses.
-// inspection = manager-driven; occupied/checkout/maintenance/out_of_order = reception/manager.
-const HK_EDITABLE: RoomUnitStatus[] = ['waiting_cleaning', 'cleaning', 'ready', 'available']
+import type { RoomUnitBasic } from '@/lib/data/types'
 
 export function RoomStatusCard({ unit }: { unit: RoomUnitBasic }) {
-  const canEdit = HK_EDITABLE.includes(unit.status)
-
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5 border border-outline-variant/30 flex flex-col">
       <div className="flex items-start justify-between mb-3 gap-3">
@@ -31,17 +24,10 @@ export function RoomStatusCard({ unit }: { unit: RoomUnitBasic }) {
       </div>
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-outline-variant/30 mt-auto">
         <span className="text-caption text-on-surface-variant min-w-0 truncate">
-          {canEdit ? 'สลับสถานะ' : 'อ่านอย่างเดียว (พนักงานต้อนรับควบคุม)'}
+          อ่านอย่างเดียว (พนักงานต้อนรับควบคุม)
         </span>
         <div className="flex-shrink-0 ml-2">
-          {canEdit ? (
-            <RoomStatusDropdown
-              unitId={unit.id}
-              currentStatus={unit.status as Extract<RoomUnitStatus, 'waiting_cleaning' | 'cleaning' | 'ready' | 'available'>}
-            />
-          ) : (
-            <MaterialIcon name="lock" size={18} />
-          )}
+          <MaterialIcon name="lock" size={18} />
         </div>
       </div>
     </div>

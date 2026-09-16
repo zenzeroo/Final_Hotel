@@ -4,20 +4,21 @@ import type { RoomUnitStatus } from '@/lib/data/types'
 
 export const dynamic = 'force-dynamic'
 
-const STATUS_FILTERS: ('all' | RoomUnitStatus)[] = [
+type FilterStatus = Exclude<RoomUnitStatus, 'ready'>
+
+const STATUS_FILTERS: ('all' | FilterStatus)[] = [
   'all',
   'available',
   'occupied',
   'cleaning',
   'waiting_cleaning',
   'inspection',
-  'ready',
   'checkout',
   'maintenance',
   'out_of_order',
 ]
 
-const STATUS_FILTER_LABELS: Record<'all' | RoomUnitStatus, string> = {
+const STATUS_FILTER_LABELS: Record<'all' | FilterStatus, string> = {
   all: 'ทั้งหมด',
   available: 'ว่าง',
   occupied: 'มีแขก',
@@ -27,7 +28,6 @@ const STATUS_FILTER_LABELS: Record<'all' | RoomUnitStatus, string> = {
   // Phase 30.1 — DB CHECK widened to include these 4 new values.
   waiting_cleaning: 'รอทำคว�สะอาด',
   inspection: 'กำลังตรวจสอบ',
-  ready: 'พร้อมขาย',
   checkout: 'เช็คเอาท์แล้ว',
 }
 
@@ -35,7 +35,10 @@ export default async function RoomStatusOverview({ searchParams }: { searchParam
   const params = await searchParams
   const filter = ((params.status as string) || 'all') as 'all' | RoomUnitStatus
   const units = await getAllRoomUnits()
-  const filtered = filter === 'all' ? units : units.filter(u => u.status === filter)
+  const filtered = units.filter(u =>
+    filter === 'all' ||
+    (filter === 'available' ? u.status === 'available' || u.status === 'ready' : u.status === filter),
+  )
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">

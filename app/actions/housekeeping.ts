@@ -165,12 +165,12 @@ export async function updateRoomStatus(
   unitId: string,
   newStatus: 'waiting_cleaning' | 'cleaning' | 'ready' | 'available'
 ): Promise<ActionResult> {
-  await requireRole(['housekeeper', 'reception', 'manager', 'admin'], '/housekeeper')
+  await requireRole(['reception', 'manager', 'admin'], '/login')
   if (!isUuid(unitId)) return { ok: false, error: 'Invalid unit id' }
   const supabase = await createClient()
 
   if (!['waiting_cleaning', 'cleaning', 'ready', 'available'].includes(newStatus)) {
-    return { ok: false, error: 'Invalid status. Housekeeper may only set waiting_cleaning/cleaning/ready/available' }
+    return { ok: false, error: 'Invalid status. Only waiting_cleaning/cleaning/ready/available allowed' }
   }
 
   const { error } = await supabase
