@@ -1,12 +1,15 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { CenterModal } from './CenterModal'
+import { Modal } from './Modal'
 
 /**
  * Phase 27.A — Replaces browser-native `confirm()`. Centered modal
  * with title + body + Cancel/OK buttons. Cancel button receives
  * onCancel, OK button receives onConfirm.
+ *
+ * Phase 31.A — Now a thin wrapper over the canonical `<Modal>`
+ * primitive. API unchanged.
  *
  * Usage in a client component (Promise-based):
  *   const [confirm, setConfirm] = useState<{
@@ -56,51 +59,21 @@ export function ConfirmModal({
   cancelLabel = 'ยกเลิก',
   variant = 'default',
 }: ConfirmModalProps) {
-  const titleId = 'confirm-modal-title'
-  const showTitle = !!title
-
-  const okClass =
-    variant === 'danger'
-      ? 'flex-1 px-6 py-3 bg-error text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-error/90 transition-colors'
-      : 'flex-1 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors'
-
   return (
-    <CenterModal open={open} onClose={onCancel} ariaLabelledBy={showTitle ? titleId : undefined}>
-      <div className="flex flex-col gap-4">
-        {showTitle && (
-          <h2
-            id={titleId}
-            className="font-display text-xl font-bold text-primary text-center"
-          >
-            {title}
-          </h2>
-        )}
-        <div className="text-body-md text-on-surface">
-          {typeof body === 'string'
-            ? body.split('\n').map((line, i) => (
-                <p key={i} className={i > 0 ? 'mt-2' : ''}>
-                  {line}
-                </p>
-              ))
-            : body}
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 mt-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 px-6 py-3 border border-outline text-on-surface rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className={okClass}
-          >
-            {okLabel}
-          </button>
-        </div>
-      </div>
-    </CenterModal>
+    <Modal
+      open={open}
+      onClose={onCancel}
+      title={title}
+      body={body}
+      actions={[
+        { label: cancelLabel, onClick: onCancel, variant: 'ghost' },
+        {
+          label: okLabel,
+          onClick: onConfirm,
+          variant: variant === 'danger' ? 'danger' : 'primary',
+        },
+      ]}
+      variant="confirm"
+    />
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { Modal } from '@/components/ui/Modal'
 import { resolveDamageReportAction } from '@/app/actions/manager'
 
 interface ResolveDamageButtonProps {
@@ -37,19 +38,13 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
         <MaterialIcon name="arrow_forward" size={14} />
       </button>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <form
-            action={handleSubmit}
-            className="w-full max-w-md bg-surface-container-lowest rounded-lg shadow-level-2 p-6"
-          >
-            <h3 className="font-headline-sm text-headline-sm text-primary mb-4">
-              แก้ไขรายงานความเสียหาย
-            </h3>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="แก้ไขรายงานความเสียหาย"
+        showCloseButton
+        body={
+          <form action={handleSubmit}>
             <input type="hidden" name="reportId" value={reportId} />
 
             <label className="block mb-3">
@@ -105,8 +100,8 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
               </button>
             </div>
           </form>
-        </div>
-      ) : null}
+        }
+      />
     </>
   )
 }

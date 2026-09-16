@@ -756,4 +756,12 @@ export const en: Dictionary = {
     channel: 'Channel',
     percent: 'Percent (%)',
   },
+
+  // Phase 31.A — Modal primitive (UI-wide)
+  ui: {
+    modal: {
+      close: 'Close',
+      loading: 'Loading...',
+    },
+  },
 }

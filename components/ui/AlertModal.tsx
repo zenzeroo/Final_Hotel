@@ -1,13 +1,16 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { CenterModal } from './CenterModal'
+import { Modal } from './Modal'
 
 /**
  * Phase 27.A — Replaces browser-native `alert()`. Centered modal
  * with title + body + single OK button. Body supports multi-line
  * strings (split by \n into <p> elements) or arbitrary ReactNode
  * for richer formatting.
+ *
+ * Phase 31.A — Now a thin wrapper over the canonical `<Modal>`
+ * primitive. API unchanged so all existing call sites still work.
  *
  * Usage in a client component:
  *   const [alert, setAlert] = useState<{title?: string; body: string} | null>(null)
@@ -34,37 +37,14 @@ export function AlertModal({
   body,
   okLabel = 'ตกลง',
 }: AlertModalProps) {
-  const titleId = 'alert-modal-title'
-  const showTitle = !!title
-
   return (
-    <CenterModal open={open} onClose={onClose} ariaLabelledBy={showTitle ? titleId : undefined}>
-      <div className="flex flex-col gap-4">
-        {showTitle && (
-          <h2
-            id={titleId}
-            className="font-display text-xl font-bold text-primary text-center"
-          >
-            {title}
-          </h2>
-        )}
-        <div className="text-body-md text-on-surface">
-          {typeof body === 'string'
-            ? body.split('\n').map((line, i) => (
-                <p key={i} className={i > 0 ? 'mt-2' : ''}>
-                  {line}
-                </p>
-              ))
-            : body}
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full mt-2 inline-flex items-center justify-center px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
-        >
-          {okLabel}
-        </button>
-      </div>
-    </CenterModal>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title}
+      body={body}
+      actions={[{ label: okLabel, onClick: onClose }]}
+      variant="alert"
+    />
   )
 }

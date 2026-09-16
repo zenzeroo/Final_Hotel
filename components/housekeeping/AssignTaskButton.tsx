@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { assignTask } from '@/app/actions/housekeeping'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { Modal } from '@/components/ui/Modal'
 import { AlertModal } from '@/components/ui/AlertModal'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useT } from '@/lib/i18n/useT'
@@ -87,19 +88,14 @@ export function AssignTaskButton({
         )}
       </button>
 
-      {pickerOpen && (
-        <div className="fixed inset-0 z-50 bg-on-surface/50 flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest rounded-xl shadow-level-2 max-w-sm w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-headline-sm text-headline-sm text-primary">{label}</h2>
-              <button
-                type="button"
-                onClick={() => setPickerOpen(false)}
-                className="p-1 rounded-md hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
-              >
-                <MaterialIcon name="close" size={20} />
-              </button>
-            </div>
+      <Modal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title={label}
+        showCloseButton
+        maxWidthClass="max-w-sm"
+        body={
+          <>
             <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">
               {t('manager.housekeepingPage.selectHousekeeper')}
             </label>
@@ -132,9 +128,9 @@ export function AssignTaskButton({
                 {label}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        }
+      />
 
       {confirmMessage && (
         <ConfirmModal

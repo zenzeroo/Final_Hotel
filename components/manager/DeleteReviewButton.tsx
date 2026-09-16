@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { Modal } from '@/components/ui/Modal'
 import { deleteReviewAction } from '@/app/actions/reviews'
 
 interface DeleteReviewButtonProps {
@@ -37,19 +38,13 @@ export function DeleteReviewButton({ reviewId, guestName }: DeleteReviewButtonPr
         ลบถาวร
       </button>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <form
-            action={handleSubmit}
-            className="w-full max-w-md bg-surface-container-lowest rounded-lg shadow-level-2 p-6"
-          >
-            <h3 className="font-headline-sm text-headline-sm text-primary mb-2">
-              ลบรีวิวนี้ถาวร?
-            </h3>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="ลบรีวิวนี้ถาวร?"
+        showCloseButton
+        body={
+          <form action={handleSubmit}>
             <p className="text-body-md text-on-surface-variant mb-4">
               รีวิวจาก <span className="font-semibold">{guestName}</span>{' '}
               จะถูกลบออกจากระบบอย่างถาวรและไม่สามารถกู้คืนได้
@@ -81,8 +76,8 @@ export function DeleteReviewButton({ reviewId, guestName }: DeleteReviewButtonPr
               </button>
             </div>
           </form>
-        </div>
-      ) : null}
+        }
+      />
     </>
   )
 }

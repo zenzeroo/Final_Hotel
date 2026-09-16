@@ -752,6 +752,14 @@ export const th = {
     channel: 'ช่องทาง',
     percent: 'สัดส่วน (%)',
   },
+
+  // Phase 31.A — Modal primitive (UI-wide)
+  ui: {
+    modal: {
+      close: 'ปิด',
+      loading: 'กำลังโหลด...',
+    },
+  },
 } as const
 
 export type Dictionary = typeof th
