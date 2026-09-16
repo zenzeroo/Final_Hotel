@@ -4,7 +4,18 @@ import type { RoomUnitStatus } from '@/lib/data/types'
 
 export const dynamic = 'force-dynamic'
 
-const STATUS_FILTERS: ('all' | RoomUnitStatus)[] = ['all', 'available', 'occupied', 'cleaning', 'maintenance', 'out_of_order']
+const STATUS_FILTERS: ('all' | RoomUnitStatus)[] = [
+  'all',
+  'available',
+  'occupied',
+  'cleaning',
+  'waiting_cleaning',
+  'inspection',
+  'ready',
+  'checkout',
+  'maintenance',
+  'out_of_order',
+]
 
 const STATUS_FILTER_LABELS: Record<'all' | RoomUnitStatus, string> = {
   all: 'ทั้งหมด',
@@ -14,7 +25,7 @@ const STATUS_FILTER_LABELS: Record<'all' | RoomUnitStatus, string> = {
   maintenance: 'ปิดซ่อมบำรุง',
   out_of_order: 'ปิดใช้งาน',
   // Phase 30.1 — DB CHECK widened to include these 4 new values.
-  waiting_cleaning: 'รอทำความสะอาด',
+  waiting_cleaning: 'รอทำคว�สะอาด',
   inspection: 'กำลังตรวจสอบ',
   ready: 'พร้อมขาย',
   checkout: 'เช็คเอาท์แล้ว',
