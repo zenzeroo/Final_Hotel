@@ -99,8 +99,12 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // 20260921 fixes 20260920 RPC + trigger to allow service_role callers (mirrors Phase 20 #24
 // pattern: auth.role()='service_role' bypass). The task INSERT inside on_booking_checked_out
 // still requires auth.uid() (created_by NOT NULL), but the room-status flip always runs.
+// NOTE: alternation MUST include every migration number — missing numbers are silently skipped.
+// 20260826 = manager RLS fix-up (housekeeping_tasks INSERT widened to include 'manager')
+// 20260828 = Phase 7 admin foundation + recursion fix
+// Earlier phases (20260820-20260825) were applied by their respective phase runners.
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21)_.*\.sql$/.test(f))
+  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 
