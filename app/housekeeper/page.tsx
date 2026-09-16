@@ -43,11 +43,16 @@ export default async function HousekeeperDashboard(props: {
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
-      <header className="mb-8">
-        <h1 className="font-headline-md text-headline-md text-primary">
-          {greeting(t)}, {name}
-        </h1>
-        <p className="text-body-lg text-on-surface-variant mt-2">{t('housekeeper.shiftProgress')}</p>
+      <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="font-headline-md text-headline-md text-primary">
+            {greeting(t)}, {name}
+          </h1>
+          <p className="text-body-lg text-on-surface-variant mt-2">{t('housekeeper.shiftProgress')}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <MaintenanceReportModal roomUnits={roomUnits} />
+        </div>
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
@@ -105,10 +110,6 @@ export default async function HousekeeperDashboard(props: {
             </div>
           )
         ) : null}
-      </section>
-
-      <section className="flex justify-end mt-12">
-        <MaintenanceReportModal roomUnits={roomUnits} />
       </section>
     </div>
   )
