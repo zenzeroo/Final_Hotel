@@ -28,6 +28,7 @@ const NAV_BY_ROLE: Record<StaffSidebarProps['role'], NavItem[]> = {
     { key: 'customers', href: '/reception/customers', icon: 'search' },
     { key: 'requests', href: '/reception/requests', icon: 'forum' },
     { key: 'rooms', href: '/reception/rooms', icon: 'hotel' },
+    { key: 'maintenance', href: '/reception/maintenance', icon: 'build' },
     { key: 'history', href: '/reception/history', icon: 'history' },
   ],
   housekeeper: [
@@ -45,6 +46,7 @@ const NAV_BY_ROLE: Record<StaffSidebarProps['role'], NavItem[]> = {
     { key: 'bookings', href: '/manager/bookings', icon: 'calendar_month' },
     { key: 'staff', href: '/manager/staff', icon: 'badge' },
     { key: 'housekeeping', href: '/manager/housekeeping', icon: 'cleaning_services' },
+    { key: 'maintenance', href: '/manager/maintenance', icon: 'build' },
     { key: 'reviews', href: '/manager/reviews', icon: 'reviews' },
     { key: 'promotions', href: '/manager/promotions', icon: 'sell' },
   ],
