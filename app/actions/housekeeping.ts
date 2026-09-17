@@ -288,6 +288,9 @@ export async function createTask(input: {
 
   revalidatePath('/manager/housekeeping')
   revalidatePath('/housekeeper/tasks')
+  revalidatePath('/housekeeper/rooms')
+  revalidatePath('/housekeeper')
+  revalidatePath('/reception/rooms')
   return { ok: true, data: { taskId: data?.id ?? null } }
 }
 

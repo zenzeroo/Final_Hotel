@@ -470,16 +470,19 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
 
   const totalRooms = (rooms ?? []).length
   // Map room_units.status → FloorRoomStatus for the floor grid.
-  // `available` and `occupied` both render as 'inspected' (ready state) since
-  // the floor grid only distinguishes clean/cleaning/dirty. Phase 30.1:
-  // widened to cover all 9 DB enum values (was 5 — `inspection`/`ready`/
-  // `checkout` were falling through to `?? 'dirty'` fallback, double-
-  // counting cleaned/inspected rooms as dirty in the KPI).
+  // Phase 31 user req: binary "dirty vs clean" view. Any state where an active
+  // HK task exists (waiting_cleaning / cleaning / inspection) → 'dirty'
+  // (yellow/red — needs HK attention). States where no task exists AND the
+  // room is ready/occupied → 'inspected' (green — clean or out-of-flow).
+  // maintenance/out_of_order/checkout → 'dirty' (yellow — exclude from
+  // guest flow, not ready for sale). 'cleaning' FloorRoomStatus is now
+  // unreachable (kept in the type union for future use). Side effect:
+  // cleaningCount KPI card always reads 0 — acceptable, matches user model.
   const ROOM_TO_FLOOR_STATUS: Record<string, 'dirty' | 'cleaning' | 'inspected'> = {
     available: 'inspected',
     occupied: 'inspected',
-    cleaning: 'cleaning',
-    inspection: 'cleaning',          // HK in-progress inspection = actively being inspected
+    cleaning: 'dirty',               // active HK task in progress (Phase 31 user req)
+    inspection: 'dirty',             // active inspection task (Phase 31 user req)
     ready: 'inspected',              // post-inspection ready = clean
     waiting_cleaning: 'dirty',       // dirty queue, awaiting HK
     checkout: 'dirty',               // guest just left, pre-clean queue

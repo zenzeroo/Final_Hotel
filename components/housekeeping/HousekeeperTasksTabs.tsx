@@ -8,9 +8,8 @@
  * Tab 1 (default):  "เร่งด่วน" — hotel-wide urgent/high priority tasks.
  * Tab 2:            "มอบหมายให้ฉัน" — tasks assigned to current HK.
  *
- * The badge shows the true count via `formatTabCount` — when there are more
- * than the display cap (5), it shows "5+" so the manager isn't misled by a
- * badge count that doesn't match the visible cards.
+ * The badge shows the true count. When over `DISPLAY_CAP` (5), the `<Tabs>`
+ * primitive renders "5+" automatically (via the `badgeCap` prop).
  */
 import { Tabs, type TabItem } from '@/components/ui/Tabs'
 
@@ -26,16 +25,6 @@ interface HousekeeperTasksTabsProps {
 
 /** Cap matching the `getMyDashboardStatsForUser` priorityTasks query limit. */
 const DISPLAY_CAP = 5
-
-/**
- * Format a count for the tab badge — shows "5+" when over the display cap.
- * Returns `string | number` because `<Tabs>` `badge` prop is typed as
- * `number | null`; callers cast at the boundary (see `tabs` construction
- * below) to bypass the type while keeping the runtime text intact.
- */
-function formatTabCount(n: number): string | number {
-  return n > DISPLAY_CAP ? '5+' : n
-}
 
 const TAB_BASE: Omit<TabItem<Tab>, 'badge'>[] = [
   {
@@ -58,15 +47,10 @@ export function HousekeeperTasksTabs({
   urgentCount,
   assignedCount,
 }: HousekeeperTasksTabsProps) {
-  // `<Tabs>` `badge` is typed as `number | null`; the overflow indicator
-  // ("5+") is a string but the span just renders `{badge}` as text, so the
-  // cast is safe and keeps the prop API narrow.
-  const tabs = TAB_BASE.map((t) => ({
+  const tabs: TabItem<Tab>[] = TAB_BASE.map((t) => ({
     ...t,
-    badge:
-      t.key === 'urgent'
-        ? (formatTabCount(urgentCount) as unknown as number)
-        : assignedCount,
-  })) as TabItem<Tab>[]
+    badge: t.key === 'urgent' ? urgentCount : assignedCount,
+    badgeCap: DISPLAY_CAP,
+  }))
   return <Tabs active={active} tabs={tabs} />
 }

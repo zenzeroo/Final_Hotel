@@ -9,22 +9,37 @@ import { withSentryConfig } from "@sentry/nextjs";
 //
 // All Sentry features are optional — when SENTRY_DSN / NEXT_PUBLIC_SENTRY_DSN
 // are empty, the SDK no-ops and build/serve proceeds normally.
+// Allow next/image to fetch from the R2 public bucket. Hostname is derived
+// from R2_PUBLIC_URL (set per environment in `.env.local` for dev + Vercel
+// project settings for staging/prod) so the same code works in all envs.
+// Throws at build time if R2_PUBLIC_URL is unset — explicit failure beats
+// silently pointing at the dev bucket on prod. Default mirrors the Zod
+// fallback in `lib/env.ts:19` so a bare `npm run dev` (no `.env.local`)
+// still works against the dev bucket.
+const R2_PUBLIC_URL =
+  process.env.R2_PUBLIC_URL ?? 'https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev'
+let r2Hostname: string
+try {
+  r2Hostname = new URL(R2_PUBLIC_URL).hostname
+} catch {
+  throw new Error(`next.config.ts: R2_PUBLIC_URL is not a valid URL: ${R2_PUBLIC_URL}`)
+}
+
+// `next.config.ts` is the ONLY place next/image's domain allowlist lives.
+// We do NOT include `lh3.googleusercontent.com` here — all V1 images must
+// have been migrated to R2 via `scripts/migrate-images.mjs` before deploy.
+// Legacy URLs in unmigrated rows surface as `<RoomImage>` graceful
+// fallback (gradient + MaterialIcon) instead of crashing the build.
 const nextConfig: NextConfig = {
-  // Allow images from R2 public bucket and Google (for migration only)
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "lh3.googleusercontent.com",
-        pathname: "/**",
+        protocol: 'https',
+        hostname: r2Hostname,
+        pathname: '/**',
       },
     ],
-    formats: ["image/webp"],
+    formats: ['image/webp'],
   },
 };
 

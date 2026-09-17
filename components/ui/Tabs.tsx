@@ -8,7 +8,10 @@ export interface TabItem<T extends string = string> {
   label: string
   href: string
   icon?: string
+  /** True count. When > `badgeCap` (if set), displays "{badgeCap}+" instead. */
   badge?: number | null
+  /** Overflow indicator — when true count exceeds this, render "{cap}+" instead. */
+  badgeCap?: number
   badgeTone?: BadgeTone
 }
 
@@ -23,6 +26,10 @@ export function Tabs<T extends string>({ active, tabs }: TabsProps<T>) {
       {tabs.map((t) => {
         const isActive = active === t.key
         const showBadge = t.badge != null && t.badge > 0
+        const badgeDisplay =
+          t.badge != null && t.badgeCap != null && t.badge > t.badgeCap
+            ? `${t.badgeCap}+`
+            : t.badge
         const badgeClass =
           t.badgeTone === 'error'
             ? 'bg-error text-on-error'
@@ -46,7 +53,7 @@ export function Tabs<T extends string>({ active, tabs }: TabsProps<T>) {
               <span
                 className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-caption ${badgeClass}`}
               >
-                {t.badge}
+                {badgeDisplay}
               </span>
             ) : null}
           </Link>
