@@ -7,6 +7,7 @@ import { ScrollNavIsland } from './ScrollNavIsland'
 import { UserDropdownMenu } from './UserDropdownMenu'
 import { LanguageToggle } from './LanguageToggle'
 import { NavLink } from './NavLink'
+import { MobileNavMenu } from './MobileNavMenu'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
@@ -29,7 +30,7 @@ export async function TopNavBar() {
               Zenzero Hotel
             </Link>
 
-            {/* Nav Links */}
+            {/* Nav Links (desktop only) */}
             <nav className="hidden md:flex items-center gap-8">
               <NavLink href="/">{t('nav.home')}</NavLink>
               <NavLink href="/rooms">{t('nav.rooms')}</NavLink>
@@ -38,23 +39,49 @@ export async function TopNavBar() {
             </nav>
 
             {/* Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
+              {/* Mobile hamburger trigger */}
+              <MobileNavMenu
+                isAuthed={isAuthed}
+                role={session?.role ?? 'user'}
+                locale={locale}
+                labels={{
+                  home: t('nav.home'),
+                  rooms: t('nav.rooms'),
+                  bookings: t('nav.bookings'),
+                  about: t('nav.about'),
+                  login: t('nav.login'),
+                  logout: t('nav.logout'),
+                  greeting: t('nav.greeting'),
+                  notification: t('nav.notification'),
+                  menu: 'เมนู',
+                  menuAriaLabel: 'เปิดเมนู',
+                }}
+              />
+
+              {/* Desktop notification button */}
               <button
                 className="hidden md:inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-primary-fixed transition-colors"
                 aria-label={t('nav.notification')}
               >
                 <MaterialIcon name="notifications" size={22} />
               </button>
+
+              {/* Language toggle */}
               <LanguageToggle currentLocale={locale} />
-              {isAuthed && session ? (
-                session.role === 'user' ? (
-                  <UserDropdownMenu session={session} />
+
+              {/* Auth controls — desktop full menu; mobile uses icon-only in MobileNavMenu */}
+              <div className="hidden md:flex items-center gap-4">
+                {isAuthed && session ? (
+                  session.role === 'user' ? (
+                    <UserDropdownMenu session={session} />
+                  ) : (
+                    <UserMenu session={session} t={t} />
+                  )
                 ) : (
-                  <UserMenu session={session} t={t} />
-                )
-              ) : (
-                <LoginButton label={t('nav.login')} />
-              )}
+                  <LoginButton label={t('nav.login')} />
+                )}
+              </div>
             </div>
           </div>
         </div>

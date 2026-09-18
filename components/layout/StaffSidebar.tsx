@@ -6,10 +6,20 @@ import { signOut } from '@/app/actions/auth'
 import { useT } from '@/lib/i18n/useT'
 import { roleHomePath } from '@/lib/supabase/roles'
 
+export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'
+
 interface StaffSidebarProps {
-  role: 'reception' | 'housekeeper' | 'manager' | 'admin'
+  role: StaffRole
   userName: string | null
   pathname: string
+}
+
+interface StaffSidebarNavProps {
+  role: StaffRole
+  userName: string | null
+  pathname: string
+  /** Optional callback fired when a nav item is clicked (used to close mobile overlay) */
+  onNavigate?: () => void
 }
 
 interface NavItem {
@@ -19,7 +29,7 @@ interface NavItem {
   disabled?: boolean
 }
 
-const NAV_BY_ROLE: Record<StaffSidebarProps['role'], NavItem[]> = {
+const NAV_BY_ROLE: Record<StaffRole, NavItem[]> = {
   reception: [
     { key: 'dashboard', href: '/reception', icon: 'dashboard' },
     { key: 'bookings', href: '/reception/bookings', icon: 'bookmark' },
@@ -59,23 +69,41 @@ const NAV_BY_ROLE: Record<StaffSidebarProps['role'], NavItem[]> = {
   ],
 }
 
-const ROLE_LABEL_KEY: Record<StaffSidebarProps['role'], string> = {
-  reception: 'reception.sidebar.dashboard', // top-level role label is per-page title elsewhere
+const ROLE_LABEL_KEY: Record<StaffRole, string> = {
+  reception: 'reception.sidebar.dashboard',
   housekeeper: 'housekeeper.title',
   manager: 'manager.title',
   admin: 'admin.title',
 }
 
+/**
+ * Desktop sidebar — visible at md+ only. On mobile, the same content
+ * is rendered inside `<StaffMobileHeader>`'s overlay via `<StaffSidebarNav>`.
+ */
 export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
+  return (
+    <aside className="hidden md:flex w-72 shrink-0 self-start sticky top-0 z-30 bg-primary text-secondary h-screen flex-col">
+      <StaffSidebarNav role={role} userName={userName} pathname={pathname} />
+    </aside>
+  )
+}
+
+/**
+ * Inner navigation content (used by both desktop `<StaffSidebar>` and
+ * mobile `<StaffMobileHeader>` overlay). Exported so the mobile header
+ * can render the same nav links inside its `<MobileOverlay>`.
+ */
+export function StaffSidebarNav({ role, userName, pathname, onNavigate }: StaffSidebarNavProps) {
   const t = useT()
   const navItems = NAV_BY_ROLE[role] ?? []
 
   return (
-    <aside className="w-72 shrink-0 self-start sticky top-0 z-30 bg-primary text-secondary h-screen flex flex-col">
+    <>
       {/* Brand */}
       <div className="px-6 py-6 border-b border-primary-container">
         <Link
           href={roleHomePath(role)}
+          onClick={onNavigate}
           className="font-display text-2xl font-bold text-secondary hover:text-on-primary transition-colors duration-200 rounded px-1 -mx-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
         >
           Zenzero Hotel
@@ -112,6 +140,7 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               aria-current={isActive ? 'page' : undefined}
               className={`group flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${
                 isActive
@@ -150,22 +179,19 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
           </button>
         </form>
       </div>
-    </aside>
+    </>
   )
 }
 
 /** Map (role, navKey) → translation key. */
 function navLabel(
   t: ReturnType<typeof useT>,
-  role: StaffSidebarProps['role'],
+  role: StaffRole,
   key: string,
 ): string {
-  // Most keys exist directly under `<role>.sidebar.<key>`. A few
-  // (e.g. 'dashboard') are at `<role>.title` for the role's top page.
   const directKey = `${role}.sidebar.${key}`
   const direct = t(directKey)
   if (direct !== directKey) return direct
-  // Fall back to the role's <key> (which is what `dashboard` uses).
   const fallback = t(`${role}.${key}`)
   return fallback === `${role}.${key}` ? key : fallback
 }
