@@ -13,6 +13,7 @@ import {
   R2UploadError,
 } from '@/lib/r2/upload'
 import { deleteObjectFromR2 } from '@/lib/r2/delete'
+import { createClient } from '@/lib/supabase/server'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -111,7 +112,9 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
   return { ok: true }
 }
 
-const roomTypeUpdateSchema = roomTypeSchema.partial().extend({ id: z.string().min(1) })
+const roomTypeUpdateSchema = roomTypeSchema.partial().extend({
+  id: z.string().uuid('Invalid room type id'),
+})
 
 /** Parse a JSON-encoded string[] from FormData (e.g. `existing_gallery_keys`, `delete_image_keys`). */
 function parseStringArray(raw: FormDataEntryValue | null): string[] {
@@ -147,13 +150,37 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
 
   const { id, ...rest } = parsed.data
 
-  // Image state from form (carried via hidden inputs):
-  //   - existing_hero_key: current hero key (always sent)
-  //   - existing_gallery_keys: gallery keys AFTER the form's deletedKeys filter
-  //   - delete_image_keys: pending-deleted keys (hero + gallery combined)
-  const existingHeroKey = String(formData.get('existing_hero_key') ?? '')
-  const existingGalleryKeys = parseStringArray(formData.get('existing_gallery_keys'))
+  // SECURITY: fetch current DB state instead of trusting form-supplied hero/gallery
+  // keys. The form can claim anything (manipulated hidden inputs, crafted request),
+  // but the DB row is the single source of truth. This prevents the action from
+  // (a) overwriting the room with stale form data, or (b) deleting arbitrary
+  // R2 objects that don't belong to this room type.
+  const supabase = await createClient()
+  const { data: rt, error: rtErr } = await supabase
+    .from('room_types')
+    .select('hero_image_key, gallery_keys')
+    .eq('id', id)
+    .single()
+  if (rtErr || !rt) {
+    return { ok: false, error: 'Room type not found' }
+  }
+  const dbHeroKey = rt.hero_image_key as string
+  const dbGalleryKeys = (rt.gallery_keys ?? []) as string[]
+
+  // Form intent: which keys the admin wants deleted.
   const deleteKeys = parseStringArray(formData.get('delete_image_keys'))
+
+  // SECURITY: every delete key must belong to this room type. Otherwise a crafted
+  // request could trick the server into deleting arbitrary R2 objects.
+  const ownedKeys = new Set<string>([dbHeroKey, ...dbGalleryKeys].filter(Boolean))
+  for (const key of deleteKeys) {
+    if (!ownedKeys.has(key)) {
+      return {
+        ok: false,
+        error: `Image key "${key}" is not associated with this room type`,
+      }
+    }
+  }
 
   // Upload any new files first. The hero upload REPLACES; gallery uploads APPEND.
   const heroFile = formData.get('hero_image_file')
@@ -182,18 +209,18 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
     return actionFail(e, 'Image upload failed')
   }
 
-  // Compute final hero + gallery atomically.
+  // Compute final hero + gallery atomically from DB state.
   // Hero logic:
   //   1. If user uploaded a new hero file → use it.
   //   2. Else if user marked hero for delete (in deleteKeys) → promote first remaining gallery item.
   //   3. Else → keep existing hero.
-  const heroMarkedForDelete = existingHeroKey.length > 0 && deleteKeys.includes(existingHeroKey)
+  const heroMarkedForDelete = deleteKeys.includes(dbHeroKey)
 
   let finalHero: string
   if (newHeroKeys.length > 0) {
     finalHero = newHeroKeys[0]
   } else if (heroMarkedForDelete) {
-    const remaining = existingGalleryKeys.filter((k) => !deleteKeys.includes(k))
+    const remaining = dbGalleryKeys.filter((k) => !deleteKeys.includes(k))
     if (remaining.length === 0) {
       return {
         ok: false,
@@ -202,12 +229,12 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
     }
     finalHero = remaining[0]
   } else {
-    finalHero = existingHeroKey
+    finalHero = dbHeroKey
   }
 
-  // Gallery logic: keep non-deleted existing keys, then append new uploads.
+  // Gallery logic: keep non-deleted existing keys (from DB), then append new uploads.
   const finalGallery: string[] = [
-    ...existingGalleryKeys.filter((k) => !deleteKeys.includes(k)),
+    ...dbGalleryKeys.filter((k) => !deleteKeys.includes(k)),
     ...newGalleryKeys,
   ]
 

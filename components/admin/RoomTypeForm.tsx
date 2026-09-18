@@ -165,22 +165,14 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
       </div>
 
       {initial?.id && (
-        <>
-          <input type="hidden" name="existing_hero_key" value={heroKey} />
-          <input
-            type="hidden"
-            name="existing_gallery_keys"
-            value={JSON.stringify(visibleGallery)}
-          />
-          <input
-            type="hidden"
-            name="delete_image_keys"
-            value={JSON.stringify([
-              ...(pendingHeroDelete && heroKey ? [heroKey] : []),
-              ...Array.from(deletedKeys),
-            ])}
-          />
-        </>
+        <input
+          type="hidden"
+          name="delete_image_keys"
+          value={JSON.stringify([
+            ...(pendingHeroDelete && heroKey ? [heroKey] : []),
+            ...Array.from(deletedKeys),
+          ])}
+        />
       )}
 
       {/* Pending delete banner */}
