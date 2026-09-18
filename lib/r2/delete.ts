@@ -6,8 +6,9 @@ import { wrapSupabaseError } from '../errors/supabase'
 /**
  * Delete a single object from the Cloudflare R2 bucket.
  *
- * Used by admin image-removal server actions (e.g. `deleteRoomTypeImageAction`).
- * Mirrors the structure of `lib/r2/upload.ts:uploadImageToR2`:
+ * Used by admin image-removal flows (currently `updateRoomTypeAction` in
+ * `app/actions/admin/rates.ts` after the form-submit refactor). Mirrors
+ * the structure of `lib/r2/upload.ts:uploadImageToR2`:
  *   - Throws if R2 is not configured (caller should surface to user).
  *   - Throws if `key` is empty.
  *   - Wraps R2 SDK errors via `wrapSupabaseError` so server logs show context.

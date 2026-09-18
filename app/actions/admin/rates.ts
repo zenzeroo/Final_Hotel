@@ -13,8 +13,6 @@ import {
   R2UploadError,
 } from '@/lib/r2/upload'
 import { deleteObjectFromR2 } from '@/lib/r2/delete'
-import { isUuid } from '@/lib/ids'
-import { createClient } from '@/lib/supabase/server'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -115,8 +113,8 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
 
 const roomTypeUpdateSchema = roomTypeSchema.partial().extend({ id: z.string().min(1) })
 
-/** Parse the JSON-encoded list of existing gallery keys sent by the edit form. */
-function parseExistingGalleryKeys(raw: FormDataEntryValue | null): string[] {
+/** Parse a JSON-encoded string[] from FormData (e.g. `existing_gallery_keys`, `delete_image_keys`). */
+function parseStringArray(raw: FormDataEntryValue | null): string[] {
   if (typeof raw !== 'string' || raw.trim() === '') return []
   try {
     const parsed = JSON.parse(raw)
@@ -149,17 +147,20 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
 
   const { id, ...rest } = parsed.data
 
-  // Image updates are optional — only patch the columns the admin actually changed.
-  // Hero: uploaded file → replace; no file → keep existing (omit from patch).
-  // Gallery: append new keys to existing_gallery_keys; if no new uploads, keep existing.
+  // Image state from form (carried via hidden inputs):
+  //   - existing_hero_key: current hero key (always sent)
+  //   - existing_gallery_keys: gallery keys AFTER the form's deletedKeys filter
+  //   - delete_image_keys: pending-deleted keys (hero + gallery combined)
+  const existingHeroKey = String(formData.get('existing_hero_key') ?? '')
+  const existingGalleryKeys = parseStringArray(formData.get('existing_gallery_keys'))
+  const deleteKeys = parseStringArray(formData.get('delete_image_keys'))
+
+  // Upload any new files first. The hero upload REPLACES; gallery uploads APPEND.
   const heroFile = formData.get('hero_image_file')
   const galleryFiles = collectFiles(formData.getAll('gallery_image_files'))
-  const existingGalleryKeys = parseExistingGalleryKeys(formData.get('existing_gallery_keys'))
 
-  const patch: Partial<Omit<typeof rest, never>> & {
-    hero_image_key?: string
-    gallery_keys?: string[]
-  } = { ...rest }
+  const newHeroKeys: string[] = [] // 0 or 1 entry
+  const newGalleryKeys: string[] = []
 
   try {
     if (heroFile instanceof File && heroFile.size > 0 && heroFile.type.length > 0) {
@@ -167,23 +168,62 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
       const ext = pickExt(heroFile)
       const key = roomImageKey(slugForKey, 'hero', ext)
       const result = await uploadImageToR2(heroFile, key)
-      patch.hero_image_key = result.key
+      newHeroKeys.push(result.key)
     }
-    if (galleryFiles.length > 0) {
+    for (const file of galleryFiles) {
       const slugForKey = rest.slug ?? id
-      const newKeys: string[] = []
-      for (const file of galleryFiles) {
-        const ext = pickExt(file)
-        const key = roomImageKey(slugForKey, 'gallery', ext)
-        const result = await uploadImageToR2(file, key)
-        newKeys.push(result.key)
-      }
-      patch.gallery_keys = [...existingGalleryKeys, ...newKeys]
+      const ext = pickExt(file)
+      const key = roomImageKey(slugForKey, 'gallery', ext)
+      const result = await uploadImageToR2(file, key)
+      newGalleryKeys.push(result.key)
     }
   } catch (e) {
     if (e instanceof R2UploadError) return { ok: false, error: e.message }
     return actionFail(e, 'Image upload failed')
   }
+
+  // Compute final hero + gallery atomically.
+  // Hero logic:
+  //   1. If user uploaded a new hero file → use it.
+  //   2. Else if user marked hero for delete (in deleteKeys) → promote first remaining gallery item.
+  //   3. Else → keep existing hero.
+  const heroMarkedForDelete = existingHeroKey.length > 0 && deleteKeys.includes(existingHeroKey)
+
+  let finalHero: string
+  if (newHeroKeys.length > 0) {
+    finalHero = newHeroKeys[0]
+  } else if (heroMarkedForDelete) {
+    const remaining = existingGalleryKeys.filter((k) => !deleteKeys.includes(k))
+    if (remaining.length === 0) {
+      return {
+        ok: false,
+        error: 'ไม่สามารถลบ hero ได้ — ต้องมีรูปในระบบอย่างน้อย 1 รูป (อัปโหลดรูปใหม่ก่อน)',
+      }
+    }
+    finalHero = remaining[0]
+  } else {
+    finalHero = existingHeroKey
+  }
+
+  // Gallery logic: keep non-deleted existing keys, then append new uploads.
+  const finalGallery: string[] = [
+    ...existingGalleryKeys.filter((k) => !deleteKeys.includes(k)),
+    ...newGalleryKeys,
+  ]
+
+  // If neither hero nor gallery has anything after edits, the column
+  // NOT NULL constraint would reject. Reject early with a clear message.
+  if (!finalHero) {
+    return {
+      ok: false,
+      error: 'ต้องมี hero อย่างน้อย 1 รูป (อัปโหลดรูปใหม่ก่อน)',
+    }
+  }
+
+  const patch: Partial<Omit<typeof rest, never>> & {
+    hero_image_key: string
+    gallery_keys: string[]
+  } = { ...rest, hero_image_key: finalHero, gallery_keys: finalGallery }
 
   try {
     await updateRoomType({ id, patch })
@@ -191,97 +231,22 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
     return actionFail(e, 'Could not update room type')
   }
 
+  // Best-effort R2 cleanup AFTER DB success. If a delete fails, the DB row
+  // is still consistent — orphan R2 files can be cleaned by a periodic job.
+  for (const key of deleteKeys) {
+    try {
+      await deleteObjectFromR2(key)
+    } catch (e) {
+      console.warn(`[updateRoomTypeAction] R2 delete failed for key ${key}:`, e)
+    }
+  }
+
+  revalidatePath('/admin/rates/room-types')
+  revalidatePath(`/admin/rates/room-types/${id}/edit`)
   revalidatePath('/admin/rates')
   revalidatePath('/manager/rates')
   revalidatePath('/rooms')
   return { ok: true }
-}
-
-/**
- * Delete an existing image (hero or gallery) from a room type.
- *
- * Hero deletion policy: if the deleted key is the current hero AND the
- * gallery has remaining items, auto-promote the first gallery image to hero
- * (atomic with the gallery key removal). If the gallery is empty, reject —
- * the column is NOT NULL and the admin must upload a replacement first.
- *
- * R2 deletion is best-effort: if R2 fails after the DB updates succeed, we
- * log a warning and return success (the DB is the source of truth; orphan
- * R2 files can be cleaned up by a periodic script).
- */
-export async function deleteRoomTypeImageAction(input: {
-  roomTypeId: string
-  key: string
-}): Promise<
-  | { ok: true; data: { newHeroKey: string | null; removedFromGallery: boolean } }
-  | { ok: false; error: string }
-> {
-  await requireRole(['admin', 'manager'], '/admin/rates')
-
-  if (!isUuid(input.roomTypeId)) return { ok: false, error: 'Invalid room type id' }
-  if (!input.key || typeof input.key !== 'string') {
-    return { ok: false, error: 'Image key is required' }
-  }
-
-  const supabase = await createClient()
-
-  const { data: rt, error: loadErr } = await supabase
-    .from('room_types')
-    .select('id, hero_image_key, gallery_keys')
-    .eq('id', input.roomTypeId)
-    .single()
-  if (loadErr || !rt) return { ok: false, error: 'Room type not found' }
-
-  const heroKey = rt.hero_image_key as string | null
-  const gallery = (rt.gallery_keys ?? []) as string[]
-  const isHero = heroKey === input.key
-  const inGallery = gallery.includes(input.key)
-
-  if (!isHero && !inGallery) {
-    return { ok: false, error: 'Image is not associated with this room type' }
-  }
-
-  let patch: { hero_image_key?: string; gallery_keys?: string[] } = {}
-  let removedFromGallery = false
-  let newHeroKey: string | null = null
-
-  if (isHero) {
-    const remainingGallery = gallery.filter((k) => k !== input.key)
-    if (remainingGallery.length === 0) {
-      return {
-        ok: false,
-        error: 'ไม่สามารถลบ hero ได้ — ต้องมีรูปในระบบอย่างน้อย 1 รูป (อัปโหลดรูปใหม่ก่อน)',
-      }
-    }
-    const [promoted, ...rest] = remainingGallery
-    patch = { hero_image_key: promoted, gallery_keys: rest }
-    newHeroKey = promoted
-  } else {
-    patch = { gallery_keys: gallery.filter((k) => k !== input.key) }
-    removedFromGallery = true
-  }
-
-  const { error: updateErr } = await supabase
-    .from('room_types')
-    .update(patch)
-    .eq('id', input.roomTypeId)
-  if (updateErr) return actionFail(updateErr, 'Could not update room type')
-
-  // Best-effort R2 delete — log on failure but don't fail the action.
-  try {
-    await deleteObjectFromR2(input.key)
-  } catch (e) {
-    console.warn(`[deleteRoomTypeImageAction] R2 delete failed for key ${input.key}:`, e)
-  }
-
-  revalidatePath('/admin/rates/room-types')
-  revalidatePath(`/admin/rates/room-types/${input.roomTypeId}/edit`)
-  revalidatePath('/admin/rates')
-  revalidatePath('/manager/rates')
-  revalidatePath('/rooms')
-  revalidatePath('/')
-
-  return { ok: true, data: { newHeroKey, removedFromGallery } }
 }
 
 // =====================================================
