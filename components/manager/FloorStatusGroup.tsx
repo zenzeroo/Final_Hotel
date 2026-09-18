@@ -16,7 +16,7 @@ export function FloorStatusGroup({ group }: FloorStatusGroupProps) {
           {group.assignedTo ? `มอบหมายแล้ว` : 'ยังไม่ได้มอบหมาย'}
         </span>
       </div>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
         {group.rooms.map((r) => (
           <RoomStatusCell key={r.roomNumber} cell={r} />
         ))}

@@ -29,7 +29,7 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
       )}
 
       {customers.length > 0 && (
-        <div className="mt-6 bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-hidden">
+        <div className="mt-6 bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-x-auto overflow-y-hidden">
           <table className="w-full">
             <thead className="bg-surface-container">
               <tr>

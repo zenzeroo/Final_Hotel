@@ -50,7 +50,7 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
           <p className="text-body-md text-on-surface-variant">ไม่พบการจอง</p>
         </div>
       ) : (
-        <div className="mt-6 bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-hidden">
+        <div className="mt-6 bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-x-auto overflow-y-hidden">
           <table className="w-full">
             <thead className="bg-surface-container">
               <tr>

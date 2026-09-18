@@ -95,7 +95,7 @@ export function RoomInventoryTable({ units }: RoomInventoryTableProps) {
               ({floorUnits.length} ห้อง)
             </span>
           </h3>
-          <div className="bg-surface-container-lowest rounded-lg shadow-level-1 overflow-hidden">
+          <div className="bg-surface-container-lowest rounded-lg shadow-level-1 overflow-x-auto overflow-y-hidden">
             <table className="w-full">
               <thead className="bg-surface-container-low border-b border-outline-variant">
                 <tr className="text-label-md uppercase tracking-wider text-on-surface-variant">

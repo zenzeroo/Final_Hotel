@@ -129,7 +129,7 @@ export default async function AdminDashboard() {
             {t('bookings.noBookings')}
           </div>
         ) : (
-          <div className="bg-surface-container-lowest rounded-lg shadow-level-1 overflow-hidden">
+          <div className="bg-surface-container-lowest rounded-lg shadow-level-1 overflow-x-auto overflow-y-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-outline-variant">
