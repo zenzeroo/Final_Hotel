@@ -1,11 +1,16 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useFormStatus } from 'react-dom'
 import Image from 'next/image'
 import type { RoomType } from '@/lib/data/types'
-import { createRoomTypeAction, updateRoomTypeAction } from '@/app/actions/admin/rates'
+import {
+  createRoomTypeAction,
+  updateRoomTypeAction,
+  deleteRoomTypeImageAction,
+} from '@/app/actions/admin/rates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { Modal } from '@/components/ui/Modal'
 import { r2Url } from '@/lib/r2/publicUrl'
 
 interface RoomTypeFormProps {
@@ -66,14 +71,50 @@ function SubmitButton({ label }: { label: string }) {
  * Shows live previews for newly selected files via `URL.createObjectURL`.
  * Existing gallery keys are forwarded to the server action via a hidden JSON input
  * so updates don't wipe the gallery when only adding more.
+ *
+ * Per-image delete: × overlay button on each existing thumbnail (hero + gallery).
+ * Confirms via Modal before calling `deleteRoomTypeImageAction`. Deletes are
+ * tracked locally via `deletedKeys` + `promotedHeroKey` — the visible gallery
+ * and hero are *derived* from `initial` props + these local mutations (no
+ * setState-in-effect anti-pattern).
+ *
+ * Hero delete policy: server auto-promotes first gallery image to hero; client
+ * mirrors that by storing the promoted key in `promotedHeroKey` so the UI stays
+ * in sync without a server refresh.
  */
 function RoomImagesSection({ initial }: { initial?: RoomType }) {
-  const heroUrl = initial?.hero_image_key ? r2Url(initial.hero_image_key) : ''
-  const existingGallery = initial?.gallery_keys ?? []
+  const initialHero = initial?.hero_image_key ?? ''
+  const initialGallery = useMemo(
+    () => initial?.gallery_keys ?? [],
+    [initial?.gallery_keys],
+  )
 
+  // Track deletions + hero promotion locally. The hero + visible gallery are
+  // *derived* from these states + props (no useEffect sync).
+  const [deletedKeys, setDeletedKeys] = useState<ReadonlySet<string>>(new Set())
+  const [promotedHeroKey, setPromotedHeroKey] = useState<string | null>(null)
+
+  // Derived current hero — promoted key wins over the initial prop.
+  const heroKey = promotedHeroKey ?? initialHero
+
+  // Derived visible gallery — exclude deleted keys AND the current hero
+  // (a promoted gallery key shouldn't appear in both hero + gallery).
+  const visibleGallery = useMemo(
+    () =>
+      initialGallery.filter(
+        (k) => !deletedKeys.has(k) && k !== heroKey,
+      ),
+    [initialGallery, deletedKeys, heroKey],
+  )
+
+  // Local UI-only state (preview object URLs + delete modal).
   const [heroPreview, setHeroPreview] = useState<string | null>(null)
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
   const objectUrlsRef = useRef<string[]>([])
+
+  const [deleteTarget, setDeleteTarget] = useState<{ key: string; isHero: boolean } | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isDeleting, startDeleteTransition] = useTransition()
 
   // Revoke any object URLs we created when the component unmounts (memory leak guard).
   useEffect(() => {
@@ -95,7 +136,6 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
 
   const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
-    // Revoke previous previews before creating new ones.
     objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
     objectUrlsRef.current = []
     const urls = files.map((file) => {
@@ -106,9 +146,55 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
     setGalleryPreviews(urls)
   }
 
-  const heroDisplay = heroPreview ?? heroUrl
-  const hasExistingGallery = existingGallery.length > 0
+  const requestDelete = (key: string, isHero: boolean) => {
+    setDeleteTarget({ key, isHero })
+    setDeleteError(null)
+  }
+
+  const cancelDelete = () => {
+    if (isDeleting) return
+    setDeleteTarget(null)
+    setDeleteError(null)
+  }
+
+  const confirmDelete = () => {
+    if (!deleteTarget || !initial?.id) return
+    setDeleteError(null)
+    startDeleteTransition(async () => {
+      const result = await deleteRoomTypeImageAction({
+        roomTypeId: initial.id,
+        key: deleteTarget.key,
+      })
+      if (!result.ok) {
+        setDeleteError(result.error)
+        return
+      }
+      // Mark the deleted key (so it's filtered from visible gallery) AND
+      // optionally promote a gallery key to hero on success.
+      setDeletedKeys((prev) => {
+        const next = new Set(prev)
+        next.add(deleteTarget.key)
+        return next
+      })
+      if (result.data.newHeroKey) {
+        setPromotedHeroKey(result.data.newHeroKey)
+      }
+      setDeleteTarget(null)
+    })
+  }
+
+  const heroDisplay = heroPreview ?? (heroKey ? r2Url(heroKey) : '')
+  const hasExistingGallery = visibleGallery.length > 0
   const hasNewGallery = galleryPreviews.length > 0
+  // Server guard: hero deletion requires ≥1 remaining gallery item to promote.
+  const canDeleteHero = !!heroKey && visibleGallery.length > 0
+
+  const confirmBody =
+    deleteTarget?.isHero
+      ? canDeleteHero
+        ? 'ลบ hero แล้วเลื่อน gallery รูปแรกขึ้นเป็น hero แทน? การลบไม่สามารถยกเลิกได้'
+        : 'ไม่สามารถลบ hero ได้ — ต้องมีรูปในระบบอย่างน้อย 1 รูป (อัปโหลดรูปใหม่ก่อน)'
+      : 'ลบรูปนี้ออกจาก gallery? การลบไม่สามารถยกเลิกได้'
 
   return (
     <div className="flex flex-col gap-4 p-4 bg-surface-container-low border border-outline-variant rounded-lg">
@@ -118,14 +204,18 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
       </div>
 
       {initial?.id && (
-        <input type="hidden" name="existing_gallery_keys" value={JSON.stringify(existingGallery)} />
+        <input
+          type="hidden"
+          name="existing_gallery_keys"
+          value={JSON.stringify(visibleGallery)}
+        />
       )}
 
       {/* Hero */}
       <div className="flex flex-col gap-2">
         <span className="text-label-md text-on-surface">รูป Hero (ภาพหลัก)</span>
         {heroDisplay && (
-          <div className="relative w-full aspect-[16/9] max-w-md rounded-lg overflow-hidden bg-surface-container">
+          <div className="relative w-full aspect-[16/9] max-w-md rounded-lg overflow-hidden bg-surface-container group">
             <Image
               src={heroDisplay}
               alt="Hero preview"
@@ -134,6 +224,17 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
               sizes="(max-width: 768px) 100vw, 448px"
               className="object-cover"
             />
+            {heroKey && !heroPreview && (
+              <button
+                type="button"
+                onClick={() => canDeleteHero && requestDelete(heroKey, true)}
+                disabled={!canDeleteHero}
+                title={canDeleteHero ? 'ลบ hero' : 'ต้องมีรูปอื่นในระบบก่อนลบ hero'}
+                className="absolute top-2 right-2 inline-flex items-center justify-center w-8 h-8 rounded-full bg-error text-on-error opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity disabled:cursor-not-allowed disabled:bg-on-surface-variant"
+              >
+                <MaterialIcon name="close" size={18} />
+              </button>
+            )}
           </div>
         )}
         <input
@@ -155,13 +256,13 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
         {hasExistingGallery && (
           <div className="flex flex-col gap-1.5">
             <span className="text-body-sm text-on-surface-variant">
-              รูป Gallery ปัจจุบัน ({existingGallery.length} รูป):
+              รูป Gallery ปัจจุบัน ({visibleGallery.length} รูป):
             </span>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-              {existingGallery.map((key) => (
+              {visibleGallery.map((key) => (
                 <div
                   key={key}
-                  className="relative aspect-square rounded-md overflow-hidden bg-surface-container"
+                  className="relative aspect-square rounded-md overflow-hidden bg-surface-container group"
                 >
                   <Image
                     src={r2Url(key)}
@@ -171,6 +272,14 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
                     sizes="120px"
                     className="object-cover"
                   />
+                  <button
+                    type="button"
+                    onClick={() => requestDelete(key, false)}
+                    title="ลบรูปนี้"
+                    className="absolute top-1 right-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-error text-on-error opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                  >
+                    <MaterialIcon name="close" size={14} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -211,9 +320,40 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
           className="block w-full text-body-sm text-on-surface file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-secondary file:font-semibold file:cursor-pointer hover:file:bg-primary-container file:transition-colors"
         />
         <span className="text-body-sm text-on-surface-variant">
-          รูปใหม่จะถูกเพิ่มต่อท้าย gallery เดิม (ไม่ลบรูปเก่า)
+          รูปใหม่จะถูกเพิ่มต่อท้าย gallery เดิม (ไม่ลบรูปเก่า) · คลิก × ที่รูปเพื่อลบ
         </span>
       </div>
+
+      {/* Delete confirm modal */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={cancelDelete}
+        title="ยืนยันการลบรูปภาพ"
+        body={
+          <div className="flex flex-col gap-2">
+            <p>{confirmBody}</p>
+            {deleteError && (
+              <p className="text-body-sm text-error">⚠ {deleteError}</p>
+            )}
+          </div>
+        }
+        actions={[
+          {
+            label: isDeleting ? 'กำลังลบ…' : 'ลบรูปภาพ',
+            onClick: confirmDelete,
+            disabled: isDeleting || (deleteTarget?.isHero === true && !canDeleteHero),
+            variant: 'danger',
+          },
+          {
+            label: 'ยกเลิก',
+            onClick: cancelDelete,
+            disabled: isDeleting,
+            variant: 'ghost',
+          },
+        ]}
+        variant="danger"
+        closeOnBackdrop={false}
+      />
     </div>
   )
 }
