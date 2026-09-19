@@ -104,9 +104,14 @@ export function StaffSidebarNav({ role, userName, pathname, onNavigate }: StaffS
         <Link
           href={roleHomePath(role)}
           onClick={onNavigate}
-          className="font-display text-2xl font-bold text-secondary hover:text-on-primary transition-colors duration-200 rounded px-1 -mx-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+          className="group inline-flex items-center gap-1 font-display text-2xl font-bold text-secondary hover:text-on-primary hover:translate-x-0.5 transition-all duration-150 ease-out rounded px-1 -mx-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
         >
           Zenzero Hotel
+          <MaterialIcon
+            name="arrow_forward"
+            size={20}
+            className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+          />
         </Link>
         <p className="text-caption text-secondary/70 mt-1 uppercase tracking-wider">
           {t(ROLE_LABEL_KEY[role])}
@@ -125,12 +130,12 @@ export function StaffSidebarNav({ role, userName, pathname, onNavigate }: StaffS
               <div
                 key={item.href}
                 aria-disabled="true"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary/40 cursor-not-allowed"
+                className="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary/40 cursor-not-allowed transition-colors duration-150 hover:bg-secondary/5"
                 title="เร็วๆ นี้"
               >
                 <MaterialIcon name={item.icon} size={20} />
                 <span className="text-body-md">{navLabel(t, role, item.key)}</span>
-                <span className="ml-auto text-[10px] uppercase tracking-wider text-secondary/40">
+                <span className="ml-auto text-[10px] uppercase tracking-wider text-secondary/40 transition-opacity duration-150 group-hover:opacity-70">
                   เร็วๆ นี้
                 </span>
               </div>
@@ -142,10 +147,10 @@ export function StaffSidebarNav({ role, userName, pathname, onNavigate }: StaffS
               href={item.href}
               onClick={onNavigate}
               aria-current={isActive ? 'page' : undefined}
-              className={`group flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${
+              className={`group relative overflow-hidden flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 transition-all duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary [--icon-fill:1] ${
                 isActive
                   ? 'bg-primary text-on-primary font-semibold border-secondary shadow-[-3px_0_8px_-1px_rgba(254,215,152,0.5)]'
-                  : 'text-secondary/80 border-transparent hover:bg-primary-fixed hover:text-primary'
+                  : 'text-secondary/80 border-transparent hover:bg-primary-fixed hover:text-primary hover:translate-x-0.5 hover:border-l-secondary hover:shadow-[-2px_0_6px_-1px_rgba(254,215,152,0.3)]'
               }`}
             >
               <MaterialIcon name={item.icon} size={20} filled={isActive} />
@@ -153,11 +158,17 @@ export function StaffSidebarNav({ role, userName, pathname, onNavigate }: StaffS
               <MaterialIcon
                 name="chevron_right"
                 size={18}
-                className={`ml-auto transition-transform duration-200 ${
+                className={`ml-auto transition-all duration-150 ease-out ${
                   isActive
                     ? 'opacity-100 translate-x-0'
-                    : 'opacity-0 -translate-x-1 group-hover:opacity-60 group-hover:translate-x-0'
+                    : 'opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0'
                 }`}
+              />
+              {/* Sheen sweep — pseudo-element travels left-to-right on hover.
+                  pointer-events-none + aria-hidden so it's purely decorative. */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-secondary/15 to-transparent -translate-x-full group-hover:translate-x-[200%] transition-transform duration-700 ease-out"
               />
             </Link>
           )
@@ -172,10 +183,15 @@ export function StaffSidebarNav({ role, userName, pathname, onNavigate }: StaffS
         <form action={signOut}>
           <button
             type="submit"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary/80 hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+            className="group w-full flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 border-transparent text-secondary/80 hover:bg-primary-fixed hover:text-primary hover:translate-x-0.5 hover:border-l-error/50 transition-all duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
           >
             <MaterialIcon name="logout" size={20} />
             <span className="text-body-md">{t('nav.logout')}</span>
+            <MaterialIcon
+              name="chevron_right"
+              size={18}
+              className="ml-auto opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+            />
           </button>
         </form>
       </div>
