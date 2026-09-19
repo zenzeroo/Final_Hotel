@@ -64,7 +64,16 @@ export async function updateProfileAction(
       birthdate: parsed.data.birthdate === '' ? null : parsed.data.birthdate,
     })
     revalidatePath('/', 'layout')
+    // Re-validate every profile route — this action is reachable from
+    // /account/profile (User) + /admin|manager|reception|housekeeper/profile
+    // (staff). Without listing each staff path, those pages keep serving
+    // the stale RSC payload until a hard refresh — looks like the change
+    // "didn't save" even though the DB row IS updated.
     revalidatePath('/account/profile')
+    revalidatePath('/admin/profile')
+    revalidatePath('/manager/profile')
+    revalidatePath('/reception/profile')
+    revalidatePath('/housekeeper/profile')
     return { ok: true }
   } catch (e) {
     return actionFail(e, 'ไม่สามารถบันทึกข้อมูลส่วนตัวได้')

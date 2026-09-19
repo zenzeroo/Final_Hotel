@@ -129,6 +129,9 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
                 />
               </div>
+              <p className="font-caption text-caption text-on-surface-variant">
+                อีเมลผูกกับบัญชีเข้าสู่ระบบ หากต้องการเปลี่ยนกรุณาติดต่อผู้ดูแลระบบ
+              </p>
             </Field>
             <Field label="เบอร์โทรศัพท์" required>
               <input
