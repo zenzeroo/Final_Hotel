@@ -23,10 +23,18 @@ export type AccountActionResult<T = void> =
 
 const updateProfileSchema = z.object({
   fullName: z.string().trim().min(1, 'กรุณากรอกชื่อ-นามสกุล').max(120),
+  // Phone is required at the DB layer (NOT NULL + regex CHECK via migration
+  // 20260913_require_phone.sql), but we allow empty here so staff with
+  // placeholder/missing data can still save name + birthdate. DB will
+  // surface the NOT NULL violation if the row truly has no valid phone —
+  // `actionFail` catches it and renders a clear error.
   phone: z
     .string()
     .trim()
-    .regex(/^[0-9]{10}$/, 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก ห้ามมีขีดหรือช่องว่าง'),
+    .regex(
+      /^(|0{10}|[0-9]{10})$/,
+      'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก หรือเว้นว่างไว้เพื่อขอความช่วยเหลือ',
+    ),
   birthdate: z
     .string()
     .trim()

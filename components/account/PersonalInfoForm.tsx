@@ -70,6 +70,15 @@ function SubmitButton() {
 export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
   const [editing, setEditing] = useState(false)
 
+  // Phone sentinel value used by migration 20260913_require_phone.sql to
+  // backfill NULL phones for Google OAuth users (no real phone captured).
+  // Detecting it here lets us prompt the staff member to update.
+  const PHONE_SENTINEL = '0000000000'
+  const phoneValue = (profile.phone ?? '').replace(/\D/g, '').slice(0, 10)
+  const isPlaceholderPhone = phoneValue === PHONE_SENTINEL
+  const hasInvalidDbPhone =
+    !!profile.phone && !/^[0-9]{10}$/.test(profile.phone)
+
   // Wrap raw action to fit useActionState's (prev, formData) signature.
   const wrapped = async (
     _state: FormState | null,
@@ -89,6 +98,17 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
           <h3 className="font-headline-sm text-headline-sm text-primary">ข้อมูลส่วนตัว</h3>
         </div>
         <form action={formAction} className="px-gutter md:px-[32px] pb-gutter md:pb-[32px] flex flex-col gap-5">
+          {hasInvalidDbPhone && (
+            <div className="px-4 py-3 bg-error-container text-on-error-container rounded-lg text-body-md flex items-start gap-2">
+              <MaterialIcon name="error" size={20} className="shrink-0 mt-0.5" />
+              <div>
+                <strong>เบอร์โทรศัพท์ของคุณไม่ถูกต้อง</strong>
+                <p className="text-body-sm mt-1">
+                  กรุณาติดต่อผู้ดูแลระบบเพื่ออัปเดตเบอร์โทรศัพท์
+                </p>
+              </div>
+            </div>
+          )}
           {state?.error && (
             <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
               {state.error}
@@ -139,11 +159,8 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
                 type="tel"
                 inputMode="numeric"
                 maxLength={10}
-                minLength={10}
-                required
-                pattern="[0-9]{10}"
                 placeholder="08xxxxxxxx"
-                defaultValue={(profile.phone ?? '').replace(/\D/g, '').slice(0, 10)}
+                defaultValue={phoneValue}
                 onInput={(e) => {
                   const target = e.currentTarget
                   const cleaned = target.value.replace(/\D/g, '').slice(0, 10)
@@ -151,9 +168,16 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
                 }}
                 className={inputClass}
               />
-              <p className="font-caption text-caption text-on-surface-variant">
-                ต้องเป็นตัวเลข 10 หลักเท่านั้น (ไม่มีขีด ไม่มีช่องว่าง)
-              </p>
+              {isPlaceholderPhone ? (
+                <div className="px-3 py-2 bg-warning-container text-on-warning-container rounded-md text-body-sm flex items-center gap-2">
+                  <MaterialIcon name="warning" size={16} />
+                  เบอร์โทรศัพท์ของคุณยังไม่ได้ตั้ง — กรุณากรอกเบอร์จริงเพื่อให้ลูกค้าติดต่อท่านได้
+                </div>
+              ) : (
+                <p className="font-caption text-caption text-on-surface-variant">
+                  ต้องเป็นตัวเลข 10 หลักเท่านั้น (ไม่มีขีด ไม่มีช่องว่าง)
+                </p>
+              )}
             </Field>
           </div>
           <div className="flex justify-end gap-3 mt-2 pt-gutter border-t border-surface-container">
