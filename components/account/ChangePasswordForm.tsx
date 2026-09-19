@@ -92,13 +92,13 @@ export function ChangePasswordForm() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
           <PasswordInput
             name="currentPassword"
-            placeholder="••••••••"
+            placeholder="กรอกรหัสผ่านปัจจุบัน"
             autoComplete="current-password"
             required
           />
           <PasswordInput
             name="newPassword"
-            placeholder="••••••••"
+            placeholder="รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)"
             autoComplete="new-password"
             minLength={8}
             maxLength={72}
@@ -106,7 +106,7 @@ export function ChangePasswordForm() {
           />
           <PasswordInput
             name="confirmNewPassword"
-            placeholder="••••••••"
+            placeholder="พิมพ์รหัสผ่านใหม่อีกครั้ง"
             autoComplete="new-password"
             minLength={8}
             maxLength={72}
