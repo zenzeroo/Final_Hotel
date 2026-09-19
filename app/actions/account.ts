@@ -40,7 +40,13 @@ export async function updateProfileAction(
   _state: AccountActionResult | null,
   formData: FormData,
 ): Promise<AccountActionResult> {
-  await requireRole('user', '/account/profile')
+  // Accept any authenticated user; the data layer enforces owner-only
+  // access via RLS (profiles.id = auth.uid()). Profile pages gate the
+  // role match via `app/[role]/layout.tsx` redirects.
+  await requireRole(
+    ['user', 'reception', 'housekeeper', 'manager', 'admin'],
+    '/account/profile',
+  )
 
   const parsed = updateProfileSchema.safeParse({
     fullName: String(formData.get('fullName') ?? ''),
@@ -87,7 +93,10 @@ export async function changePasswordAction(
   _state: AccountActionResult | null,
   formData: FormData,
 ): Promise<AccountActionResult> {
-  const session = await requireRole('user', '/account/profile')
+  const session = await requireRole(
+    ['user', 'reception', 'housekeeper', 'manager', 'admin'],
+    '/account/profile',
+  )
   const email = session.email
   if (!email) {
     return { ok: false, error: 'ไม่พบอีเมลของบัญชี กรุณาติดต่อผู้ดูแลระบบ' }
@@ -142,6 +151,10 @@ export async function deactivateAccountAction(
   _state: AccountActionResult | null,
   formData: FormData,
 ): Promise<AccountActionResult> {
+  // User-only — staff can't self-deactivate (admin controls is_active via
+  // /admin/staff). DeactivateAccountSection is hidden for staff profiles
+  // via `showDangerZone={false}`, so this branch is only reachable from
+  // /account/profile.
   await requireRole('user', '/account/profile')
 
   const parsed = deactivateSchema.safeParse({
@@ -187,7 +200,10 @@ export async function uploadAvatarAction(
   _state: AccountActionResult<{ avatarKey: string }> | null,
   formData: FormData,
 ): Promise<AccountActionResult<{ avatarKey: string }>> {
-  const session = await requireRole('user', '/account/profile')
+  const session = await requireRole(
+    ['user', 'reception', 'housekeeper', 'manager', 'admin'],
+    '/account/profile',
+  )
 
   const file = formData.get('file')
   if (!(file instanceof File) || file.size === 0) {

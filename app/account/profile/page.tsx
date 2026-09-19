@@ -1,12 +1,8 @@
 import { requireRole } from '@/lib/auth/require'
-import { getOwnProfile } from '@/lib/data/account'
+import { getOwnProfile } from '@/lib/data/supabase-account'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
-import { ProfileCard } from '@/components/account/ProfileCard'
-import { AccountQuickLinks } from '@/components/account/AccountQuickLinks'
-import { PersonalInfoForm } from '@/components/account/PersonalInfoForm'
-import { ChangePasswordForm } from '@/components/account/ChangePasswordForm'
-import { DeactivateAccountSection } from '@/components/account/DeactivateAccountSection'
+import { AccountProfileContent } from '@/components/account/AccountProfileContent'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
@@ -53,20 +49,13 @@ export default async function AccountProfilePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter items-start">
-            {/* Left column */}
-            <div className="lg:col-span-1 flex flex-col gap-gutter">
-              <ProfileCard profile={profile} />
-              <AccountQuickLinks />
-            </div>
-
-            {/* Right column */}
-            <div className="lg:col-span-2 flex flex-col gap-gutter">
-              <PersonalInfoForm profile={profile} />
-              <ChangePasswordForm />
-              <DeactivateAccountSection fullName={profile.full_name} />
-            </div>
-          </div>
+          <AccountProfileContent
+            profile={profile}
+            showDangerZone
+            quickLinks={[
+              { href: '/bookings', icon: 'history', label: 'ประวัติการจอง' },
+            ]}
+          />
         </div>
       </main>
       <Footer />

@@ -175,11 +175,26 @@ export function StaffSidebarNav({ role, userName, pathname, onNavigate }: StaffS
         })}
       </nav>
 
-      {/* User + Logout */}
+      {/* User + Profile + Logout */}
       <div className="px-3 py-4 border-t border-primary-container">
         <div className="px-3 py-2 mb-2">
           <p className="text-caption text-secondary/70 uppercase tracking-wider">{userName ?? 'ผู้ใช้งาน'}</p>
         </div>
+        {/* Profile link — /[role]/profile. Inherits the same Tier 3 polish
+            (slide + chevron + border-l accent) as the main nav items. */}
+        <Link
+          href={`/${role}/profile`}
+          onClick={onNavigate}
+          className="group flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 border-transparent text-secondary/80 hover:bg-primary-fixed hover:text-primary hover:translate-x-0.5 hover:border-l-secondary hover:shadow-[-2px_0_6px_-1px_rgba(254,215,152,0.3)] [--icon-fill:1] transition-all duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+        >
+          <MaterialIcon name="account_circle" size={20} />
+          <span className="text-body-md">โปรไฟล์</span>
+          <MaterialIcon
+            name="chevron_right"
+            size={18}
+            className="ml-auto opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+          />
+        </Link>
         <form action={signOut}>
           <button
             type="submit"
