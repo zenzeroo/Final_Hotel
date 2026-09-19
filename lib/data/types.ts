@@ -59,13 +59,22 @@ export interface AccountProfile {
   id: string
   full_name: string | null
   phone: string | null
-  birthdate: string | null // YYYY-MM-DD or null
+  birthdate: string | null
   avatar_key: string | null
   email: string | null
   created_at: string
+  /**
+   * Phase 36 — true blocks login + booking creation. Set via
+   * `/admin/customers/[id]`. NULL columns track when + why.
+   * Enforced at app layer (not RLS) per CLAUDE.md zenzero-rls-recursion-fix.
+   */
+  is_suspended: boolean
+  suspended_at: string | null
+  suspended_reason: string | null
   role: AccountRole
   is_active: boolean
   locale: string | null
+  deleted_at: string | null
 }
 
 export interface SearchFilters {
@@ -512,6 +521,24 @@ export interface Promotion {
 }
 
 export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'
+
+/**
+ * Phase 36 — public-facing customer record (subset of profiles where
+ * role='user'). Derived fields like `total_bookings` are optional
+ * (populated by `listCustomers()` via parallel count query).
+ */
+export interface Customer {
+  id: string
+  full_name: string | null
+  email: string | null
+  phone: string | null
+  created_at: string
+  is_active: boolean
+  is_suspended: boolean
+  suspended_at: string | null
+  suspended_reason: string | null
+  total_bookings?: number
+}
 
 export interface StaffMember {
   id: string

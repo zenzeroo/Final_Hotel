@@ -8,10 +8,16 @@
  * Server-side R2 upload (`uploadOwnAvatar`) lives in a separate path
  * because R2 writes need the admin client (service role bypasses RLS
  * for the bucket put).
+ *
+ * Phase 36 — added admin-only customer management functions
+ * (listCustomers / getCustomerById / suspendCustomer / unsuspendCustomer).
+ * These use `createAdminClient()` to bypass RLS — the server actions
+ * in `app/actions/admin/customers.ts` enforce the admin-only role gate.
  */
 import { createClient } from '@/lib/supabase/server'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
-import type { AccountProfile } from './types'
+import { createAdminClient } from '@/lib/supabase/admin'
+import type { AccountProfile, Customer } from './types'
 
 export async function getOwnProfile(): Promise<AccountProfile | null> {
   const supabase = await createClient()
@@ -131,4 +137,137 @@ export async function putAvatarToR2(args: {
       CacheControl: 'public, max-age=31536000, immutable',
     }),
   )
+}
+
+// =========================================================
+// Phase 36 — Customer management (admin only)
+// =========================================================
+
+export interface ListCustomersOptions {
+  /** Substring match against full_name OR email OR phone (≥2 chars recommended). */
+  search?: string
+  /**
+   * Filter by suspension state:
+   *   - undefined → all customers (active + suspended)
+   *   - true      → only suspended
+   *   - false     → only active
+   */
+  isSuspended?: boolean
+  /** Cap on returned rows (default 200 to keep list snappy). */
+  limit?: number
+}
+
+/**
+ * List customers (profiles with role='user') with optional search/filter.
+ * Service-role client — admin-only callers enforced at the server action
+ * layer (`app/actions/admin/customers.ts`).
+ *
+ * Booking count is NOT joined here to avoid N+1 fan-out for the rare
+ * use case of "list every customer with count". The detail page computes
+ * the count separately via `getCustomerBookingCount`.
+ */
+export async function listCustomers(
+  opts: ListCustomersOptions = {},
+): Promise<Customer[]> {
+  const admin = await createAdminClient()
+  let q = admin
+    .from('profiles')
+    .select(
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason',
+    )
+    .eq('role', 'user')
+    .order('created_at', { ascending: false })
+
+  if (opts.search && opts.search.trim().length >= 2) {
+    // ILIKE on full_name OR email OR phone. Wrap in %...% for contains-match.
+    const term = `%${opts.search.trim()}%`
+    q = q.or(`full_name.ilike.${term},email.ilike.${term},phone.ilike.${term}`)
+  }
+
+  if (opts.isSuspended === true) q = q.eq('is_suspended', true)
+  if (opts.isSuspended === false) q = q.eq('is_suspended', false)
+
+  if (opts.limit && opts.limit > 0) q = q.limit(opts.limit)
+
+  const { data, error } = await q
+  if (error) wrapSupabaseError('listCustomers', error)
+  return (data ?? []) as Customer[]
+}
+
+/** Fetch a single customer by id. Service-role. Returns null if not found. */
+export async function getCustomerById(id: string): Promise<Customer | null> {
+  const admin = await createAdminClient()
+  const { data, error } = await admin
+    .from('profiles')
+    .select(
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason',
+    )
+    .eq('id', id)
+    .eq('role', 'user')
+    .maybeSingle()
+  if (error) wrapSupabaseError('getCustomerById', error)
+  return (data as Customer | null) ?? null
+}
+
+/** Count bookings for one customer. Service-role bypasses booking RLS. */
+export async function getCustomerBookingCount(customerId: string): Promise<number> {
+  const admin = await createAdminClient()
+  const { count, error } = await admin
+    .from('bookings')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', customerId)
+  if (error) wrapSupabaseError('getCustomerBookingCount', error)
+  return count ?? 0
+}
+
+/**
+ * Suspend a customer. Sets `is_suspended=true`, `suspended_at=now()`,
+ * optional `suspended_reason`. Returns the updated row.
+ * Caller (server action) must verify admin role + self-protection.
+ */
+export async function suspendCustomer(args: {
+  targetId: string
+  reason: string | null
+}): Promise<Customer> {
+  const admin = await createAdminClient()
+  const update: Record<string, unknown> = {
+    is_suspended: true,
+    suspended_at: new Date().toISOString(),
+  }
+  if (args.reason !== null) update.suspended_reason = args.reason
+  const { data, error } = await admin
+    .from('profiles')
+    .update(update)
+    .eq('id', args.targetId)
+    .select(
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason',
+    )
+    .single()
+  if (error) wrapSupabaseError('suspendCustomer', error)
+  return data as Customer
+}
+
+/**
+ * Unsuspend a customer. Clears `is_suspended`, `suspended_at`,
+ * `suspended_reason`. Returns the updated row.
+ * Caller (server action) must verify admin role + self-protection.
+ */
+export async function unsuspendCustomer(args: {
+  targetId: string
+}): Promise<Customer> {
+  const admin = await createAdminClient()
+  const { data, error } = await admin
+    .from('profiles')
+    .update({
+      is_suspended: false,
+      suspended_at: null,
+      suspended_reason: null,
+    })
+    .eq('id', args.targetId)
+    .select(
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason',
+    )
+    .single()
+  if (error) wrapSupabaseError('unsuspendCustomer', error)
+  return data as Customer
 }

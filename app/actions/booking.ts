@@ -56,6 +56,18 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   } = await supabase.auth.getUser()
   if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
 
+  // Phase 36 — block suspended customers from booking. App-layer guard
+  // (per CLAUDE.md zenzero-rls-recursion-fix) because Supabase auth itself
+  // doesn't read profiles and inline EXISTS-on-profiles triggers 42P17.
+  const { data: customerProfile } = await supabase
+    .from('profiles')
+    .select('is_suspended')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (customerProfile?.is_suspended) {
+    return { error: 'บัญชีของคุณถูกระงับ กรุณาติดต่อเจ้าหน้าที่' }
+  }
+
   // Get room
   const { data: room, error: roomErr } = await supabase
     .from('room_types')

@@ -66,6 +66,9 @@ const NAV_BY_ROLE: Record<StaffRole, NavItem[]> = {
   ],
   admin: [
     { key: 'dashboard', href: '/admin', icon: 'dashboard' },
+    // Phase 36 — customer management (admin only). Other roles don't see
+    // this item because their NAV_BY_ROLE arrays are unchanged.
+    { key: 'customers', href: '/admin/customers', icon: 'group' },
     { key: 'promotions', href: '/admin/promotions', icon: 'sell' },
     { key: 'staff', href: '/admin/staff', icon: 'badge' },
     { key: 'rates', href: '/admin/rates', icon: 'bed' },

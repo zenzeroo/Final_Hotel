@@ -107,8 +107,9 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // 20260925 = Phase 32 hotfix — drop stale "public read room_types" policy from migration 20260819.
 // 20260926 = Phase X room_types i18n — short_desc_th / description_th / view_label_th nullable columns.
 // 20260927 = Phase 34.5 hotfix — fix RLS recursion in "profiles admin write" (inline EXISTS → has_role()).
+// 20260928 = Phase 36 customer suspension — is_suspended/suspended_at/suspended_reason columns + booking_events.booking_id nullable.
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27)_.*\.sql$/.test(f))
+  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 
