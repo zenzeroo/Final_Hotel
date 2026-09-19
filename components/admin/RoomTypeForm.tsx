@@ -10,6 +10,7 @@ import {
 } from '@/app/actions/admin/rates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { r2Url } from '@/lib/r2/publicUrl'
+import { roomTypeLabel } from '@/lib/format/roomType'
 
 interface RoomTypeFormProps {
   mode: 'create' | 'edit'
@@ -544,17 +545,27 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
       <RoomImagesSection initial={initial} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="จำนวนผู้เข้าพักสูงสุด" required>
-          <input
-            name="max_guests"
-            type="number"
-            min="1"
-            max="20"
-            step="1"
-            defaultValue={initial?.max_guests ?? 2}
+        {/* Tier dropdown — Deluxe / Suite / Villa.
+            Previously hardcoded to 'Deluxe' server-side; now user-selectable.
+            Labels use the existing `roomTypeLabel(type, locale)` helper for
+            bilingual display matching SeasonalRateForm's {rt.name} ({rt.name_th})
+            pattern at components/admin/SeasonalRateForm.tsx:112. */}
+        <Field label="ประเภทห้อง" required>
+          <select
+            name="type"
             required
+            defaultValue={initial?.type ?? ''}
             className={inputClass}
-          />
+          >
+            <option value="" disabled>
+              — เลือกประเภทห้อง —
+            </option>
+            {(['Deluxe', 'Suite', 'Villa'] as const).map((t) => (
+              <option key={t} value={t}>
+                {roomTypeLabel(t, 'th')} ({roomTypeLabel(t, 'en')})
+              </option>
+            ))}
+          </select>
         </Field>
 
         <Field label="ขนาดห้อง (ตร.ม.)" required>
@@ -569,6 +580,19 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
           />
         </Field>
       </div>
+
+      <Field label="จำนวนผู้เข้าพักสูงสุด" required>
+        <input
+          name="max_guests"
+          type="number"
+          min="1"
+          max="20"
+          step="1"
+          defaultValue={initial?.max_guests ?? 2}
+          required
+          className={inputClass}
+        />
+      </Field>
 
       <Field label="สถานะ">
         <label className="inline-flex items-center gap-2 mt-2">

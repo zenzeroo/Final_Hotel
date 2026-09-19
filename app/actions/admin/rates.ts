@@ -31,6 +31,7 @@ const roomTypeSchema = z.object({
   description_th: z.string().max(2000).nullable(),
   view_label: z.string().max(80).nullable(),
   view_label_th: z.string().max(80).nullable(),
+  type: z.enum(['Deluxe', 'Suite', 'Villa']),
   base_price: z.number().positive(),
   max_guests: z.number().int().min(1).max(20),
   size_sqm: z.number().positive(),
@@ -57,6 +58,7 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
     description_th: String(formData.get('description_th') ?? '').trim() || null,
     view_label: String(formData.get('view_label') ?? '').trim() || null,
     view_label_th: String(formData.get('view_label_th') ?? '').trim() || null,
+    type: String(formData.get('type') ?? '') as 'Deluxe' | 'Suite' | 'Villa',
     base_price: Number(formData.get('base_price') ?? 0),
     max_guests: Number(formData.get('max_guests') ?? 1),
     size_sqm: Number(formData.get('size_sqm') ?? 0),
@@ -100,7 +102,8 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
     ...parsed.data,
     bed_type: 'King' as const,
     floor: existing.length > 0 ? Math.max(...existing.map((r) => r.floor)) + 1 : 1,
-    type: 'Deluxe' as const,
+    // Phase X — `type` now comes from parsed.data (user-picked via dropdown).
+    // Previously hardcoded to 'Deluxe'; now admin can pick Deluxe/Suite/Villa.
     hero_image_key,
     gallery_keys,
     amenities: [] as string[],
