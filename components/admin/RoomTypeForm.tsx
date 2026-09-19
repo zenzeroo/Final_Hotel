@@ -511,7 +511,7 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
       <div className="flex items-center gap-3 pt-2">
         <SubmitButton label={mode === 'create' ? 'สร้างประเภทห้อง' : 'บันทึกการแก้ไข'} />
         <a
-          href="/admin/rates"
+          href="/admin/rates/room-types"
           className="inline-flex items-center justify-center px-6 py-3 bg-surface-container-low border border-outline-variant rounded-lg font-medium text-body-md hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
         >
           ยกเลิก

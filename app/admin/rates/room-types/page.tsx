@@ -1,6 +1,6 @@
+import Link from 'next/link'
 import { listRoomTypes } from '@/lib/data/rooms'
 import { Tabs } from '@/components/ui/Tabs'
-import { RoomTypeForm } from '@/components/admin/RoomTypeForm'
 import { RoomTypesAdminTable } from '@/components/admin/RoomTypesAdminTable'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
@@ -23,14 +23,23 @@ export default async function AdminRoomTypesPage() {
             ประเภทห้อง
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            จัดการประเภทห้องพักและราคาฐาน — สร้าง / แก้ไข / เปิด-ปิด
+            จัดการประเภทห้องพักและราคาฐาน — สร้าง / แก้ไข / เปิด-ปิด / ลบ
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
-          <MaterialIcon name="bed" size={18} className="text-on-surface-variant" />
-          <span className="text-body-md text-on-surface-variant">
-            {roomTypes.length} ประเภท
-          </span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link
+            href="/admin/rates/room-types/new"
+            className="inline-flex items-center gap-2 bg-primary text-on-primary rounded-lg px-4 py-2 hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+          >
+            <MaterialIcon name="add" size={18} />
+            สร้างประเภทห้องใหม่
+          </Link>
+          <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
+            <MaterialIcon name="bed" size={18} className="text-on-surface-variant" />
+            <span className="text-body-md text-on-surface-variant">
+              {roomTypes.length} ประเภท
+            </span>
+          </div>
         </div>
       </header>
 
@@ -60,13 +69,6 @@ export default async function AdminRoomTypesPage() {
             {roomTypes.length - activeRoomTypes}
           </p>
         </div>
-      </section>
-
-      <section className="mb-12">
-        <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          สร้างประเภทห้องใหม่
-        </h2>
-        <RoomTypeForm mode="create" />
       </section>
 
       <section>

@@ -276,6 +276,40 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
   return { ok: true }
 }
 
+/**
+ * Soft-delete (deactivate) a room type by setting `is_active = false`.
+ * Admin only. Reuses `updateRoomType` so no new data-layer function is
+ * required. Booking history is preserved (no FK cascade), and the
+ * action is reversible via the same endpoint with `is_active=true`.
+ */
+export async function setRoomTypeActiveAction(formData: FormData): Promise<ActionResult> {
+  await requireRole('admin', '/admin/rates')
+
+  const id = String(formData.get('id') ?? '').trim()
+  const isActiveRaw = String(formData.get('is_active') ?? '').trim()
+  if (!id) return { ok: false, error: 'Missing room type id' }
+  if (isActiveRaw !== 'true' && isActiveRaw !== 'false') {
+    return { ok: false, error: 'Invalid is_active value' }
+  }
+  const isActive = isActiveRaw === 'true'
+
+  try {
+    await updateRoomType({ id, patch: { is_active: isActive } })
+  } catch (e) {
+    return actionFail(
+      e,
+      isActive ? 'Could not activate room type' : 'Could not deactivate room type',
+    )
+  }
+
+  revalidatePath('/admin/rates/room-types')
+  revalidatePath(`/admin/rates/room-types/${id}/edit`)
+  revalidatePath('/admin/rates')
+  revalidatePath('/manager/rates')
+  revalidatePath('/rooms')
+  return { ok: true }
+}
+
 // =====================================================
 // Seasonal rate actions
 // =====================================================

@@ -1,10 +1,79 @@
+'use client'
+
 import Link from 'next/link'
+import { useState, useTransition } from 'react'
 import type { RoomType } from '@/lib/data/types'
 import { formatTHB } from '@/lib/pricing'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { setRoomTypeActiveAction } from '@/app/actions/admin/rates'
 
 interface RoomTypesAdminTableProps {
   roomTypes: RoomType[]
+}
+
+/**
+ * Soft-delete (deactivate) a room type via the admin table. Mirrors the
+ * inline `<DeleteButton>` pattern used in `PromotionsAdminTable.tsx`,
+ * but also supports reactivate (restore icon) because `room_types.is_active`
+ * is a first-class toggle. Soft delete preserves booking history — see
+ * `setRoomTypeActiveAction` for rationale.
+ */
+function DeleteRoomTypeButton({
+  id,
+  name,
+  isActive,
+}: {
+  id: string
+  name: string
+  isActive: boolean
+}) {
+  const [pending, startTransition] = useTransition()
+  const [confirm, setConfirm] = useState<{ nextIsActive: boolean } | null>(null)
+
+  async function handleConfirm() {
+    if (!confirm) return
+    const fd = new FormData()
+    fd.set('id', id)
+    fd.set('is_active', String(confirm.nextIsActive))
+    setConfirm(null)
+    startTransition(async () => {
+      await setRoomTypeActiveAction(fd)
+    })
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirm({ nextIsActive: !isActive })}
+        disabled={pending}
+        title={isActive ? `ลบ ${name}` : `เปิดใช้งาน ${name}`}
+        aria-label={isActive ? `ลบประเภทห้อง ${name}` : `เปิดใช้งานประเภทห้อง ${name}`}
+        className={`inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors disabled:opacity-60 ${
+          isActive
+            ? 'text-error hover:bg-error-container'
+            : 'text-secondary hover:bg-secondary-container'
+        }`}
+      >
+        <MaterialIcon name={isActive ? 'delete' : 'restore'} size={18} />
+      </button>
+      {confirm && (
+        <ConfirmModal
+          open
+          variant={confirm.nextIsActive ? 'default' : 'danger'}
+          okLabel={confirm.nextIsActive ? 'เปิดใช้งาน' : 'ลบ'}
+          body={
+            confirm.nextIsActive
+              ? `เปิดใช้งานประเภทห้อง "${name}" ใหม่อีกครั้ง?`
+              : `ลบประเภทห้อง "${name}"? ประเภทห้องนี้จะไม่ปรากฏในหน้าจองอีก แต่ประวัติการจองจะยังคงอยู่`
+          }
+          onCancel={() => setConfirm(null)}
+          onConfirm={handleConfirm}
+        />
+      )}
+    </>
+  )
 }
 
 export function RoomTypesAdminTable({ roomTypes }: RoomTypesAdminTableProps) {
@@ -65,13 +134,16 @@ export function RoomTypesAdminTable({ roomTypes }: RoomTypesAdminTableProps) {
                   )}
                 </td>
                 <td className="px-4 py-4 text-right">
-                  <Link
-                    href={`/admin/rates/room-types/${r.id}/edit`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body-md rounded-lg border border-outline-variant hover:bg-primary-fixed hover:text-primary transition-colors"
-                  >
-                    <MaterialIcon name="edit" size={16} />
-                    แก้ไข
-                  </Link>
+                  <div className="inline-flex items-center gap-2">
+                    <Link
+                      href={`/admin/rates/room-types/${r.id}/edit`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body-md rounded-lg border border-outline-variant hover:bg-primary-fixed hover:text-primary transition-colors"
+                    >
+                      <MaterialIcon name="edit" size={16} />
+                      แก้ไข
+                    </Link>
+                    <DeleteRoomTypeButton id={r.id} name={r.name} isActive={r.is_active} />
+                  </div>
                 </td>
               </tr>
             ))}
