@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { AvatarBadge } from '@/components/account/AvatarBadge'
 import { signOut } from '@/app/actions/auth'
 import { useT } from '@/lib/i18n/useT'
 import { roleHomePath } from '@/lib/supabase/roles'
@@ -12,12 +13,16 @@ interface StaffSidebarProps {
   role: StaffRole
   userName: string | null
   pathname: string
+  /** R2 object key for the current user's avatar — drives the profile link icon. */
+  avatarKey?: string | null
 }
 
 interface StaffSidebarNavProps {
   role: StaffRole
   userName: string | null
   pathname: string
+  /** R2 object key for the current user's avatar — drives the profile link icon. */
+  avatarKey?: string | null
   /** Optional callback fired when a nav item is clicked (used to close mobile overlay) */
   onNavigate?: () => void
 }
@@ -80,10 +85,15 @@ const ROLE_LABEL_KEY: Record<StaffRole, string> = {
  * Desktop sidebar — visible at md+ only. On mobile, the same content
  * is rendered inside `<StaffMobileHeader>`'s overlay via `<StaffSidebarNav>`.
  */
-export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
+export function StaffSidebar({ role, userName, pathname, avatarKey }: StaffSidebarProps) {
   return (
     <aside className="hidden md:flex w-72 shrink-0 self-start sticky top-0 z-30 bg-primary text-secondary h-screen flex-col">
-      <StaffSidebarNav role={role} userName={userName} pathname={pathname} />
+      <StaffSidebarNav
+        role={role}
+        userName={userName}
+        pathname={pathname}
+        avatarKey={avatarKey}
+      />
     </aside>
   )
 }
@@ -93,7 +103,13 @@ export function StaffSidebar({ role, userName, pathname }: StaffSidebarProps) {
  * mobile `<StaffMobileHeader>` overlay). Exported so the mobile header
  * can render the same nav links inside its `<MobileOverlay>`.
  */
-export function StaffSidebarNav({ role, userName, pathname, onNavigate }: StaffSidebarNavProps) {
+export function StaffSidebarNav({
+  role,
+  userName,
+  pathname,
+  avatarKey,
+  onNavigate,
+}: StaffSidebarNavProps) {
   const t = useT()
   const navItems = NAV_BY_ROLE[role] ?? []
 
@@ -187,7 +203,11 @@ export function StaffSidebarNav({ role, userName, pathname, onNavigate }: StaffS
           onClick={onNavigate}
           className="group flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 border-transparent text-secondary/80 hover:bg-primary-fixed hover:text-primary hover:translate-x-0.5 hover:border-l-secondary hover:shadow-[-2px_0_6px_-1px_rgba(254,215,152,0.3)] [--icon-fill:1] transition-all duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
         >
-          <MaterialIcon name="account_circle" size={20} />
+          <AvatarBadge
+            avatarKey={avatarKey ?? null}
+            fullName={userName ?? 'ผู้ใช้งาน'}
+            size={20}
+          />
           <span className="text-body-md">โปรไฟล์</span>
           <MaterialIcon
             name="chevron_right"

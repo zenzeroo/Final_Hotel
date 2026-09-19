@@ -16,9 +16,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      <StaffMobileHeader role="admin" userName={session.fullName} pathname={pathname} />
+      <StaffMobileHeader
+        role="admin"
+        userName={session.fullName}
+        pathname={pathname}
+        avatarKey={session.avatarKey}
+      />
       <div className="flex flex-1 min-h-screen">
-        <StaffSidebar role="admin" userName={session.fullName} pathname={pathname} />
+        <StaffSidebar
+          role="admin"
+          userName={session.fullName}
+          pathname={pathname}
+          avatarKey={session.avatarKey}
+        />
         <main className="flex-1 bg-background min-h-screen overflow-x-auto">{children}</main>
       </div>
     </div>
