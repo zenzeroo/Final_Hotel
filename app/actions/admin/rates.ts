@@ -26,7 +26,11 @@ const roomTypeSchema = z.object({
   name: z.string().min(1).max(120),
   name_th: z.string().max(120),
   short_desc: z.string().min(1).max(300),
+  short_desc_th: z.string().max(300).nullable(),
   description: z.string().min(1).max(2000),
+  description_th: z.string().max(2000).nullable(),
+  view_label: z.string().max(80).nullable(),
+  view_label_th: z.string().max(80).nullable(),
   base_price: z.number().positive(),
   max_guests: z.number().int().min(1).max(20),
   size_sqm: z.number().positive(),
@@ -48,7 +52,11 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
     name: String(formData.get('name') ?? '').trim(),
     name_th: String(formData.get('name_th') ?? '').trim(),
     short_desc: String(formData.get('short_desc') ?? '').trim(),
+    short_desc_th: String(formData.get('short_desc_th') ?? '').trim() || null,
     description: String(formData.get('description') ?? '').trim(),
+    description_th: String(formData.get('description_th') ?? '').trim() || null,
+    view_label: String(formData.get('view_label') ?? '').trim() || null,
+    view_label_th: String(formData.get('view_label_th') ?? '').trim() || null,
     base_price: Number(formData.get('base_price') ?? 0),
     max_guests: Number(formData.get('max_guests') ?? 1),
     size_sqm: Number(formData.get('size_sqm') ?? 0),
@@ -87,7 +95,7 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
     return actionFail(e, 'Image upload failed')
   }
 
-  const existing = await listRoomTypes()
+  const existing = await listRoomTypes({ isDeleted: false })
   const createArgs = {
     ...parsed.data,
     bed_type: 'King' as const,
@@ -98,6 +106,10 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
     amenities: [] as string[],
     rating_avg: 0,
     rating_count: 0,
+    // Phase 32 — newly-created rooms default to non-deleted (active or inactive
+    // per the form's `is_active` checkbox; the toggle is independent of
+    // soft-delete which is only applied later via the admin tabbed view).
+    deleted_at: null as string | null,
   }
 
   try {
@@ -136,7 +148,11 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
     name: String(formData.get('name') ?? '').trim(),
     name_th: String(formData.get('name_th') ?? '').trim(),
     short_desc: String(formData.get('short_desc') ?? '').trim(),
+    short_desc_th: String(formData.get('short_desc_th') ?? '').trim() || null,
     description: String(formData.get('description') ?? '').trim(),
+    description_th: String(formData.get('description_th') ?? '').trim() || null,
+    view_label: String(formData.get('view_label') ?? '').trim() || null,
+    view_label_th: String(formData.get('view_label_th') ?? '').trim() || null,
     base_price: Number(formData.get('base_price') ?? 0),
     max_guests: Number(formData.get('max_guests') ?? 1),
     size_sqm: Number(formData.get('size_sqm') ?? 0),
@@ -281,20 +297,36 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
  * Admin only. Reuses `updateRoomType` so no new data-layer function is
  * required. Booking history is preserved (no FK cascade), and the
  * action is reversible via the same endpoint with `is_active=true`.
+ *
+ * Phase 32 — now ALSO accepts an optional `deleted_at` ISO-timestamp field
+ * to support the three admin tabs. Leaving `deleted_at` untouched on the
+ * active/inactive transition, setting it to the supplied timestamp when
+ * the admin clicks "ลบ" on the inactive tab → moves the row to the deleted tab.
  */
 export async function setRoomTypeActiveAction(formData: FormData): Promise<ActionResult> {
   await requireRole('admin', '/admin/rates')
 
   const id = String(formData.get('id') ?? '').trim()
   const isActiveRaw = String(formData.get('is_active') ?? '').trim()
+  const deletedAtRaw = String(formData.get('deleted_at') ?? '').trim()
   if (!id) return { ok: false, error: 'Missing room type id' }
   if (isActiveRaw !== 'true' && isActiveRaw !== 'false') {
     return { ok: false, error: 'Invalid is_active value' }
   }
   const isActive = isActiveRaw === 'true'
 
+  const patch: { is_active: boolean; deleted_at?: string | null } = { is_active: isActive }
+  // deleted_at supplied as ISO string from the client → forward as-is.
+  // empty string = "leave it"; 'null' or absent = "don't touch".
+  if (deletedAtRaw === 'null' || deletedAtRaw === '') {
+    // explicitly cleared (used when reactivating from deleted)
+    patch.deleted_at = null
+  } else if (deletedAtRaw) {
+    patch.deleted_at = deletedAtRaw
+  }
+
   try {
-    await updateRoomType({ id, patch: { is_active: isActive } })
+    await updateRoomType({ id, patch })
   } catch (e) {
     return actionFail(
       e,
@@ -304,6 +336,98 @@ export async function setRoomTypeActiveAction(formData: FormData): Promise<Actio
 
   revalidatePath('/admin/rates/room-types')
   revalidatePath(`/admin/rates/room-types/${id}/edit`)
+  revalidatePath('/admin/rates')
+  revalidatePath('/manager/rates')
+  revalidatePath('/rooms')
+  return { ok: true }
+}
+
+/**
+ * Phase 32 — Restore a soft-deleted room type.
+ * Sets `deleted_at = NULL` and `is_active = true` so it moves to the
+ * active tab. Booking history is preserved (no FK side-effects).
+ * Admin only.
+ */
+export async function restoreRoomTypeAction(formData: FormData): Promise<ActionResult> {
+  await requireRole('admin', '/admin/rates')
+
+  const id = String(formData.get('id') ?? '').trim()
+  if (!id) return { ok: false, error: 'Missing room type id' }
+
+  try {
+    await updateRoomType({ id, patch: { deleted_at: null, is_active: true } })
+  } catch (e) {
+    return actionFail(e, 'Could not restore room type')
+  }
+
+  revalidatePath('/admin/rates/room-types')
+  revalidatePath(`/admin/rates/room-types/${id}/edit`)
+  revalidatePath('/admin/rates')
+  revalidatePath('/manager/rates')
+  revalidatePath('/rooms')
+  return { ok: true }
+}
+
+/**
+ * Phase 32 — Permanently delete a soft-deleted room type (hard DELETE).
+ * Admin only. Booking history blocks hard delete via `bookings.room_type_id`
+ * `ON DELETE RESTRICT` FK constraint (SQLSTATE 23503) — the user gets a
+ * clear error in that case. R2 image keys (hero + gallery) are cleaned
+ * best-effort AFTER successful DB delete.
+ *
+ * Safety: requires `requireRole('admin')` (not manager) — Phase 7 policy
+ * gives admin-only DELETE on this table.
+ */
+export async function permanentlyDeleteRoomTypeAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireRole('admin', '/admin/rates')
+
+  const id = String(formData.get('id') ?? '').trim()
+  if (!id) return { ok: false, error: 'Missing room type id' }
+
+  // Fetch hero + gallery keys FIRST (so we can clean R2 after a successful
+  // DB delete). The RLS-bypass happens here via session admin client —
+  // soft-deleted rows are hidden from public, but the admin write policy
+  // still allows SELECT.
+  const supabase = await createClient()
+  const { data: rt, error: rtErr } = await supabase
+    .from('room_types')
+    .select('hero_image_key, gallery_keys')
+    .eq('id', id)
+    .maybeSingle()
+  if (rtErr || !rt) {
+    return { ok: false, error: 'ไม่พบประเภทห้อง (อาจถูกลบไปแล้ว)' }
+  }
+  const heroKey = (rt.hero_image_key as string | null) ?? null
+  const galleryKeys = ((rt.gallery_keys ?? []) as string[]).filter(Boolean)
+
+  // Hard DELETE. Will fail with FK violation (23503) if bookings/room_units
+  // reference this room type — surface the cause back to the admin.
+  const { error: delErr } = await supabase.from('room_types').delete().eq('id', id)
+  if (delErr) {
+    if (delErr.code === '23503') {
+      return {
+        ok: false,
+        error:
+          'ไม่สามารถลบถาวรได้ — มีประวัติการจอง/ห้องพัก/รีวิวผูกอยู่กับประเภทห้องนี้',
+      }
+    }
+    return actionFail(delErr, 'Could not permanently delete room type')
+  }
+
+  // Best-effort R2 cleanup AFTER DB success. Failures are logged but never
+  // surfaced to the user (DB is source of truth; orphan R2 files are
+  // acceptable and can be GC'd periodically).
+  for (const key of [heroKey, ...galleryKeys].filter((k): k is string => !!k)) {
+    try {
+      await deleteObjectFromR2(key)
+    } catch (e) {
+      console.warn(`[permanentlyDeleteRoomTypeAction] R2 cleanup failed for ${key}:`, e)
+    }
+  }
+
+  revalidatePath('/admin/rates/room-types')
   revalidatePath('/admin/rates')
   revalidatePath('/manager/rates')
   revalidatePath('/rooms')

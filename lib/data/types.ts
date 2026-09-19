@@ -2,6 +2,8 @@
  * Data layer types — shared between mock and Supabase implementations.
  */
 
+import type { UserRole } from '@/lib/supabase/roles'
+
 export type BedType = 'King' | 'Queen' | 'Twin'
 export type RoomTypeName = 'Deluxe' | 'Suite' | 'Villa'
 
@@ -11,13 +13,19 @@ export interface RoomType {
   name: string
   name_th: string
   short_desc: string
+  /** Phase X — Thai short description. NULL = fallback to short_desc (EN). */
+  short_desc_th: string | null
   description: string
+  /** Phase X — Thai full description. NULL = fallback to description (EN). */
+  description_th: string | null
   base_price: number // THB per night
   max_guests: number
   size_sqm: number
   bed_type: BedType
   floor: number
-  view_label?: string
+  view_label: string | null
+  /** Phase X — Thai view label (e.g. "วิวสวน"). NULL = fallback to view_label (EN). */
+  view_label_th: string | null
   rating_avg: number
   rating_count: number
   hero_image_key: string
@@ -25,6 +33,13 @@ export interface RoomType {
   amenities: string[] // amenity slugs
   type: RoomTypeName
   is_active: boolean
+  /**
+   * Phase 32 soft-delete timestamp.
+   * - `null` + `is_active=true`  → ACTIVE (default, public-visible)
+   * - `null` + `is_active=false` → INACTIVE (ปิดชั่วคราว, hidden from public)
+   * - non-null                    → SOFT-DELETED (ถูกลบ, hidden from public + only visible in admin `?tab=deleted`)
+   */
+  deleted_at: string | null
 }
 
 export interface Amenity {
@@ -366,7 +381,17 @@ export interface RefundRequest {
 export interface AuditLogEntry {
   id: string
   timestamp: string
+  /**
+   * Decorated staff display string for legacy callers (e.g. AuditLogTable's
+   * mono-font rendering). Format: "full_name (role)" or "full_name" when no
+   * role is known, or "System" when the event has no actor.
+   * @deprecated Prefer `staffName` + `staffRole` separately in new code.
+   */
   staffId: string
+  /** Actor's `profiles.full_name` from the booking_events join, or null for system events. */
+  staffName: string | null
+  /** Actor's `profiles.role` (user_role enum), or null when no actor / unknown. */
+  staffRole: UserRole | null
   action: string
   actionBadgeClass: string
   targetCode: string

@@ -418,53 +418,128 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
         </Field>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="ชื่อห้อง (EN)" required>
+      {/* ============================================================
+          Phase X — bilingual content (grouped sections).
+          English fields are required; Thai fields are optional and
+          fall back to the EN version on public pages when omitted.
+          ============================================================ */}
+
+      {/* English section (required) */}
+      <section className="flex flex-col gap-4">
+        <header className="flex items-center gap-2 pb-2 border-b border-outline-variant">
+          <span className="text-body-lg" aria-hidden>
+            🌐
+          </span>
+          <h3 className="font-headline-sm text-headline-sm text-primary">
+            English (required)
+          </h3>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Room name" required>
+            <input
+              name="name"
+              type="text"
+              defaultValue={initial?.name ?? ''}
+              placeholder="Deluxe Garden View"
+              required
+              maxLength={120}
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="View label (optional)">
+            <input
+              name="view_label"
+              type="text"
+              defaultValue={initial?.view_label ?? ''}
+              placeholder="Garden View"
+              maxLength={80}
+              className={inputClass}
+            />
+          </Field>
+        </div>
+
+        <Field label="Short description" required>
           <input
-            name="name"
+            name="short_desc"
             type="text"
-            defaultValue={initial?.name ?? ''}
-            placeholder="Deluxe Garden View"
+            defaultValue={initial?.short_desc ?? ''}
             required
-            maxLength={120}
+            maxLength={300}
             className={inputClass}
           />
         </Field>
 
-        <Field label="ชื่อห้อง (TH)" required>
-          <input
-            name="name_th"
-            type="text"
-            defaultValue={initial?.name_th ?? ''}
-            placeholder="ห้องดีลักซ์วิวสวน"
+        <Field label="Full description" required>
+          <textarea
+            name="description"
+            defaultValue={initial?.description ?? ''}
             required
-            maxLength={120}
+            maxLength={2000}
+            rows={3}
             className={inputClass}
           />
         </Field>
-      </div>
+      </section>
 
-      <Field label="คำอธิบายสั้น" required>
-        <input
-          name="short_desc"
-          type="text"
-          defaultValue={initial?.short_desc ?? ''}
-          required
-          maxLength={300}
-          className={inputClass}
-        />
-      </Field>
+      {/* Thai section (optional) */}
+      <section className="flex flex-col gap-4">
+        <header className="flex items-center gap-2 pb-2 border-b border-outline-variant">
+          <span className="text-body-lg" aria-hidden>
+            🌐
+          </span>
+          <h3 className="font-headline-sm text-headline-sm text-primary">
+            ภาษาไทย (ไม่บังคับ — เว้นว่างไว้ = ใช้ภาษาอังกฤษ)
+          </h3>
+        </header>
 
-      <Field label="คำอธิบายเต็ม" required>
-        <textarea
-          name="description"
-          defaultValue={initial?.description ?? ''}
-          required
-          maxLength={2000}
-          rows={3}
-          className={inputClass}
-        />
-      </Field>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="ชื่อห้อง">
+            <input
+              name="name_th"
+              type="text"
+              defaultValue={initial?.name_th ?? ''}
+              placeholder="ห้องดีลักซ์วิวสวน"
+              maxLength={120}
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="ป้ายวิว (ไม่บังคับ)">
+            <input
+              name="view_label_th"
+              type="text"
+              defaultValue={initial?.view_label_th ?? ''}
+              placeholder="วิวสวน"
+              maxLength={80}
+              className={inputClass}
+            />
+          </Field>
+        </div>
+
+        <Field label="คำอธิบายสั้น">
+          <input
+            name="short_desc_th"
+            type="text"
+            defaultValue={initial?.short_desc_th ?? ''}
+            placeholder="เว้นว่างไว้ = ใช้ภาษาอังกฤษ"
+            maxLength={300}
+            className={inputClass}
+          />
+        </Field>
+
+        <Field label="คำอธิบายเต็ม">
+          <textarea
+            name="description_th"
+            defaultValue={initial?.description_th ?? ''}
+            placeholder="เว้นว่างไว้ = ใช้ภาษาอังกฤษ"
+            maxLength={2000}
+            rows={3}
+            className={inputClass}
+          />
+        </Field>
+      </section>
 
       <RoomImagesSection initial={initial} />
 

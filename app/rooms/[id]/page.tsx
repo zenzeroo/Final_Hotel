@@ -54,7 +54,10 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
               {/* Title block */}
               <div>
                 <div className="flex items-start justify-between gap-4 mb-3">
-                  <h1 className="font-display text-3xl md:text-4xl text-primary">{room.name}</h1>
+                  <h1 className="font-display text-3xl md:text-4xl text-primary">
+                    {/* Phase X — locale-aware title (TH when available + locale=th) */}
+                    {locale === 'th' && room.name_th ? room.name_th : room.name}
+                  </h1>
                   <RatingStars value={room.rating_avg} count={room.rating_count} size={20} />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-body-md text-on-surface-variant">
@@ -79,7 +82,9 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
                   {room.view_label && (
                     <span className="inline-flex items-center gap-2">
                       <MaterialIcon name="landscape" size={18} />
-                      {t('roomDetail.view')}: {room.view_label}
+                      {t('roomDetail.view')}:{' '}
+                      {/* Phase X — locale-aware view label (TH when available + locale=th) */}
+                      {locale === 'th' && room.view_label_th ? room.view_label_th : room.view_label}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-2">
@@ -98,7 +103,10 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
               {/* Description */}
               <section>
                 <h2 className="font-display text-2xl text-primary mb-4">{t('roomDetail.description')}</h2>
-                <p className="text-body-lg text-on-surface leading-relaxed">{room.description}</p>
+                <p className="text-body-lg text-on-surface leading-relaxed">
+                  {/* Phase X — locale-aware description (TH when available + locale=th) */}
+                  {locale === 'th' && room.description_th ? room.description_th : room.description}
+                </p>
               </section>
 
               {/* Reviews */}
@@ -132,11 +140,18 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
 
 export async function generateMetadata(props: PageProps<'/rooms/[id]'>) {
   const { id } = await props.params
-  const t = getT(await getLocale())
+  const locale = await getLocale()
+  const t = getT(locale)
   const room = await getRoomBySlug(id)
   if (!room) return { title: `${t('roomDetail.roomNotFound')} | Zenzero Hotel` }
   return {
-    title: `${room.name} | Zenzero Hotel`,
-    description: room.short_desc,
+    // Phase X — locale-aware title (TH when available + locale=th)
+    title:
+      locale === 'th' && room.name_th
+        ? `${room.name_th} | Zenzero Hotel`
+        : `${room.name} | Zenzero Hotel`,
+    description:
+      // Phase X — locale-aware SEO meta (TH when available + locale=th)
+      locale === 'th' && room.short_desc_th ? room.short_desc_th : room.short_desc,
   }
 }
