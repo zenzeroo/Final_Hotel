@@ -8,7 +8,6 @@ import { StaffSidebarNav, type StaffRole } from './StaffSidebar'
 interface StaffMobileHeaderProps {
   role: StaffRole
   userName: string | null
-  pathname: string
   /** R2 object key for the current user's avatar — drives the profile link icon. */
   avatarKey?: string | null
 }
@@ -23,7 +22,7 @@ interface StaffMobileHeaderProps {
  *
  * Hidden on md+ (the desktop `<StaffSidebar>` takes over).
  */
-export function StaffMobileHeader({ role, userName, pathname, avatarKey }: StaffMobileHeaderProps) {
+export function StaffMobileHeader({ role, userName, avatarKey }: StaffMobileHeaderProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -63,7 +62,6 @@ export function StaffMobileHeader({ role, userName, pathname, avatarKey }: Staff
           <StaffSidebarNav
             role={role}
             userName={userName}
-            pathname={pathname}
             avatarKey={avatarKey}
             onNavigate={() => setOpen(false)}
           />

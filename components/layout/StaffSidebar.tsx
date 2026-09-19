@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { AvatarBadge } from '@/components/account/AvatarBadge'
 import { signOut } from '@/app/actions/auth'
@@ -12,7 +13,6 @@ export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'
 interface StaffSidebarProps {
   role: StaffRole
   userName: string | null
-  pathname: string
   /** R2 object key for the current user's avatar — drives the profile link icon. */
   avatarKey?: string | null
 }
@@ -20,7 +20,6 @@ interface StaffSidebarProps {
 interface StaffSidebarNavProps {
   role: StaffRole
   userName: string | null
-  pathname: string
   /** R2 object key for the current user's avatar — drives the profile link icon. */
   avatarKey?: string | null
   /** Optional callback fired when a nav item is clicked (used to close mobile overlay) */
@@ -85,13 +84,12 @@ const ROLE_LABEL_KEY: Record<StaffRole, string> = {
  * Desktop sidebar — visible at md+ only. On mobile, the same content
  * is rendered inside `<StaffMobileHeader>`'s overlay via `<StaffSidebarNav>`.
  */
-export function StaffSidebar({ role, userName, pathname, avatarKey }: StaffSidebarProps) {
+export function StaffSidebar({ role, userName, avatarKey }: StaffSidebarProps) {
   return (
     <aside className="hidden md:flex w-72 shrink-0 self-start sticky top-0 z-30 bg-primary text-secondary h-screen flex-col">
       <StaffSidebarNav
         role={role}
         userName={userName}
-        pathname={pathname}
         avatarKey={avatarKey}
       />
     </aside>
@@ -106,10 +104,10 @@ export function StaffSidebar({ role, userName, pathname, avatarKey }: StaffSideb
 export function StaffSidebarNav({
   role,
   userName,
-  pathname,
   avatarKey,
   onNavigate,
 }: StaffSidebarNavProps) {
+  const pathname = usePathname()
   const t = useT()
   const navItems = NAV_BY_ROLE[role] ?? []
 
