@@ -31,7 +31,14 @@ export function AuditLogTable({ entries }: AuditLogTableProps) {
             {entries.map((e) => (
               <tr key={e.id} className="border-b border-outline-variant last:border-b-0">
                 <td className="py-3 pr-4 text-on-surface-variant whitespace-nowrap">{e.timestamp}</td>
-                <td className="py-3 pr-4 text-on-surface font-mono text-caption">{e.staffId}</td>
+                <td className="py-3 pr-4 text-on-surface">
+                  {e.staffName ?? 'System'}
+                  {e.staffRole && (
+                    <span className="text-caption text-on-surface-variant ml-1">
+                      ({e.staffRole})
+                    </span>
+                  )}
+                </td>
                 <td className="py-3 pr-4">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-caption ${e.actionBadgeClass}`}>
                     {e.action}

@@ -25,6 +25,7 @@ export async function getFeaturedRooms(): Promise<RoomType[]> {
     .from('room_types')
     .select('*')
     .eq('is_active', true)
+    .is('deleted_at', null)
     .order('rating_avg', { ascending: false })
     .limit(4)
 
@@ -39,6 +40,7 @@ export async function getRoomBySlug(slug: string): Promise<RoomType | null> {
     .select('*')
     .eq('slug', slug)
     .eq('is_active', true)
+    .is('deleted_at', null)
     .maybeSingle()
 
   if (error) wrapSupabaseError('', error)
@@ -51,6 +53,7 @@ export async function searchRooms(filters: SearchFilters): Promise<SearchResult>
     .from('room_types')
     .select('*', { count: 'exact' })
     .eq('is_active', true)
+    .is('deleted_at', null)
 
   if (filters.type && filters.type !== 'all') {
     query = query.eq('type', filters.type)
@@ -142,12 +145,35 @@ async function filterByAvailability(
   })
 }
 
-export async function listRoomTypes(): Promise<RoomType[]> {
+/**
+ * Phase 32 — optional filter for the admin tabbed view at
+ * `/admin/rates/room-types?tab=active|inactive|deleted`.
+ *
+ *   tab=active   → { isActive: true,  isDeleted: false }  (default landing)
+ *   tab=inactive → { isActive: false, isDeleted: false }
+ *   tab=deleted  → { isDeleted: true }                   (isActive irrelevant once deleted)
+ *
+ * All fields undefined = every row (admin all-rooms view, used by the
+ * canonical seed / migration check + future bulk-edit screens).
+ *
+ * Public-facing callers (getRoomTypes, getFloors, getFeaturedRooms,
+ * getRoomBySlug, searchRooms) all hard-code `isDeleted: false` to keep
+ * soft-deleted rows invisible — defense-in-depth on top of the tightened
+ * public RLS policy in migration `20260924_room_types_soft_delete.sql`.
+ */
+export interface ListRoomTypesFilter {
+  isActive?: boolean | null
+  isDeleted?: boolean | null
+}
+
+export async function listRoomTypes(filter?: ListRoomTypesFilter): Promise<RoomType[]> {
   const supabase = await getClient()
-  const { data, error } = await supabase
-    .from('room_types')
-    .select('*')
-    .order('base_price', { ascending: true })
+  let q = supabase.from('room_types').select('*').order('base_price', { ascending: true })
+  if (filter?.isActive === true) q = q.eq('is_active', true)
+  if (filter?.isActive === false) q = q.eq('is_active', false)
+  if (filter?.isDeleted === true) q = q.not('deleted_at', 'is', null)
+  if (filter?.isDeleted === false) q = q.is('deleted_at', null)
+  const { data, error } = await q
   if (error) wrapSupabaseError('', error)
   return (data ?? []) as RoomType[]
 }
@@ -167,7 +193,7 @@ export async function createRoomType(args: Omit<RoomType, 'id'>): Promise<RoomTy
   const supabase = await getClient()
   const { data, error } = await supabase
     .from('room_types')
-    .insert(args)
+    .insert({ ...args, deleted_at: args.deleted_at ?? null })
     .select()
     .single()
   if (error) wrapSupabaseError('', error)
@@ -190,8 +216,8 @@ export async function updateRoomType(args: {
 }
 
 /**
- * Distinct active room types (`type` column) for filter dropdowns.
- * `rooms.ts` previously fell through to mock here.
+ * Distinct active + non-deleted room types (`type` column) for filter dropdowns.
+ * Phase 32 — added `deleted_at IS NULL` guard.
  */
 export async function getRoomTypes(): Promise<RoomType['type'][]> {
   const supabase = await getClient()
@@ -199,13 +225,14 @@ export async function getRoomTypes(): Promise<RoomType['type'][]> {
     .from('room_types')
     .select('type')
     .eq('is_active', true)
+    .is('deleted_at', null)
   if (error) wrapSupabaseError('', error)
   return [...new Set((data ?? []).map((r) => r.type))]
 }
 
 /**
- * Distinct active floors for filter dropdowns.
- * `rooms.ts` previously fell through to mock here.
+ * Distinct active + non-deleted floors for filter dropdowns.
+ * Phase 32 — added `deleted_at IS NULL` guard.
  */
 export async function getFloors(): Promise<number[]> {
   const supabase = await getClient()
@@ -213,6 +240,7 @@ export async function getFloors(): Promise<number[]> {
     .from('room_types')
     .select('floor')
     .eq('is_active', true)
+    .is('deleted_at', null)
   if (error) wrapSupabaseError('', error)
   return [...new Set((data ?? []).map((r) => r.floor))].sort((a, b) => a - b)
 }

@@ -858,8 +858,18 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
   const auditLog: AuditLogEntry[] = (auditRows ?? []).map((row) => {
     const actor = Array.isArray(row.actor) ? row.actor[0] : row.actor
     const booking = Array.isArray(row.booking) ? row.booking[0] : row.booking
-    const role = actor?.role ?? 'system'
-    const staffId = actor?.full_name ?? 'system'
+    const fullName = actor?.full_name ?? null
+    const role = (actor?.role ?? null) as AuditLogEntry['staffRole']
+    // Back-compat decorated string (legacy font-mono callers). New code
+    // should prefer staffName + staffRole separately. Previously this
+    // returned "MGR-USER" / "MGR-SYSTEM" for non-manager/admin roles
+    // because the old logic hard-coded a fallback that swallowed the
+    // real actor name. Always show the real name when available.
+    const staffId = fullName
+      ? role
+        ? `${fullName} (${role})`
+        : fullName
+      : 'System'
     const eventType = row.event_type
     const badgeMap: Record<string, string> = {
       special_edit: 'bg-secondary-container text-on-secondary-container',
@@ -899,7 +909,9 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
       // a simple ISO date for the live layer. UI already accepts arbitrary
       // string here.
       timestamp: row.created_at,
-      staffId: role === 'manager' || role === 'admin' ? staffId : `MGR-${role.toUpperCase()}`,
+      staffId,
+      staffName: fullName,
+      staffRole: role,
       action: actionLabel[eventType] ?? eventType,
       actionBadgeClass: badgeMap[eventType] ?? 'bg-surface-variant text-on-surface-variant',
       targetCode: booking?.booking_code ?? '—',

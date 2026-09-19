@@ -1,19 +1,75 @@
 import Link from 'next/link'
 import { listRoomTypes } from '@/lib/data/rooms'
-import { Tabs } from '@/components/ui/Tabs'
+import { Tabs, type TabItem } from '@/components/ui/Tabs'
 import { RoomTypesAdminTable } from '@/components/admin/RoomTypesAdminTable'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 export const dynamic = 'force-dynamic'
 
-const TABS = [
-  { key: 'room-types', label: 'ประเภทห้อง', href: '/admin/rates/room-types', icon: 'bed' },
-] as const
+type Tab = 'active' | 'inactive' | 'deleted'
 
-export default async function AdminRoomTypesPage() {
-  const roomTypes = await listRoomTypes()
+const TAB_KEYS: readonly Tab[] = ['active', 'inactive', 'deleted']
 
-  const activeRoomTypes = roomTypes.filter((r) => r.is_active).length
+export default async function AdminRoomTypesPage(props: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab: rawTab } = await props.searchParams
+  const tab: Tab = (TAB_KEYS as readonly string[]).includes(rawTab ?? '')
+    ? (rawTab as Tab)
+    : 'active'
+
+  // Parallel fetch all 3 lists — used both for the body table (the matching
+  // list) AND the 3 tab badge counts. Cheap because each is a tiny filtered
+  // count(*) query against an indexed column.
+  const [activeList, inactiveList, deletedList] = await Promise.all([
+    listRoomTypes({ isActive: true, isDeleted: false }),
+    listRoomTypes({ isActive: false, isDeleted: false }),
+    listRoomTypes({ isDeleted: true }),
+  ])
+
+  const roomTypes =
+    tab === 'active' ? activeList : tab === 'inactive' ? inactiveList : deletedList
+
+  const TABS: TabItem<Tab>[] = [
+    {
+      key: 'active',
+      label: 'เปิดใช้งาน',
+      href: '/admin/rates/room-types?tab=active',
+      icon: 'check_circle',
+      badge: activeList.length,
+      badgeTone: 'primary',
+    },
+    {
+      key: 'inactive',
+      label: 'ปิดชั่วคราว',
+      href: '/admin/rates/room-types?tab=inactive',
+      icon: 'block',
+      badge: inactiveList.length,
+      badgeTone: 'default',
+    },
+    {
+      key: 'deleted',
+      label: 'ถูกลบ',
+      href: '/admin/rates/room-types?tab=deleted',
+      icon: 'delete',
+      badge: deletedList.length,
+      badgeTone: 'error',
+    },
+  ]
+
+  const HEADER_SUBTITLE: Record<Tab, string> = {
+    active: 'จัดการประเภทห้องที่เปิดให้จอง — แก้ไข / ปิดชั่วคราว / ลบ',
+    inactive: 'ประเภทห้องที่ปิดการจองชั่วคราว — เปิดใช้งานกลับ / ย้ายไปถูกลบ',
+    deleted: 'ประวัติประเภทห้องที่ถูกลบ — กู้คืน / ลบถาวร',
+  }
+
+  const SECTION_TITLE: Record<Tab, string> = {
+    active: 'ประเภทห้องที่เปิดใช้งาน',
+    inactive: 'ประเภทห้องที่ปิดชั่วคราว',
+    deleted: 'ประวัติประเภทห้องที่ถูกลบ',
+  }
+
+  const totalAll = activeList.length + inactiveList.length + deletedList.length
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
@@ -23,7 +79,7 @@ export default async function AdminRoomTypesPage() {
             ประเภทห้อง
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            จัดการประเภทห้องพักและราคาฐาน — สร้าง / แก้ไข / เปิด-ปิด / ลบ
+            {HEADER_SUBTITLE[tab]}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -37,45 +93,19 @@ export default async function AdminRoomTypesPage() {
           <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
             <MaterialIcon name="bed" size={18} className="text-on-surface-variant" />
             <span className="text-body-md text-on-surface-variant">
-              {roomTypes.length} ประเภท
+              {totalAll} ประเภท
             </span>
           </div>
         </div>
       </header>
 
-      <Tabs<'room-types'>
-        active="room-types"
-        tabs={[...TABS]}
-      />
-
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
-          <p className="text-label-md uppercase tracking-wider text-on-surface-variant mb-2">
-            ประเภทห้องทั้งหมด
-          </p>
-          <p className="font-display-lg text-display-lg-mobile text-primary">{roomTypes.length}</p>
-        </div>
-        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
-          <p className="text-label-md uppercase tracking-wider text-on-surface-variant mb-2">
-            เปิดให้จอง
-          </p>
-          <p className="font-display-lg text-display-lg-mobile text-secondary">{activeRoomTypes}</p>
-        </div>
-        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
-          <p className="text-label-md uppercase tracking-wider text-on-surface-variant mb-2">
-            ปิดให้จอง
-          </p>
-          <p className="font-display-lg text-display-lg-mobile text-error">
-            {roomTypes.length - activeRoomTypes}
-          </p>
-        </div>
-      </section>
+      <Tabs<Tab> active={tab} tabs={TABS} />
 
       <section>
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          ประเภทห้องทั้งหมด
+          {SECTION_TITLE[tab]}
         </h2>
-        <RoomTypesAdminTable roomTypes={roomTypes} />
+        <RoomTypesAdminTable roomTypes={roomTypes} tab={tab} />
       </section>
     </div>
   )

@@ -2,11 +2,9 @@ import { getSession } from '@/lib/supabase/getSession'
 import {
   getManagerDashboardStats,
   getBookingsOversight,
-  listRoomUnits,
   listStaff,
 } from '@/lib/data/manager'
 import { KpiCard } from '@/components/manager/KpiCard'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
@@ -23,22 +21,49 @@ function today(localeBcp: string) {
   })
 }
 
+/**
+ * Format an ISO timestamp using the same calendar + verbosity as the
+ * page header so dates in the Recent Activity table are visually
+ * consistent with the header subtitle. Both use `calendar: 'gregory'`
+ * to force the Gregorian year (avoiding the Buddhist-Era default
+ * that `th-TH` would otherwise produce — which previously rendered
+ * as "8/9/69" for the audit log).
+ */
+function formatTimestamp(iso: string, localeBcp: string): string {
+  return new Date(iso).toLocaleString(localeBcp, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    calendar: 'gregory',
+  })
+}
+
 export default async function AdminDashboard() {
   const locale = await getLocale()
   const t = getT(locale)
   const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
   const session = await getSession()
-  const [stats, bookingsOversight, units, staff] = await Promise.all([
+  const [stats, bookingsOversight, staff] = await Promise.all([
     getManagerDashboardStats(),
     getBookingsOversight(),
-    listRoomUnits(),
     listStaff(),
   ])
 
   const name = session?.fullName ?? 'Admin'
-  const totalRooms = units.length
-  const occupied = units.filter((u) => u.status === 'occupied').length
-  const occupancyPct = totalRooms > 0 ? Math.round((occupied / totalRooms) * 100) : 0
+  // Canonical occupancy source of truth = `getManagerDashboardStats`
+  // (lib/data/supabase-manager.ts:159-164). It counts bookings WHERE
+  // check_in <= today AND check_out > today AND status IN (confirmed, checked_in)
+  // — i.e. guests currently in-house.
+  //
+  // We deliberately do NOT derive occupancy from `room_units.status='occupied'`
+  // because that column is only updated on manual reception check-in (via the
+  // check-in server action + DB trigger), not on web bookings. Many in-house
+  // guests still have `room_units.status='available'` until reception clicks
+  // check-in, so the room-units-based count under-reports real occupancy.
+  const occupancyPct = stats.occupancyRatePct
   const activeStaff = staff.filter((s) => s.is_active).length
   const pendingRefunds = bookingsOversight.refundRequests.length
   const recentActivity = bookingsOversight.auditLog.slice(0, 8)
@@ -53,10 +78,6 @@ export default async function AdminDashboard() {
           <p className="text-body-lg text-on-surface-variant mt-2">
             {t('nav.greeting')} {name} · {t('admin.title')} · {today(localeBcp)}
           </p>
-        </div>
-        <div className="inline-flex items-center gap-2 text-body-md text-on-surface-variant bg-surface-container-low rounded-full px-4 py-2">
-          <MaterialIcon name="shield_person" size={18} />
-          {t('admin.title')}
         </div>
       </header>
 
@@ -76,9 +97,6 @@ export default async function AdminDashboard() {
             >
               <div className="absolute inset-1 rounded-full bg-surface-container-lowest" />
             </div>
-          </div>
-          <div className="text-caption text-on-surface-variant mt-2">
-            {occupied} / {totalRooms} {t('manager.bookingsPage.title')}
           </div>
         </KpiCard>
 
@@ -151,13 +169,15 @@ export default async function AdminDashboard() {
                     className="border-b border-outline-variant last:border-b-0"
                   >
                     <td className="px-4 py-3 text-body-md text-on-surface">
-                      {new Date(entry.timestamp).toLocaleString(localeBcp, {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })}
+                      {formatTimestamp(entry.timestamp, localeBcp)}
                     </td>
                     <td className="px-4 py-3 text-body-md text-on-surface-variant">
-                      {entry.staffId}
+                      {entry.staffName ?? 'System'}
+                      {entry.staffRole && (
+                        <span className="text-caption text-on-surface-variant ml-1">
+                          ({entry.staffRole})
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-body-md text-on-surface">
                       {entry.action}

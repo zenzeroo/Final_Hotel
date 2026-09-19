@@ -20,7 +20,7 @@ export default async function NewPromotionPage({
 }) {
   const [{ tab: rawTab }, roomTypes, roomTypeNames] = await Promise.all([
     searchParams,
-    listRoomTypes(),
+    listRoomTypes({ isDeleted: false }),
     getRoomTypes(),
   ])
   const tab: NewTabKey = rawTab === 'dates' ? 'dates' : 'code'

@@ -222,7 +222,7 @@ node scripts/run-migrations.mjs --dry-run
 ```
 
 **Migration filter ปัจจุบัน** (`scripts/run-migrations.mjs:73`):
-`/202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12)_.*\.sql$/` — migrations 18–26 และ 28 apply ผ่าน
+`/202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25)_.*\.sql$/` — migrations 18–26 และ 28 apply ผ่าน
 Supabase Dashboard SQL editor ไปแล้ว
 
 **หลัง apply migration ใหม่**: copy file ไปที่ `Y:\Final\db-schemas\` (local archive)
