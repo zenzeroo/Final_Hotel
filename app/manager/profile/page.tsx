@@ -22,6 +22,7 @@ export default async function ManagerProfilePage() {
       </header>
       <AccountProfileContent
         profile={profile}
+        role="manager"
         showDangerZone={false}
         quickLinks={[
           { href: '/manager', icon: 'dashboard', label: 'แดชบอร์ด' },

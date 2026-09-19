@@ -1,4 +1,5 @@
 import type { AccountProfile } from '@/lib/data/types'
+import type { UserRole } from '@/lib/supabase/roles'
 import { ProfileCard } from './ProfileCard'
 import { AccountQuickLinks, type QuickLink } from './AccountQuickLinks'
 import { PersonalInfoForm } from './PersonalInfoForm'
@@ -7,6 +8,12 @@ import { DeactivateAccountSection } from './DeactivateAccountSection'
 
 export interface AccountProfileContentProps {
   profile: AccountProfile
+  /**
+   * Current viewer's role. Defaults to `'user'` for back-compat with
+   * existing callers (User profile page doesn't pass role → editable).
+   * Staff pages pass their role so PersonalInfoForm locks name + birthdate.
+   */
+  role?: UserRole | 'user'
   /**
    * Show the "ลบบัญชี" danger zone (User only — staff can't self-deactivate;
    * admin controls `is_active` via /admin/staff).
@@ -30,6 +37,7 @@ export interface AccountProfileContentProps {
  */
 export function AccountProfileContent({
   profile,
+  role = 'user',
   showDangerZone = false,
   quickLinks = [],
 }: AccountProfileContentProps) {
@@ -43,7 +51,7 @@ export function AccountProfileContent({
 
       {/* Right column */}
       <div className="lg:col-span-2 flex flex-col gap-gutter">
-        <PersonalInfoForm profile={profile} />
+        <PersonalInfoForm profile={profile} role={role} />
         <ChangePasswordForm />
         {showDangerZone && (
           <DeactivateAccountSection fullName={profile.full_name} />

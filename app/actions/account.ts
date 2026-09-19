@@ -21,13 +21,12 @@ export type AccountActionResult<T = void> =
 // updateProfileAction
 // ---------------------------------------------------------------------------
 
-const updateProfileSchema = z.object({
-  fullName: z.string().trim().min(1, 'กรุณากรอกชื่อ-นามสกุล').max(120),
-  // Phone is required at the DB layer (NOT NULL + regex CHECK via migration
-  // 20260913_require_phone.sql), but we allow empty here so staff with
-  // placeholder/missing data can still save name + birthdate. DB will
-  // surface the NOT NULL violation if the row truly has no valid phone —
-  // `actionFail` catches it and renders a clear error.
+// Phone is required at the DB layer (NOT NULL + regex CHECK via migration
+// 20260913_require_phone.sql), but we allow empty here so staff with
+// placeholder/missing data can still save phone. DB will surface the
+// NOT NULL violation if the row truly has no valid phone — `actionFail`
+// catches it and renders a clear error.
+const basePhoneSchema = z.object({
   phone: z
     .string()
     .trim()
@@ -35,6 +34,11 @@ const updateProfileSchema = z.object({
       /^(|0{10}|[0-9]{10})$/,
       'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก หรือเว้นว่างไว้เพื่อขอความช่วยเหลือ',
     ),
+})
+
+// User (customer) retains full edit on name + birthdate.
+const userFullSchema = basePhoneSchema.extend({
+  fullName: z.string().trim().min(1, 'กรุณากรอกชื่อ-นามสกุล').max(120),
   birthdate: z
     .string()
     .trim()
@@ -51,26 +55,50 @@ export async function updateProfileAction(
   // Accept any authenticated user; the data layer enforces owner-only
   // access via RLS (profiles.id = auth.uid()). Profile pages gate the
   // role match via `app/[role]/layout.tsx` redirects.
-  await requireRole(
+  const session = await requireRole(
     ['user', 'reception', 'housekeeper', 'manager', 'admin'],
     '/account/profile',
   )
 
-  const parsed = updateProfileSchema.safeParse({
-    fullName: String(formData.get('fullName') ?? ''),
+  // Staff (reception/housekeeper/manager/admin) can only edit phone.
+  // full_name + birthdate are verified personal data locked in the UI
+  // and stripped from the schema. Admin can change them via
+  // /admin/staff/[id]/edit instead.
+  const isStaff = session.role !== 'user'
+  const schema = isStaff ? basePhoneSchema : userFullSchema
+
+  const rawCandidate = {
     phone: String(formData.get('phone') ?? ''),
-    birthdate: String(formData.get('birthdate') ?? ''),
-  })
+    ...(isStaff
+      ? {}
+      : {
+          fullName: String(formData.get('fullName') ?? ''),
+          birthdate: String(formData.get('birthdate') ?? ''),
+        }),
+  }
+  const parsed = schema.safeParse(rawCandidate)
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' }
   }
 
   try {
-    await updateOwnProfile({
-      fullName: parsed.data.fullName,
-      phone: parsed.data.phone,
-      birthdate: parsed.data.birthdate === '' ? null : parsed.data.birthdate,
-    })
+    // Build the update payload from the parsed (schema-stripped) shape.
+    // For staff: only phone. For User: phone + full_name + birthdate.
+    if (isStaff) {
+      await updateOwnProfile({ phone: parsed.data.phone })
+    } else {
+      // After the schema branch, parsed.data is userFullSchema's shape.
+      const { phone, fullName, birthdate } = parsed.data as {
+        phone: string
+        fullName: string
+        birthdate: string
+      }
+      await updateOwnProfile({
+        phone,
+        fullName,
+        birthdate: birthdate === '' ? null : birthdate,
+      })
+    }
     revalidatePath('/', 'layout')
     // Re-validate every profile route — this action is reachable from
     // /account/profile (User) + /admin|manager|reception|housekeeper/profile

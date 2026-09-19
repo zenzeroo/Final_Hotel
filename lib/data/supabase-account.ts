@@ -29,24 +29,24 @@ export async function getOwnProfile(): Promise<AccountProfile | null> {
   return (data as AccountProfile | null) ?? null
 }
 
-export async function updateOwnProfile(args: {
-  fullName: string
-  phone: string | null
-  birthdate: string | null
-}): Promise<void> {
+export async function updateOwnProfile(
+  args: {
+    fullName?: string
+    phone?: string | null
+    birthdate?: string | null
+  },
+): Promise<void> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
+  // Supabase `.update()` ignores undefined keys — caller controls which
+  // fields are touched. Used for staff (phone-only) vs User (full) paths.
   const { error } = await supabase
     .from('profiles')
-    .update({
-      full_name: args.fullName,
-      phone: args.phone,
-      birthdate: args.birthdate,
-    })
+    .update(args)
     .eq('id', user.id)
   if (error) wrapSupabaseError('updateOwnProfile', error)
 }

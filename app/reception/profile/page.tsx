@@ -22,6 +22,7 @@ export default async function ReceptionProfilePage() {
       </header>
       <AccountProfileContent
         profile={profile}
+        role="reception"
         showDangerZone={false}
         quickLinks={[
           { href: '/reception', icon: 'dashboard', label: 'แดชบอร์ด' },

@@ -5,11 +5,32 @@ import { useFormStatus } from 'react-dom'
 import { updateProfileAction } from '@/app/actions/account'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import type { AccountProfile } from '@/lib/data/types'
+import type { UserRole } from '@/lib/supabase/roles'
 import { formatDate } from '@/lib/dates'
 
 interface PersonalInfoFormProps {
   profile: AccountProfile
+  /**
+   * Current viewer's role. Staff roles (reception/housekeeper/manager/admin)
+   * see name + birthdate as locked fields — only phone stays editable.
+   * User role retains the full edit form.
+   */
+  role: UserRole | 'user'
 }
+
+const STAFF_ROLES: readonly UserRole[] = [
+  'reception',
+  'housekeeper',
+  'manager',
+  'admin',
+]
+
+function isStaffRole(role: UserRole | 'user'): role is UserRole {
+  return STAFF_ROLES.includes(role as UserRole)
+}
+
+const VERIFIED_DATA_HINT =
+  'ข้อมูลส่วนบุคคลที่ยืนยันตัวตนแล้ว หากต้องการเปลี่ยนกรุณาติดต่อผู้ดูแลระบบ'
 
 interface FormState {
   error?: string
@@ -67,8 +88,9 @@ function SubmitButton() {
  * edit toggle. View mode renders readonly rows; Edit mode renders the form
  * via useActionState. On successful submit, returns to view mode.
  */
-export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
+export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
   const [editing, setEditing] = useState(false)
+  const verifiedDataLocked = isStaffRole(role)
 
   // Phone sentinel value used by migration 20260913_require_phone.sql to
   // backfill NULL phones for Google OAuth users (no real phone captured).
@@ -121,21 +143,56 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-            <Field label="ชื่อ-นามสกุล (ตามบัตรประชาชน)" required>
-              <input
-                name="fullName"
-                defaultValue={profile.full_name ?? ''}
-                required
-                className={inputClass}
-              />
+            <Field label="ชื่อ-นามสกุล (ตามบัตรประชาชน)" required={!verifiedDataLocked}>
+              {verifiedDataLocked ? (
+                <div className="relative">
+                  <input
+                    defaultValue={profile.full_name ?? ''}
+                    disabled
+                    className="w-full bg-surface-container border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface-variant cursor-not-allowed"
+                  />
+                  <MaterialIcon
+                    name="lock"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
+                  />
+                </div>
+              ) : (
+                <input
+                  name="fullName"
+                  defaultValue={profile.full_name ?? ''}
+                  required
+                  className={inputClass}
+                />
+              )}
+              <p className="font-caption text-caption text-on-surface-variant">
+                {VERIFIED_DATA_HINT}
+              </p>
             </Field>
             <Field label="วันเกิด">
-              <input
-                name="birthdate"
-                type="date"
-                defaultValue={profile.birthdate ?? ''}
-                className={inputClass}
-              />
+              {verifiedDataLocked ? (
+                <div className="relative">
+                  <input
+                    type="date"
+                    defaultValue={profile.birthdate ?? ''}
+                    disabled
+                    className="w-full bg-surface-container border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface-variant cursor-not-allowed"
+                  />
+                  <MaterialIcon
+                    name="lock"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
+                  />
+                </div>
+              ) : (
+                <input
+                  name="birthdate"
+                  type="date"
+                  defaultValue={profile.birthdate ?? ''}
+                  className={inputClass}
+                />
+              )}
+              <p className="font-caption text-caption text-on-surface-variant">
+                {VERIFIED_DATA_HINT}
+              </p>
             </Field>
             <Field label="อีเมล">
               <div className="relative">
