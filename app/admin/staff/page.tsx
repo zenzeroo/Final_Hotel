@@ -1,7 +1,7 @@
 import { listStaff } from '@/lib/data/manager'
 import { getSession } from '@/lib/supabase/getSession'
 import { StaffAdminTable } from '@/components/admin/StaffAdminTable'
-import { AddStaffForm } from '@/components/admin/AddStaffForm'
+import { AddStaffModal } from '@/components/admin/AddStaffModal'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 export const dynamic = 'force-dynamic'
@@ -22,9 +22,13 @@ export default async function AdminStaffPage() {
             จัดการพนักงานทั้งหมด — เพิ่ม / แก้ไข / เปิด-ปิดการใช้งาน
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
-          <MaterialIcon name="badge" size={18} className="text-on-surface-variant" />
-          <span className="text-body-md text-on-surface-variant">{staff.length} คน</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Phase 33 — Add staff modal trigger (replaces inline AddStaffForm section) */}
+          <AddStaffModal />
+          <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
+            <MaterialIcon name="badge" size={18} className="text-on-surface-variant" />
+            <span className="text-body-md text-on-surface-variant">{staff.length} คน</span>
+          </div>
         </div>
       </header>
 
@@ -47,13 +51,6 @@ export default async function AdminStaffPage() {
           </p>
           <p className="font-display-lg text-display-lg-mobile text-error">{adminCount}</p>
         </div>
-      </section>
-
-      <section className="mb-12">
-        <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          เพิ่มพนักงานใหม่
-        </h2>
-        <AddStaffForm />
       </section>
 
       <section>
