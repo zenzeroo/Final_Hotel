@@ -58,25 +58,6 @@ export async function updateOwnProfile(
 }
 
 /**
- * Soft-delete: flip is_active=false. User can't sign back in but
- * bookings + reviews remain intact (matches `setStaffActive` semantics
- * from admin/staff.ts).
- */
-export async function deactivateOwnAccount(): Promise<void> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-
-  const { error } = await supabase
-    .from('profiles')
-    .update({ is_active: false })
-    .eq('id', user.id)
-  if (error) wrapSupabaseError('deactivateOwnAccount', error)
-}
-
-/**
  * Update avatar_key in the user's profile. Called after the server-side
  * R2 upload in `uploadAvatarAction`.
  */

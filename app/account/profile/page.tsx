@@ -54,7 +54,6 @@ export default async function AccountProfilePage(props: {
 
           <AccountProfileContent
             profile={profile}
-            showDangerZone
             quickLinks={[
               { href: '/bookings', icon: 'history', label: 'ประวัติการจอง' },
             ]}

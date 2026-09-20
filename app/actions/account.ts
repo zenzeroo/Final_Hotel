@@ -5,10 +5,8 @@ import { z } from 'zod'
 import { requireRole } from '@/lib/auth/require'
 import { actionFail } from '@/lib/errors/supabase'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from './auth'
 import {
   updateOwnProfile,
-  deactivateOwnAccount,
   uploadOwnAvatar,
   putAvatarToR2,
 } from '@/lib/data/account'
@@ -181,56 +179,6 @@ export async function changePasswordAction(
   }
 
   revalidatePath('/', 'layout')
-  return { ok: true }
-}
-
-// ---------------------------------------------------------------------------
-// deactivateAccountAction
-// ---------------------------------------------------------------------------
-
-const deactivateSchema = z.object({
-  confirmText: z.string(),
-})
-
-export async function deactivateAccountAction(
-  _state: AccountActionResult | null,
-  formData: FormData,
-): Promise<AccountActionResult> {
-  // User-only — staff can't self-deactivate (admin controls is_active via
-  // /admin/staff). DeactivateAccountSection is hidden for staff profiles
-  // via `showDangerZone={false}`, so this branch is only reachable from
-  // /account/profile.
-  await requireRole('user', '/account/profile')
-
-  const parsed = deactivateSchema.safeParse({
-    confirmText: String(formData.get('confirmText') ?? '').trim(),
-  })
-  if (!parsed.success) {
-    return { ok: false, error: 'ข้อมูลไม่ถูกต้อง' }
-  }
-
-  // Mockup requires user to type "ลบบัญชี" verbatim before submission.
-  if (parsed.data.confirmText !== 'ลบบัญชี') {
-    return { ok: false, error: 'กรุณาพิมพ์ "ลบบัญชี" ให้ตรงกันเพื่อยืนยัน' }
-  }
-
-  try {
-    // Soft-delete (flips is_active=false) — non-destructive; preserves
-    // bookings + reviews for analytics / dispute resolution.
-    await deactivateOwnAccount()
-  } catch (e) {
-    return actionFail(e, 'ไม่สามารถลบบัญชีได้')
-  }
-
-  // signOut() ends with redirect('/'), which throws NEXT_REDIRECT. The
-  // Next.js runtime catches it at the action boundary and navigates the
-  // browser — do NOT wrap in try/catch, or the redirect signal gets
-  // swallowed and the user stays on /account/profile with the spinner
-  // stuck (Phase 26 deactivate-bug fix — see CLAUDE.md Common Pitfalls).
-  await signOut()
-  // Unreachable: signOut() always throws via redirect('/'). The line
-  // below satisfies TS noImplicitReturns under strict mode; mirrors the
-  // pattern in `signIn` which ends with `redirect(redirectTo)`.
   return { ok: true }
 }
 

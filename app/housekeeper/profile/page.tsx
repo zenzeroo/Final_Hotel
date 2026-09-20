@@ -23,7 +23,6 @@ export default async function HousekeeperProfilePage() {
       <AccountProfileContent
         profile={profile}
         role="housekeeper"
-        showDangerZone={false}
         quickLinks={[
           { href: '/housekeeper', icon: 'dashboard', label: 'แดชบอร์ด' },
           { href: '/housekeeper/tasks', icon: 'task_alt', label: 'งานของฉัน' },

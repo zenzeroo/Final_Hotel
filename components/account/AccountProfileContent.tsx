@@ -4,7 +4,6 @@ import { ProfileCard } from './ProfileCard'
 import { AccountQuickLinks, type QuickLink } from './AccountQuickLinks'
 import { PersonalInfoForm } from './PersonalInfoForm'
 import { AccountSecuritySection } from './AccountSecuritySection'
-import { DeactivateAccountSection } from './DeactivateAccountSection'
 import { LinkedAccountsCard } from './LinkedAccountsCard'
 
 export interface AccountProfileContentProps {
@@ -15,12 +14,6 @@ export interface AccountProfileContentProps {
    * Staff pages pass their role so PersonalInfoForm locks name + birthdate.
    */
   role?: UserRole | 'user'
-  /**
-   * Show the "ลบบัญชี" danger zone (User only — staff can't self-deactivate;
-   * admin controls `is_active` via /admin/staff).
-   * @default false
-   */
-  showDangerZone?: boolean
   /**
    * Quick links shown in the left column under the profile card.
    * Empty array (or omitted) hides the quick-links card entirely.
@@ -43,13 +36,17 @@ export interface AccountProfileContentProps {
  * column underneath the profile card so users can manage multi-provider
  * sign-in (email/password + Google).
  *
+ * Phase 38 — removed the User-account self-delete (Danger Zone) section
+ * that lived here in Phase 26–37. Admin staff `setStaffActive` still
+ * flips `profiles.is_active` via `/admin/staff`; only the User-side
+ * self-delete path was removed.
+ *
  * Layout: left column = profile card + quick links + LinkedAccountsCard;
- * right column = personal info, security (password), optional danger zone.
+ * right column = personal info + security (password / set-password).
  */
 export async function AccountProfileContent({
   profile,
   role = 'user',
-  showDangerZone = false,
   quickLinks = [],
   searchParams,
 }: AccountProfileContentProps) {
@@ -66,9 +63,6 @@ export async function AccountProfileContent({
       <div className="lg:col-span-2 flex flex-col gap-gutter">
         <PersonalInfoForm profile={profile} role={role} />
         <AccountSecuritySection />
-        {showDangerZone && (
-          <DeactivateAccountSection fullName={profile.full_name} />
-        )}
       </div>
     </div>
   )

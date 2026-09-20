@@ -23,7 +23,6 @@ export default async function ReceptionProfilePage() {
       <AccountProfileContent
         profile={profile}
         role="reception"
-        showDangerZone={false}
         quickLinks={[
           { href: '/reception', icon: 'dashboard', label: 'แดชบอร์ด' },
           { href: '/reception/bookings', icon: 'bookmark', label: 'การจอง' },
