@@ -17,7 +17,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { AccountProfile, Customer } from './types'
+import type { AccountProfile, Customer, LinkedIdentity, IdentityLinkSafety } from './types'
 
 export async function getOwnProfile(): Promise<AccountProfile | null> {
   const supabase = await createClient()
@@ -137,6 +137,200 @@ export async function putAvatarToR2(args: {
       CacheControl: 'public, max-age=31536000, immutable',
     }),
   )
+}
+
+// =========================================================
+// Phase 37 — Identity linking (multi-provider sign-in)
+// =========================================================
+
+/**
+ * List all auth identities linked to the currently signed-in user.
+ * Used by the LinkedAccountsCard UI to decide which providers are
+ * already connected + which can be unlinked (must keep ≥1).
+ */
+export async function listMyIdentities(): Promise<LinkedIdentity[]> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  // getUserIdentities() returns ALL identities in one query (no
+  // pagination). On user accounts this is always a small set
+  // (≤ 5 providers in practice).
+  const { data, error } = await supabase.auth.getUserIdentities()
+  if (error) {
+    // getUserIdentities returns AuthError on network issues; wrap so
+    // caller can render a localized "couldn't load" message.
+    wrapSupabaseError('listMyIdentities', error)
+  }
+
+  const list: LinkedIdentity[] = (data?.identities ?? []).map((id) => {
+    const data = (id.identity_data ?? {}) as Record<string, unknown>
+    const email =
+      typeof data['email'] === 'string' ? (data['email'] as string) : null
+    const emailVerified =
+      data['email_verified'] === true ||
+      // Some providers (legacy configurations) put a string in here.
+      String(data['email_verified']) === 'true'
+    return {
+      identityId: id.identity_id,
+      userId: id.user_id,
+      provider: id.provider,
+      email,
+      emailVerified,
+      lastSignInAt: id.last_sign_in_at ?? null,
+      createdAt: id.created_at ?? null,
+    }
+  })
+  return list
+}
+
+/**
+ * Helper for ChangePasswordForm / SetPasswordForm branching.
+ * True iff the user has at least one 'email'-provider identity
+ * (Google-only users → false).
+ */
+export async function hasPasswordIdentity(): Promise<boolean> {
+  const identities = await listMyIdentities()
+  return identities.some((i) => i.provider === 'email')
+}
+
+/**
+ * Defense-in-depth gate before initiating any identity link flow.
+ * Calls the can_link_identity_by_email() SECURITY DEFINER function
+ * to check that BOTH sides' email is verified.
+ *
+ * The server action that calls this should pass
+ * `newEmailVerified = identity_data.email_verified` from the
+ * candidate IdP. This is a defense-in-depth check — Supabase's
+ * own gate (the Dashboard "Manual Linking" toggle + the matching
+ * Supabase auth code path) is the primary wall.
+ */
+export async function checkIdentityLinkSafety(args: {
+  existingEmail: string
+  newEmailVerified: boolean
+}): Promise<IdentityLinkSafety> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('can_link_identity_by_email', {
+    p_existing_email: args.existingEmail,
+    p_new_email_verified: args.newEmailVerified,
+  })
+  if (error) wrapSupabaseError('checkIdentityLinkSafety', error)
+  const row = (data as Array<Record<string, unknown>> | null)?.[0]
+  if (!row) {
+    // Defensive — RPC always returns a row, but if it doesn't, refuse.
+    return {
+      safeToLink: false,
+      existingUserId: null,
+      existingEmailVerified: false,
+      reason: 'email_mismatch',
+    }
+  }
+  return {
+    safeToLink: row['safe_to_link'] === true,
+    existingUserId: (row['existing_user_id'] as string | null) ?? null,
+    existingEmailVerified: row['existing_email_verified'] === true,
+    reason: row['reason'] as IdentityLinkSafety['reason'],
+  }
+}
+
+/**
+ * Initiate Google OAuth as an identity-linking flow for the
+ * currently signed-in user. Calls supabase.auth.linkIdentity()
+ * (different from signInWithOAuth — linkIdentity requires a session
+ * and attaches a new identity to the existing user).
+ *
+ * Returns the provider URL — caller (server action) calls
+ * `redirect(url)` to navigate the browser to Google consent.
+ *
+ * IMPORTANT: `skipBrowserRedirect: true` is required server-side,
+ * otherwise the SDK would call window.location.assign() which is
+ * undefined in Node and throws.
+ */
+export async function getGoogleLinkUrl(args: {
+  origin: string
+  next: string
+}): Promise<string | null> {
+  const supabase = await createClient()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  if (!session) return null
+
+  const { data, error } = await supabase.auth.linkIdentity({
+    provider: 'google',
+    options: {
+      redirectTo: `${args.origin}/auth/callback?intent=link&next=${encodeURIComponent(args.next)}`,
+      queryParams: { prompt: 'select_account' },
+      skipBrowserRedirect: true,
+    },
+  })
+
+  if (error) wrapSupabaseError('getGoogleLinkUrl', error)
+  return data?.url ?? null
+}
+
+/**
+ * Set a password for a user who currently has no email/password
+ * identity (e.g. signed up via Google).
+ *
+ * Uses the service-role client to bypass RLS — this is server-only
+ * and the user's session has already been verified by requireRole()
+ * in the calling server action. The service-role direct password set
+ * is the canonical way to attach a credential without knowing the
+ * old one (Supabase does NOT require a recent login for admin-set
+ * passwords because the admin client is already privileged).
+ *
+ * Errors propagate as caught PostgRESTError; the caller wraps
+ * with actionFail() for UI display.
+ */
+export async function setPasswordViaAdmin(args: {
+  userId: string
+  newPassword: string
+}): Promise<void> {
+  const admin = await createAdminClient()
+  const { error } = await admin.auth.admin.updateUserById(args.userId, {
+    password: args.newPassword,
+  })
+  if (error) wrapSupabaseError('setPasswordViaAdmin', error)
+}
+
+/**
+ * Unlink an identity from the current user.
+ *
+ * Refuses if removing this identity would leave the user with
+ * zero identities (would lock them out). Supabase also enforces
+ * this on the server (returns 422), but the pre-check makes
+ * the error message clearer.
+ *
+ * Requires the user to be signed in (the auth.uid() / session
+ * context is what linkIdentity / unlinkIdentity bind against).
+ */
+export async function unlinkIdentityById(identityId: string): Promise<void> {
+  const supabase = await createClient()
+  // Pre-check via the LinkedIdentity DTO (cheaper to compute) — how many
+  // identities would remain if we removed this one?
+  const identities = await listMyIdentities()
+  const remaining = identities.filter((i) => i.identityId !== identityId)
+  if (remaining.length === 0) {
+    throw new Error('CANNOT_UNLINK_LAST_IDENTITY')
+  }
+
+  // unlinkIdentity needs the RAW UserIdentity shape (id, user_id,
+  // identity_id, identity_data, provider, ...). Re-fetch from auth-js so
+  // the DTO conversion above doesn't strip required fields.
+  const { data, error: listError } = await supabase.auth.getUserIdentities()
+  if (listError) wrapSupabaseError('unlinkIdentityById (list)', listError)
+  const target = (data?.identities ?? []).find(
+    (i) => i.identity_id === identityId,
+  )
+  if (!target) {
+    throw new Error('IDENTITY_NOT_FOUND')
+  }
+
+  const { error } = await supabase.auth.unlinkIdentity(target)
+  if (error) wrapSupabaseError('unlinkIdentityById', error)
 }
 
 // =========================================================

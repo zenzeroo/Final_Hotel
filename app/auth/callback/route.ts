@@ -10,6 +10,13 @@
  *   - the role-specific home (admin / manager / reception / housekeeper) —
  *     staff ALWAYS land on their own dashboard, matching `signIn` behavior
  *
+ * Phase 37 — `?intent=link` distinguishes identity-linking callbacks from
+ * first-time sign-in. Linking flow must NOT create a new auth.users row;
+ * it attaches a new identity (Google) to the existing session's user.
+ * The intent=link flag forces the redirect back to /account/profile so
+ * the LinkedAccountsCard can show "Google: connected". Regular sign-in
+ * (no intent) preserves the role-home routing.
+ *
  * Profile creation is handled automatically by the `handle_new_user()` trigger
  * (db-schemas/20260832_staff_shifts_and_email.sql:25-51) — by the time we
  * look up `profiles.role` here, the row exists.
@@ -17,6 +24,9 @@
  * Failure paths:
  *   - No `code` param (user cancelled) → `/login?error=oauth_cancelled`
  *   - `exchangeCodeForSession` error → `/login?error=oauth_failed`
+ *   - Linking-specific failure (user cancelled Google consent mid-link) →
+ *     `/account/profile?link_error=cancelled` so the card can show a
+ *     localized banner instead of falling through to /login.
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -27,12 +37,22 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = sanitizeNext(searchParams.get('next'))
+  const intent = searchParams.get('intent')
 
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       // Session established. Resolve role-based home.
+
+      // Phase 37 — Linking flow always returns to /account/profile so the
+      // LinkedAccountsCard can render the "Google: connected" state. We
+      // deliberately IGNORE `?next=` for intent=link to avoid leaking the
+      // linking callback into a public route mid-flow.
+      if (intent === 'link') {
+        return NextResponse.redirect(`${origin}/account/profile?linked=google`)
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -53,7 +73,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // No code, or exchange failed — fall back to the login screen with an error.
+  // No code, or exchange failed — fall back appropriately.
+  if (intent === 'link') {
+    // Linking-specific cancellation goes back to /account/profile so the
+    // card shows a "ยกเลิก" hint, not a "ต้องเข้าสู่ระบบ" redirect.
+    return NextResponse.redirect(`${origin}/account/profile?link_error=cancelled`)
+  }
+
   // Supabase appends `?error_description=...` for the exchange failure case;
   // we drop it and use a generic flag so the form can show a friendly message.
   return NextResponse.redirect(

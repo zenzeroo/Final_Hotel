@@ -109,8 +109,9 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // 20260927 = Phase 34.5 hotfix — fix RLS recursion in "profiles admin write" (inline EXISTS → has_role()).
 // 20260928 = Phase 36 customer suspension — is_suspended/suspended_at/suspended_reason columns + booking_events.booking_id nullable.
 // 20260929 = Phase 36.1 hotfix — restore email+hired_at columns in handle_new_user() trigger (lost in 20260913 rewrite) + backfill NULL rows.
+// 20261001 = Phase 37 identity-linking helper — can_link_identity_by_email() SECURITY DEFINER for verifying BOTH sides before allowing OAuth-to-email/password merge.
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)_.*\.sql$/.test(f))
+  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)|202610(01)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 

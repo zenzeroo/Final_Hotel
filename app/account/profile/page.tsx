@@ -9,10 +9,13 @@ import { getT } from '@/lib/i18n/t'
 // Server-render on demand (Supabase data + session-scoped).
 export const dynamic = 'force-dynamic'
 
-export default async function AccountProfilePage() {
+export default async function AccountProfilePage(props: {
+  searchParams: Promise<{ linked?: string; link_error?: string }>
+}) {
   // Layout already gated role/user + auth; this is defense-in-depth.
   await requireRole('user', '/account/profile')
 
+  const searchParams = await props.searchParams
   const profile = await getOwnProfile()
   const t = getT(await getLocale())
 
@@ -55,6 +58,7 @@ export default async function AccountProfilePage() {
             quickLinks={[
               { href: '/bookings', icon: 'history', label: 'ประวัติการจอง' },
             ]}
+            searchParams={Promise.resolve(searchParams)}
           />
         </div>
       </main>

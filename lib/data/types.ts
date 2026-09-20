@@ -614,3 +614,47 @@ export interface CancellationPolicy {
   refund_pct: number // 0..100
   description: string
 }
+
+// =====================================================
+// Phase 37 — Identity linking (multi-provider sign-in)
+// =====================================================
+
+/**
+ * One row of the `auth.identities` table mirrored for UI consumption.
+ * Supabase populates `identity_data.email_verified` (boolean sub-claim
+ * from the IdP) plus `email` (most providers expose it separately).
+ */
+export interface LinkedIdentity {
+  /** Internal Supabase identity row id (= auth.identities.id). */
+  identityId: string
+  /** auth.identities.user_id = auth.users.id of the row this identity belongs to. */
+  userId: string
+  /** 'email' | 'google' | ... — provider slug. */
+  provider: string
+  /** Email string the provider associated with this identity. */
+  email: string | null
+  /** Whether the IdP confirmed the email (Google = true for gmail / verified Workspace). */
+  emailVerified: boolean
+  /** ISO timestamp of last sign-in via this identity. */
+  lastSignInAt: string | null
+  /** ISO timestamp of when the identity was created. */
+  createdAt: string | null
+}
+
+/**
+ * Defense-in-depth result returned by `can_link_identity_by_email` SQL
+ * function. The server actions inspect `safeToLink` + `reason` and
+ * surface a localized error message on failure.
+ */
+export interface IdentityLinkSafety {
+  safeToLink: boolean
+  existingUserId: string | null
+  existingEmailVerified: boolean
+  /** Short machine-readable reason; the UI uses this to pick i18n message. */
+  reason:
+    | 'no_existing_account'
+    | 'verified_both_sides'
+    | 'existing_email_unverified'
+    | 'new_email_unverified'
+    | 'email_mismatch'
+}
