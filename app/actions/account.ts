@@ -222,15 +222,15 @@ export async function deactivateAccountAction(
     return actionFail(e, 'ไม่สามารถลบบัญชีได้')
   }
 
-  // signOut() calls redirect('/') which throws NEXT_REDIRECT — TypeScript
-  // can't see that, so wrap in try/catch (any thrown value here means
-  // "redirect succeeded, browser is navigating"). Reaching the success
-  // branch below is only possible if the redirect fails.
-  try {
-    await signOut()
-  } catch {
-    // Redirect initiated — caller won't see this branch.
-  }
+  // signOut() ends with redirect('/'), which throws NEXT_REDIRECT. The
+  // Next.js runtime catches it at the action boundary and navigates the
+  // browser — do NOT wrap in try/catch, or the redirect signal gets
+  // swallowed and the user stays on /account/profile with the spinner
+  // stuck (Phase 26 deactivate-bug fix — see CLAUDE.md Common Pitfalls).
+  await signOut()
+  // Unreachable: signOut() always throws via redirect('/'). The line
+  // below satisfies TS noImplicitReturns under strict mode; mirrors the
+  // pattern in `signIn` which ends with `redirect(redirectTo)`.
   return { ok: true }
 }
 

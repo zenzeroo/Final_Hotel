@@ -169,8 +169,9 @@ rebuilt into a typed Next.js + Supabase app across 15 phases.
 - `/admin/promotions` (+ `new`, `[id]/edit`) — CRUD promotions
 - `/admin/staff` (+ `new`, `[id]/edit`) — CRUD staff + assign role + soft-delete
 - `/admin/settings` — hotel-wide settings editor (singleton row)
-- `/admin/rates/room-types` (+ `new`, `[id]/edit`) — CRUD room types
+- `/admin/rates/room-types` (+ `new`, `[id]/edit`) — CRUD room types (3 tabs: active/inactive/deleted)
 - `/admin/rates/seasonal-rates` (+ `new`, `[id]/edit`) — CRUD seasonal rates
+- `/admin/customers` (+ `[id]`) — **Customer Management**: list + search + suspend/unsuspend. Suspended customers blocked at app-layer from login + booking creation. Admin-only.
 
 ---
 
@@ -221,9 +222,9 @@ node scripts/run-migrations.mjs --only=20260912
 node scripts/run-migrations.mjs --dry-run
 ```
 
-**Migration filter ปัจจุบัน** (`scripts/run-migrations.mjs:73`):
-`/202608(27|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25)_.*\.sql$/` — migrations 18–26 และ 28 apply ผ่าน
-Supabase Dashboard SQL editor ไปแล้ว
+**Migration filter ปัจจุบัน** (`scripts/run-migrations.mjs:107`):
+`/202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)_.*\.sql$/` — migrations 18–26 และ 28 apply ผ่าน
+Supabase Dashboard SQL editor ไปแล้ว (ยกเว้น 20260929 ที่ apply ผ่าน runner)
 
 **หลัง apply migration ใหม่**: copy file ไปที่ `Y:\Final\db-schemas\` (local archive)
 
@@ -486,6 +487,15 @@ Key business rules enforced in DB:
 12. **Phase 20 #28 (Sentry) + #30 (404 stubs) shipped (2026-09-04)** — Sentry Next.js SDK
     via `withSentryConfig` (optional via empty `SENTRY_DSN`) + stub pages for
     `/privacy`, `/terms`, `/about`, `/contact`, `/careers` + branded `app/not-found.tsx`.
+13. **Trigger function rewrites can silently drop columns (Phase 36.1)** — Migration
+    `20260913_require_phone.sql` replaced `handle_new_user()` with a smaller body
+    that lost `email` + `hired_at` columns from the INSERT. Result: every profile
+    created since 20260913 had `email=NULL` even though `auth.users.email` IS
+    populated for both email/password AND Google OAuth signups. **Always run
+    a full backfill + sanity-check after any `CREATE OR REPLACE FUNCTION` on
+    auth-related triggers** — `select count(*) filter (where p.email is null) as missing,
+    count(*) filter (where p.email is distinct from au.email) as mismatched` should
+    return 0,0 after backfill.
 
 ---
 
