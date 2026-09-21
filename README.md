@@ -7,8 +7,15 @@
 each with their own dashboards, permissions, and server actions.
 
 Originally prototyped as static HTML at `Y:/Final/V1_Prototype/extracted/`, then
-rebuilt into a typed Next.js + Supabase app across 15 phases.
+rebuilt into a typed Next.js + Supabase app across **38 phases** (see `docs/phases-done.md`).
 
+> ✅ **Phase 37 + Phase 38 shipped (2026-09-20)** — Identity linking + remove User self-delete:
+>
+> - **Phase 37 — Identity linking** — User can sign in via BOTH email/password AND Google OAuth on the same account. `supabase/migrations/20261001_identity_linking_helpers.sql` adds `public.can_link_identity_by_email(text, boolean)` SECURITY DEFINER helper that requires email_verified=true on BOTH sides. UI: new `LinkedAccountsCard` ("วิธีเข้าสู่ระบบ") on `/account/profile` with Connect Google / Set Password / Disconnect controls. `AccountSecuritySection` branches ChangePassword vs SetPassword based on whether email identity exists. Requires **Supabase Dashboard → Auth → Providers → "Allow manual linking" toggle = ON** (verified by `scripts/test-phase37-identity-linking.mts` Case 5).
+> - **Phase 38 — Remove User self-delete** — Removed the "ลบบัญชีผู้ใช้" Danger Zone section from `/account/profile`. Deleted `components/account/DeactivateAccountSection.tsx` + `deactivateAccountAction` + `deactivateOwnAccount`. Admin staff still controls `profiles.is_active` via `/admin/staff`. 0 DB changes.
+>
+> Commits `b9860aa` (Phase 37) + `9cb5376` (Phase 38). Plan: `C:\Users\suns9\.claude\plans\distributed-tickling-bird.md`.
+>
 > ✅ **Phase 26 shipped (2026-09-05)** — i18n (TH/EN) + UI polish + /account profile + validation + email confirmation. 21 commits on `origin/main` (commits `44c9f14` → `10472c7`):
 >
 > - **i18n full coverage** — `lib/i18n/{config,getLocale,t,I18nProvider,useT}.ts` + `dictionaries/{th,en}.ts` (600+ strings across 12 namespaces). `setLocaleAction` server action + `NEXT_LOCALE` cookie + `LanguageToggle` client island. 36 pages + 5 email templates + XLSX export headers + `lib/errors/translate.ts` all threaded through `t()`.
@@ -83,8 +90,14 @@ rebuilt into a typed Next.js + Supabase app across 15 phases.
   + `profiles.locale` persistence + `hotel_settings.locale_default`
   fallback
 - **/account profile page (Role User)** — avatar upload (R2) + personal
-  info (TH/EN) + password change + soft-delete with email confirmation
-  flow
+  info (TH/EN) + password change + LinkedAccountsCard ("วิธีเข้าสู่ระบบ"
+  for multi-provider sign-in — Phase 37)
+- **Identity linking (Phase 37)** — user can sign in via BOTH email/password
+  AND Google OAuth into the SAME Supabase account. Defense-in-depth
+  `can_link_identity_by_email()` SQL helper requires email_verified=true
+  on BOTH sides before any merge. UI at `/account/profile` → "วิธีเข้าสู่ระบบ"
+  card lists connected providers + Connect/Disconnect/Set-Password
+  controls. Requires Dashboard "Allow manual linking" toggle = ON.
 - **Stacked RLS policies** — public read + self-only + staff via
   `is_staff()` / `has_role(text)` SECURITY DEFINER helpers (ห้าม inline EXISTS
   — เกิด Postgres 42P17 recursion)
@@ -282,6 +295,8 @@ npx tsx scripts/test-phase24-cancel-policy.mts  # Phase 20 #24 — cancellation 
 npx tsx scripts/test-phase25-email.mts          # Phase 25 — email infrastructure (7/7)
 npx tsx scripts/test-phase29-rate-limit.mts     # Phase 20 #29 — app-level rate limiting (10/10)
 npx tsx scripts/test-phase31-xlsx-export.mts    # Phase 20 #31 — Excel export for manager reports (10/10)
+npx tsx scripts/test-phase37-identity-linking.mts # Phase 37 — identity linking (5/5; Case 5 verifies Manual Linking toggle)
+npx tsx scripts/test-deactivate-fix.mts         # Phase 26 deactivate-bug fix — code invariants (action removed in Phase 38 but history preserved)
 npx tsx scripts/_cleanup-test-rows.mts          # Cleanup leaked test bookings
 ```
 
@@ -496,6 +511,18 @@ Key business rules enforced in DB:
     auth-related triggers** — `select count(*) filter (where p.email is null) as missing,
     count(*) filter (where p.email is distinct from au.email) as mismatched` should
     return 0,0 after backfill.
+14. **Phase 37 requires "Manual Linking" toggle ON (Phase 37)** — Supabase
+    Dashboard → Auth → Sign In/Up → "Allow manual linking" / "Enable Manual
+    Linking" must be ON. Without it, `supabase.auth.linkIdentity()` and
+    `unlinkIdentity()` server-side reject with `"Manual linking is disabled"`.
+    The Phase 37 SQL helper `can_link_identity_by_email()` is defense-in-depth
+    regardless — but the runtime gate is the Dashboard toggle. Verify with
+    `npx tsx scripts/test-phase37-identity-linking.mts` Case 5.
+15. **Phase 37 + 38 shipped (2026-09-20)** — Identity linking (link email/password
+    + Google into one Supabase account) + remove User-account self-delete (Danger
+    Zone removed from `/account/profile`). Local `notmain` has 2 commits
+    (`b9860aa`, `9cb5376`) not yet on remote. See
+    `docs/PROJECT-STATUS.md` for the today's-snapshot doc.
 
 ---
 

@@ -97,6 +97,26 @@ Rules ละเอียดเต็มอยู่ใน `Rule.md` ที่ ro
 
 ---
 
+## 🔭 Open Items / Where to pick up next
+
+**Phase 38 done — what's pending:**
+
+| Priority | Item | Where to look |
+|---|---|---|
+| 🔴 Verify | **Dashboard "Allow manual linking" toggle = ON** — required for Phase 37 runtime. Run `npx tsx scripts/test-phase37-identity-linking.mts`; Case 5 should no longer return `"Manual linking is disabled"` | `docs/PROJECT-STATUS.md` § "Dashboard toggles REQUIRED" |
+| 🟠 Open | **Phase 27 backlog A-H** — 27.A Modal primitive ✅ done. Remaining: 27.B Toast/snackbar, 27.C server-action `locale` threading, 27.D 4 email templates i18n, 27.E staff dashboard sub-pages i18n, 27.F `AccountQuickLinks` dead links, 27.G locale cookie on sign-out, 27.H alert() → toast | `## 🔭 Future Work / Backlog` below |
+| 🟡 Open | **Phase 39+ candidates** — PDF generation (D1 PDFKit already decided in `docs/phase31-decisions.md`), 2FA/GDPR cookie consent, staff_shifts write UI, notification system (gap #26), loyalty/user-promotions features | `docs/phases-upcoming.md` |
+| ✅ Done | Phase 37 (identity linking), Phase 38 (User self-delete removed) | See status table above |
+| 🔵 Maintenance | `git push origin notmain` — 6 commits (b9860aa + 9cb5376) on local `notmain` not yet on remote | Ask before push (R2) |
+
+**Quick pointers for AI sessions:**
+- Need to onboard fast? Read `docs/PROJECT-STATUS.md` first (~150 lines).
+- Need full phase history? Read `docs/phases-done.md`.
+- Need phase decisions + plans? Look in `C:\Users\suns9\.claude\plans\` (LOCAL, not in repo).
+- Stuck on a pattern? Grep this file's `## Common Pitfalls` section — most gotchas are documented.
+
+---
+
 ## 🧰 Tech Stack (versions verified from `package.json`)
 
 | Layer | Package | Version | Notes |
