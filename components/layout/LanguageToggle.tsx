@@ -24,7 +24,9 @@ export function LanguageToggle({ currentLocale }: LanguageToggleProps) {
   return (
     <div className="hidden md:inline-flex items-center gap-1 text-label-md">
       <LocaleButton active={currentLocale === 'th'} locale="th" label="TH" />
-      <span className="text-outline-variant">|</span>
+      <span className="text-outline-variant" aria-hidden>
+        |
+      </span>
       <LocaleButton active={currentLocale === 'en'} locale="en" label="EN" />
     </div>
   )
@@ -55,11 +57,11 @@ function SubmitButton({ active, label }: { active: boolean; label: string }) {
       disabled={active || pending}
       aria-pressed={active}
       aria-label={label === 'TH' ? 'ภาษาไทย' : 'English'}
-      className={
+      className={`min-w-[44px] inline-flex items-center justify-center px-2 py-1 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary rounded ${
         active
-          ? 'px-2 py-1 bg-primary text-on-primary font-semibold rounded'
-          : 'px-2 py-1 text-on-surface-variant hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary rounded disabled:opacity-100'
-      }
+          ? 'bg-primary text-on-primary font-semibold'
+          : 'text-on-surface-variant hover:bg-primary-fixed hover:text-primary disabled:opacity-100'
+      }`}
     >
       {label}
     </button>

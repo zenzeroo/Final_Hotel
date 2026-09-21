@@ -122,20 +122,22 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
           <Link
             href="/account/profile"
             role="menuitem"
-            className="flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
+            title="ดูโปรไฟล์ของฉัน"
+            className="flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors min-w-0"
           >
-            <MaterialIcon name="person" size={20} className="text-on-surface-variant" />
-            ดูโปรไฟล์ของฉัน
+            <MaterialIcon name="person" size={20} className="text-on-surface-variant flex-shrink-0" />
+            <span className="min-w-0 truncate flex-1">ดูโปรไฟล์ของฉัน</span>
           </Link>
 
           <form action={signOut}>
             <button
               type="submit"
               role="menuitem"
-              className="w-full flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors text-left"
+              title="ออกจากระบบ"
+              className="w-full flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors text-left min-w-0"
             >
-              <MaterialIcon name="logout" size={20} className="text-on-surface-variant" />
-              ออกจากระบบ
+              <MaterialIcon name="logout" size={20} className="text-on-surface-variant flex-shrink-0" />
+              <span className="min-w-0 truncate flex-1">ออกจากระบบ</span>
             </button>
           </form>
         </div>

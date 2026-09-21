@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { AvatarBadge } from '@/components/account/AvatarBadge'
+import { TruncatedText } from '@/components/ui/TruncatedText'
 import { signOut } from '@/app/actions/auth'
 import { useT } from '@/lib/i18n/useT'
 import { roleHomePath } from '@/lib/supabase/roles'
@@ -130,7 +131,10 @@ export function StaffSidebarNav({
             className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
           />
         </Link>
-        <p className="text-caption text-secondary/70 mt-1 uppercase tracking-wider">
+        {/* Role label (e.g. 'แดชบอร์ดผู้จัดการ' / 'Manager Dashboard') wraps
+            differently per language — reserve 1-line height so the brand
+            + role label block doesn't reflow when toggling TH↔EN. */}
+        <p className="text-caption text-secondary/70 mt-1 uppercase tracking-wider min-h-[1.25rem] leading-tight truncate" title={t(ROLE_LABEL_KEY[role])}>
           {t(ROLE_LABEL_KEY[role])}
         </p>
       </div>
@@ -150,9 +154,9 @@ export function StaffSidebarNav({
                 className="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary/40 cursor-not-allowed transition-colors duration-150 hover:bg-secondary/5"
                 title="เร็วๆ นี้"
               >
-                <MaterialIcon name={item.icon} size={20} />
-                <span className="text-body-md">{navLabel(t, role, item.key)}</span>
-                <span className="ml-auto text-[10px] uppercase tracking-wider text-secondary/40 transition-opacity duration-150 group-hover:opacity-70">
+                <MaterialIcon name={item.icon} size={20} className="flex-shrink-0" />
+                <TruncatedText text={navLabel(t, role, item.key)} className="text-body-md" />
+                <span className="ml-auto flex-shrink-0 text-[10px] uppercase tracking-wider text-secondary/40 transition-opacity duration-150 group-hover:opacity-70">
                   เร็วๆ นี้
                 </span>
               </div>
@@ -170,12 +174,12 @@ export function StaffSidebarNav({
                   : 'text-secondary/80 border-transparent hover:bg-primary-fixed hover:text-primary hover:translate-x-0.5 hover:border-l-secondary hover:shadow-[-2px_0_6px_-1px_rgba(254,215,152,0.3)]'
               }`}
             >
-              <MaterialIcon name={item.icon} size={20} filled={isActive} />
-              <span className="text-body-md">{navLabel(t, role, item.key)}</span>
+              <MaterialIcon name={item.icon} size={20} filled={isActive} className="flex-shrink-0" />
+              <TruncatedText text={navLabel(t, role, item.key)} className="text-body-md" />
               <MaterialIcon
                 name="chevron_right"
                 size={18}
-                className={`ml-auto transition-all duration-150 ease-out ${
+                className={`flex-shrink-0 ml-auto transition-all duration-150 ease-out ${
                   isActive
                     ? 'opacity-100 translate-x-0'
                     : 'opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0'
@@ -195,7 +199,12 @@ export function StaffSidebarNav({
       {/* User + Profile + Logout */}
       <div className="px-3 py-4 border-t border-primary-container">
         <div className="px-3 py-2 mb-2">
-          <p className="text-caption text-secondary/70 uppercase tracking-wider">{userName ?? 'ผู้ใช้งาน'}</p>
+          <p
+            className="text-caption text-secondary/70 uppercase tracking-wider min-h-[1.25rem] leading-tight truncate"
+            title={userName ?? 'ผู้ใช้งาน'}
+          >
+            {userName ?? 'ผู้ใช้งาน'}
+          </p>
         </div>
         {/* Profile link — /[role]/profile. Inherits the same Tier 3 polish
             (slide + chevron + border-l accent) as the main nav items. */}
@@ -209,11 +218,13 @@ export function StaffSidebarNav({
             fullName={userName ?? 'ผู้ใช้งาน'}
             size={20}
           />
-          <span className="text-body-md">โปรไฟล์</span>
+          <span className="text-body-md min-w-0 truncate flex-1" title="โปรไฟล์">
+            โปรไฟล์
+          </span>
           <MaterialIcon
             name="chevron_right"
             size={18}
-            className="ml-auto opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+            className="flex-shrink-0 ml-auto opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
           />
         </Link>
         <form action={signOut}>
@@ -221,12 +232,12 @@ export function StaffSidebarNav({
             type="submit"
             className="group w-full flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 border-transparent text-secondary/80 hover:bg-primary-fixed hover:text-primary hover:translate-x-0.5 hover:border-l-error/50 transition-all duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
           >
-            <MaterialIcon name="logout" size={20} />
-            <span className="text-body-md">{t('nav.logout')}</span>
+            <MaterialIcon name="logout" size={20} className="flex-shrink-0" />
+            <TruncatedText text={t('nav.logout')} className="text-body-md" />
             <MaterialIcon
               name="chevron_right"
               size={18}
-              className="ml-auto opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+              className="flex-shrink-0 ml-auto opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
             />
           </button>
         </form>

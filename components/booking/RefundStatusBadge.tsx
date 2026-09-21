@@ -40,11 +40,12 @@ export function RefundStatusBadge({ status, amountFormatted, t }: RefundStatusBa
   const s = STYLES[status]
   return (
     <span
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-label-md font-semibold uppercase tracking-wider ${s.bg} ${s.text}`}
+      title={t(s.labelKey)}
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-label-md font-semibold uppercase tracking-wider whitespace-nowrap max-w-full ${s.bg} ${s.text}`}
     >
-      <MaterialIcon name={s.icon} size={16} />
-      <span>{t(s.labelKey)}</span>
-      <span className="font-mono normal-case">· {amountFormatted}</span>
+      <MaterialIcon name={s.icon} size={16} className="flex-shrink-0" />
+      <span className="whitespace-nowrap">{t(s.labelKey)}</span>
+      <span className="font-mono normal-case whitespace-nowrap truncate" title={amountFormatted}>· {amountFormatted}</span>
     </span>
   )
 }

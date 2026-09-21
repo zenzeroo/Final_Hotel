@@ -21,44 +21,45 @@ interface TabsProps<T extends string> {
 }
 
 export function Tabs<T extends string>({ active, tabs }: TabsProps<T>) {
-  return (
-    <div className="flex items-center gap-1 border-b border-outline-variant mb-6 overflow-x-auto">
-      {tabs.map((t) => {
-        const isActive = active === t.key
-        const showBadge = t.badge != null && t.badge > 0
-        const badgeDisplay =
-          t.badge != null && t.badgeCap != null && t.badge > t.badgeCap
-            ? `${t.badgeCap}+`
-            : t.badge
-        const badgeClass =
-          t.badgeTone === 'error'
-            ? 'bg-error text-on-error'
-            : t.badgeTone === 'primary'
-              ? 'bg-primary text-secondary'
-              : 'bg-surface-variant text-on-surface-variant'
-        return (
-          <Link
-            key={t.key}
-            href={t.href}
-            aria-current={isActive ? 'page' : undefined}
-            className={`inline-flex items-center gap-2 px-4 py-3 border-b-2 -mb-px transition-colors ${
-              isActive
-                ? 'border-primary bg-primary text-on-primary font-semibold'
-                : 'border-transparent text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
-            }`}
-          >
-            {t.icon ? <MaterialIcon name={t.icon} size={18} /> : null}
-            <span className="text-body-md">{t.label}</span>
-            {showBadge ? (
-              <span
-                className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-caption ${badgeClass}`}
-              >
-                {badgeDisplay}
-              </span>
-            ) : null}
-          </Link>
-        )
-      })}
-    </div>
-  )
-}
+return (
+      <div className="flex items-center gap-1 border-b border-outline-variant mb-6 overflow-x-auto">
+        {tabs.map((t) => {
+          const isActive = active === t.key
+          const showBadge = t.badge != null && t.badge > 0
+          const badgeDisplay =
+            t.badge != null && t.badgeCap != null && t.badge > t.badgeCap
+              ? `${t.badgeCap}+`
+              : t.badge
+          const badgeClass =
+            t.badgeTone === 'error'
+              ? 'bg-error text-on-error'
+              : t.badgeTone === 'primary'
+                ? 'bg-primary text-secondary'
+                : 'bg-surface-variant text-on-surface-variant'
+          return (
+            <Link
+              key={t.key}
+              href={t.href}
+              aria-current={isActive ? 'page' : undefined}
+              title={t.label}
+              className={`inline-flex items-center gap-2 px-4 py-3 border-b-2 -mb-px transition-colors whitespace-nowrap flex-shrink-0 ${
+                isActive
+                  ? 'border-primary bg-primary text-on-primary font-semibold'
+                  : 'border-transparent text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
+              }`}
+            >
+              {t.icon ? <MaterialIcon name={t.icon} size={18} className="flex-shrink-0" /> : null}
+              <span className="text-body-md whitespace-nowrap">{t.label}</span>
+              {showBadge ? (
+                <span
+                  className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-caption flex-shrink-0 ${badgeClass}`}
+                >
+                  {badgeDisplay}
+                </span>
+              ) : null}
+            </Link>
+          )
+        })}
+      </div>
+    )
+  }

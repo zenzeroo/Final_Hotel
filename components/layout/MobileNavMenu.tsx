@@ -83,19 +83,21 @@ export function MobileNavMenu({ isAuthed, role, labels, locale }: MobileNavMenuP
             <form action={signOut} className="ml-auto">
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant text-label-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
+                title={labels.logout}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant text-label-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors min-w-[140px] justify-center whitespace-nowrap"
               >
-                <MaterialIcon name="logout" size={16} />
-                {labels.logout}
+                <MaterialIcon name="logout" size={16} className="flex-shrink-0" />
+                <span className="truncate">{labels.logout}</span>
               </button>
             </form>
           ) : (
             <Link
               href="/login"
               onClick={close}
-              className="ml-auto inline-flex items-center justify-center h-10 px-5 rounded-full bg-primary text-on-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+              title={labels.login}
+              className="ml-auto inline-flex items-center justify-center h-10 px-5 rounded-full bg-primary text-on-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors min-w-[140px] whitespace-nowrap"
             >
-              {labels.login}
+              <span className="truncate">{labels.login}</span>
             </Link>
           )}
         </div>
@@ -119,10 +121,11 @@ function MobileNavItem({
     <Link
       href={href}
       onClick={onNavigate}
-      className="flex items-center gap-3 px-4 py-3 rounded-lg text-body-lg text-on-surface hover:bg-primary-fixed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+      title={label}
+      className="flex items-center gap-3 px-4 py-3 rounded-lg text-body-lg text-on-surface hover:bg-primary-fixed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary min-w-0"
     >
-      <MaterialIcon name={icon} size={20} />
-      <span>{label}</span>
+      <MaterialIcon name={icon} size={20} className="flex-shrink-0" />
+      <span className="min-w-0 truncate flex-1">{label}</span>
     </Link>
   )
 }

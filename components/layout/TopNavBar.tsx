@@ -30,8 +30,11 @@ export async function TopNavBar() {
               Zenzero Hotel
             </Link>
 
-            {/* Nav Links (desktop only) */}
-            <nav className="hidden md:flex items-center gap-8">
+            {/* Nav Links (desktop only) — gap-4 instead of gap-8 keeps
+                the actions cluster from being squeezed off the right
+                edge when EN labels are longer ("My Bookings" vs TH
+                "ประวัติการจอง"). */}
+            <nav className="hidden md:flex items-center gap-4">
               <NavLink href="/">{t('nav.home')}</NavLink>
               <NavLink href="/rooms">{t('nav.rooms')}</NavLink>
               <NavLink href="/bookings">{t('nav.bookings')}</NavLink>
@@ -94,9 +97,10 @@ function LoginButton({ label }: { label: string }) {
   return (
     <Link
       href="/login"
-      className="inline-flex items-center justify-center h-10 px-5 rounded-full bg-primary text-on-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+      title={label}
+      className="inline-flex items-center justify-center h-10 px-5 rounded-full bg-primary text-on-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors min-w-[120px] whitespace-nowrap"
     >
-      {label}
+      <span className="truncate">{label}</span>
     </Link>
   )
 }
@@ -139,10 +143,11 @@ function UserMenu({
       <form action={signOut}>
         <button
           type="submit"
-          className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
+          title={t('nav.logout')}
+          className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors min-w-[120px] justify-center whitespace-nowrap"
         >
-          <MaterialIcon name="logout" size={16} />
-          {t('nav.logout')}
+          <MaterialIcon name="logout" size={16} className="flex-shrink-0" />
+          <span className="truncate">{t('nav.logout')}</span>
         </button>
       </form>
     </div>

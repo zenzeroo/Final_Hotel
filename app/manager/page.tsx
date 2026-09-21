@@ -47,9 +47,16 @@ export default async function ManagerDashboard() {
             {t('manager.subtitle')} · {today(localeBcp)}
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 text-body-md text-on-surface-variant bg-surface-container-low rounded-full px-4 py-2">
-          <MaterialIcon name="calendar_today" size={18} />
-          {today(localeBcp)}
+        {/* Today-date pill — TH date format ("วันจันทร์ที่ 21 กันยายน พ.ศ. 2569")
+            is wider than EN ("Monday, September 21, 2026"). min-w-[180px]
+            reserves enough width for the longer version so the pill
+            doesn't shrink on language toggle. */}
+        <div
+          title={today(localeBcp)}
+          className="inline-flex items-center gap-2 text-body-md text-on-surface-variant bg-surface-container-low rounded-full px-4 py-2 min-w-[180px] whitespace-nowrap"
+        >
+          <MaterialIcon name="calendar_today" size={18} className="flex-shrink-0" />
+          <span className="truncate">{today(localeBcp)}</span>
         </div>
       </header>
 
