@@ -37,7 +37,7 @@ export async function getOwnProfile(): Promise<AccountProfile | null> {
 
 export async function updateOwnProfile(
   args: {
-    fullName?: string
+    full_name?: string
     phone?: string | null
     birthdate?: string | null
   },

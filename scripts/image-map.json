@@ -1,0 +1,68 @@
+{
+  "Y:\\Final\\Photo\\Presidential Suite\\03.jpg": {
+    "key": "hero/home-hero.webp",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/hero/home-hero.webp",
+    "bytes": 140068,
+    "uploadedAt": "2026-09-22T09:14:59.429Z"
+  },
+  "Y:\\Final\\Photo\\Honeymoon Suite\\04.jpg": {
+    "key": "rooms/serenity-suite/hero.jpg",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/rooms/serenity-suite/hero.jpg",
+    "bytes": 177139,
+    "uploadedAt": "2026-09-22T09:15:00.779Z"
+  },
+  "Y:\\Final\\Photo\\Suite\\01.jpg": {
+    "key": "rooms/botanic-king/hero.jpg",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/rooms/botanic-king/hero.jpg",
+    "bytes": 232825,
+    "uploadedAt": "2026-09-22T09:15:01.745Z"
+  },
+  "Y:\\Final\\Photo\\Deluxe Room\\01.jpg": {
+    "key": "rooms/heritage-twin/hero.jpg",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/rooms/heritage-twin/hero.jpg",
+    "bytes": 154084,
+    "uploadedAt": "2026-09-22T09:15:02.540Z"
+  },
+  "Y:\\Final\\Photo\\Deluxe Room\\04.jpg": {
+    "key": "rooms/ocean-grand-deluxe/hero.jpg",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/rooms/ocean-grand-deluxe/hero.jpg",
+    "bytes": 193282,
+    "uploadedAt": "2026-09-22T09:15:03.693Z"
+  },
+  "Y:\\Final\\Photo\\Honeymoon Suite\\03.jpg": {
+    "key": "rooms/ocean-twin-premium/hero.jpg",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/rooms/ocean-twin-premium/hero.jpg",
+    "bytes": 306224,
+    "uploadedAt": "2026-09-22T09:15:04.503Z"
+  },
+  "Y:\\Final\\Photo\\Superior Room\\04.jpg": {
+    "key": "rooms/deluxe-forest-suite/hero.jpg",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/rooms/deluxe-forest-suite/hero.jpg",
+    "bytes": 443873,
+    "uploadedAt": "2026-09-22T09:15:05.222Z"
+  },
+  "Y:\\Final\\Photo\\Honeymoon Suite\\05.jpg": {
+    "key": "rooms/executive-corner-suite/hero.jpg",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/rooms/executive-corner-suite/hero.jpg",
+    "bytes": 151787,
+    "uploadedAt": "2026-09-22T09:15:06.163Z"
+  },
+  "Y:\\Final\\Photo\\Penthouse\\01.jpg": {
+    "key": "rooms/oasis-villa/hero.jpg",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/rooms/oasis-villa/hero.jpg",
+    "bytes": 274013,
+    "uploadedAt": "2026-09-22T09:15:16.205Z"
+  },
+  "Y:\\Final\\Photo\\Presidential Suite\\02.jpg": {
+    "key": "rooms/the-heritage-suite/hero.jpg",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/rooms/the-heritage-suite/hero.jpg",
+    "bytes": 254883,
+    "uploadedAt": "2026-09-22T09:15:19.905Z"
+  },
+  "Y:\\Final\\Photo\\Penthouse\\02.jpg": {
+    "key": "rooms/garden-view-pavilion/hero.jpg",
+    "publicUrl": "https://pub-bd00e642ff7946b0b63fbec785554bf8.r2.dev/rooms/garden-view-pavilion/hero.jpg",
+    "bytes": 327220,
+    "uploadedAt": "2026-09-22T09:15:21.373Z"
+  }
+}

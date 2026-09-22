@@ -86,14 +86,16 @@ export async function updateProfileAction(
       await updateOwnProfile({ phone: parsed.data.phone })
     } else {
       // After the schema branch, parsed.data is userFullSchema's shape.
-      const { phone, fullName, birthdate } = parsed.data as {
+      // Rename fullName → full_name at the data-layer boundary
+      // (PostgREST uses snake_case column names).
+      const { phone, fullName: full_name, birthdate } = parsed.data as {
         phone: string
         fullName: string
         birthdate: string
       }
       await updateOwnProfile({
         phone,
-        fullName,
+        full_name,
         birthdate: birthdate === '' ? null : birthdate,
       })
     }

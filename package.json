@@ -9,6 +9,9 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "images:migrate": "node scripts/migrate-images.mjs",
+    "images:upload": "node scripts/upload-image.mjs",
+    "images:check": "npx tsx scripts/check-r2-images.mts",
+    "images:preflight": "npx tsx scripts/preflight-google-urls.mts",
     "db:migrate": "node scripts/run-migrations.mjs"
   },
   "dependencies": {
