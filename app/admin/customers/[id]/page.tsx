@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getSession } from '@/lib/supabase/getSession'
 import { getCustomerById } from '@/lib/data/supabase-account'
 import { getUserBookings } from '@/lib/data/bookings'
+import { formatDate, formatDateTime } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { SuspendCustomerButton } from '@/components/admin/SuspendCustomerButton'
 import { UnsuspendCustomerButton } from '@/components/admin/UnsuspendCustomerButton'
@@ -69,9 +70,7 @@ export default async function CustomerDetailPage(props: {
           <DetailRow label="เบอร์โทร" value={customer.phone ?? '—'} />
           <DetailRow
             label="สมัครเมื่อ"
-            value={new Date(customer.created_at).toLocaleDateString('th-TH', {
-              dateStyle: 'medium',
-            })}
+            value={formatDate(customer.created_at, 'th-TH')}
           />
         </div>
       </section>
@@ -90,10 +89,7 @@ export default async function CustomerDetailPage(props: {
               label="ระงับเมื่อ"
               value={
                 customer.suspended_at
-                  ? new Date(customer.suspended_at).toLocaleString('th-TH', {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })
+                  ? formatDateTime(customer.suspended_at, 'th-TH')
                   : '—'
               }
             />

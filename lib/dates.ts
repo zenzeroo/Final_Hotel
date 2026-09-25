@@ -49,6 +49,28 @@ export function formatDateRange(
 }
 
 /**
+ * Format ISO date as Gregorian numeric DD/MM/YYYY.
+ * Example: "2026-09-23" → "23/09/2026"
+ *
+ * Used by /rooms SearchBar + BookingWidget where the UI expects a
+ * compact numeric layout. Forces Gregorian calendar explicitly via
+ * the `calendar: 'gregory'` option (matching `formatDate` /
+ * `formatDateTime` in this file) — the `th-TH` locale otherwise
+ * defaults to Buddhist Era and would render "23/09/2569".
+ */
+export function formatDateNumeric(iso: string, locale = 'th-TH'): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    calendar: 'gregory',
+  }).format(d)
+}
+
+/**
  * Maximum legal birthdate for an "age >= 18" gate — i.e. today minus 18
  * years in ISO YYYY-MM-DD. Used as the `max=` attribute on
  * <input type="date"> so the browser's native date picker won't even let

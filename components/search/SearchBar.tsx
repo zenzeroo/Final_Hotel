@@ -8,6 +8,7 @@ import {
   getMinCheckInLocalIso,
   getTomorrowLocalIso,
   addDaysLocalIso,
+  formatDateNumeric,
 } from '@/lib/dates'
 import { useT } from '@/lib/i18n/useT'
 
@@ -111,13 +112,16 @@ export function SearchBar({
     debouncedNavigate(next)
   }
 
-  // Compact-only: navigate without the guests param so the server
-  // filter (`if (filters.guests > 0) gte('max_guests', guests)`) is
-  // skipped — shows every room type matching the date range.
+  // Compact-only: "ดูทั้งหมด" — keep guests in URL so RoomCard's
+  // `buildRoomHref()` (components/room/RoomCard.tsx:96) forwards
+  // checkin/checkout/guests onto /rooms/[slug], letting the
+  // BookingWidget there prefill from them. `viewAll=1` signals the
+  // /rooms page to skip the `max_guests >= guests` filter — show every
+  // available room for the date range regardless of capacity.
   function handleSeeAll() {
     if (!isCompact) return
     const params = new URLSearchParams(searchParams.toString())
-    params.delete('guests')
+    params.set('viewAll', '1')
     if (checkin) params.set('checkin', checkin)
     else params.delete('checkin')
     if (checkout) params.set('checkout', checkout)
@@ -234,25 +238,25 @@ function DateField({
   onChange: (v: string) => void
 }) {
   return (
-    <label
-      className={`flex-1 flex items-center gap-3 px-4 py-3 ${
-        /* keep simple styling for hero variant: input inside pill */
-        ''
-      }`}
-    >
+    <label className="flex-1 flex items-center gap-3 px-4 py-3 relative cursor-pointer">
       <MaterialIcon name="calendar_today" size={20} className="text-on-surface-variant shrink-0" />
-      <div className="flex flex-col">
+      <div className="flex flex-col flex-1 min-w-0">
         <span className="text-caption text-on-surface-variant font-semibold uppercase tracking-wider">
           {label}
         </span>
-        <input
-          type="date"
-          value={value}
-          min={min}
-          onChange={(e) => onChange(e.target.value)}
-          className="bg-transparent text-body-md font-medium text-on-surface focus:outline-none"
-        />
+        <span className="text-body-md font-medium text-on-surface">
+          {formatDateNumeric(value)}
+        </span>
       </div>
+      {/* Hidden native input — covers label for click target + native picker + min validation */}
+      <input
+        type="date"
+        value={value}
+        min={min}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+      />
     </label>
   )
 }

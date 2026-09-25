@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback } from 'react'
 import Link from 'next/link'
 import type { Customer } from '@/lib/data/types'
+import { formatDate } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface CustomersAdminTableProps {
@@ -147,9 +148,7 @@ export function CustomersAdminTable({
                         {c.full_name ?? '(ไม่มีชื่อ)'}
                       </Link>
                       <p className="text-caption text-on-surface-variant mt-0.5">
-                        {new Date(c.created_at).toLocaleDateString('th-TH', {
-                          dateStyle: 'short',
-                        })}
+                        {formatDate(c.created_at, 'th-TH')}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-body-md text-on-surface-variant">

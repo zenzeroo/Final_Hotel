@@ -37,10 +37,20 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
       ? searchParams.checkout
       : addDaysLocalIso(todayPlus1, 1)
 
+  // viewAll=1 is set by SearchBar's "ดูทั้งหมด" button — keeps guests
+  // in URL for downstream BookingWidget prefilling (via RoomCard's
+  // link forwarding) but tells the results page to skip the
+  // `max_guests >= guests` filter. Date availability filter still runs.
+  const skipGuestsFilter = searchParams.viewAll === '1'
+
   const filters: SearchFilters = {
     checkin: todayPlus1,
     checkout: todayPlus2,
-    guests: searchParams.guests ? parseInt(String(searchParams.guests), 10) : undefined,
+    guests: skipGuestsFilter
+      ? undefined
+      : searchParams.guests
+        ? parseInt(String(searchParams.guests), 10)
+        : undefined,
     type:
       typeof searchParams.type === 'string'
         ? (searchParams.type as SearchFilters['type'])
@@ -70,7 +80,11 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
               variant="compact"
               defaultCheckin={filters.checkin}
               defaultCheckout={filters.checkout}
-              defaultGuests={filters.guests}
+              defaultGuests={
+                searchParams.guests
+                  ? parseInt(String(searchParams.guests), 10)
+                  : undefined
+              }
             />
           </div>
         </section>

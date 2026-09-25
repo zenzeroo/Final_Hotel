@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { RoomType } from '@/lib/data/types'
+import { formatDateTime } from '@/lib/dates'
 import { formatTHB } from '@/lib/pricing'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -343,10 +344,7 @@ export function RoomTypesAdminTable({ roomTypes, tab }: RoomTypesAdminTableProps
                   {tab === 'deleted' ? (
                     r.deleted_at ? (
                       <span className="text-caption text-on-surface-variant">
-                        {new Date(r.deleted_at).toLocaleString('th-TH', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}
+                        {formatDateTime(r.deleted_at, 'th-TH')}
                       </span>
                     ) : (
                       <span className="text-caption text-on-surface-variant italic">
