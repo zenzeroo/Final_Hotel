@@ -128,6 +128,28 @@ export const th = {
     checkEmailModalBody: 'เราได้ส่งลิงก์ยืนยันไปยังอีเมลที่คุณใช้สมัครแล้ว กรุณาตรวจสอบกล่องข้อความและคลิกลิงก์เพื่อเปิดใช้งานบัญชี',
     checkEmailModalOk: 'รับทราบ',
     checkEmailModalSpam: 'หากไม่พบอีเมล กรุณาตรวจสอบในโฟลเดอร์สแปม',
+    // Phase 41 — forgot/reset password pages
+    forgotPasswordPage: {
+      title: 'ลืมรหัสผ่าน',
+      subtitle: 'เราจะส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณ',
+      submitButton: 'ส่งลิงก์รีเซ็ต',
+      successTitle: 'ตรวจสอบอีเมลของคุณ',
+      successBody: 'หากอีเมลนี้มีอยู่ในระบบ เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปให้แล้ว กรุณาตรวจสอบกล่องข้อความและคลิกลิงก์เพื่อดำเนินการต่อ',
+      successSpam: 'หากไม่พบอีเมล กรุณาตรวจสอบในโฟลเดอร์สแปม',
+      backToLogin: 'กลับไปหน้าเข้าสู่ระบบ',
+      tryAgain: 'ลองอีกครั้ง',
+    },
+    resetPasswordPage: {
+      title: 'ตั้งรหัสผ่านใหม่',
+      subtitle: 'กรุณากรอกรหัสผ่านใหม่สำหรับบัญชีของคุณ',
+      newPasswordLabel: 'รหัสผ่านใหม่',
+      confirmPasswordLabel: 'ยืนยันรหัสผ่านใหม่',
+      submitButton: 'บันทึกรหัสผ่านใหม่',
+      expiredTitle: 'ลิงก์รีเซ็ตหมดอายุหรือไม่ถูกต้อง',
+      expiredBody: 'กรุณาขอลิงก์รีเซ็ตใหม่อีกครั้ง',
+      requestNewLink: 'ขอลิงก์รีเซ็ตใหม่',
+      successMessage: 'ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่',
+    },
   },
 
   // Payment success modal (Stripe Checkout redirect)

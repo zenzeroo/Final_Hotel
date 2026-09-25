@@ -132,6 +132,28 @@ export const en: Dictionary = {
     checkEmailModalBody: 'We\'ve sent a confirmation email to the email you used to register. Please check your inbox and click the link to activate your account.',
     checkEmailModalOk: 'Got it',
     checkEmailModalSpam: 'If you don\'t see the email, please check your spam folder.',
+    // Phase 41 — forgot/reset password pages
+    forgotPasswordPage: {
+      title: 'Forgot password',
+      subtitle: 'We will send a password reset link to your email',
+      submitButton: 'Send reset link',
+      successTitle: 'Check your email',
+      successBody: 'If this email exists in our system, we have sent a password reset link. Please check your inbox and click the link to continue.',
+      successSpam: 'If you don\'t see the email, please check your spam folder.',
+      backToLogin: 'Back to login',
+      tryAgain: 'Try again',
+    },
+    resetPasswordPage: {
+      title: 'Set new password',
+      subtitle: 'Please enter a new password for your account',
+      newPasswordLabel: 'New password',
+      confirmPasswordLabel: 'Confirm new password',
+      submitButton: 'Save new password',
+      expiredTitle: 'Reset link expired or invalid',
+      expiredBody: 'Please request a new reset link',
+      requestNewLink: 'Request new reset link',
+      successMessage: 'New password has been set. Please sign in with your new password.',
+    },
   },
 
   // Payment success modal (Stripe Checkout redirect)

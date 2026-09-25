@@ -54,19 +54,35 @@ export async function GET(request: NextRequest) {
       }
 
       const {
-        data: { user },
-      } = await supabase.auth.getUser()
+        data: { session },
+      } = await supabase.auth.getSession()
       let redirectTo = next
+      const user = session?.user ?? null
       if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle()
-        // Staff always lands on their own dashboard (anti-phishing).
-        // Regular users honour `?next=` deep link.
-        if (profile?.role && profile.role !== 'user') {
-          redirectTo = roleHomePath(profile.role as UserRole)
+        // Phase 41 — password reset flow. When the user clicks the
+        // "reset your password" email link, Supabase sets up a recovery
+        // session whose JWT `amr` claim includes { method: 'recovery' }.
+        // The amr claim is on JwtPayload (not directly on Session), so
+        // we cast to access it. We MUST honour `?next=` (typically
+        // /reset-password) for ALL roles — staff users also need to land
+        // on the password form, not their dashboard.
+        const amr = (session as { amr?: Array<{ method: string }> | string[] } | null)?.amr ?? []
+        const isRecovery = Array.isArray(amr)
+          && amr.some((m) => {
+              if (typeof m === 'string') return m === 'recovery'
+              return m.method === 'recovery'
+            })
+        if (!isRecovery) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle()
+          // Staff always lands on their own dashboard (anti-phishing).
+          // Regular users honour `?next=` deep link.
+          if (profile?.role && profile.role !== 'user') {
+            redirectTo = roleHomePath(profile.role as UserRole)
+          }
         }
       }
       return NextResponse.redirect(`${origin}${redirectTo}`)

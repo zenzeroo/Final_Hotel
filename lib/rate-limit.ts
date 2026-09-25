@@ -48,6 +48,8 @@ const ROUTE_CONFIG: Record<string, RouteConfig> = {
   '/register': { max: 5, windowMs: 60_000 }, // 5 signups/min per IP
   '/auth/callback': { max: 20, windowMs: 60_000 }, // 20 OAuth callbacks/min
   '/api/payments/checkout': { max: 10, windowMs: 60_000 }, // 10 checkout starts/min
+  '/forgot-password': { max: 5, windowMs: 60_000 }, // 5 reset requests/min per IP
+  '/reset-password': { max: 10, windowMs: 60_000 }, // 10 password updates/min per IP
 }
 
 function getConfig(route: string): RouteConfig {
