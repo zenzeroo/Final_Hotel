@@ -8,6 +8,7 @@ import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { BookingForm } from './BookingForm'
 import { calculateNights } from '@/lib/pricing'
+import { acquireBookingHoldAction } from '@/app/actions/booking-holds'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,6 +41,19 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
   const nights = calculateNights(checkIn, checkOut)
   if (nights === 0) {
     redirect(`/rooms/${room.slug}`)
+  }
+
+  // Phase 40 — acquire a 10-minute hold on this room_type+dates so other
+  // users see the room as unavailable while this user fills the form.
+  // If the slot is already held by someone else (or the room_type has no
+  // active units), redirect back to the room page with an error message.
+  const holdResult = await acquireBookingHoldAction({
+    roomTypeId: room.id,
+    checkIn,
+    checkOut,
+  })
+  if (!holdResult.ok) {
+    redirect(`/rooms/${room.slug}?error=held`)
   }
 
   // Get profile (for pre-fill)

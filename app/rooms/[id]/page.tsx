@@ -46,6 +46,11 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
   const session = await getSession()
   const isAuthed = Boolean(session)
 
+  // Phase 40 — when /bookings/new redirected back with ?error=held,
+  // show a Thai/EN banner explaining the room was just taken by another
+  // user. The booking_holds TTL is 10 minutes so the user can retry.
+  const holdError = searchParams.error === 'held'
+
   if (!room) {
     notFound()
   }
@@ -55,6 +60,16 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
       <TopNavBar />
       <main className="flex-1 bg-background">
         <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-10">
+          {holdError && (
+            <div
+              role="alert"
+              className="mb-6 px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error"
+            >
+              {isEn
+                ? 'This room was just reserved by another guest. Please try again in a few minutes — the hold expires automatically.'
+                : 'ห้องนี้เพิ่งถูกจองหรือถูกระงับชั่วคราวโดยผู้ใช้อื่น กรุณาลองใหม่ในอีกสักครู่ (การถือครองจะหมดอายุภายใน 10 นาที)'}
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-10">
             {/* Main content */}
             <article className="flex flex-col gap-12">

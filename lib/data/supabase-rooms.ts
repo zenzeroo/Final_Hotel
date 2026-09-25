@@ -111,7 +111,14 @@ async function filterByAvailability(
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const admin = await createAdminClient()
 
-  const [unitsRes, bookingsRes] = await Promise.all([
+  // Phase 40 — also fetch active booking_holds (expires_at > now()) for
+  // the same date range. The `create_booking` RPC counts these in its
+  // capacity check (see db-schemas/20261003_booking_holds.sql), so this
+  // client-side filter must too — otherwise two searchers both see the
+  // room as available while the second user's create_booking fails with
+  // P0001. Note: RLS doesn't apply (admin client) and we don't filter by
+  // user_id — a user's own hold also blocks OTHER searchers.
+  const [unitsRes, bookingsRes, holdsRes] = await Promise.all([
     admin
       .from('room_units')
       .select('room_type_id')
@@ -120,6 +127,12 @@ async function filterByAvailability(
       .from('bookings')
       .select('room_type_id')
       .in('status', ['confirmed', 'checked_in'])
+      .lte('check_in', checkout)
+      .gte('check_out', checkin),
+    admin
+      .from('booking_holds')
+      .select('room_type_id')
+      .gt('expires_at', new Date().toISOString())
       .lte('check_in', checkout)
       .gte('check_out', checkin),
   ])
@@ -134,12 +147,18 @@ async function filterByAvailability(
     bookedByType.set(b.room_type_id, (bookedByType.get(b.room_type_id) ?? 0) + 1)
   })
 
+  // Phase 40 — fold active holds into the booked count.
+  holdsRes.data?.forEach((h) => {
+    bookedByType.set(h.room_type_id, (bookedByType.get(h.room_type_id) ?? 0) + 1)
+  })
+
   return rooms.filter((r) => {
     const pool = poolByType.get(r.id) ?? 0
     const booked = bookedByType.get(r.id) ?? 0
-    // Hide the entire room type once ANY active booking overlaps the
-    // requested date range — matches the user expectation "I booked
-    // it, it's gone" and matches the RPC's authoritative semantics.
+    // Hide the entire room type once ANY active booking OR active hold
+    // overlaps the requested date range — matches the user expectation
+    // "I booked it, it's gone" and matches the RPC's authoritative
+    // semantics (combined `v_active_count + v_hold_count`).
     // The `pool > 0` guard still hides types with no physical units.
     return pool > 0 && booked === 0
   })
