@@ -7,8 +7,8 @@ import { TransactionalHeader } from '@/components/layout/TransactionalHeader'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { BookingForm } from './BookingForm'
+import { BookingHoldInit } from '@/components/booking/BookingHoldInit'
 import { calculateNights } from '@/lib/pricing'
-import { acquireBookingHoldAction } from '@/app/actions/booking-holds'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,19 +43,6 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
     redirect(`/rooms/${room.slug}`)
   }
 
-  // Phase 40 — acquire a 10-minute hold on this room_type+dates so other
-  // users see the room as unavailable while this user fills the form.
-  // If the slot is already held by someone else (or the room_type has no
-  // active units), redirect back to the room page with an error message.
-  const holdResult = await acquireBookingHoldAction({
-    roomTypeId: room.id,
-    checkIn,
-    checkOut,
-  })
-  if (!holdResult.ok) {
-    redirect(`/rooms/${room.slug}?error=held`)
-  }
-
   // Get profile (for pre-fill)
   const { data: profile } = await supabase
     .from('profiles')
@@ -85,6 +72,17 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
 
   return (
     <>
+      {/* Phase 40 — Client Component triggers acquireBookingHoldAction on
+          mount. Cookies().set() inside the action is allowed because the
+          call originates from a Client Component useEffect (not from
+          this Server Component render). On error, the component
+          redirects back to /rooms/[slug]?error=held. */}
+      <BookingHoldInit
+        roomTypeId={room.id}
+        checkIn={checkIn}
+        checkOut={checkOut}
+        roomSlug={room.slug}
+      />
       <TopNavBar />
       <main className="flex-1 bg-background">
         <TransactionalHeader backHref={`/rooms/${room.slug}`} />
