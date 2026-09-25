@@ -29,13 +29,14 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
   // back to the hardcoded DEFAULT_PRICING (0.07 / 150).
   const pricingSettings = await getPricingConstants()
 
-  // Forward the dates+guests that the user picked in /rooms so the
-  // BookingWidget pre-fills instead of resetting to defaults. Casing is
-  // lowercase `checkin/checkout` to match the SearchBar writer (see
-  // components/search/SearchBar.tsx:36-44).
+  // Forward the dates the user picked in /rooms so the BookingWidget
+  // pre-fills instead of resetting to defaults. Casing is lowercase
+  // `checkin/checkout` to match the SearchBar writer (see
+  // components/search/SearchBar.tsx). `guests` is no longer read by the
+  // widget — it always reserves the room's max capacity — so the URL
+  // param from the /rooms SearchBar is ignored on this page.
   const defaultCheckIn = typeof searchParams.checkin === 'string' ? searchParams.checkin : undefined
   const defaultCheckOut = typeof searchParams.checkout === 'string' ? searchParams.checkout : undefined
-  const defaultGuests = searchParams.guests ? parseInt(String(searchParams.guests), 10) : undefined
 
   if (!room) {
     notFound()
@@ -128,7 +129,6 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
               settings={pricingSettings}
               defaultCheckIn={defaultCheckIn}
               defaultCheckOut={defaultCheckOut}
-              defaultGuests={defaultGuests}
             />
           </div>
         </div>

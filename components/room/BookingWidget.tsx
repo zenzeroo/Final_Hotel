@@ -24,8 +24,6 @@ interface BookingWidgetProps {
   defaultCheckIn?: string
   /** Pre-fill from the /rooms search (lowercase `checkout` URL param). */
   defaultCheckOut?: string
-  /** Pre-fill from the /rooms search (`guests` URL param). */
-  defaultGuests?: number
 }
 
 /** Tomorrow + 1 day (i.e. 2 nights out) — the historical default checkout. */
@@ -35,7 +33,7 @@ function getTomorrowPlusOneIso() {
   return getLocalIsoDate(d)
 }
 
-export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut, defaultGuests }: BookingWidgetProps) {
+export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut }: BookingWidgetProps) {
   const router = useRouter()
   // Hotels require ≥ 1 day advance booking — clamp URL-provided checkIn
   // so a stale `?checkIn=2026-09-08` link (today) doesn't strand the user.
@@ -44,12 +42,6 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
     return defaultCheckIn && defaultCheckIn >= min ? defaultCheckIn : min
   })
   const [checkOut, setCheckOut] = useState(() => defaultCheckOut ?? getTomorrowPlusOneIso())
-  // Clamp initial guests into [1, max_guests] so a stale URL param (e.g.
-  // ?guests=10 on a max=4 room) doesn't strand the + button in a
-  // permanently-capped state.
-  const [guests, setGuests] = useState(() =>
-    Math.min(Math.max(1, defaultGuests ?? 2), room.max_guests),
-  )
 
   // Phase parity — capture full QuoteResult so calculatePrice uses the
   // seasonal-aware baseSubtotal. Also drives the appliedRates banner.
@@ -91,12 +83,11 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
           basePrice: room.base_price,
           checkIn,
           checkOut,
-          guests,
           quote: quote ?? undefined,
         },
         settings,
       ),
-    [room.base_price, checkIn, checkOut, guests, quote, settings]
+    [room.base_price, checkIn, checkOut, quote, settings]
   )
 
   const handleReserve = () => {
@@ -104,7 +95,12 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
       roomId: room.id,
       checkIn,
       checkOut,
-      guests: String(guests),
+      // Guest count is fixed to the room's max capacity — pricing doesn't
+      // vary by guest count in this project (see lib/pricing.ts:18 — the
+      // `guests` field is reserved for future guest-based pricing but is
+      // not currently read by `calculatePrice`). BookingForm still needs
+      // the value to forward to `createBooking` server action.
+      guests: String(room.max_guests),
     })
     router.push(`/bookings/new?${params.toString()}`)
   }
@@ -154,36 +150,14 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
           </div>
         </div>
         <div className="border-t border-outline-variant p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-caption text-on-surface-variant uppercase tracking-wider block">
-                ผู้เข้าพัก
-              </span>
-              <span className="text-body-md font-medium text-on-surface">
-                {guests} ท่าน / สูงสุด {room.max_guests}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setGuests((g) => Math.max(1, g - 1))}
-                disabled={guests <= 1}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-current disabled:hover:border-outline-variant"
-                aria-label="ลดจำนวนผู้เข้าพัก"
-              >
-                <MaterialIcon name="remove" size={16} />
-              </button>
-              <span className="text-body-md font-semibold w-6 text-center">{guests}</span>
-              <button
-                type="button"
-                onClick={() => setGuests((g) => Math.min(room.max_guests, g + 1))}
-                disabled={guests >= room.max_guests}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-current disabled:hover:border-outline-variant"
-                aria-label="เพิ่มจำนวนผู้เข้าพัก"
-              >
-                <MaterialIcon name="add" size={16} />
-              </button>
-            </div>
+          <div className="flex items-center gap-2">
+            <MaterialIcon name="group" size={18} className="text-on-surface-variant" />
+            <span className="text-caption text-on-surface-variant uppercase tracking-wider">
+              ผู้เข้าพัก
+            </span>
+            <span className="text-body-md font-medium text-on-surface ml-auto">
+              เข้าพักได้สูงสุด <strong>{room.max_guests}</strong> ท่าน
+            </span>
           </div>
         </div>
       </div>
