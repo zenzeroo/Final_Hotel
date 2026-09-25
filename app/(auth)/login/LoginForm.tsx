@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react'
 import { useFormStatus } from 'react-dom'
+import Link from 'next/link'
 import { signIn, signInWithGoogle, type AuthState } from '@/app/actions/auth'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -88,12 +89,12 @@ export function LoginForm({ next, errorMessage }: LoginFormProps) {
       <label className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <span className="text-label-md text-on-surface">รหัสผ่าน</span>
-          <a
-            href="#"
+          <Link
+            href="/forgot-password"
             className="text-caption text-primary px-1 py-0.5 rounded hover:bg-primary-fixed hover:text-primary transition-colors"
           >
             ลืมรหัสผ่าน?
-          </a>
+          </Link>
         </div>
         <PasswordInput
           name="password"
