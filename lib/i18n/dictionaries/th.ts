@@ -83,6 +83,13 @@ export const th = {
     reviewCount: '{count} รีวิว',
     noReviews: 'ยังไม่มีรีวิว',
     writeReview: 'เขียนรีวิว',
+    // Login prompt modal — shown when logged-out user clicks "ยืนยันการจอง"
+    loginToBook: {
+      title: 'เข้าสู่ระบบเพื่อจองห้องพัก',
+      body: 'กรุณาเข้าสู่ระบบเพื่อดำเนินการจองต่อ',
+      continueViewing: 'ดูข้อมูลห้องต่อ',
+      goToLogin: 'เข้าสู่ระบบ',
+    },
   },
 
   // Room card (homepage featured grid)

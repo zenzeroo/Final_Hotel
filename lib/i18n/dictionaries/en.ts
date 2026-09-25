@@ -87,6 +87,13 @@ export const en: Dictionary = {
     reviewCount: '{count} reviews',
     noReviews: 'No reviews yet',
     writeReview: 'Write a review',
+    // Login prompt modal — shown when logged-out user clicks "ยืนยันการจอง"
+    loginToBook: {
+      title: 'Sign in to book this room',
+      body: 'Please sign in to continue with your booking',
+      continueViewing: 'Continue viewing',
+      goToLogin: 'Sign in',
+    },
   },
 
   // Room card (homepage featured grid)

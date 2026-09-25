@@ -1,9 +1,11 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useState, useMemo, useTransition, useEffect } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { RatingStars } from './RatingStars'
+import { ConfirmModal } from '../ui/ConfirmModal'
+import { useT } from '@/lib/i18n/useT'
 import {
   calculateNights,
   calculatePrice,
@@ -24,6 +26,13 @@ interface BookingWidgetProps {
   defaultCheckIn?: string
   /** Pre-fill from the /rooms search (lowercase `checkout` URL param). */
   defaultCheckOut?: string
+  /**
+   * Server-derived auth state. When `false`, clicking "ยืนยันการจอง"
+   * opens a login prompt modal that preserves the user's date selection
+   * on dismiss and forwards a return URL on confirm. When `true`,
+   * navigates straight to /bookings/new as before.
+   */
+  isAuthed: boolean
 }
 
 /** Tomorrow + 1 day (i.e. 2 nights out) — the historical default checkout. */
@@ -33,8 +42,11 @@ function getTomorrowPlusOneIso() {
   return getLocalIsoDate(d)
 }
 
-export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut }: BookingWidgetProps) {
+export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut, isAuthed }: BookingWidgetProps) {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const t = useT()
   // Hotels require ≥ 1 day advance booking — clamp URL-provided checkIn
   // so a stale `?checkIn=2026-09-08` link (today) doesn't strand the user.
   const [checkIn, setCheckIn] = useState(() => {
@@ -42,6 +54,10 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut 
     return defaultCheckIn && defaultCheckIn >= min ? defaultCheckIn : min
   })
   const [checkOut, setCheckOut] = useState(() => defaultCheckOut ?? getTomorrowPlusOneIso())
+  // Logged-out users clicking "ยืนยันการจอง" see a confirmation modal
+  // instead of being redirected straight to /login. State is local to
+  // the modal — dismissing it leaves the dates widget state untouched.
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
 
   // Phase parity — capture full QuoteResult so calculatePrice uses the
   // seasonal-aware baseSubtotal. Also drives the appliedRates banner.
@@ -91,6 +107,10 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut 
   )
 
   const handleReserve = () => {
+    if (!isAuthed) {
+      setShowLoginPrompt(true)
+      return
+    }
     const params = new URLSearchParams({
       roomId: room.id,
       checkIn,
@@ -103,6 +123,20 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut 
       guests: String(room.max_guests),
     })
     router.push(`/bookings/new?${params.toString()}`)
+  }
+
+  /**
+   * Build the post-login return URL from the user's current location
+   * (pathname + searchParams) so they land back on this room page with
+   * their date selections preserved. encodeURIComponent handles the `?`,
+   * `&`, `=` inside the value. signIn action runs sanitizeNext() which
+   * rejects open-redirect attempts.
+   */
+  function handleLoginClick() {
+    const qs = searchParams.toString()
+    const next = qs ? `${pathname}?${qs}` : pathname
+    router.push(`/login?next=${encodeURIComponent(next)}`)
+    setShowLoginPrompt(false)
   }
 
   const hasSeasonalRates = appliedRates.length > 0
@@ -221,6 +255,20 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut 
           <span>ยกเลิกฟรีภายใน 24 ชั่วโมง</span>
         </div>
       </div>
+
+      {/* Login prompt — shown when logged-out user clicks "ยืนยันการจอง".
+          Dismissing leaves the user's date selections intact; confirming
+          sends them to /login with a return URL back to this exact page
+          (including current ?checkin / ?checkout / ?guests params). */}
+      <ConfirmModal
+        open={showLoginPrompt}
+        onCancel={() => setShowLoginPrompt(false)}
+        onConfirm={handleLoginClick}
+        title={t('roomDetail.loginToBook.title')}
+        body={t('roomDetail.loginToBook.body')}
+        cancelLabel={t('roomDetail.loginToBook.continueViewing')}
+        okLabel={t('roomDetail.loginToBook.goToLogin')}
+      />
     </aside>
   )
 }

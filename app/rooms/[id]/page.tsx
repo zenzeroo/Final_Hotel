@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getRoomBySlug } from '@/lib/data/rooms'
 import { getPricingConstants } from '@/lib/data/manager'
+import { getSession } from '@/lib/supabase/getSession'
 import { bedTypeLabel } from '@/lib/format/bedType'
 import { roomTypeLabel } from '@/lib/format/roomType'
 import { TopNavBar } from '@/components/layout/TopNavBar'
@@ -37,6 +38,13 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
   // param from the /rooms SearchBar is ignored on this page.
   const defaultCheckIn = typeof searchParams.checkin === 'string' ? searchParams.checkin : undefined
   const defaultCheckOut = typeof searchParams.checkout === 'string' ? searchParams.checkout : undefined
+
+  // Read auth state server-side so the BookingWidget can show a login
+  // prompt modal when the user clicks "ยืนยันการจอง" without an account,
+  // instead of bouncing them through /bookings/new → /login. Mirrors the
+  // pattern used by <TopNavBar> (passes isAuthed down to client children).
+  const session = await getSession()
+  const isAuthed = Boolean(session)
 
   if (!room) {
     notFound()
@@ -129,6 +137,7 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
               settings={pricingSettings}
               defaultCheckIn={defaultCheckIn}
               defaultCheckOut={defaultCheckOut}
+              isAuthed={isAuthed}
             />
           </div>
         </div>
