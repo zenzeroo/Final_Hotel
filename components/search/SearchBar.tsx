@@ -151,8 +151,8 @@ export function SearchBar({
       onSubmit={handleSubmit}
       className={`flex flex-col md:flex-row items-stretch gap-3 md:gap-2 ${
         isHero
-          ? 'bg-surface-container-lowest p-4 md:p-3 rounded-2xl shadow-(--shadow-ambient-lg) md:rounded-full'
-          : 'bg-surface-container-lowest p-4 rounded-2xl shadow-(--shadow-ambient)'
+          ? 'bg-surface-container-lowest p-3 md:p-3 rounded-2xl shadow-(--shadow-ambient-lg) md:rounded-full'
+          : 'bg-surface-container-lowest p-3 rounded-2xl shadow-(--shadow-ambient)'
       }`}
     >
       {/* Check-in */}
@@ -175,11 +175,11 @@ export function SearchBar({
       <div
         className={`flex-1 flex items-center gap-3 ${
           isHero
-            ? 'md:px-4 md:py-2 md:border-l md:border-outline-variant'
+            ? 'md:px-4 md:py-3 md:border-l md:border-outline-variant'
             : 'px-4 py-3 border border-outline-variant rounded-xl'
         }`}
       >
-        <span className="text-label-md text-on-surface-variant shrink-0">ผู้เข้าพัก</span>
+        <span className="text-caption text-on-surface-variant font-semibold uppercase tracking-wider shrink-0">ผู้เข้าพัก</span>
         <div className="flex items-center gap-3 ml-auto">
           <button
             type="button"
@@ -205,7 +205,7 @@ export function SearchBar({
       {isHero ? (
         <button
           type="submit"
-          className="md:rounded-full bg-primary text-on-primary px-6 py-3 md:py-2 rounded-xl font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-on-primary px-6 py-3 font-semibold text-label-md uppercase tracking-wider whitespace-nowrap shrink-0 hover:bg-primary-fixed hover:text-primary transition-colors"
         >
           <MaterialIcon name="search" size={20} />
           <span>ค้นหาห้องพัก</span>
@@ -214,7 +214,7 @@ export function SearchBar({
         <button
           type="button"
           onClick={handleSeeAll}
-          className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-primary text-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-primary text-primary font-semibold text-label-md uppercase tracking-wider whitespace-nowrap shrink-0 hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
         >
           <MaterialIcon name="grid_view" size={18} />
           <span>{t('roomsList.seeAll')}</span>
