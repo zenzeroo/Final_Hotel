@@ -92,7 +92,7 @@ export const en: Dictionary = {
       title: 'Sign in to book this room',
       body: 'Please sign in to continue with your booking',
       continueViewing: 'Continue viewing',
-      goToLogin: 'Sign in',
+      goToLogin: 'Go to login',
     },
   },
 
