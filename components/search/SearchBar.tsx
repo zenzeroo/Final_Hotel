@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useRef, useState, type FormEvent } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
-import { DatePickerField } from '../ui/DatePickerField'
 import {
   getMinCheckInLocalIso,
   addDaysLocalIso,
@@ -156,7 +155,7 @@ export function SearchBar({
       }`}
     >
       {/* Check-in */}
-      <DatePickerField
+      <DateField
         label="เช็คอิน"
         value={checkin}
         min={getMinCheckInLocalIso()}
@@ -164,7 +163,7 @@ export function SearchBar({
       />
 
       {/* Check-out */}
-      <DatePickerField
+      <DateField
         label="เช็คเอาท์"
         value={checkout}
         min={addDaysLocalIso(checkin, 1)}
@@ -221,5 +220,39 @@ export function SearchBar({
         </button>
       )}
     </form>
+  )
+}
+
+function DateField({
+  label,
+  value,
+  min,
+  onChange,
+}: {
+  label: string
+  value: string
+  min: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <label className="flex-1 flex items-center gap-3 px-4 py-3">
+      <MaterialIcon
+        name="calendar_today"
+        size={20}
+        className="text-on-surface-variant shrink-0"
+      />
+      <div className="flex flex-col">
+        <span className="text-caption text-on-surface-variant font-semibold uppercase tracking-wider">
+          {label}
+        </span>
+        <input
+          type="date"
+          value={value}
+          min={min}
+          onChange={(e) => onChange(e.target.value)}
+          className="bg-transparent text-body-md font-medium text-on-surface focus:outline-none"
+        />
+      </div>
+    </label>
   )
 }
