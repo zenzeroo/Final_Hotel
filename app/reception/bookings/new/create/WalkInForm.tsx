@@ -5,6 +5,7 @@ import { useState, useTransition, useMemo } from 'react'
 import { createWalkInBooking } from '@/app/actions/walk-in-booking'
 import { calculateNights, calculatePrice, formatTHB } from '@/lib/pricing'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { DatePickerField } from '@/components/ui/DatePickerField'
 
 interface WalkInFormProps {
   room: {
@@ -139,28 +140,24 @@ export function WalkInForm({ room }: WalkInFormProps) {
           <h2 className="font-display text-xl text-primary mb-4">วันที่เข้าพัก</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="เช็คอิน" required>
-              <input
-                type="date"
+              <DatePickerField
                 value={checkIn}
                 min={getTodayIso()}
-                onChange={(e) => {
-                  setCheckIn(e.target.value)
-                  if (e.target.value >= checkOut) {
-                    const next = new Date(e.target.value)
+                onChange={(v) => {
+                  setCheckIn(v)
+                  if (v >= checkOut) {
+                    const next = new Date(v)
                     next.setDate(next.getDate() + 1)
                     setCheckOut(next.toISOString().slice(0, 10))
                   }
                 }}
-                className="input"
               />
             </Field>
             <Field label="เช็คเอาท์" required>
-              <input
-                type="date"
+              <DatePickerField
                 value={checkOut}
                 min={checkIn}
-                onChange={(e) => setCheckOut(e.target.value)}
-                className="input"
+                onChange={(v) => setCheckOut(v)}
               />
             </Field>
             <Field label="ผู้เข้าพัก" required>

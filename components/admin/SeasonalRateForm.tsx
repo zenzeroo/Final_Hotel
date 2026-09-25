@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom'
 import type { RoomType } from '@/lib/data/types'
 import { createSeasonalRateAction } from '@/app/actions/admin/rates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { DatePickerField } from '@/components/ui/DatePickerField'
 
 interface SeasonalRateFormProps {
   roomTypes: RoomType[]
@@ -128,20 +129,10 @@ export function SeasonalRateForm({ roomTypes }: SeasonalRateFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="วันเริ่มต้น" required>
-          <input
-            name="start_date"
-            type="date"
-            required
-            className={inputClass}
-          />
+          <DatePickerField name="start_date" required />
         </Field>
         <Field label="วันสิ้นสุด" required>
-          <input
-            name="end_date"
-            type="date"
-            required
-            className={inputClass}
-          />
+          <DatePickerField name="end_date" required />
         </Field>
       </div>
 

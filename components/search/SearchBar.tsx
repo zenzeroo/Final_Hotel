@@ -3,12 +3,10 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useRef, useState, type FormEvent } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { DatePickerField } from '../ui/DatePickerField'
 import {
-  getLocalIsoDate,
   getMinCheckInLocalIso,
-  getTomorrowLocalIso,
   addDaysLocalIso,
-  formatDateNumeric,
 } from '@/lib/dates'
 import { useT } from '@/lib/i18n/useT'
 
@@ -158,7 +156,7 @@ export function SearchBar({
       }`}
     >
       {/* Check-in */}
-      <DateField
+      <DatePickerField
         label="เช็คอิน"
         value={checkin}
         min={getMinCheckInLocalIso()}
@@ -166,7 +164,7 @@ export function SearchBar({
       />
 
       {/* Check-out */}
-      <DateField
+      <DatePickerField
         label="เช็คเอาท์"
         value={checkout}
         min={addDaysLocalIso(checkin, 1)}
@@ -223,40 +221,5 @@ export function SearchBar({
         </button>
       )}
     </form>
-  )
-}
-
-function DateField({
-  label,
-  value,
-  min,
-  onChange,
-}: {
-  label: string
-  value: string
-  min: string
-  onChange: (v: string) => void
-}) {
-  return (
-    <label className="flex-1 flex items-center gap-3 px-4 py-3 relative cursor-pointer">
-      <MaterialIcon name="calendar_today" size={20} className="text-on-surface-variant shrink-0" />
-      <div className="flex flex-col flex-1 min-w-0">
-        <span className="text-caption text-on-surface-variant font-semibold uppercase tracking-wider">
-          {label}
-        </span>
-        <span className="text-body-md font-medium text-on-surface">
-          {formatDateNumeric(value)}
-        </span>
-      </div>
-      {/* Hidden native input — covers label for click target + native picker + min validation */}
-      <input
-        type="date"
-        value={value}
-        min={min}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={label}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-      />
-    </label>
   )
 }

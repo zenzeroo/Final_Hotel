@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { updateProfileAction } from '@/app/actions/account'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { DatePickerField } from '@/components/ui/DatePickerField'
 import type { AccountProfile } from '@/lib/data/types'
 import type { UserRole } from '@/lib/supabase/roles'
 import { formatDate } from '@/lib/dates'
@@ -170,24 +171,14 @@ export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
             </Field>
             <Field label="วันเกิด">
               {verifiedDataLocked ? (
-                <div className="relative">
-                  <input
-                    type="date"
-                    defaultValue={profile.birthdate ?? ''}
-                    disabled
-                    className="w-full bg-surface-container border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface-variant cursor-not-allowed"
-                  />
-                  <MaterialIcon
-                    name="lock"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
-                  />
-                </div>
-              ) : (
-                <input
-                  name="birthdate"
-                  type="date"
+                <DatePickerField
                   defaultValue={profile.birthdate ?? ''}
-                  className={inputClass}
+                  disabled
+                />
+              ) : (
+                <DatePickerField
+                  name="birthdate"
+                  defaultValue={profile.birthdate ?? ''}
                 />
               )}
               <p className="font-caption text-caption text-on-surface-variant">

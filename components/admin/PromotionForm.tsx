@@ -9,6 +9,7 @@ import {
   updatePromotionAction,
 } from '@/app/actions/promotions'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { DatePickerField } from '@/components/ui/DatePickerField'
 import { getTodayLocalIso } from '@/lib/dates'
 
 interface PromotionFormProps {
@@ -191,25 +192,21 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="วันเริ่มต้น" required>
-          <input
+          <DatePickerField
             name="valid_from"
-            type="date"
             min={getTodayLocalIso()}
             defaultValue={initial?.valid_from ?? ''}
-            onChange={(e) => setValidFrom(e.target.value)}
+            onChange={(v) => setValidFrom(v)}
             required
-            className={inputClass}
           />
         </Field>
 
         <Field label="วันสิ้นสุด" required>
-          <input
+          <DatePickerField
             name="valid_until"
-            type="date"
             min={validFrom || getTodayLocalIso()}
             defaultValue={initial?.valid_until ?? ''}
             required
-            className={inputClass}
           />
         </Field>
       </div>

@@ -13,7 +13,8 @@ import {
 import { getSeasonalRatesAction } from '@/app/actions/seasonal-rates'
 import type { AppliedRate, QuoteResult } from '@/lib/pricing/seasons'
 import type { RoomType } from '@/lib/data/types'
-import { getLocalIsoDate, getMinCheckInLocalIso, getTomorrowLocalIso, addDaysLocalIso } from '@/lib/dates'
+import { getLocalIsoDate, getMinCheckInLocalIso, addDaysLocalIso } from '@/lib/dates'
+import { DatePickerField } from '../ui/DatePickerField'
 
 interface BookingWidgetProps {
   room: RoomType
@@ -126,37 +127,31 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
       {/* Date + guest picker */}
       <div className="border border-outline-variant rounded-xl overflow-hidden mb-4">
         <div className="grid grid-cols-2 divide-x divide-outline-variant">
-          <label className="block p-3 cursor-pointer hover:bg-primary-fixed transition-colors">
-            <span className="text-caption text-on-surface-variant uppercase tracking-wider block">
-              เช็คอิน
-            </span>
-            <input
-              type="date"
+          <div className="hover:bg-primary-fixed transition-colors">
+            <DatePickerField
+              label="เช็คอิน"
+              iconName=""
               value={checkIn}
               min={getMinCheckInLocalIso()}
-              onChange={(e) => {
-                setCheckIn(e.target.value)
-                if (e.target.value >= checkOut) {
-                  const next = new Date(e.target.value)
+              onChange={(v) => {
+                setCheckIn(v)
+                if (v >= checkOut) {
+                  const next = new Date(v)
                   next.setDate(next.getDate() + 1)
                   setCheckOut(getLocalIsoDate(next))
                 }
               }}
-              className="w-full bg-transparent text-body-md font-medium text-on-surface focus:outline-none"
             />
-          </label>
-          <label className="block p-3 cursor-pointer hover:bg-primary-fixed transition-colors">
-            <span className="text-caption text-on-surface-variant uppercase tracking-wider block">
-              เช็คเอาท์
-            </span>
-            <input
-              type="date"
+          </div>
+          <div className="hover:bg-primary-fixed transition-colors">
+            <DatePickerField
+              label="เช็คเอาท์"
+              iconName=""
               value={checkOut}
               min={addDaysLocalIso(checkIn, 1)}
-              onChange={(e) => setCheckOut(e.target.value)}
-              className="w-full bg-transparent text-body-md font-medium text-on-surface focus:outline-none"
+              onChange={(v) => setCheckOut(v)}
             />
-          </label>
+          </div>
         </div>
         <div className="border-t border-outline-variant p-3">
           <div className="flex items-center justify-between">
