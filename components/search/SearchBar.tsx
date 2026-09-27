@@ -10,7 +10,7 @@ import {
 import { useT } from '@/lib/i18n/useT'
 
 interface SearchBarProps {
-  variant?: 'hero' | 'compact' | 'overlay'
+  variant?: 'hero' | 'compact'
   defaultCheckin?: string
   defaultCheckout?: string
   defaultGuests?: number
@@ -45,15 +45,11 @@ export function SearchBar({
 
   const isHero = variant === 'hero'
   const isCompact = variant === 'compact'
-  const isOverlay = variant === 'overlay'
 
   /**
    * Navigation strategy:
    * - `compact`  (/rooms list) → in-place URL update via router.replace.
-   * - `overlay`  (hero on / or /rooms/[id]) → debounced 400ms then
-   *              router.push to /rooms with new dates. Skips if already
-   *              on /rooms (treat like compact — in-place update).
-   * - `hero`     (legacy) → requires explicit Submit.
+   * - `hero`     (homepage hero on /) → requires explicit Submit.
    */
   const isOnRooms = pathname === '/rooms'
 
@@ -62,8 +58,9 @@ export function SearchBar({
     checkout?: string
     guests?: number
   }) {
-    // Merge with current searchParams so we preserve unrelated filters
-    // (type, floor, priceRange, viewAll) when on /rooms.
+    // Compact renders only on /rooms, so we always replace (not push)
+    // and always merge with existing searchParams to preserve unrelated
+    // filters (type, floor, priceRange, viewAll).
     const params = new URLSearchParams(
       isOnRooms ? searchParams.toString() : '',
     )
@@ -81,33 +78,16 @@ export function SearchBar({
     }
     const qs = params.toString()
 
-    if (isOnRooms) {
-      // In-place URL update — keeps history clean + scroll position.
-      router.replace(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
-    } else {
-      // Push to /rooms — overlay SearchBar lives on / or /rooms/[id],
-      // and changing dates should take the user to the results page.
-      router.push(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
-    }
+    // In-place URL update — keeps history clean + scroll position.
+    router.replace(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // Realtime auto-navigate (compact + overlay)
+  // Realtime auto-navigate (compact)
   // ─────────────────────────────────────────────────────────────────
-  // Compact already used a 350ms debounce for guests +/- clicks (only).
-  // Overlay now debounces ALL changes (dates + guests) — a rapid burst of
-  // date-picker clicks coalesces into one navigation, not 4-5 back-to-back.
+  // Compact uses a 350ms debounce for guests +/- clicks so rapid bursts
+  // coalesce into one navigation, not 4-5 back-to-back.
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const debouncedNavigate = (opts: {
-    checkin?: string
-    checkout?: string
-    guests?: number
-  }) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      navigateToRooms(opts)
-    }, 400)
-  }
 
   // Cleanup pending debounce on unmount.
   useEffect(() => {
@@ -131,8 +111,6 @@ export function SearchBar({
 
     if (isCompact) {
       navigateToRooms({ checkin: v, checkout: nextCheckout })
-    } else if (isOverlay) {
-      debouncedNavigate({ checkin: v, checkout: nextCheckout })
     }
     // hero: no-op — user must Submit
   }
@@ -142,8 +120,6 @@ export function SearchBar({
 
     if (isCompact) {
       navigateToRooms({ checkout: v })
-    } else if (isOverlay) {
-      debouncedNavigate({ checkout: v })
     }
     // hero: no-op
   }
@@ -159,8 +135,6 @@ export function SearchBar({
       debounceRef.current = setTimeout(() => {
         navigateToRooms({ guests: next })
       }, 350)
-    } else if (isOverlay) {
-      debouncedNavigate({ guests: next })
     }
     // hero: no-op
   }
@@ -250,7 +224,7 @@ export function SearchBar({
         </div>
       </div>
 
-      {/* Actions — compact: "ดูทั้งหมด" button. Overlay: no button (auto-navigates). Hero: Submit button. */}
+      {/* Actions — compact: "ดูทั้งหมด" button. Hero: Submit button. */}
       {isCompact ? (
         <button
           type="button"
