@@ -2,7 +2,7 @@ import { MaterialIcon } from '../ui/MaterialIcon'
 
 interface RatingStarsProps {
   value: number // 0.0 - 5.0
-  count?: number // number of reviews
+  count?: number // number of reviews; when 0, render nothing
   size?: number
   showValue?: boolean
   className?: string
@@ -15,6 +15,8 @@ export function RatingStars({
   showValue = true,
   className = '',
 }: RatingStarsProps) {
+  if (count !== undefined && count === 0) return null
+
   const rounded = Math.round(value * 2) / 2 // round to nearest 0.5
   const fullStars = Math.floor(rounded)
   const hasHalf = rounded % 1 !== 0

@@ -163,7 +163,7 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
             <span className="text-body-md text-on-surface-variant">/ คืน</span>
           </div>
         </div>
-        <RatingStars value={room.rating_avg} size={16} showValue={false} />
+        <RatingStars value={room.rating_avg} count={room.rating_count} size={16} showValue={false} />
       </div>
 
       {/* Date + guest picker */}
