@@ -28,6 +28,8 @@ import type {
   RoomUnitWithType,
   SeasonalRate,
   CancellationPolicy,
+  HeroSlide,
+  HeroSlideSourceType,
   OccupancyMonthPoint,
   RankedRoom,
   RankedRoomTypeRevenue,
@@ -1411,6 +1413,8 @@ export async function createPromotion(args: Omit<Promotion, 'id' | 'createdAt' |
     valid_from: args.valid_from,
     valid_until: args.valid_until,
     is_active: args.is_active,
+    // Phase 43 — optional hero image.
+    image_key: args.image_key ?? null,
   }
   const { data, error } = await supabase
     .from('promotions')
@@ -1443,6 +1447,150 @@ export async function deletePromotion(args: { id: string }): Promise<{ id: strin
   const { error } = await supabase.from('promotions').delete().eq('id', args.id)
   if (error) wrapSupabaseError('', error)
   return { id: args.id }
+}
+
+// ============================================================================
+// Phase 43 — Hero carousel admin functions
+// ============================================================================
+
+/**
+ * List ALL hero slides for the admin management UI (active + inactive).
+ * Ordered by display_order ASC. Includes joined room_type / promotion
+ * denormalized fields so the admin table can render source labels without
+ * follow-up fetches.
+ *
+ * Uses admin client to bypass RLS (admin policy already covers it, but
+ * admin client keeps the call uniform with other management pages).
+ */
+export async function listAllHeroSlides(): Promise<
+  (HeroSlide & {
+    room_type_name_th: string | null
+    room_type_name: string | null
+    promotion_name: string | null
+  })[]
+> {
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = await createAdminClient()
+  const { data, error } = await admin
+    .from('hero_slides')
+    .select(
+      `
+      *,
+      room_type:room_types(name, name_th),
+      promotion:promotions(name)
+    `,
+    )
+    .order('display_order', { ascending: true })
+  if (error) wrapSupabaseError('listAllHeroSlides', error)
+  return (data ?? []).map((row) => {
+    const rt = row.room_type as { name: string; name_th: string } | null
+    const pr = row.promotion as { name: string } | null
+    return {
+      ...(row as HeroSlide),
+      room_type_name_th: rt?.name_th ?? null,
+      room_type_name: rt?.name ?? null,
+      promotion_name: pr?.name ?? null,
+    }
+  })
+}
+
+/**
+ * Toggle the `is_active` flag on a hero slide via the regular PostgREST
+ * API. RLS admin write policy allows the update; defense-in-depth check
+ * on session.role lives in the server action.
+ */
+export async function setHeroSlideActive(args: {
+  slideId: string
+  isActive: boolean
+}): Promise<void> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('hero_slides')
+    .update({ is_active: args.isActive })
+    .eq('id', args.slideId)
+  if (error) wrapSupabaseError('setHeroSlideActive', error)
+}
+
+/**
+ * Delete a hero slide. Cascading FK to room_types / promotions will
+ * remove the row automatically; this is just an explicit DELETE so the
+ * admin UI has a clean call.
+ */
+export async function deleteHeroSlide(args: { slideId: string }): Promise<void> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { error } = await supabase.from('hero_slides').delete().eq('id', args.slideId)
+  if (error) wrapSupabaseError('deleteHeroSlide', error)
+}
+
+/**
+ * Move a hero slide up or down in the display order. Delegates to the
+ * SECURITY DEFINER RPC `move_hero_slide(uuid, smallint)` which does an
+ * atomic swap under FOR UPDATE — see migration 20261005.
+ */
+export async function moveHeroSlide(args: {
+  slideId: string
+  direction: 'up' | 'down'
+}): Promise<void> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const direction = args.direction === 'up' ? -1 : 1
+  const { error } = await supabase.rpc('move_hero_slide', {
+    p_slide_id: args.slideId,
+    p_direction: direction,
+  })
+  if (error) wrapSupabaseError('moveHeroSlide', error)
+}
+
+/**
+ * Append a new hero slide via the SECURITY DEFINER RPC. The RPC computes
+ * the next display_order atomically (max + 1) so two concurrent admin
+ * clicks can't both pick the same order.
+ */
+export async function appendHeroSlide(args: {
+  sourceType: 'room_type' | 'promotion' | 'custom'
+  roomTypeId?: string
+  promotionId?: string
+  customImageKey?: string
+  customCaption?: string
+  customCaptionTh?: string
+  updatedBy: string
+}): Promise<{ id: string }> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('append_hero_slide', {
+    p_source_type: args.sourceType,
+    p_room_type_id: args.roomTypeId ?? null,
+    p_promotion_id: args.promotionId ?? null,
+    p_custom_image_key: args.customImageKey ?? null,
+    p_custom_caption: args.customCaption ?? null,
+    p_custom_caption_th: args.customCaptionTh ?? null,
+    p_updated_by: args.updatedBy,
+  })
+  if (error) wrapSupabaseError('appendHeroSlide', error)
+  return { id: data as string }
+}
+
+/**
+ * Update a custom slide's caption (TH + EN). Only meaningful for
+ * source_type='custom' — server action can validate if needed.
+ */
+export async function updateHeroSlideCaption(args: {
+  slideId: string
+  customCaption: string | null
+  customCaptionTh: string | null
+}): Promise<void> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('hero_slides')
+    .update({
+      custom_caption: args.customCaption,
+      custom_caption_th: args.customCaptionTh,
+    })
+    .eq('id', args.slideId)
+  if (error) wrapSupabaseError('updateHeroSlideCaption', error)
 }
 
 export async function updateHotelSettings(args: Partial<HotelSettings>): Promise<HotelSettings> {

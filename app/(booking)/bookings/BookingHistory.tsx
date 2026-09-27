@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { cancelBooking } from '@/app/actions/booking'
+import {
+  cancelBooking,
+  cancelTempBookingAction,
+} from '@/app/actions/booking'
 import { createCheckoutSessionAction } from '@/app/actions/payment'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { AlertModal } from '@/components/ui/AlertModal'
@@ -28,6 +31,9 @@ function statusLabel(
   paymentStatus: Booking['payment_status'],
   t: ReturnType<typeof useT>,
 ) {
+  // Phase 42 — new statuses before the legacy fallthrough.
+  if (status === 'expired') return t('bookings.statusExpired')
+  if (status === 'temp_pending') return t('bookings.statusTempPending')
   if (status === 'cancelled') return t('bookings.statusCancelled')
   if (status === 'checked_out') return t('bookings.statusCheckedOut')
   if (status === 'checked_in') return t('bookings.statusCheckedIn')
@@ -37,10 +43,60 @@ function statusLabel(
 }
 
 function statusClass(status: Booking['status'], paymentStatus: Booking['payment_status']) {
+  // Phase 42 — distinct classes for temp_pending (amber) + expired (error red).
+  if (status === 'expired') return 'bg-error/10 text-error'
+  if (status === 'temp_pending') return 'bg-warning/15 text-warning'
   if (status === 'cancelled') return 'bg-error/10 text-error'
   if (status === 'checked_out') return 'bg-surface-container text-on-surface-variant'
   if (paymentStatus === 'paid') return 'bg-primary/10 text-primary'
   return 'bg-secondary/20 text-secondary'
+}
+
+/**
+ * Phase 42 — Live countdown chip for temp_pending bookings. Re-renders every 1s.
+ * When the timer hits 0, refreshes the page so the lazy-expiry helper picks up
+ * the new 'expired' status and the booking moves to the Cancelled tab.
+ */
+function TempCountdown({ expiresAt }: { expiresAt: string }) {
+  const router = useRouter()
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const target = new Date(expiresAt).getTime()
+  const remainingMs = Math.max(0, target - now)
+  const isExpired = remainingMs === 0
+
+  useEffect(() => {
+    if (isExpired) {
+      // Once the timer hits 0, refresh so the page picks up the new 'expired' status.
+      router.refresh()
+    }
+  }, [isExpired, router])
+
+  if (isExpired) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error/10 text-error text-caption font-semibold">
+        <MaterialIcon name="timer_off" size={12} />
+        หมดเวลาแล้ว
+      </span>
+    )
+  }
+
+  const totalSec = Math.floor(remainingMs / 1000)
+  const mm = Math.floor(totalSec / 60)
+  const ss = totalSec % 60
+  const mmStr = String(mm).padStart(2, '0')
+  const ssStr = String(ss).padStart(2, '0')
+
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-caption font-semibold">
+      <MaterialIcon name="timer" size={12} />
+      {mmStr}:{ssStr}
+    </span>
+  )
 }
 
 export function BookingHistory({ bookings }: BookingHistoryProps) {
@@ -52,16 +108,24 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
   const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
   const [confirmBookingId, setConfirmBookingId] = useState<string | null>(null)
   const [confirmIsRefund, setConfirmIsRefund] = useState(false)
+  const [confirmIsTemp, setConfirmIsTemp] = useState(false)
   const [alertMessage, setAlertMessage] = useState<string | null>(null)
   const [payError, setPayError] = useState<string | null>(null)
 
+  // Phase 42 — Active tab now also includes 'temp_pending' (Phase 42 temporary bookings).
+  // 'expired' goes into the Cancelled tab (semantically: no longer in use).
   const activeBookings = bookings.filter(
-    (b) => b.status === 'pending' || b.status === 'confirmed',
+    (b) =>
+      b.status === 'pending' ||
+      b.status === 'confirmed' ||
+      b.status === 'temp_pending',
   )
   const checkedInBookings = bookings.filter(
     (b) => b.status === 'checked_in' || b.status === 'checked_out',
   )
-  const cancelledBookings = bookings.filter((b) => b.status === 'cancelled')
+  const cancelledBookings = bookings.filter(
+    (b) => b.status === 'cancelled' || b.status === 'expired',
+  )
 
   const counts = {
     active: activeBookings.length,
@@ -80,9 +144,10 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
     }
   })()
 
-  function handleCancel(bookingId: string, isPaid: boolean) {
+  function handleCancel(bookingId: string, isPaid: boolean, isTemp: boolean) {
     setConfirmBookingId(bookingId)
     setConfirmIsRefund(isPaid)
+    setConfirmIsTemp(isTemp)
   }
 
   function handlePay(bookingId: string) {
@@ -101,6 +166,22 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
     const bookingId = confirmBookingId
     setConfirmBookingId(null)
     if (!bookingId) return
+
+    if (confirmIsTemp) {
+      // Phase 42 — guest cancels a temp_pending booking before completing the form.
+      startTransition(async () => {
+        const result = await cancelTempBookingAction(bookingId)
+        if (!result.ok || result.error) {
+          setAlertMessage(result.error ?? 'ไม่สามารถยกเลิกการจอง')
+          return
+        }
+        setAlertMessage(t('bookings.cancelSuccess'))
+        router.refresh()
+      })
+      return
+    }
+
+    // Legacy confirmed/checked_in path — uses cancel_booking RPC with refund logic.
     startTransition(async () => {
       const result = await cancelBooking(bookingId)
       if (result?.error) {
@@ -187,9 +268,21 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
       {confirmBookingId && (
         <ConfirmModal
           open
-          body={confirmIsRefund ? t('bookingDetail.refundConfirm') : t('bookingDetail.cancelConfirm')}
-          variant={confirmIsRefund ? 'default' : 'danger'}
-          okLabel={confirmIsRefund ? t('bookingDetail.requestRefund') : t('bookings.cancelBooking')}
+          body={
+            confirmIsTemp
+              ? t('bookingDetail.cancelTempConfirm')
+              : confirmIsRefund
+                ? t('bookingDetail.refundConfirm')
+                : t('bookingDetail.cancelConfirm')
+          }
+          variant={confirmIsTemp || !confirmIsRefund ? 'danger' : 'default'}
+          okLabel={
+            confirmIsTemp
+              ? t('bookings.cancelBooking')
+              : confirmIsRefund
+                ? t('bookingDetail.requestRefund')
+                : t('bookings.cancelBooking')
+          }
           onCancel={() => setConfirmBookingId(null)}
           onConfirm={handleConfirm}
         />
@@ -239,15 +332,17 @@ function BookingRow({
   localeBcp,
 }: {
   booking: Booking
-  onCancel: (id: string, isPaid: boolean) => void
+  onCancel: (id: string, isPaid: boolean, isTemp: boolean) => void
   onPay: (id: string) => void
   isPending: boolean
   t: ReturnType<typeof useT>
   localeBcp: string
 }) {
   const isCancelled = booking.status === 'cancelled'
+  const isExpired = booking.status === 'expired'
   const isCheckedIn = booking.status === 'checked_in'
   const isCheckedOut = booking.status === 'checked_out'
+  const isTempPending = booking.status === 'temp_pending'
   const isPaid = booking.payment_status === 'paid'
 
   return (
@@ -271,15 +366,20 @@ function BookingRow({
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
+          <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
             <h3 className="font-display text-lg text-primary truncate">
               {booking.room_type?.name_th ?? t('bookings.roomName')}
             </h3>
-            <span
-              className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-caption font-semibold ${statusClass(booking.status, booking.payment_status)}`}
-            >
-              {statusLabel(booking.status, booking.payment_status, t)}
-            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              {isTempPending && booking.hold_expires_at && (
+                <TempCountdown expiresAt={booking.hold_expires_at} />
+              )}
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-caption font-semibold ${statusClass(booking.status, booking.payment_status)}`}
+              >
+                {statusLabel(booking.status, booking.payment_status, t)}
+              </span>
+            </div>
           </div>
           <p className="text-caption text-on-surface-variant font-mono mb-2">
             {t('bookings.bookingCode')} #{booking.booking_code}
@@ -304,38 +404,65 @@ function BookingRow({
       </Link>
 
       {/* Actions */}
-      {!isCancelled && !isCheckedIn && !isCheckedOut && (
-        <div className="flex items-center gap-2 px-4 md:px-6 pb-4">
-          {!isPaid && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                onPay(booking.id)
-              }}
-              disabled={isPending}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60"
-            >
-              <MaterialIcon name="credit_card" size={16} />
-              {t('bookings.continuePayment')}
-            </button>
+      {!isCancelled && !isExpired && !isCheckedIn && !isCheckedOut && (
+        <div className="flex items-center gap-2 px-4 md:px-6 pb-4 flex-wrap">
+          {isTempPending ? (
+            // Phase 42 — temp_pending: primary action "ดำเนินการต่อ" + secondary "ยกเลิก"
+            <>
+              <Link
+                href={`/bookings/new?bookingId=${booking.id}`}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
+              >
+                <MaterialIcon name="edit" size={16} />
+                {t('bookings.continueBooking')}
+              </Link>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  onCancel(booking.id, false, true)
+                }}
+                disabled={isPending}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-label-md uppercase tracking-wider transition-colors disabled:opacity-60 border border-error text-error hover:bg-error hover:text-on-primary"
+              >
+                <MaterialIcon name="cancel" size={16} />
+                {t('bookings.cancelBooking')}
+              </button>
+            </>
+          ) : (
+            <>
+              {!isPaid && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    onPay(booking.id)
+                  }}
+                  disabled={isPending}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60"
+                >
+                  <MaterialIcon name="credit_card" size={16} />
+                  {t('bookings.continuePayment')}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  onCancel(booking.id, isPaid, false)
+                }}
+                disabled={isPending}
+                className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-label-md uppercase tracking-wider transition-colors disabled:opacity-60 ${
+                  isPaid
+                    ? 'border border-primary text-primary hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed'
+                    : 'border border-error text-error hover:bg-error hover:text-on-primary'
+                }`}
+              >
+                <MaterialIcon name={isPaid ? 'undo' : 'cancel'} size={16} />
+                {isPaid ? t('bookingDetail.requestRefund') : t('bookings.cancelBooking')}
+              </button>
+            </>
           )}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              onCancel(booking.id, isPaid)
-            }}
-            disabled={isPending}
-            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-label-md uppercase tracking-wider transition-colors disabled:opacity-60 ${
-              isPaid
-                ? 'border border-primary text-primary hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed'
-                : 'border border-error text-error hover:bg-error hover:text-on-primary'
-            }`}
-          >
-            <MaterialIcon name={isPaid ? 'undo' : 'cancel'} size={16} />
-            {isPaid ? t('bookingDetail.requestRefund') : t('bookings.cancelBooking')}
-          </button>
         </div>
       )}
     </article>

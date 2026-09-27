@@ -34,8 +34,11 @@ export const en: Dictionary = {
 
   // Homepage
   home: {
-    heroTitle: 'Stay Above the Rest',
+    heroTitle: 'Find Your Dream Stay',
+    heroLabel: 'Luxury from nature',
     heroSubtitle: 'Experience premium hospitality in every detail',
+    heroSubheading:
+      'Feel the luxury of nature — every detail is crafted for rest, reflection, and quiet wonder.',
     featuredRooms: 'Featured Rooms',
     searchPlaceholder: 'Search rooms',
   },
@@ -94,6 +97,8 @@ export const en: Dictionary = {
       continueViewing: 'Continue viewing',
       goToLogin: 'Go to login',
     },
+    // Phase 42 — fallback error from createTempBookingAction.
+    tempBookingError: 'Could not create temporary booking',
   },
 
   // Room card (homepage featured grid)
@@ -236,7 +241,10 @@ export const en: Dictionary = {
     status: 'Status',
     viewDetails: 'View details',
     cancelBooking: 'Cancel booking',
+    cancelSuccess: 'Booking cancelled',
     continuePayment: 'Continue payment',
+    continueBooking: 'Continue booking',
+    creatingHold: 'Creating temporary booking…',
     tabActive: 'Upcoming',
     tabCheckedIn: 'Stay history',
     emptyActive: 'No upcoming bookings',
@@ -247,6 +255,12 @@ export const en: Dictionary = {
     statusRefunded: 'Refunded',
     statusCheckedIn: 'Checked in',
     statusCheckedOut: 'Checked out',
+    // Phase 42 — temp_pending (awaiting details) + expired (lazy or daily cron).
+    statusTempPending: 'Awaiting details',
+    statusExpired: 'Expired',
+    tempExpiresIn: 'Expires in {time}',
+    tempExpired: 'Expired',
+    expiredHint: 'This booking has expired. Please make a new booking.',
   },
 
   // Booking detail page
@@ -273,6 +287,8 @@ export const en: Dictionary = {
     actions: 'Actions',
     cancelBooking: 'Cancel booking',
     cancelConfirm: 'Are you sure you want to cancel this booking?',
+    // Phase 42 — temp booking cancel confirmation.
+    cancelTempConfirm: 'Cancel this temporary booking? The room will be released to other guests immediately.',
     requestRefund: 'Request refund',
     refundConfirm: 'Are you sure you want to request a refund?',
     cancelSuccess: 'Booking cancelled',
@@ -650,8 +666,24 @@ export const en: Dictionary = {
       customers: 'Customers',
       promotions: 'Promotions',
       rates: 'Rates',
+      heroCarousel: 'Homepage Hero',
       staff: 'Staff',
       settings: 'Settings',
+    },
+    // Phase 43 — hero carousel management page.
+    heroCarouselPage: {
+      title: 'Homepage Hero Carousel',
+      subtitle: 'Manage the slides shown on the homepage — pick from rooms, promotions, or upload your own',
+      viewHomepage: 'View homepage',
+      kpiActive: 'Active slides',
+      kpiRoomType: 'Room slides',
+      kpiPromotion: 'Promotion slides',
+      kpiCustom: 'Custom slides',
+      slidesTitle: 'All slides',
+      sourceRoomType: 'Room',
+      sourcePromotion: 'Promotion',
+      sourceCustom: 'Custom',
+      empty: 'No slides yet — click "Add slide" to get started',
     },
     customersPage: {
       title: 'Customer Management',

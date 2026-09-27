@@ -19,8 +19,10 @@ export function HeroSection() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-primary/60" />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 w-full max-w-(--spacing-container-max) px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) flex flex-col items-center text-center">
+      {/* Heading — positioned in the upper-middle area of the hero (above the
+          center line, below the top edge) so the SearchBar has room to sit
+          below it. Centered vertically via -translate-y-1/2. */}
+      <div className="absolute top-[38%] left-0 right-0 z-10 -translate-y-1/2 px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) flex flex-col items-center text-center pointer-events-none">
         <span className="text-label-md text-secondary font-semibold uppercase tracking-wider mb-4">
           ความหรูหราจากธรรมชาติ
         </span>
@@ -32,8 +34,11 @@ export function HeroSection() {
         </p>
       </div>
 
-      {/* Floating search bar */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) pb-6">
+      {/* Floating search bar — positioned in the upper-middle area of the hero,
+          below the heading block. Uses `variant="overlay"` so date/guests
+          changes debounced-navigate to /rooms (or update in-place if already
+          on /rooms). Mobile falls back to bottom for thumb-reach. */}
+      <div className="absolute inset-x-0 z-20 px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) bottom-0 pb-6 md:bottom-auto md:top-[80%] md:pb-0">
         <div className="max-w-(--spacing-container-max) mx-auto">
           <SearchBar variant="hero" />
         </div>

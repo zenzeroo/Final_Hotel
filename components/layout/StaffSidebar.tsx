@@ -73,6 +73,8 @@ const NAV_BY_ROLE: Record<StaffRole, NavItem[]> = {
     { key: 'promotions', href: '/admin/promotions', icon: 'sell' },
     { key: 'staff', href: '/admin/staff', icon: 'badge' },
     { key: 'rates', href: '/admin/rates', icon: 'bed' },
+    // Phase 43 — homepage hero carousel admin (curated slides).
+    { key: 'heroCarousel', href: '/admin/hero-carousel', icon: 'image' },
     { key: 'settings', href: '/admin/settings', icon: 'settings' },
   ],
 }

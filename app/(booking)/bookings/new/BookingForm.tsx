@@ -2,14 +2,19 @@
 
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition, useMemo, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
-import { createBooking, type CreateBookingResult } from '@/app/actions/booking'
+import {
+  createBooking,
+  completeTempBookingAction,
+  type CreateBookingResult,
+} from '@/app/actions/booking'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { calculatePrice, formatTHB, type PricingSettings } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
 import type { QuoteResult } from '@/lib/pricing/seasons'
 import { formatDate } from '@/lib/dates'
+import type { Booking } from '@/lib/data/bookings'
 
 interface BookingFormProps {
   room: {
@@ -20,14 +25,21 @@ interface BookingFormProps {
     hero_image_key: string
     base_price: number
   }
-  checkIn: string
-  checkOut: string
-  guests: number
-  profile: {
+  checkIn?: string
+  checkOut?: string
+  guests?: number
+  profile?: {
     fullName: string
     email: string
     phone: string
   }
+  /**
+   * Phase 42 — when provided, form operates in "complete existing temp
+   * booking" mode. The form pre-fills from this booking's data, locks
+   * room/dates/guests, and submit calls `completeTempBookingAction` to
+   * flip status to 'confirmed' (same row, not a new insert).
+   */
+  existingBooking?: Booking
   /** Phase 8 — server-computed quote (already includes seasonal rate nightly breakdown). */
   quote: QuoteResult
   /** True when an applied seasonal rate has min_nights_override > stay length. */
@@ -41,7 +53,13 @@ interface BookingFormProps {
   settings: PricingSettings
 }
 
-function SubmitButton({ disabled }: { disabled: boolean }) {
+function SubmitButton({
+  disabled,
+  label,
+}: {
+  disabled: boolean
+  label: string
+}) {
   const { pending } = useFormStatus()
   return (
     <button
@@ -57,21 +75,77 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
       ) : (
         <>
           <MaterialIcon name="lock" size={18} />
-          ยืนยันการจ่ายเงิน
+          {label}
         </>
       )}
     </button>
   )
 }
 
-export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, minNightsBlocked, settings }: BookingFormProps) {
+/**
+ * Phase 42 — Live countdown chip for the existing temp booking's hold.
+ * Re-renders every 1s. When the timer hits 0, shows "หมดเวลาแล้ว".
+ */
+function HoldCountdown({ expiresAt }: { expiresAt: string }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const target = new Date(expiresAt).getTime()
+  const remainingMs = Math.max(0, target - now)
+  const isExpired = remainingMs === 0
+
+  if (isExpired) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-error/10 text-error text-caption font-semibold">
+        <MaterialIcon name="timer_off" size={14} />
+        หมดเวลาแล้ว
+      </span>
+    )
+  }
+
+  const totalSec = Math.floor(remainingMs / 1000)
+  const mm = Math.floor(totalSec / 60)
+  const ss = totalSec % 60
+  const mmStr = String(mm).padStart(2, '0')
+  const ssStr = String(ss).padStart(2, '0')
+
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-warning/10 text-warning text-caption font-semibold">
+      <MaterialIcon name="timer" size={14} />
+      หมดเวลาใน {mmStr}:{ssStr}
+    </span>
+  )
+}
+
+export function BookingForm(props: BookingFormProps) {
+  const { room, quote, minNightsBlocked, settings } = props
+
+  // Phase 42 — derive mode + values from either existingBooking (new path)
+  // or checkIn/checkOut/guests/profile (legacy path).
+  const isCompletingExisting = Boolean(props.existingBooking)
+  const existing = props.existingBooking
+  const checkIn = existing?.check_in ?? props.checkIn ?? ''
+  const checkOut = existing?.check_out ?? props.checkOut ?? ''
+  const guests = existing?.guests ?? props.guests ?? 1
+  const initialFullName =
+    existing?.booker_full_name ?? props.profile?.fullName ?? ''
+  const initialEmail = existing?.booker_email ?? props.profile?.email ?? ''
+  const initialPhone = existing?.booker_phone ?? props.profile?.phone ?? ''
+
   const router = useRouter()
   const [state, setState] = useState<CreateBookingResult | null>(null)
   const [isPending, startTransition] = useTransition()
-  const [fullName, setFullName] = useState(profile.fullName)
-  const [email, setEmail] = useState(profile.email)
-  const [phone, setPhone] = useState(profile.phone)
-  const [specialRequest, setSpecialRequest] = useState('')
+  const [fullName, setFullName] = useState(initialFullName)
+  const [email, setEmail] = useState(initialEmail)
+  const [phone, setPhone] = useState(
+    initialPhone && initialPhone !== '0000000000' ? initialPhone : '',
+  )
+  const [specialRequest, setSpecialRequest] = useState(
+    existing?.special_request ?? '',
+  )
   const [promoCode, setPromoCode] = useState('')
 
   // Phase 8 — quote is computed server-side. Pass it to calculatePrice so
@@ -80,19 +154,45 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, m
   // `hotel_settings.tax_rate` / `resort_fee` the server action will use.
   const price = useMemo(
     () =>
-      calculatePrice({
-        basePrice: room.base_price,
-        checkIn,
-        checkOut,
-        guests,
-        quote,
-      }, settings),
-    [room.base_price, checkIn, checkOut, guests, quote, settings]
+      calculatePrice(
+        {
+          basePrice: room.base_price,
+          checkIn,
+          checkOut,
+          guests,
+          quote,
+        },
+        settings,
+      ),
+    [room.base_price, checkIn, checkOut, guests, quote, settings],
   )
   const nights = quote.nights
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (isCompletingExisting && existing) {
+      // Phase 42 path — complete existing temp booking.
+      startTransition(async () => {
+        const result = await completeTempBookingAction({
+          bookingId: existing.id,
+          bookerFullName: fullName,
+          bookerEmail: email,
+          bookerPhone: phone,
+          specialRequest: specialRequest || undefined,
+          promoCode: promoCode || undefined,
+        })
+        if (!result.ok || result.error) {
+          setState({ error: result.error })
+          return
+        }
+        if (result.bookingId) {
+          router.push(`/bookings/${result.bookingId}`)
+        }
+      })
+      return
+    }
+
+    // Legacy path — create a brand-new booking row.
     startTransition(async () => {
       const result = await createBooking({
         roomTypeId: room.id,
@@ -124,6 +224,17 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, m
         {state?.error && (
           <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
             {state.error}
+          </div>
+        )}
+
+        {isCompletingExisting && existing?.hold_expires_at && (
+          <div className="px-4 py-3 bg-warning/10 border border-warning/30 rounded-lg text-body-md text-on-surface flex items-center gap-3 flex-wrap">
+            <MaterialIcon name="timer" size={20} className="text-warning" />
+            <span>
+              การจองนี้จะหมดเวลาเมื่อไม่มีการเคลื่อนไหว หากหมดเวลาก่อนยืนยัน
+              ห้องจะถูกปล่อยให้ผู้ใช้อื่น
+            </span>
+            <HoldCountdown expiresAt={existing.hold_expires_at} />
           </div>
         )}
 
@@ -255,7 +366,10 @@ export function BookingForm({ room, checkIn, checkOut, guests, profile, quote, m
             <div className="my-4 border-t border-outline-variant" />
             <PriceRow label="รวมทั้งสิ้น" value={formatTHB(price.total)} emphasis />
 
-            <SubmitButton disabled={isPending || nights === 0 || minNightsBlocked} />
+            <SubmitButton
+              disabled={isPending || nights === 0 || minNightsBlocked}
+              label={isCompletingExisting ? 'ยืนยันการจ่ายเงิน' : 'ยืนยันการจ่ายเงิน'}
+            />
 
             <p className="mt-4 text-caption text-on-surface-variant text-center">
               ระบบจะแสดงหน้ายืนยันเมื่อสร้างการจองสำเร็จ

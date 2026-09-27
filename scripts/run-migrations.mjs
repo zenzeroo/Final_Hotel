@@ -111,9 +111,19 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // 20260929 = Phase 36.1 hotfix — restore email+hired_at columns in handle_new_user() trigger (lost in 20260913 rewrite) + backfill NULL rows.
 // 20261001 = Phase 37 identity-linking helper — can_link_identity_by_email() SECURITY DEFINER for verifying BOTH sides before allowing OAuth-to-email/password merge.
 // 20261002 = Phase X R2 image 404 fix — UPDATE room_types.hero_image_key rename .webp → .jpg for 10 room slugs (companion to scripts/upload-image.mjs + scripts/check-r2-images.mts).
-// 20261003 = Phase 40 booking_holds — 10-minute TTL hold on room_type+dates while user fills /bookings/new; create_booking RPC counts holds in capacity check.
+// 20261004 = Phase 42 temp_pending bookings — real bookings row with status='temp_pending' + hold_expires_at,
+//   replacing the separate booking_holds table. Adds 'temp_pending' + 'expired' enum values, 6 new RPCs
+//   (create/complete/cancel/2 lazy-expiry helpers/cleanup_abandoned), rewrites create_booking to count
+//   live temp_pending in capacity check, widens EXCLUDE constraint scope.
+//   Split into 3 files (numeric prefix ensures correct sort order — enum must apply before the rest):
+//     20261004_1_booking_status_enum.sql — ADD VALUE for 'temp_pending' + 'expired'
+//     20261004_2_temp_pending_bookings.sql — column + indexes + EXCLUDE + create_booking rewrite + 6 RPCs
+//     20261004_3_drop_booking_holds.sql — drop the Phase 40 table (no longer referenced)
+// 20261005 = Phase 43 hero carousel — admin-managed hero slides on the homepage. Adds hero_slides table
+//   + promotions.image_key column + 2 SECURITY DEFINER RPCs (append_hero_slide + move_hero_slide) +
+//   RLS policies (public read active + admin write via has_role). UI-only 8-slide cap.
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)|202610(01|02|03)_.*\.sql$/.test(f))
+  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)|202610(01|02|03|04|05)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 

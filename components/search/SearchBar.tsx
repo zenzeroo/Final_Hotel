@@ -1,7 +1,7 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useRef, useState, type FormEvent } from 'react'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import {
   getMinCheckInLocalIso,
@@ -10,7 +10,7 @@ import {
 import { useT } from '@/lib/i18n/useT'
 
 interface SearchBarProps {
-  variant?: 'hero' | 'compact'
+  variant?: 'hero' | 'compact' | 'overlay'
   defaultCheckin?: string
   defaultCheckout?: string
   defaultGuests?: number
@@ -24,6 +24,7 @@ export function SearchBar({
 }: SearchBarProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const t = useT()
 
   // Hotels require ≥ 1 day of advance booking. Clamp any URL-provided
@@ -43,22 +44,29 @@ export function SearchBar({
   const [guests, setGuests] = useState(defaultGuests)
 
   const isHero = variant === 'hero'
-
-  // Compact variant only — realtime auto-search. Hero variant still
-  // requires explicit Submit because every change on `/` would
-  // otherwise navigate the homepage away before the user is done.
-  const isCompact = !isHero
+  const isCompact = variant === 'compact'
+  const isOverlay = variant === 'overlay'
 
   /**
-   * Merge our local state with the current page's searchParams (so
-   * FilterSidebar's type/floor/priceRange are preserved) and navigate
-   * to the merged URL. `router.replace` keeps history clean — each
-   * field change shouldn't push a new entry. `{ scroll: false }`
-   * preserves the user's scroll position in the results list.
+   * Navigation strategy:
+   * - `compact`  (/rooms list) → in-place URL update via router.replace.
+   * - `overlay`  (hero on / or /rooms/[id]) → debounced 400ms then
+   *              router.push to /rooms with new dates. Skips if already
+   *              on /rooms (treat like compact — in-place update).
+   * - `hero`     (legacy) → requires explicit Submit.
    */
-  function navigateWith(opts: { checkin?: string; checkout?: string; guests?: number }) {
-    if (!isCompact) return
-    const params = new URLSearchParams(searchParams.toString())
+  const isOnRooms = pathname === '/rooms'
+
+  function navigateToRooms(opts: {
+    checkin?: string
+    checkout?: string
+    guests?: number
+  }) {
+    // Merge with current searchParams so we preserve unrelated filters
+    // (type, floor, priceRange, viewAll) when on /rooms.
+    const params = new URLSearchParams(
+      isOnRooms ? searchParams.toString() : '',
+    )
     if (opts.checkin !== undefined) {
       if (opts.checkin) params.set('checkin', opts.checkin)
       else params.delete('checkin')
@@ -72,20 +80,45 @@ export function SearchBar({
       else params.delete('guests')
     }
     const qs = params.toString()
-    router.replace(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
+
+    if (isOnRooms) {
+      // In-place URL update — keeps history clean + scroll position.
+      router.replace(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
+    } else {
+      // Push to /rooms — overlay SearchBar lives on / or /rooms/[id],
+      // and changing dates should take the user to the results page.
+      router.push(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
+    }
   }
 
-  // Inline ~350ms debounce for the guests +/- buttons. A rapid burst
-  // of clicks coalesces into a single navigation. Date fields don't
-  // need debouncing (one change = one nav).
+  // ─────────────────────────────────────────────────────────────────
+  // Realtime auto-navigate (compact + overlay)
+  // ─────────────────────────────────────────────────────────────────
+  // Compact already used a 350ms debounce for guests +/- clicks (only).
+  // Overlay now debounces ALL changes (dates + guests) — a rapid burst of
+  // date-picker clicks coalesces into one navigation, not 4-5 back-to-back.
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const debouncedNavigate = (nextGuests: number) => {
+  const debouncedNavigate = (opts: {
+    checkin?: string
+    checkout?: string
+    guests?: number
+  }) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      navigateWith({ guests: nextGuests })
-    }, 350)
+      navigateToRooms(opts)
+    }, 400)
   }
 
+  // Cleanup pending debounce on unmount.
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
+
+  // ─────────────────────────────────────────────────────────────────
+  // Handlers
+  // ─────────────────────────────────────────────────────────────────
   function handleCheckinChange(v: string) {
     setCheckin(v)
     let nextCheckout = checkout
@@ -95,18 +128,41 @@ export function SearchBar({
       nextCheckout = addDaysLocalIso(v, 1)
       setCheckout(nextCheckout)
     }
-    navigateWith({ checkin: v, checkout: nextCheckout })
+
+    if (isCompact) {
+      navigateToRooms({ checkin: v, checkout: nextCheckout })
+    } else if (isOverlay) {
+      debouncedNavigate({ checkin: v, checkout: nextCheckout })
+    }
+    // hero: no-op — user must Submit
   }
 
   function handleCheckoutChange(v: string) {
     setCheckout(v)
-    navigateWith({ checkout: v })
+
+    if (isCompact) {
+      navigateToRooms({ checkout: v })
+    } else if (isOverlay) {
+      debouncedNavigate({ checkout: v })
+    }
+    // hero: no-op
   }
 
   function handleGuestsChange(delta: number) {
     const next = Math.max(1, Math.min(10, guests + delta))
     setGuests(next)
-    debouncedNavigate(next)
+
+    if (isCompact) {
+      // Original compact behavior: realtime but with 350ms debounce for the
+      // guests +/- clicks. Keep that exact timing on /rooms.
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        navigateToRooms({ guests: next })
+      }, 350)
+    } else if (isOverlay) {
+      debouncedNavigate({ guests: next })
+    }
+    // hero: no-op
   }
 
   // Compact-only: "ดูทั้งหมด" — keep guests in URL so RoomCard's
@@ -129,20 +185,14 @@ export function SearchBar({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    // Hero: explicit search action (push, not replace, so the user's
-    // history reflects the navigation away from the homepage).
-    // Compact: this fires when the user presses Enter on a date field
-    // (no Submit button rendered in compact). Same merged semantics.
-    const params = new URLSearchParams(
-      isCompact ? searchParams.toString() : '',
-    )
+    // Hero (legacy): explicit Submit required. Use push so the user's
+    // history reflects the navigation away from the homepage.
+    const params = new URLSearchParams('')
     if (checkin) params.set('checkin', checkin)
     if (checkout) params.set('checkout', checkout)
     if (guests) params.set('guests', String(guests))
     const qs = params.toString()
-    router[isCompact ? 'replace' : 'push'](`/rooms${qs ? `?${qs}` : ''}`, {
-      scroll: false,
-    })
+    router.push(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
   }
 
   return (
@@ -200,16 +250,8 @@ export function SearchBar({
         </div>
       </div>
 
-      {/* Actions — compact: See All + (no Submit, realtime already navigates). Hero: Submit button. */}
-      {isHero ? (
-        <button
-          type="submit"
-          className="md:rounded-full bg-primary text-on-primary px-6 py-3 md:py-2 rounded-xl font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
-        >
-          <MaterialIcon name="search" size={20} />
-          <span>ค้นหาห้องพัก</span>
-        </button>
-      ) : (
+      {/* Actions — compact: "ดูทั้งหมด" button. Overlay: no button (auto-navigates). Hero: Submit button. */}
+      {isCompact ? (
         <button
           type="button"
           onClick={handleSeeAll}
@@ -218,7 +260,15 @@ export function SearchBar({
           <MaterialIcon name="grid_view" size={18} />
           <span>{t('roomsList.seeAll')}</span>
         </button>
-      )}
+      ) : isHero ? (
+        <button
+          type="submit"
+          className="md:rounded-full bg-primary text-on-primary px-6 py-3 md:py-2 rounded-xl font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
+        >
+          <MaterialIcon name="search" size={20} />
+          <span>ค้นหาห้องพัก</span>
+        </button>
+      ) : null}
     </form>
   )
 }

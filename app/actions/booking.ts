@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { calculatePrice, generateBookingCode } from '@/lib/pricing'
+import { calculatePrice, calculateNights, generateBookingCode } from '@/lib/pricing'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/manager'
 import { getDefaultCancellationPolicy, getPromotionByCode } from '@/lib/data/bookings'
@@ -249,6 +249,423 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   }
 
   return { success: true, bookingId }
+}
+
+// ============================================================================
+// Phase 42 — Temporary/Pending Booking
+// ============================================================================
+
+const createTempBookingSchema = z.object({
+  roomTypeId: z.string().uuid(),
+  checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  guests: z.coerce.number().int().min(1).max(10),
+})
+
+export type CreateTempBookingInput = z.infer<typeof createTempBookingSchema>
+
+export interface CreateTempBookingResult {
+  ok?: boolean
+  error?: string
+  bookingId?: string
+  expiresAt?: string
+}
+
+/**
+ * Phase 42 — Create a temporary/pending booking.
+ *
+ * Called by the "ยืนยันการจอง" button on /rooms/[id]. Inserts a real
+ * `bookings` row with status='temp_pending' + hold_expires_at = now() + 2min.
+ * The user then fills /bookings/new and submits the form, which calls
+ * `completeTempBookingAction` to flip the same row to 'confirmed'.
+ *
+ * Differs from `createBooking`:
+ *   - No form validation (user hasn't filled the form yet)
+ *   - booker_* fields are pre-filled from user profile
+ *   - status='temp_pending' (not 'confirmed')
+ *   - hold_expires_at is set
+ *   - No email fired (avoids spam from accidental clicks)
+ *
+ * Capacity check is in the RPC — same pool + confirmed + temp_pending
+ * count as `create_booking`. Throws P0001 when pool exhausted.
+ */
+export async function createTempBookingAction(
+  input: CreateTempBookingInput,
+): Promise<CreateTempBookingResult> {
+  const parsed = createTempBookingSchema.safeParse(input)
+  if (!parsed.success) {
+    return { error: 'ข้อมูลไม่ถูกต้อง: ' + translateZodIssues(parsed.error.issues) }
+  }
+  const data = parsed.data
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+
+  // Phase 36 — block suspended customers (mirrors createBooking guard).
+  const { data: customerProfile } = await supabase
+    .from('profiles')
+    .select('is_suspended, full_name, phone')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (customerProfile?.is_suspended) {
+    return { error: 'บัญชีของคุณถูกระงับ กรุณาติดต่อเจ้าหน้าที่' }
+  }
+
+  // Validate dates against today's minimum (1 day advance — same as SearchBar).
+  const today = new Date().toISOString().slice(0, 10)
+  if (data.checkIn < today) {
+    return { error: 'วันที่เช็คอินต้องไม่เป็นอดีต' }
+  }
+  if (data.checkIn >= data.checkOut) {
+    return { error: 'วันที่เช็คเอาท์ต้องมาหลังวันเช็คอิน' }
+  }
+
+  // Look up room for capacity + max_guests validation + price computation.
+  const { data: room, error: roomErr } = await supabase
+    .from('room_types')
+    .select('base_price, max_guests, is_active')
+    .eq('id', data.roomTypeId)
+    .maybeSingle()
+  if (roomErr || !room) return { error: 'ไม่พบห้องพัก' }
+  if (!room.is_active) return { error: 'ห้องพักนี้ไม่พร้อมใช้งาน' }
+  if (data.guests > room.max_guests) {
+    return { error: `ห้องนี้รองรับผู้เข้าพักสูงสุด ${room.max_guests} ท่าน` }
+  }
+
+  // Compute nights + base_subtotal for the temp booking. Don't include
+  // promotion here (user hasn't entered a code yet). Tax/fee computed
+  // server-side at completion time via getPricingConstants.
+  const nights = calculateNights(data.checkIn, data.checkOut)
+  if (nights === 0) {
+    return { error: 'จำนวนคืนต้องมากกว่า 0' }
+  }
+  const baseSubtotal = room.base_price * nights
+
+  // Pre-fill booker_* from profile (user can override on /bookings/new).
+  const bookerFullName =
+    customerProfile?.full_name ?? user.user_metadata?.full_name ?? ''
+  const bookerEmail = user.email ?? ''
+  const bookerPhone = customerProfile?.phone ?? user.user_metadata?.phone ?? ''
+
+  // Hard guard — booker_phone has regex constraint (^[0-9]{10}$) at DB level.
+  // If profile doesn't have a valid phone, default to a sentinel that the
+  // user will be required to overwrite on /bookings/new before submit.
+  // (The schema uses '0000000000' as the standard placeholder per
+  // Phase 26.1 / 20260913_require_phone.sql.)
+  const safeBookerPhone = /^[0-9]{10}$/.test(bookerPhone) ? bookerPhone : '0000000000'
+
+  // Call RPC. hold_minutes defaults to 2.
+  const { data: bookingId, error: rpcError } = await supabase.rpc(
+    'create_temp_booking',
+    {
+      p_user_id: user.id,
+      p_room_type_id: data.roomTypeId,
+      p_check_in: data.checkIn,
+      p_check_out: data.checkOut,
+      p_guests: data.guests,
+      p_nights: nights,
+      p_base_subtotal: baseSubtotal,
+      p_total: baseSubtotal, // tax/fee added at complete_temp_booking time
+      p_booker_full_name: bookerFullName || 'ผู้เข้าพัก',
+      p_booker_email: bookerEmail,
+      p_booker_phone: safeBookerPhone,
+      p_hold_minutes: 2,
+    },
+  )
+
+  if (rpcError || !bookingId) {
+    if (rpcError?.code === 'P0001') {
+      return {
+        error:
+          'ห้องพักประเภทนี้ไม่ว่างในช่วงวันที่เลือก กรุณาเลือกวันอื่นหรือประเภทอื่น',
+      }
+    }
+    return {
+      error: 'ไม่สามารถสร้างการจองชั่วคราว: ' + translateSupabaseError(rpcError?.message),
+    }
+  }
+
+  revalidatePath('/rooms')
+  revalidatePath('/bookings')
+
+  return {
+    ok: true,
+    bookingId,
+    expiresAt: new Date(Date.now() + 2 * 60 * 1000).toISOString(),
+  }
+}
+
+const completeTempBookingSchema = z.object({
+  bookingId: z.string().uuid(),
+  bookerFullName: z.string().min(1).max(120),
+  bookerEmail: z.string().email(),
+  bookerPhone: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{10}$/, 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หัน ห้ามมีขีดหรือช่องว่าง'),
+  specialRequest: z.string().max(500).optional().nullable(),
+  promoCode: z.string().max(40).optional().nullable(),
+})
+
+export type CompleteTempBookingInput = z.infer<typeof completeTempBookingSchema>
+
+export interface CompleteTempBookingResult {
+  ok?: boolean
+  error?: string
+  bookingId?: string
+}
+
+/**
+ * Phase 42 — Finalize a temp_pending booking.
+ *
+ * Called by the form submit on /bookings/new when the user fills in the
+ * remaining details + confirms. Flips the existing bookings row from
+ * 'temp_pending' → 'confirmed' (atomic via the `complete_temp_booking`
+ * SECURITY DEFINER RPC).
+ *
+ * Computes the final price (with optional promotion + tax/fee) and fires
+ * the booking_confirmation email — same pattern as `createBooking` after
+ * the RPC insert.
+ */
+export async function completeTempBookingAction(
+  input: CompleteTempBookingInput,
+): Promise<CompleteTempBookingResult> {
+  const parsed = completeTempBookingSchema.safeParse(input)
+  if (!parsed.success) {
+    return { error: 'ข้อมูลไม่ถูกต้อง: ' + translateZodIssues(parsed.error.issues) }
+  }
+  const data = parsed.data
+
+  if (!isUuid(data.bookingId)) {
+    return { error: 'รหัสการจองไม่ถูกต้อง' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+
+  // Phase 36 — block suspended customers.
+  const { data: customerProfile } = await supabase
+    .from('profiles')
+    .select('is_suspended')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (customerProfile?.is_suspended) {
+    return { error: 'บัญชีของคุณถูกระงับ กรุณาติดต่อเจ้าหน้าที่' }
+  }
+
+  // Load the existing temp booking. Confirms ownership + active state.
+  // The lazy-expiry helper ensures a stale row is flipped to 'expired'
+  // before this read (so we error out instead of completing an expired one).
+  await supabase.rpc('expire_specific_temp_booking', {
+    p_booking_id: data.bookingId,
+    p_user_id: user.id,
+  })
+  const { data: existing, error: existingErr } = await supabase
+    .from('bookings')
+    .select('id, user_id, status, room_type_id, check_in, check_out, guests, currency')
+    .eq('id', data.bookingId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (existingErr) {
+    return { error: 'ไม่สามารถโหลดข้อมูลการจอง: ' + translateSupabaseError(existingErr.message) }
+  }
+  if (!existing) {
+    return { error: 'ไม่พบการจองนี้' }
+  }
+  if (existing.status !== 'temp_pending') {
+    if (existing.status === 'expired') {
+      return { error: 'การจองนี้หมดเวลาแล้ว กรุณาจองใหม่อีกครั้ง' }
+    }
+    if (existing.status === 'cancelled') {
+      return { error: 'การจองนี้ถูกยกเลิกไปแล้ว' }
+    }
+    if (existing.status === 'confirmed') {
+      return { error: 'การจองนี้ได้รับการยืนยันแล้ว' }
+    }
+    return { error: 'การจองนี้อยู่ในสถานะที่ไม่สามารถแก้ไขได้: ' + existing.status }
+  }
+
+  // Compute price with optional promotion + tax/fee.
+  const { data: room } = await supabase
+    .from('room_types')
+    .select('base_price, max_guests')
+    .eq('id', existing.room_type_id)
+    .maybeSingle()
+  if (!room) return { error: 'ไม่พบห้องพัก' }
+  if (existing.guests > room.max_guests) {
+    return { error: `ห้องนี้รองรับผู้เข้าพักสูงสุด ${room.max_guests} ท่าน` }
+  }
+
+  let promotion = null
+  if (data.promoCode) {
+    promotion = await getPromotionByCode(data.promoCode)
+    if (!promotion) return { error: 'รหัสโปรโมชั่นไม่ถูกต้อง' }
+  }
+
+  const policy = await getDefaultCancellationPolicy()
+
+  const seasonalRates = await getActiveSeasonalRatesForRange({
+    roomTypeId: existing.room_type_id,
+    checkIn: existing.check_in,
+    checkOut: existing.check_out,
+  })
+
+  let quote
+  try {
+    quote = quoteStay({
+      roomTypeId: existing.room_type_id,
+      basePrice: room.base_price,
+      checkIn: existing.check_in,
+      checkOut: existing.check_out,
+      rates: seasonalRates,
+    })
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'วันที่ไม่ถูกต้อง' }
+  }
+  if (violatesMinNights(quote, seasonalRates)) {
+    return { error: 'การจองนี้ต้องพักขั้นต่ำตามที่กำหนดในเรทฤดูกาล' }
+  }
+
+  const pricingSettings = await getPricingConstants()
+  const price = calculatePrice(
+    {
+      basePrice: room.base_price,
+      checkIn: existing.check_in,
+      checkOut: existing.check_out,
+      guests: existing.guests,
+      promotion: promotion
+        ? {
+            code: promotion.code,
+            discountType: promotion.discount_type,
+            discountValue: promotion.discount_value,
+            minNights: promotion.min_nights,
+            maxDiscountAmount: promotion.max_discount_amount ?? null,
+          }
+        : null,
+      quote,
+    },
+    pricingSettings,
+  )
+  if (price.nights === 0) return { error: 'จำนวนคืนต้องมากกว่า 0' }
+
+  // Call RPC — atomic UPDATE + audit row.
+  const { error: rpcError } = await supabase.rpc('complete_temp_booking', {
+    p_booking_id: data.bookingId,
+    p_user_id: user.id,
+    p_booker_full_name: data.bookerFullName,
+    p_booker_email: data.bookerEmail,
+    p_booker_phone: data.bookerPhone,
+    p_special_request: data.specialRequest ?? null,
+    p_promotion_id: promotion?.id ?? null,
+    p_cancellation_policy_id: policy?.id ?? null,
+    p_base_subtotal: price.baseSubtotal,
+    p_discount_total: price.discountTotal,
+    p_tax_total: price.taxTotal,
+    p_fee_total: price.feeTotal,
+    p_total: price.total,
+    p_nights: price.nights,
+  })
+
+  if (rpcError) {
+    const code = (rpcError as { code?: string }).code
+    if (code === 'P0002') return { error: 'ไม่พบการจองนี้' }
+    if (code === '42501') return { error: 'ไม่ใช่การจองของคุณ' }
+    if (code === 'P0001') {
+      return { error: 'การจองนี้ไม่อยู่ในสถานะชั่วคราว กรุณาจองใหม่อีกครั้ง' }
+    }
+    return { error: 'ไม่สามารถยืนยันการจอง: ' + translateSupabaseError(rpcError.message) }
+  }
+
+  revalidatePath('/bookings')
+  revalidatePath(`/bookings/${data.bookingId}`)
+
+  // Fire booking_confirmation email — same pattern as createBooking.
+  try {
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select(
+        'id, booking_code, check_in, check_out, nights, total, currency, booker_email, booker_full_name, room_type:room_types(name)',
+      )
+      .eq('id', data.bookingId)
+      .single()
+    if (booking && data.bookerEmail) {
+      const roomTypeName =
+        (booking.room_type as { name?: string } | null)?.name ?? 'ห้องพัก'
+      const { BookingConfirmationEmail } = await import(
+        '@/lib/email/templates/booking-confirmation'
+      )
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+      await sendEmail({
+        to: data.bookerEmail,
+        template: 'booking_confirmation',
+        subject: `[Zenzero] ยืนยันการจอง ${booking.booking_code} — ${booking.check_in}`,
+        react: BookingConfirmationEmail({
+          bookingCode: booking.booking_code,
+          guestName: booking.booker_full_name ?? '',
+          roomTypeName,
+          checkIn: booking.check_in,
+          checkOut: booking.check_out,
+          nights: booking.nights ?? 0,
+          total: Number(booking.total),
+          currency: booking.currency,
+          viewUrl: `${appUrl}/bookings/${booking.id}`,
+        }),
+        eventKey: `booking_confirmation:booking:${booking.id}`,
+        bookingId: booking.id,
+        metadata: { channel: 'web', nights: booking.nights },
+      })
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('[booking_confirmation] email dispatch failed:', e)
+  }
+
+  return { ok: true, bookingId: data.bookingId }
+}
+
+/**
+ * Phase 42 — Guest-initiated cancel of a temp_pending booking.
+ *
+ * Distinct from `cancelBooking` which handles the confirmed/checked_in flow
+ * + refund policy logic. This just flips status to 'cancelled' without
+ * any refund (no payment_status='paid' to refund).
+ */
+export async function cancelTempBookingAction(
+  bookingId: string,
+): Promise<{ ok?: boolean; error?: string }> {
+  if (!isUuid(bookingId)) return { error: 'รหัสการจองไม่ถูกต้อง' }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+
+  const { error } = await supabase.rpc('cancel_temp_booking', {
+    p_booking_id: bookingId,
+    p_user_id: user.id,
+  })
+
+  if (error) {
+    const code = (error as { code?: string }).code
+    if (code === 'P0002') return { error: 'ไม่พบการจองนี้' }
+    if (code === '42501') return { error: 'ไม่ใช่การจองของคุณ' }
+    if (code === 'P0001') {
+      return { error: 'การจองนี้ไม่อยู่ในสถานะชั่วคราวแล้ว ไม่สามารถยกเลิกได้' }
+    }
+    return { error: 'ไม่สามารถยกเลิกการจอง: ' + translateSupabaseError(error.message) }
+  }
+
+  revalidatePath('/bookings')
+  revalidatePath(`/bookings/${bookingId}`)
+
+  return { ok: true }
 }
 
 /**

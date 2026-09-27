@@ -163,7 +163,15 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function BookingStatusBadge({
   status,
 }: {
-  status: 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled'
+  // Phase 42 — added 'temp_pending' + 'expired' (Phase 42 temp bookings).
+  status:
+    | 'pending'
+    | 'confirmed'
+    | 'checked_in'
+    | 'checked_out'
+    | 'cancelled'
+    | 'temp_pending'
+    | 'expired'
 }) {
   const map = {
     pending: { label: 'รอดำเนินการ', cls: 'bg-surface-container-high text-on-surface-variant' },
@@ -171,6 +179,8 @@ function BookingStatusBadge({
     checked_in: { label: 'เช็คอิน', cls: 'bg-primary text-on-primary' },
     checked_out: { label: 'เช็คเอาท์', cls: 'bg-secondary-container text-on-secondary-container' },
     cancelled: { label: 'ยกเลิก', cls: 'bg-error-container text-on-error-container' },
+    temp_pending: { label: 'รอกรอกข้อมูล', cls: 'bg-warning-container text-on-warning-container' },
+    expired: { label: 'หมดเวลา', cls: 'bg-error-container text-on-error-container' },
   } as const
   const { label, cls } = map[status]
   return (

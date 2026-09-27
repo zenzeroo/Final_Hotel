@@ -6,11 +6,13 @@ import { roleHomePath } from '@/lib/supabase/roles'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { HeroSection } from '@/components/landing/HeroSection'
+import { HeroCarousel } from '@/components/landing/HeroCarousel'
 import { RoomCard } from '@/components/room/RoomCard'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { roomTypeLabel } from '@/lib/format/roomType'
+import { getActiveHeroSlides } from '@/lib/data/landing'
 
 // Server-render on demand (Supabase data, no static prerender)
 export const dynamic = 'force-dynamic'
@@ -29,13 +31,28 @@ export default async function HomePage() {
 
   const locale = await getLocale()
   const t = getT(locale)
-  const rooms = await getFeaturedRooms()
+  const [rooms, slides] = await Promise.all([getFeaturedRooms(), getActiveHeroSlides()])
 
   return (
     <>
       <TopNavBar />
       <main className="flex-1">
-        <HeroSection />
+        {/*
+          Phase 43 — admin-managed hero carousel. If at least 1 active
+          slide exists, render the carousel; otherwise fall back to the
+          static HeroSection so a fresh install with no slides configured
+          yet still has a homepage.
+         */}
+        {slides.length > 0 ? (
+          <HeroCarousel
+            slides={slides}
+            defaultLabel={t('home.heroLabel')}
+            defaultHeading={t('home.heroTitle')}
+            defaultSubheading={t('home.heroSubheading')}
+          />
+        ) : (
+          <HeroSection />
+        )}
 
         {/* Featured Rooms */}
         <section className="pt-40 pb-20 md:pt-48 md:pb-24">

@@ -30,8 +30,11 @@ export const th = {
 
   // Homepage
   home: {
-    heroTitle: 'พักผ่อนที่เหนือระดับ',
+    heroTitle: 'ค้นหาห้องพักในฝันของคุณ',
+    heroLabel: 'ความหรูหราจากธรรมชาติ',
     heroSubtitle: 'สัมผัสประสบการณ์การบริการระดับพรีเมียม',
+    heroSubheading:
+      'สัมผัสความหรูหราที่เป็นธรรมชาติ — ทุกรายละเอียดถูกรังสรรค์เพื่อการพักผ่อน การไตร่ตรอง และความมหัศจรรย์อันเงียบสงบ',
     featuredRooms: 'ห้องพักแนะนำ',
     searchPlaceholder: 'ค้นหาห้องพัก',
   },
@@ -90,6 +93,8 @@ export const th = {
       continueViewing: 'ดูข้อมูลห้องต่อ',
       goToLogin: 'ไปที่หน้าเข้าสู่ระบบ',
     },
+    // Phase 42 — fallback error from createTempBookingAction.
+    tempBookingError: 'ไม่สามารถสร้างการจองชั่วคราว',
   },
 
   // Room card (homepage featured grid)
@@ -219,7 +224,7 @@ export const th = {
   bookings: {
     title: 'ประวัติการจอง',
     noBookings: 'คุณยังไม่มีการจอง',
-    noBookingsHint: 'เริ่มต้นจองห้องพักในฝันของคุ�น',
+    noBookingsHint: 'เริ่มต้นจองห้องพักในฝันของคุณ',
     guestsCount: '{count} ท่าน',
     browseRooms: 'เลือกดูห้องพัก',
     bookingCode: 'รหัสการจอง',
@@ -232,7 +237,10 @@ export const th = {
     status: 'สถานะ',
     viewDetails: 'ดูรายละเอียด',
     cancelBooking: 'ยกเลิกการจอง',
+    cancelSuccess: 'ยกเลิกการจองเรียบร้อยแล้ว',
     continuePayment: 'ชำระเงินต่อ',
+    continueBooking: 'ดำเนินการต่อ',
+    creatingHold: 'กำลังสร้างการจองชั่วคราว…',
     tabActive: 'กำลังจะมาถึง',
     tabCheckedIn: 'ประวัติการเข้าพัก',
     emptyActive: 'ยังไม่มีการจองที่กำลังจะมาถึง',
@@ -243,6 +251,12 @@ export const th = {
     statusRefunded: 'คืนเงินแล้ว',
     statusCheckedIn: 'เข้าพักอยู่',
     statusCheckedOut: 'เช็คเอาท์แล้ว',
+    // Phase 42 — temp_pending (awaiting details) + expired (lazy or daily cron).
+    statusTempPending: 'รอกรอกข้อมูล',
+    statusExpired: 'หมดเวลา',
+    tempExpiresIn: 'หมดเวลาใน {time}',
+    tempExpired: 'หมดเวลาแล้ว',
+    expiredHint: 'การจองนี้หมดเวลาแล้ว กรุณาจองใหม่อีกครั้ง',
   },
 
   // Booking detail page
@@ -269,6 +283,8 @@ export const th = {
     actions: 'การดำเนินการ',
     cancelBooking: 'ยกเลิกการจอง',
     cancelConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้?',
+    // Phase 42 — temp booking cancel confirmation.
+    cancelTempConfirm: 'ยกเลิกการจองชั่วคราวนี้หรือไม่? ห้องจะถูกปล่อยให้ผู้ใช้อื่นทันที',
     requestRefund: 'ขอเงินคืน',
     refundConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการขอเงินคืน?',
     cancelSuccess: 'ยกเลิกการจองเรียบร้อย',
@@ -646,8 +662,24 @@ export const th = {
       customers: 'ลูกค้า',
       promotions: 'โปรโมชั่น',
       rates: 'ราคา',
+      heroCarousel: 'หน้าแรก',
       staff: 'พนักงาน',
       settings: 'ตั้งค่า',
+    },
+    // Phase 43 — hero carousel management page.
+    heroCarouselPage: {
+      title: 'แครูเซลหน้าแรก',
+      subtitle: 'จัดการสไลด์ที่แสดงบนหน้าแรก — เลือกจากห้องพัก / โปรโมชั่น / อัปโหลดเอง',
+      viewHomepage: 'ดูหน้าแรก',
+      kpiActive: 'สไลด์ที่เปิดใช้งาน',
+      kpiRoomType: 'สไลด์จากห้องพัก',
+      kpiPromotion: 'สไลด์จากโปรโมชั่น',
+      kpiCustom: 'สไลด์ที่อัปโหลดเอง',
+      slidesTitle: 'สไลด์ทั้งหมด',
+      sourceRoomType: 'ห้องพัก',
+      sourcePromotion: 'โปรโมชั่น',
+      sourceCustom: 'กำหนดเอง',
+      empty: 'ยังไม่มีสไลด์ในแครูเซล — กดปุ่ม "เพิ่มสไลด์" เพื่อเริ่มต้น',
     },
     customersPage: {
       title: 'จัดการลูกค้า',

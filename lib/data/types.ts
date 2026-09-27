@@ -516,8 +516,59 @@ export interface Promotion {
   valid_from: string // YYYY-MM-DD
   valid_until: string // YYYY-MM-DD
   is_active: boolean
+  /**
+   * Phase 43 — optional R2 object key for a marketing image. Used by the
+   * homepage hero carousel when a slide picks source_type='promotion'.
+   * NULL = promotion has no hero image (carousel promo tab won't show it).
+   */
+  image_key: string | null
   createdAt?: string
   updatedAt?: string
+}
+
+// ============================================================================
+// Phase 43 — Hero carousel slide types
+// ============================================================================
+
+/**
+ * Source type for a hero carousel slide. Determines which underlying column
+ * (room_type_id / promotion_id / custom_image_key) is populated.
+ */
+export type HeroSlideSourceType = 'room_type' | 'promotion' | 'custom'
+
+/** Raw hero_slides row as returned by the DB layer. */
+export interface HeroSlide {
+  id: string
+  source_type: HeroSlideSourceType
+  room_type_id: string | null
+  promotion_id: string | null
+  custom_image_key: string | null
+  custom_caption: string | null
+  custom_caption_th: string | null
+  display_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  updated_by: string | null
+}
+
+/**
+ * Resolved hero slide — joins resolved fields from the source row
+ * (room_type or promotion) so the public carousel can render without
+ * N+1 follow-up queries. Used by the homepage server component.
+ */
+export interface ResolvedHeroSlide {
+  id: string
+  imageKey: string
+  sourceType: HeroSlideSourceType
+  displayOrder: number
+  isActive: boolean
+  /** Heading rendered in the overlay (h1). NULL = use the default. */
+  heading: string | null
+  /** Subheading rendered below the heading. NULL = use the default. */
+  subheading: string | null
+  /** Optional small badge (e.g. "โปรโมชั่น"). NULL = no badge. */
+  badge: string | null
 }
 
 export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'

@@ -14,6 +14,7 @@ import { ReviewList } from '@/components/room/ReviewList'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
+import { SearchBar } from '@/components/search/SearchBar'
 
 // Server-render on demand (Supabase data + dynamic params)
 export const dynamic = 'force-dynamic'
@@ -73,7 +74,21 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-10">
             {/* Main content */}
             <article className="flex flex-col gap-12">
-              <RoomGallery room={room} />
+              {/* Gallery + overlay SearchBar — relative wrapper so the
+                  SearchBar floats over the bottom edge of the gallery.
+                  variant="overlay" auto-navigates to /rooms on date change. */}
+              <div className="relative">
+                <RoomGallery room={room} />
+                <div className="absolute inset-x-0 bottom-0 z-20 px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) pb-3 md:pb-4 pointer-events-none">
+                  <div className="max-w-(--spacing-container-max) mx-auto pointer-events-auto">
+                    <SearchBar
+                      variant="overlay"
+                      defaultCheckin={defaultCheckIn}
+                      defaultCheckout={defaultCheckOut}
+                    />
+                  </div>
+                </div>
+              </div>
 
               {/* Title block */}
               <div>

@@ -13,6 +13,7 @@ import {
   type PricingSettings,
 } from '@/lib/pricing'
 import { getSeasonalRatesAction } from '@/app/actions/seasonal-rates'
+import { createTempBookingAction } from '@/app/actions/booking'
 import type { AppliedRate, QuoteResult } from '@/lib/pricing/seasons'
 import type { RoomType } from '@/lib/data/types'
 import { getLocalIsoDate, getMinCheckInLocalIso, addDaysLocalIso } from '@/lib/dates'
@@ -59,12 +60,16 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
   // the modal — dismissing it leaves the dates widget state untouched.
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
 
+  // Phase 42 — inline error from createTempBookingAction (replaces the
+  // pre-Phase-42 redirect-with-search-params flow that had no error path).
+  const [reserveError, setReserveError] = useState<string | null>(null)
+
   // Phase parity — capture full QuoteResult so calculatePrice uses the
   // seasonal-aware baseSubtotal. Also drives the appliedRates banner.
   const [appliedRates, setAppliedRates] = useState<AppliedRate[]>([])
   const [quote, setQuote] = useState<QuoteResult | null>(null)
   const [minNightsBlocked, setMinNightsBlocked] = useState(false)
-  const [, startTransition] = useTransition()
+  const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     if (checkIn >= checkOut) return
@@ -111,18 +116,25 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
       setShowLoginPrompt(true)
       return
     }
-    const params = new URLSearchParams({
-      roomId: room.id,
-      checkIn,
-      checkOut,
-      // Guest count is fixed to the room's max capacity — pricing doesn't
-      // vary by guest count in this project (see lib/pricing.ts:18 — the
-      // `guests` field is reserved for future guest-based pricing but is
-      // not currently read by `calculatePrice`). BookingForm still needs
-      // the value to forward to `createBooking` server action.
-      guests: String(room.max_guests),
+    setReserveError(null)
+    startTransition(async () => {
+      const result = await createTempBookingAction({
+        roomTypeId: room.id,
+        checkIn,
+        checkOut,
+        // Guest count is fixed to the room's max capacity — pricing doesn't
+        // vary by guest count in this project (see lib/pricing.ts:18 — the
+        // `guests` field is reserved for future guest-based pricing but is
+        // not currently read by `calculatePrice`). completeTempBookingAction
+        // re-reads max_guests at server-side anyway as defense-in-depth.
+        guests: room.max_guests,
+      })
+      if (!result.ok || !result.bookingId) {
+        setReserveError(result.error ?? t('rooms.tempBookingError'))
+        return
+      }
+      router.push(`/bookings/new?bookingId=${result.bookingId}`)
     })
-    router.push(`/bookings/new?${params.toString()}`)
   }
 
   /**
@@ -235,14 +247,32 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
 
       <PriceRow label="รวมทั้งสิ้น" value={formatTHB(price.total)} emphasis />
 
+      {reserveError && (
+        <div
+          role="alert"
+          className="mt-4 px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error"
+        >
+          {reserveError}
+        </div>
+      )}
+
       <button
         type="button"
         onClick={handleReserve}
-        disabled={nights === 0 || minNightsBlocked}
+        disabled={nights === 0 || minNightsBlocked || isPending}
         className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        <MaterialIcon name="bookmark" size={18} />
-        ยืนยันการจอง
+        {isPending ? (
+          <>
+            <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+            {t('bookings.creatingHold')}
+          </>
+        ) : (
+          <>
+            <MaterialIcon name="bookmark" size={18} />
+            ยืนยันการจอง
+          </>
+        )}
       </button>
 
       <p className="mt-4 text-caption text-on-surface-variant text-center">

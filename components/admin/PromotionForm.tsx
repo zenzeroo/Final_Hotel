@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
+import Image from 'next/image'
 import type { Promotion, RoomTypeName } from '@/lib/data/types'
 import {
   createPromotionAction,
@@ -11,6 +12,7 @@ import {
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { DatePickerField } from '@/components/ui/DatePickerField'
 import { getTodayLocalIso } from '@/lib/dates'
+import { r2Url } from '@/lib/r2/publicUrl'
 
 interface PromotionFormProps {
   mode: 'create' | 'edit'
@@ -75,6 +77,9 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
   const [discountType, setDiscountType] = useState<'percent' | 'flat'>(
     initial?.discount_type ?? 'percent',
   )
+  // Phase 43 — track if user opted to remove the existing hero image.
+  // Default false so the existing image stays unless explicitly cleared.
+  const [removeImage, setRemoveImage] = useState(false)
 
   // useActionState requires (state, payload) => newState signature.
   // The raw action takes only FormData, so wrap it.
@@ -136,6 +141,61 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
           className={inputClass}
         />
       </Field>
+
+      {/* Phase 43 — optional hero image. Used by the homepage hero carousel
+          when an admin picks this promotion as a slide source. Leave empty
+          to keep the promotion text-only. */}
+      <fieldset className="flex flex-col gap-3 border border-outline-variant rounded-2xl p-4">
+        <legend className="text-caption text-on-surface-variant uppercase tracking-wider px-2 -ml-2">
+          รูป Hero สำหรับหน้าแรก
+        </legend>
+
+        {/* Existing image preview */}
+        {initial?.image_key && !removeImage && (
+          <div className="relative w-full max-w-md aspect-video rounded-xl overflow-hidden bg-surface-container">
+            <Image
+              src={r2Url(initial.image_key)}
+              alt="รูป Hero ปัจจุบัน"
+              fill
+              sizes="(max-width: 768px) 100vw, 448px"
+              className="object-cover"
+            />
+          </div>
+        )}
+
+        <Field label={initial?.image_key && !removeImage ? 'อัปโหลดรูปใหม่ (จะแทนที่รูปเดิม)' : 'อัปโหลดรูป Hero'}>
+          <input
+            name="image_file"
+            type="file"
+            accept="image/*"
+            className="block w-full text-body-md text-on-surface file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-on-primary file:cursor-pointer hover:file:bg-primary-fixed hover:file:text-primary"
+          />
+        </Field>
+
+        {/* Hidden field — preserves the existing image_key across form
+            submits when no new file is uploaded. */}
+        {initial?.image_key && !removeImage && (
+          <input type="hidden" name="image_key" value={initial.image_key} />
+        )}
+
+        {initial?.image_key && !removeImage && (
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="removeImage"
+              value="true"
+              checked={removeImage}
+              onChange={(e) => setRemoveImage(e.target.checked)}
+              className="w-4 h-4 accent-error"
+            />
+            <span className="text-body-md text-error">ลบรูป Hero นี้</span>
+          </label>
+        )}
+
+        <p className="text-caption text-on-surface-variant">
+          รูปนี้จะใช้ในแครูเซลหน้าแรกเมื่อแอดมินเลือกโปรโมชั่นนี้เป็นสไลด์ — ไม่บังคับ
+        </p>
+      </fieldset>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Field label="ประเภทส่วนลด" required>

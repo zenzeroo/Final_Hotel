@@ -101,7 +101,13 @@ export async function searchRooms(filters: SearchFilters): Promise<SearchResult>
  * see the room as available while the RPC's authoritative check would
  * reject the second booking. Inventory counts are non-PII metadata.
  *
- * Mirrors `create_booking()` RPC (`db-schemas/20260905_fix_create_booking_lock.sql:67-97`).
+ * Phase 42 — also counts LIVE temp_pending bookings (hold_expires_at > now()).
+ * Replaces the Phase 40 `booking_holds` table query. No cron needed for
+ * correctness: lazy expiry flips stale temp_pending to 'expired' on every
+ * read, so a query after hold expiry naturally excludes that row.
+ *
+ * Mirrors `create_booking()` RPC capacity check
+ * (supabase/migrations/20261004_2_temp_pending_bookings.sql).
  */
 async function filterByAvailability(
   rooms: RoomType[],
@@ -111,14 +117,10 @@ async function filterByAvailability(
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const admin = await createAdminClient()
 
-  // Phase 40 — also fetch active booking_holds (expires_at > now()) for
-  // the same date range. The `create_booking` RPC counts these in its
-  // capacity check (see db-schemas/20261003_booking_holds.sql), so this
-  // client-side filter must too — otherwise two searchers both see the
-  // room as available while the second user's create_booking fails with
-  // P0001. Note: RLS doesn't apply (admin client) and we don't filter by
-  // user_id — a user's own hold also blocks OTHER searchers.
-  const [unitsRes, bookingsRes, holdsRes] = await Promise.all([
+  // Phase 42 — count live temp_pending bookings (hold_expires_at > now()).
+  // The WHERE clause excludes stale ones, so a user who closes the tab and
+  // returns after the hold expires still sees the room as available.
+  const [unitsRes, bookingsRes, tempRes] = await Promise.all([
     admin
       .from('room_units')
       .select('room_type_id')
@@ -130,9 +132,10 @@ async function filterByAvailability(
       .lte('check_in', checkout)
       .gte('check_out', checkin),
     admin
-      .from('booking_holds')
+      .from('bookings')
       .select('room_type_id')
-      .gt('expires_at', new Date().toISOString())
+      .eq('status', 'temp_pending')
+      .gt('hold_expires_at', new Date().toISOString())
       .lte('check_in', checkout)
       .gte('check_out', checkin),
   ])
@@ -147,18 +150,18 @@ async function filterByAvailability(
     bookedByType.set(b.room_type_id, (bookedByType.get(b.room_type_id) ?? 0) + 1)
   })
 
-  // Phase 40 — fold active holds into the booked count.
-  holdsRes.data?.forEach((h) => {
-    bookedByType.set(h.room_type_id, (bookedByType.get(h.room_type_id) ?? 0) + 1)
+  // Phase 42 — fold LIVE temp_pending bookings into the booked count.
+  tempRes.data?.forEach((b) => {
+    bookedByType.set(b.room_type_id, (bookedByType.get(b.room_type_id) ?? 0) + 1)
   })
 
   return rooms.filter((r) => {
     const pool = poolByType.get(r.id) ?? 0
     const booked = bookedByType.get(r.id) ?? 0
-    // Hide the entire room type once ANY active booking OR active hold
+    // Hide the entire room type once ANY active booking OR live temp_pending
     // overlaps the requested date range — matches the user expectation
     // "I booked it, it's gone" and matches the RPC's authoritative
-    // semantics (combined `v_active_count + v_hold_count`).
+    // semantics (combined `v_active_count + v_temp_count`).
     // The `pool > 0` guard still hides types with no physical units.
     return pool > 0 && booked === 0
   })

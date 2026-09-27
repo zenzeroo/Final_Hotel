@@ -1,7 +1,28 @@
 /**
- * Phase 40 — booking_holds integration test.
+ * Phase 40 — booking_holds integration test (ARCHIVED).
  *
- * Verifies the 10-minute hold mechanism:
+ * ──────────────────────────────────────────────────────────────────
+ * ⚠️  SUPERSEDED by Phase 42 — Temp Pending Bookings.
+ * ──────────────────────────────────────────────────────────────────
+ *
+ * This script tested the Phase 40 booking_holds mechanism (a separate
+ * `booking_holds` table with 10-min TTL). Phase 42 replaced that table with
+ * real `bookings` rows in `status='temp_pending'` + a `hold_expires_at`
+ * column. See `scripts/test-phase42-temp-pending.mts` for the new test.
+ *
+ * The booking_holds table was dropped in migration
+ * `20261004_3_drop_booking_holds.sql` (2026-10-04), so this script can
+ * no longer run against live DB without re-creating the table. KEPT for
+ * reference of the original test patterns (concurrency tests, ON CONFLICT
+ * DO UPDATE verification, EXCLUDE constraint interaction, etc.).
+ *
+ * DO NOT DELETE — useful as historical reference for future RPC patterns
+ * that need to verify race-safety + atomic capacity checks.
+ *
+ * ──────────────────────────────────────────────────────────────────
+ *
+ * Original purpose (Phase 40):
+ *   Verifies the 10-minute hold mechanism:
  *   1. User A acquires hold for room_type X + dates → booking_holds row
  *      created with expires_at ~10min in the future.
  *   2. While A's hold is active, searchRooms filterByAvailability hides
@@ -15,12 +36,10 @@
  *   6. A acquires + create_booking succeeds → RPC atomically
  *      DELETEs A's hold for those dates.
  *
- * Prereqs:
- *   - Migration 20261003_booking_holds.sql applied
+ * Prereqs (HAVE BEEN DROPPED):
+ *   - Migration 20261003_booking_holds.sql applied (SUPERSEDED)
  *   - Live seed has at least one room_type with one room_unit
  *   - test@zenzero.com fixture exists (run scripts/_rbac-fixture.mts)
- *
- * Run: npx tsx scripts/test-phase40-booking-holds.mts
  *
  * Cleanup: booking_code prefix `ZZR-P40H-*` for created bookings;
  *          holds are deleted by id (cleanup before + after each run).
