@@ -14,6 +14,18 @@ interface SearchBarProps {
   defaultCheckin?: string
   defaultCheckout?: string
   defaultGuests?: number
+  /**
+   * Compact-only — navigation target for date/guests changes. Defaults to
+   * '/rooms'. Reused by `/reception/bookings/new` (Phase 45) which passes
+   * navigateTo='/reception/bookings/new' so URL updates stay on the picker
+   * page instead of jumping to /rooms.
+   */
+  navigateTo?: string
+  /**
+   * Compact-only — whether to render the "ดูทั้งหมด" button. Set false for
+   * pages that don't honour the viewAll=1 param (e.g. walk-in picker).
+   */
+  showSeeAll?: boolean
 }
 
 export function SearchBar({
@@ -21,6 +33,8 @@ export function SearchBar({
   defaultCheckin,
   defaultCheckout,
   defaultGuests = 2,
+  navigateTo = '/rooms',
+  showSeeAll = true,
 }: SearchBarProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -48,21 +62,22 @@ export function SearchBar({
 
   /**
    * Navigation strategy:
-   * - `compact`  (/rooms list) → in-place URL update via router.replace.
+   * - `compact`  → updates URL at `navigateTo` (default '/rooms'). When the
+   *   user is already on `navigateTo`, replaces in-place (no history push);
+   *   otherwise pushes. Used on /rooms list + /reception/bookings/new picker.
    * - `hero`     (homepage hero on /) → requires explicit Submit.
    */
-  const isOnRooms = pathname === '/rooms'
+  const isOnTargetPage = pathname === navigateTo
 
   function navigateToRooms(opts: {
     checkin?: string
     checkout?: string
     guests?: number
   }) {
-    // Compact renders only on /rooms, so we always replace (not push)
-    // and always merge with existing searchParams to preserve unrelated
-    // filters (type, floor, priceRange, viewAll).
+    // Always merge with current searchParams to preserve unrelated filters
+    // when the user is already on the target page.
     const params = new URLSearchParams(
-      isOnRooms ? searchParams.toString() : '',
+      isOnTargetPage ? searchParams.toString() : '',
     )
     if (opts.checkin !== undefined) {
       if (opts.checkin) params.set('checkin', opts.checkin)
@@ -78,8 +93,15 @@ export function SearchBar({
     }
     const qs = params.toString()
 
-    // In-place URL update — keeps history clean + scroll position.
-    router.replace(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
+    // In-place URL update on the same page; push when the target differs
+    // (e.g. compact SearchBar reused on /reception/bookings/new pushes to
+    // navigateTo instead of /rooms).
+    const target = `${navigateTo}${qs ? `?${qs}` : ''}`
+    if (pathname === navigateTo) {
+      router.replace(target, { scroll: false })
+    } else {
+      router.push(target, { scroll: false })
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -145,8 +167,10 @@ export function SearchBar({
   // BookingWidget there prefill from them. `viewAll=1` signals the
   // /rooms page to skip the `max_guests >= guests` filter — show every
   // available room for the date range regardless of capacity.
+  // Hidden when `showSeeAll={false}` (e.g. walk-in picker — the page
+  // doesn't honour the viewAll=1 param).
   function handleSeeAll() {
-    if (!isCompact) return
+    if (!isCompact || !showSeeAll) return
     const params = new URLSearchParams(searchParams.toString())
     params.set('viewAll', '1')
     if (checkin) params.set('checkin', checkin)
@@ -154,7 +178,7 @@ export function SearchBar({
     if (checkout) params.set('checkout', checkout)
     else params.delete('checkout')
     const qs = params.toString()
-    router.replace(`/rooms${qs ? `?${qs}` : ''}`, { scroll: false })
+    router.replace(`${navigateTo}${qs ? `?${qs}` : ''}`, { scroll: false })
   }
 
   const handleSubmit = (e: FormEvent) => {
@@ -224,8 +248,8 @@ export function SearchBar({
         </div>
       </div>
 
-      {/* Actions — compact: "ดูทั้งหมด" button. Hero: Submit button. */}
-      {isCompact ? (
+      {/* Actions — compact: "ดูทั้งหมด" button (hidden when showSeeAll=false). Hero: Submit button. */}
+      {isCompact && showSeeAll ? (
         <button
           type="button"
           onClick={handleSeeAll}

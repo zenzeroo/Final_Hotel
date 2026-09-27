@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition, useMemo } from 'react'
 import { createWalkInBooking } from '@/app/actions/walk-in-booking'
 import { calculateNights, calculatePrice, formatTHB } from '@/lib/pricing'
@@ -31,11 +31,23 @@ function getTomorrowIso() {
 
 export function WalkInForm({ room }: WalkInFormProps) {
   const router = useRouter()
+  const urlParams = useSearchParams()
+  // Phase 45 — pre-fill dates/guests from URL params when the receptionist
+  // navigates here from the picker (which forwards checkin/checkout/guests
+  // via the card href). Fallback to today/tomorrow/1 when missing.
+  const urlCheckIn = urlParams.get('checkin')
+  const urlCheckOut = urlParams.get('checkout')
+  const urlGuestsRaw = urlParams.get('guests')
+  const urlGuestsParsed = urlGuestsRaw ? parseInt(urlGuestsRaw, 10) : NaN
+  const initialCheckIn = urlCheckIn && urlCheckIn >= getTodayIso() ? urlCheckIn : getTodayIso()
+  const initialCheckOut = urlCheckOut && urlCheckOut > initialCheckIn ? urlCheckOut : getTomorrowIso()
+  const initialGuests = Number.isFinite(urlGuestsParsed) && urlGuestsParsed > 0 ? urlGuestsParsed : 1
+
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [checkIn, setCheckIn] = useState(getTodayIso)
-  const [checkOut, setCheckOut] = useState(getTomorrowIso)
-  const [guests, setGuests] = useState(1)
+  const [checkIn, setCheckIn] = useState(initialCheckIn)
+  const [checkOut, setCheckOut] = useState(initialCheckOut)
+  const [guests, setGuests] = useState(initialGuests)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
