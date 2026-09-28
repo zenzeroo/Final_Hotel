@@ -1,10 +1,8 @@
 import Link from 'next/link'
 import { getAllBookings } from '@/lib/data/staff'
-import { formatTHB } from '@/lib/pricing'
-import { formatDate } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { BookingFilters } from './BookingFilters'
-import { BookingRowActions } from './BookingRowActions'
+import { BookingTableRow } from './BookingTableRow'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,41 +63,7 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
             </thead>
             <tbody>
               {bookings.map((b) => (
-                <tr key={b.id} className="border-t border-outline-variant hover:bg-primary-fixed transition-colors">
-                  <Td>
-                    <span className="font-mono text-body-md">{b.booking_code}</span>
-                  </Td>
-                  <Td>
-                    <Link
-                      href={`/reception/bookings/${b.id}`}
-                      className="block group rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
-                    >
-                      <p className="text-body-md font-medium text-on-surface group-hover:text-primary group-hover:underline transition-colors">
-                        {b.booker_full_name}
-                      </p>
-                      <p className="text-caption text-on-surface-variant">{b.booker_email}</p>
-                    </Link>
-                  </Td>
-                  <Td>
-                    <p className="text-body-md text-on-surface">{b.room_type?.name_th}</p>
-                    <p className="text-caption text-on-surface-variant">{b.guests} ท่าน · {b.nights} คืน</p>
-                  </Td>
-                  <Td>
-                    <p className="text-body-md text-on-surface">{formatDate(b.check_in)}</p>
-                    <p className="text-caption text-on-surface-variant">→ {formatDate(b.check_out)}</p>
-                  </Td>
-                  <Td>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-caption font-semibold ${statusClass(b.status, b.payment_status)}`}>
-                      {statusLabel(b.status, b.payment_status)}
-                    </span>
-                  </Td>
-                  <Td align="right">
-                    <span className="text-body-md font-semibold text-primary">{formatTHB(b.total)}</span>
-                  </Td>
-                  <Td align="right">
-                    <BookingRowActions bookingId={b.id} status={b.status} paymentStatus={b.payment_status} />
-                  </Td>
-                </tr>
+                <BookingTableRow key={b.id} booking={b} />
               ))}
             </tbody>
           </table>
@@ -119,27 +83,4 @@ function Th({ children, align }: { children: React.ReactNode; align?: 'left' | '
       {children}
     </th>
   )
-}
-
-function Td({ children, align }: { children: React.ReactNode; align?: 'left' | 'right' }) {
-  return (
-    <td className={`px-4 py-3 ${align === 'right' ? 'text-right' : 'text-left'}`}>{children}</td>
-  )
-}
-
-function statusLabel(status: string, paymentStatus: string) {
-  if (status === 'cancelled') return 'ยกเลิก'
-  if (status === 'checked_in') return 'เข้าพัก'
-  if (status === 'checked_out') return 'เช็คเอาท์'
-  if (paymentStatus === 'paid') return 'ชำระแล้ว'
-  if (status === 'confirmed') return 'รอชำระ'
-  return 'รอ'
-}
-
-function statusClass(status: string, paymentStatus: string) {
-  if (status === 'cancelled') return 'bg-error/10 text-error'
-  if (status === 'checked_in') return 'bg-primary/10 text-primary'
-  if (status === 'checked_out') return 'bg-surface-container text-on-surface-variant'
-  if (paymentStatus === 'paid') return 'bg-primary/10 text-primary'
-  return 'bg-secondary/20 text-secondary'
 }
