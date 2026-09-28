@@ -52,7 +52,7 @@ export function BookingRowActions({ bookingId, status, paymentStatus }: BookingR
       <div className="inline-flex items-center gap-1">
         <button
           type="button"
-          onClick={() => router.push(`/bookings/${bookingId}`)}
+          onClick={() => router.push(`/reception/bookings/${bookingId}`)}
           className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors"
           aria-label="ดูรายละเอียด"
         >

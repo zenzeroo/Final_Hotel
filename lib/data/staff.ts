@@ -138,3 +138,30 @@ export async function getRecentEvents(limit = 10) {
   if (error) wrapSupabaseError('', error)
   return data ?? []
 }
+
+// Phase 46 — booking_events audit log scoped to a single booking.
+// Mirrors getRecentEvents query shape (event_type + description +
+// actor + created_at + metadata) but filters by booking_id.
+// booking_id is nullable since Phase 36 (customer-suspension admin
+// actions can write audit rows without a linked booking), so the
+// `.not('booking_id','is',null)` guard is required to avoid pulling
+// those orphan rows into a per-booking timeline view.
+export async function getBookingEvents(bookingId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('booking_events')
+    .select(`
+      id,
+      event_type,
+      description,
+      metadata,
+      created_at,
+      actor:profiles!booking_events_actor_id_fkey(full_name, role)
+    `)
+    .not('booking_id', 'is', null)
+    .eq('booking_id', bookingId)
+    .order('created_at', { ascending: false })
+
+  if (error) wrapSupabaseError('', error)
+  return data ?? []
+}

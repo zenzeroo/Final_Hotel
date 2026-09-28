@@ -70,10 +70,15 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
                     <span className="font-mono text-body-md">{b.booking_code}</span>
                   </Td>
                   <Td>
-                    <div>
-                      <p className="text-body-md font-medium text-on-surface">{b.booker_full_name}</p>
+                    <Link
+                      href={`/reception/bookings/${b.id}`}
+                      className="block group rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+                    >
+                      <p className="text-body-md font-medium text-on-surface group-hover:text-primary group-hover:underline transition-colors">
+                        {b.booker_full_name}
+                      </p>
                       <p className="text-caption text-on-surface-variant">{b.booker_email}</p>
-                    </div>
+                    </Link>
                   </Td>
                   <Td>
                     <p className="text-body-md text-on-surface">{b.room_type?.name_th}</p>
