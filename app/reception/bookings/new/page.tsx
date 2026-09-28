@@ -4,6 +4,7 @@ import { RoomImage } from '@/components/room/RoomImage'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { SearchBar } from '@/components/search/SearchBar'
 import { formatTHB } from '@/lib/pricing'
+import { getMinCheckInLocalIso, addDaysLocalIso } from '@/lib/dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,27 +14,50 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
   // Phase 45 — read dates/guests from URL so the SearchBar at the top can
   // drive availability filtering in-place (mirror of the /rooms list page
   // pattern). Receptionist sets dates first, then picks a room card.
-  const checkin = typeof searchParams.checkin === 'string' ? searchParams.checkin : undefined
-  const checkout = typeof searchParams.checkout === 'string' ? searchParams.checkout : undefined
-  const guestsParam = typeof searchParams.guests === 'string' ? parseInt(searchParams.guests, 10) : NaN
-  const guests = Number.isFinite(guestsParam) && guestsParam > 0 ? guestsParam : 1
+  //
+  // Phase 45.1 — always-default checkin/checkout/guests so card hrefs
+  // always carry the values the receptionist is currently seeing on the
+  // SearchBar. Without defaults, visiting `/reception/bookings/new`
+  // produced `?roomId=X&guests=1` hrefs with no dates → WalkInForm fell
+  // back to its own (buggy today/tomorrow) defaults. Now card hrefs are
+  // stable and always include all 3 params.
+  //
+  // The filter behavior is unchanged — only filter when the URL actually
+  // has both dates (else show all active rooms).
+  const minCheckin = getMinCheckInLocalIso()
+  const defaultCheckout = addDaysLocalIso(minCheckin, 1)
 
-  const result = checkin && checkout
+  const checkin =
+    typeof searchParams.checkin === 'string' && searchParams.checkin >= minCheckin
+      ? searchParams.checkin
+      : minCheckin
+  const checkout =
+    typeof searchParams.checkout === 'string' && searchParams.checkout > checkin
+      ? searchParams.checkout
+      : defaultCheckout
+  const guests = (() => {
+    const n =
+      typeof searchParams.guests === 'string' ? parseInt(searchParams.guests, 10) : NaN
+    return Number.isFinite(n) && n > 0 ? n : 1
+  })()
+
+  const hasDateFilter = Boolean(searchParams.checkin && searchParams.checkout)
+  const result = hasDateFilter
     ? await searchRooms({ checkin, checkout, guests })
     : await searchRooms({ guests })
   const rooms = result.rooms
 
-  // Build the per-card href so WalkInForm pre-fills the same dates/guests.
+  // Build the per-card href so WalkInForm pre-fills the same dates/guests
+  // the receptionist is currently seeing on the SearchBar. All three
+  // params are always present — Phase 45.1 fix.
   const cardHref = (roomId: string) => {
     const params = new URLSearchParams()
     params.set('roomId', roomId)
-    if (checkin) params.set('checkin', checkin)
-    if (checkout) params.set('checkout', checkout)
-    if (guests) params.set('guests', String(guests))
+    params.set('checkin', checkin)
+    params.set('checkout', checkout)
+    params.set('guests', String(guests))
     return `/reception/bookings/new/create?${params.toString()}`
   }
-
-  const hasDateFilter = Boolean(checkin && checkout)
 
   return (
     <div className="p-6 md:p-8">

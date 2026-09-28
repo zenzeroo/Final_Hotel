@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition, useMemo } from 'react'
 import { createWalkInBooking } from '@/app/actions/walk-in-booking'
 import { calculateNights, calculatePrice, formatTHB } from '@/lib/pricing'
+import { getMinCheckInLocalIso, addDaysLocalIso } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { DatePickerField } from '@/components/ui/DatePickerField'
 
@@ -19,28 +20,25 @@ interface WalkInFormProps {
   }
 }
 
-function getTodayIso() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function getTomorrowIso() {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
-}
-
 export function WalkInForm({ room }: WalkInFormProps) {
   const router = useRouter()
   const urlParams = useSearchParams()
   // Phase 45 — pre-fill dates/guests from URL params when the receptionist
   // navigates here from the picker (which forwards checkin/checkout/guests
-  // via the card href). Fallback to today/tomorrow/1 when missing.
+  // via the card href). Fallback to tomorrow/day-after/1 when missing.
+  // Phase 45.1 — defaults moved to `getMinCheckInLocalIso()` (tomorrow)
+  // instead of local `getTodayIso()` (today). Hotels require ≥ 1 day
+  // advance booking — same constraint enforced by SearchBar +
+  // BookingWidget via the same helper.
+  const minCheckin = getMinCheckInLocalIso()
+  const defaultCheckout = addDaysLocalIso(minCheckin, 1)
   const urlCheckIn = urlParams.get('checkin')
   const urlCheckOut = urlParams.get('checkout')
   const urlGuestsRaw = urlParams.get('guests')
   const urlGuestsParsed = urlGuestsRaw ? parseInt(urlGuestsRaw, 10) : NaN
-  const initialCheckIn = urlCheckIn && urlCheckIn >= getTodayIso() ? urlCheckIn : getTodayIso()
-  const initialCheckOut = urlCheckOut && urlCheckOut > initialCheckIn ? urlCheckOut : getTomorrowIso()
+  const initialCheckIn = urlCheckIn && urlCheckIn >= minCheckin ? urlCheckIn : minCheckin
+  const initialCheckOut =
+    urlCheckOut && urlCheckOut > initialCheckIn ? urlCheckOut : defaultCheckout
   const initialGuests = Number.isFinite(urlGuestsParsed) && urlGuestsParsed > 0 ? urlGuestsParsed : 1
 
   const [isPending, startTransition] = useTransition()
@@ -154,7 +152,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
             <Field label="เช็คอิน" required>
               <DatePickerField
                 value={checkIn}
-                min={getTodayIso()}
+                min={minCheckin}
                 onChange={(v) => {
                   setCheckIn(v)
                   if (v >= checkOut) {
