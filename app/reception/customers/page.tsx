@@ -1,4 +1,4 @@
-import { searchCustomers } from '@/lib/data/staff'
+import { listAllCustomers } from '@/lib/data/staff'
 import { formatDate } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { CustomerSearch } from './CustomerSearch'
@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic'
 export default async function CustomersPage(props: PageProps<'/reception/customers'>) {
   const searchParams = await props.searchParams
   const q = typeof searchParams.q === 'string' ? searchParams.q : ''
-  const customers = q ? await searchCustomers(q) : []
+  const result = await listAllCustomers({ search: q })
+  const customers = result.rows
 
   return (
     <div className="p-6 md:p-8">
@@ -30,6 +31,9 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
 
       {customers.length > 0 && (
         <div className="mt-6 bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-x-auto overflow-y-hidden">
+          <p className="text-body-md text-on-surface-variant px-4 pt-3 pb-1">
+            {result.total} คน
+          </p>
           <table className="w-full">
             <thead className="bg-surface-container">
               <tr>

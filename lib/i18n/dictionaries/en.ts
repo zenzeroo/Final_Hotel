@@ -509,11 +509,13 @@ export const en: Dictionary = {
   // Reception
   reception: {
     title: 'Reception Dashboard',
+    subtitle: 'Reception operations overview',
     todayCheckIns: "Today's check-ins",
     todayCheckOuts: "Today's check-outs",
     inHouse: 'In-house',
     pendingPayment: 'Pending payment',
     availableRooms: 'Available rooms',
+    available: 'Available',
     occupied: 'Occupied',
     cleaning: 'Cleaning',
     maintenance: 'Maintenance',

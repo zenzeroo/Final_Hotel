@@ -505,11 +505,13 @@ export const th = {
   // Reception
   reception: {
     title: 'แดชบอร์ดแผนกต้อนรับ',
+    subtitle: 'ภาพรวมการดำเนินงานของแผนกต้อนรับ',
     todayCheckIns: 'เช็คอินวันนี้',
     todayCheckOuts: 'เช็คเอาท์วันนี้',
     inHouse: 'ผู้เข้าพักอยู่',
     pendingPayment: 'รอชำระเงิน',
     availableRooms: 'ห้องว่าง',
+    available: 'ห้องว่าง',
     occupied: 'มีแขก',
     cleaning: 'กำลังทำความสะอาด',
     maintenance: 'ปิดซ่อมบำรุง',

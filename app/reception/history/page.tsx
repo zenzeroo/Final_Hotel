@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getRecentEvents } from '@/lib/data/staff'
 import { formatDateTime } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
@@ -60,8 +61,13 @@ export default async function ActionHistoryPage() {
                 color: 'bg-surface-container text-on-surface-variant',
                 icon: 'event',
               }
-              return (
-                <li key={e.id} className="px-5 py-4 flex items-start gap-3 hover:bg-primary-fixed transition-colors">
+              // Phase Y — events with a booking_id are wrapped in <Link>
+              // so the whole row navigates to the booking detail page.
+              // Events without booking_id (e.g. customer-suspension audit
+              // rows from Phase 36 — booking_id is nullable) stay as
+              // plain <li> with no click target.
+              const content = (
+                <>
                   <div className={`shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full ${meta.color}`}>
                     <MaterialIcon name={meta.icon} size={20} />
                   </div>
@@ -90,6 +96,21 @@ export default async function ActionHistoryPage() {
                       )}
                     </div>
                   </div>
+                </>
+              )
+              const liClass = 'px-5 py-4 flex items-start gap-3 hover:bg-primary-fixed transition-colors'
+              return (
+                <li key={e.id}>
+                  {e.booking_id ? (
+                    <Link
+                      href={`/reception/bookings/${e.booking_id}`}
+                      className={`${liClass} cursor-pointer focus-visible:outline-2 focus-visible:outline-secondary`}
+                    >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div className={liClass}>{content}</div>
+                  )}
                 </li>
               )
             })}

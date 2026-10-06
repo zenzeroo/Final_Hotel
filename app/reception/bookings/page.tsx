@@ -1,10 +1,14 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { getAllBookings } from '@/lib/data/staff'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { Pagination } from '@/components/ui/Pagination'
 import { BookingFilters } from './BookingFilters'
 import { BookingTableRow } from './BookingTableRow'
 
 export const dynamic = 'force-dynamic'
+
+const PAGE_SIZE = 20
 
 export default async function ReceptionBookingsPage(props: PageProps<'/reception/bookings'>) {
   const searchParams = await props.searchParams
@@ -12,7 +16,13 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
   const statusFilter = typeof searchParams.status === 'string' ? searchParams.status : 'all'
   const search = typeof searchParams.q === 'string' ? searchParams.q : ''
 
-  const filters: Parameters<typeof getAllBookings>[0] = {}
+  const pageParam = Number(searchParams.page ?? 1)
+  const page = Number.isFinite(pageParam) && pageParam >= 1 ? Math.floor(pageParam) : 1
+
+  const filters: Parameters<typeof getAllBookings>[0] = {
+    page,
+    pageSize: PAGE_SIZE,
+  }
   if (statusFilter !== 'all') {
     filters.status = [statusFilter]
   }
@@ -20,7 +30,20 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
     filters.search = search
   }
 
-  const bookings = await getAllBookings(filters)
+  const result = await getAllBookings(filters)
+
+  // Out-of-range page (e.g. user typed ?page=99 with only 3 pages of data)
+  // → redirect to the last valid page while preserving other filters.
+  if (result.total > 0 && page > result.totalPages) {
+    const qs = new URLSearchParams()
+    if (statusFilter !== 'all') qs.set('status', statusFilter)
+    if (search) qs.set('q', search)
+    if (result.totalPages > 1) qs.set('page', String(result.totalPages))
+    const suffix = qs.toString()
+    redirect(suffix ? `/reception/bookings?${suffix}` : '/reception/bookings')
+  }
+
+  const { rows: bookings, total, totalPages } = result
 
   return (
     <div className="p-6 md:p-8">
@@ -28,7 +51,9 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
         <div>
           <h1 className="font-display text-3xl text-primary">จัดการการจอง</h1>
           <p className="text-body-md text-on-surface-variant mt-1">
-            {bookings.length} รายการ
+            {total > 0
+              ? `${total} รายการ · หน้า ${page} / ${totalPages}`
+              : '0 รายการ'}
           </p>
         </div>
         <Link
@@ -48,26 +73,38 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
           <p className="text-body-md text-on-surface-variant">ไม่พบการจอง</p>
         </div>
       ) : (
-        <div className="mt-6 bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-x-auto overflow-y-hidden">
-          <table className="w-full">
-            <thead className="bg-surface-container">
-              <tr>
-                <Th>รหัส</Th>
-                <Th>ลูกค้า</Th>
-                <Th>ห้อง</Th>
-                <Th>เช็คอิน / เอาท์</Th>
-                <Th>สถานะ</Th>
-                <Th align="right">ยอดรวม</Th>
-                <Th align="right">ดำเนินการ</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((b) => (
-                <BookingTableRow key={b.id} booking={b} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="mt-6 bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-x-auto overflow-y-hidden">
+            <table className="w-full">
+              <thead className="bg-surface-container">
+                <tr>
+                  <Th>รหัส</Th>
+                  <Th>ลูกค้า</Th>
+                  <Th>ห้อง</Th>
+                  <Th>เช็คอิน / เอาท์</Th>
+                  <Th>สถานะ</Th>
+                  <Th align="right">ยอดรวม</Th>
+                  <Th align="right">ดำเนินการ</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map((b) => (
+                  <BookingTableRow key={b.id} booking={b} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            basePath="/reception/bookings"
+            extraParams={{
+              status: statusFilter !== 'all' ? statusFilter : undefined,
+              q: search || undefined,
+            }}
+          />
+        </>
       )}
     </div>
   )

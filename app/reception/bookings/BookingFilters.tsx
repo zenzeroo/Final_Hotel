@@ -27,6 +27,7 @@ export function BookingFilters({ initialStatus, initialSearch }: BookingFiltersP
     const next = new URLSearchParams(params.toString())
     if (status === 'all') next.delete('status')
     else next.set('status', status)
+    next.delete('page')
     router.replace(`/reception/bookings?${next.toString()}`)
   }
 
@@ -35,6 +36,7 @@ export function BookingFilters({ initialStatus, initialSearch }: BookingFiltersP
     const next = new URLSearchParams(params.toString())
     if (search) next.set('q', search)
     else next.delete('q')
+    next.delete('page')
     router.replace(`/reception/bookings?${next.toString()}`)
   }
 
