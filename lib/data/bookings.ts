@@ -21,7 +21,8 @@ export interface Booking {
   cancellation_policy_id: string | null
   // Phase 42 — added 'temp_pending' (reserving slot, awaiting form submit)
   // and 'expired' (hold timer elapsed, lazy-flipped or via daily cron).
-  status: 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'temp_pending' | 'expired'
+  // Phase 52 — added 'payment_expired' (30-min payment deadline lapsed).
+  status: 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'temp_pending' | 'expired' | 'payment_expired'
   payment_status: 'unpaid' | 'paid' | 'refunded' | 'partial_refund'
   booker_full_name: string
   booker_email: string
@@ -32,6 +33,18 @@ export interface Booking {
   // Phase 42 — set when status='temp_pending'; null when status='confirmed'/'cancelled'/etc.
   // Filters out from availability queries once hold_expires_at < now() (no cron required).
   hold_expires_at: string | null
+  // Phase 52 — 30-min payment deadline set when status flips to 'confirmed'.
+  // Past-deadline rows are flipped to 'payment_expired' by the lazy-expiry
+  // RPCs (expire_user_unpaid_bookings / expire_specific_unpaid_booking) and
+  // the daily cron (cleanup_abandoned_unpaid_bookings).
+  payment_due_at: string | null
+  // Phase 52 follow-up — disambiguates the shared `status='expired'`
+  // value. NULL = never lapsed (or paid/cancelled).
+  // 'hold_lapsed' = temp-pending hold expired (Phase 42 path).
+  // 'payment_deadline' = confirmed+unpaid 5-min window expired
+  // (Phase 52 follow-up path). The UI label picks the right copy
+  // ("หมดเวลา" vs "หมดเวลาชำระเงิน") based on this column.
+  lapsed_reason: 'hold_lapsed' | 'payment_deadline' | null
   // Joined fields
   room_type?: {
     id: string
@@ -73,6 +86,9 @@ export interface Promotion {
  * Phase 42 — lazy expiry: flips any stale temp_pending bookings to 'expired'
  * before reading (no cron required). See `expire_user_temp_bookings` RPC
  * at supabase/migrations/20261004_2_temp_pending_bookings.sql.
+ *
+ * Phase 52 — also flips any confirmed+unpaid bookings past `payment_due_at`
+ * to 'payment_expired' so the history page reflects the current state.
  */
 export async function getUserBookings(
   userId: string,
@@ -80,9 +96,11 @@ export async function getUserBookings(
 ): Promise<Booking[]> {
   const supabase = await createClient()
 
-  // Lazy expiry — atomic UPDATE + audit row insert. Returns count but we
-  // don't need it (re-query below picks up the new statuses).
+  // Lazy expiry — atomic UPDATE + audit row insert for BOTH temp_pending
+  // leases (Phase 42) and confirmed+unpaid past-deadline (Phase 52).
+  // RPCs are idempotent and owner-scoped.
   await supabase.rpc('expire_user_temp_bookings', { p_user_id: userId })
+  await supabase.rpc('expire_user_unpaid_bookings', { p_user_id: userId })
 
   let query = supabase
     .from('bookings')
@@ -105,12 +123,23 @@ export async function getUserBookings(
 
 /**
  * Get a single booking by ID (must belong to user).
+ *
+ * Phase 52 — also triggers lazy expiry for the owner so a stale
+ * confirmed+unpaid row past `payment_due_at` is flipped to
+ * 'payment_expired' before the page renders. This is what the
+ * leave-guard on /bookings/[id] needs to see the right status.
  */
 export async function getBookingById(
   bookingId: string,
   userId: string
 ): Promise<Booking | null> {
   const supabase = await createClient()
+
+  // Phase 52 — lazy expiry. Idempotent; safe to call on every read.
+  await supabase.rpc('expire_specific_unpaid_booking', {
+    p_booking_id: bookingId,
+    p_user_id: userId,
+  })
 
   const { data, error } = await supabase
     .from('bookings')
@@ -135,6 +164,9 @@ export async function getBookingById(
  * row will reflect the post-expiry status — i.e. if the hold timer
  * elapsed, the caller sees `status='expired'` instead of `temp_pending`.
  *
+ * Phase 52 — also runs `expire_specific_unpaid_booking` so a past-deadline
+ * confirmed+unpaid row flips to 'payment_expired' on this read.
+ *
  * Used by /bookings/[id] (user detail page) and /bookings/new (form
  * re-entry after creating a temp booking) so the UI can react to expiry
  * without polling.
@@ -150,9 +182,13 @@ export async function getTempBookingById(
 ): Promise<Booking | null> {
   const supabase = await createClient()
 
-  // Lazy expiry — flips stale temp_pending to expired + audit row.
-  // Atomic in single transaction.
+  // Lazy expiry — flips stale temp_pending to expired + audit row,
+  // AND stale confirmed+unpaid to payment_expired. Atomic per RPC.
   await supabase.rpc('expire_specific_temp_booking', {
+    p_booking_id: bookingId,
+    p_user_id: userId,
+  })
+  await supabase.rpc('expire_specific_unpaid_booking', {
     p_booking_id: bookingId,
     p_user_id: userId,
   })

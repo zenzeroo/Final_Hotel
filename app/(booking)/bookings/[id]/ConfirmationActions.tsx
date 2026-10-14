@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { cancelBooking, previewCancellation, type PreviewCancellationResult } from '@/app/actions/booking'
 import { createCheckoutSessionAction } from '@/app/actions/payment'
+import { cancelUnpaidBookingAction } from '@/app/actions/booking-unpaid-cancel'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { AlertModal } from '@/components/ui/AlertModal'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -101,17 +102,32 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
   /**
    * Cancel-without-refund (unpaid bookings) keeps the original simple
    * confirm — no preview because there's no refund amount to show.
+   *
+   * Phase 52 follow-up — routes through `cancelUnpaidBookingAction`
+   * (not `cancelBooking`) so the open Stripe Checkout Session is
+   * also expired and the customer can't later pay for a booking we
+   * just cancelled. After success we redirect to `/bookings` (matches
+   * the leave-guard's behavior on /bookings/[id]). If the server
+   * reconciled the booking as paid (Stripe race), we stay on the
+   * page so the user can see the paid state.
    */
   const handleCancelUnpaidConfirm = () => {
     setConfirmCancelOpen(false)
     startTransition(async () => {
-      const result = await cancelBooking(bookingId)
-      if (result?.error) {
+      const result = await cancelUnpaidBookingAction({ bookingId })
+      if (!result.ok) {
         setAlertMessage(result.error)
         return
       }
+      if (result.data?.status === 'paid') {
+        // Race reconciled as paid — refresh in place to show the paid
+        // state instead of redirecting to the cancelled row in history.
+        setAlertMessage(t('bookingDetail.cancelSuccess'))
+        router.refresh()
+        return
+      }
       setAlertMessage(t('bookingDetail.cancelSuccess'))
-      router.refresh()
+      router.push('/bookings')
     })
   }
 
@@ -170,7 +186,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
             ) : (
               <>
                 <MaterialIcon name="credit_card" size={18} />
-                {t('bookingDetail.paymentPending')}
+                {t('bookingDetail.payNow')}
               </>
             )}
           </button>

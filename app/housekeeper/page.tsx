@@ -91,7 +91,12 @@ export default async function HousekeeperDashboard(props: {
           ) : (
             <div className="space-y-3">
               {stats.priorityTasks.map((task) => (
-                <TaskCard key={task.id} task={task} variant="my" />
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  variant="my"
+                  labels={{ started: t('housekeeper.tasks.started'), finished: t('housekeeper.tasks.finished') }}
+                />
               ))}
             </div>
           )
@@ -105,7 +110,12 @@ export default async function HousekeeperDashboard(props: {
           ) : (
             <div className="space-y-3">
               {stats.activeTasks.map((task) => (
-                <TaskCard key={task.id} task={task} variant="my" />
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  variant="my"
+                  labels={{ started: t('housekeeper.tasks.started'), finished: t('housekeeper.tasks.finished') }}
+                />
               ))}
             </div>
           )

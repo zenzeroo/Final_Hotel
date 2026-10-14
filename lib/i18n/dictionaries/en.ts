@@ -255,12 +255,54 @@ export const en: Dictionary = {
     statusRefunded: 'Refunded',
     statusCheckedIn: 'Checked in',
     statusCheckedOut: 'Checked out',
-    // Phase 42 — temp_pending (awaiting details) + expired (lazy or daily cron).
-    statusTempPending: 'Awaiting details',
+    // Phase 50 — temp_pending (lease held by heartbeat) + expired
+    // (lease lapsed via lazy-expiry helper or daily cron). No user-
+    // facing countdown — the lease is invisible.
+    statusTempPending: 'Filling in details',
     statusExpired: 'Expired',
-    tempExpiresIn: 'Expires in {time}',
+    // Phase 52 — canonical "Awaiting payment" label for confirmed+unpaid
+    // bookings. Used by StatusBadge on /bookings/[id] AND by statusLabel
+    // in BookingHistory. Distinct from `statusPending` (legacy 'pending'
+    // enum value) and from `bookingDetail.paymentPending` (the
+    // in-flight spinner copy on the Pay button).
+    awaitingPayment: 'Awaiting payment',
+    // Phase 52 follow-up — used by BookingHistory.statusLabel when the
+    // row's lapsed_reason='payment_deadline' (5-min deadline lapsed
+    // before Pay click). Distinct from `statusExpired` which is the
+    // temp-pending hold-lapsed label.
+    statusExpiredPayment: 'Payment deadline expired',
     tempExpired: 'Expired',
     expiredHint: 'This booking has expired. Please make a new booking.',
+    // Phase 50 — leave-guard dialogs (back / in-app link / idle).
+    leaveGuardTitle: 'Do you want to continue filling in your booking?',
+    leaveGuardBody: 'If you leave this page, the room will be released to other guests immediately.',
+    leaveGuardStay: 'Continue booking',
+    leaveGuardLeave: 'Leave page',
+    idleGuardTitle: 'Are you still there?',
+    idleGuardBody: 'No activity detected. If you do not respond, the room will be released automatically.',
+    idleGuardCountdown: 'Auto-releasing in {seconds} seconds',
+    holdLapsedTitle: 'This booking has expired',
+    holdLapsedBody: 'The room has been released to other guests. Please pick a new room and dates.',
+    holdLapsedOk: 'Pick new room',
+    // Phase 52 — leave-guard for /bookings/[id] unpaid active bookings.
+    statusPaymentExpired: 'Payment deadline expired',
+    unpaidCancelTitle: 'Do you want to cancel this booking?',
+    unpaidCancelBody: 'If you leave this page, the room will be released to other guests immediately.',
+    unpaidCancelStay: 'Continue payment',
+    unpaidCancelConfirm: 'Cancel booking',
+    unpaidReturnBanner: 'Payment not yet completed',
+    unpaidReturnPay: 'Pay now',
+    unpaidReturnCancel: 'Cancel booking',
+    unpaidDeadlineHelp: 'Please complete payment by {time}',
+    unpaidDeadlineSubtext: 'If payment is not received by the deadline, the room will be released automatically.',
+    // Phase 53 — placeholder view shown to logged-out visitors on
+    // /bookings. See TH counterpart.
+    loginRequired: {
+      title: 'Sign in to view your booking history',
+      body: 'Please sign in to see your bookings and manage them.',
+      goToLogin: 'Go to log in',
+      browseAsGuest: 'Browse rooms without signing in',
+    },
   },
 
   // Booking detail page
@@ -281,9 +323,27 @@ export const en: Dictionary = {
     serviceFee: 'Service fee',
     totalPrice: 'Total',
     paymentStatus: 'Payment status',
+    // paymentPending = the in-flight spinner copy on the Pay button.
+    // Distinct from `bookings.awaitingPayment` which is the status-
+    // badge label for a confirmed+unpaid booking.
     paymentPending: 'Pending payment',
     paymentPaid: 'Paid',
     paymentRefunded: 'Refunded',
+    // Phase 52 — static label for the Pay button on /bookings/[id].
+    payNow: 'Pay now',
+    // Phase 52 — free-cancel hint shown under the cancellation policy
+    // card for confirmed+unpaid bookings (no penalty if the customer
+    // cancels before paying).
+    freeCancelUnpaid: 'Payment not yet received — cancellation is free',
+    // Phase 52 follow-up — server-rendered deadline strip on
+    // /bookings/[id]. The {time} placeholder is the formatted Asia/
+    // Bangkok HH:mm (server-side, hydration-safe).
+    payBeforeHelp: 'Please complete payment by {time}',
+    paymentWindowExpired: 'This booking has expired due to the payment deadline. Please make a new booking.',
+    // Late-payment webhook recovery (capacity was free, payment honored).
+    reconcilePaidAfterExpire: 'Your booking has been confirmed',
+    // Late-payment webhook refund (capacity was taken, payment refunded).
+    reconcilePaidAfterRefund: 'Payment arrived after cancel — refund processed',
     actions: 'Actions',
     cancelBooking: 'Cancel booking',
     cancelConfirm: 'Are you sure you want to cancel this booking?',
@@ -308,6 +368,12 @@ export const en: Dictionary = {
     refundStatusRejected: 'Refund request rejected',
     writeReview: 'Write a review',
     reviewSubmitted: 'Review submitted',
+  },
+
+  // Booking form (customer /bookings/new) — Phase 51
+  bookingForm: {
+    // Helper text under the locked email field.
+    emailLockedHint: 'Email is bound to your account. Used to send your booking confirmation.',
   },
 
   // Manager dashboard
@@ -343,26 +409,13 @@ export const en: Dictionary = {
       rates: 'Rates',
     },
     maintenancePage: {
+      // Phase 53b — simplified to two sections (pending vs fixed).
+      // Removed: filter tabs, action buttons, severity/status labels,
+      // and dialog copy (no longer reachable from this page).
       title: 'Maintenance reports',
-      subtitle: 'Review and confirm room closures filed by housekeeping',
-      confirmClosure: 'Confirm closure',
-      resolveReport: 'Mark resolved',
-      resolutionNote: 'Resolution note',
-      openCount: 'Open (awaiting confirmation)',
-      inProgressCount: 'In progress',
-      resolvedCount: 'Resolved',
-      noReports: 'No reports match this filter',
-      statusOpen: 'Open',
-      statusInProgress: 'In progress',
-      statusResolved: 'Resolved',
-      severityLow: 'Low',
-      severityMedium: 'Medium',
-      severityHigh: 'High',
-      severityCritical: 'Critical',
-      confirmDialogTitle: 'Confirm room closure',
-      confirmDialogBody: 'The room will be marked as "under maintenance" and the report will move to "in progress"',
-      resolveDialogTitle: 'Mark report resolved',
-      resolveDialogBody: 'The report will be closed and the room will return to "available" status',
+      subtitle: 'Track issues reported across the hotel',
+      sectionOpen: 'Pending',
+      sectionFixed: 'Fixed',
     },
     bookingsPage: {
       title: 'Manage Bookings',
@@ -653,10 +706,24 @@ export const en: Dictionary = {
       typeOther: 'Other',
     },
     historyPage: {
-      title: 'Work history',
-      noHistory: 'No history yet',
-      avgTime: 'Average time',
-      minutes: 'minutes',
+      // Phase 53 — full i18n set (was 4 keys, all orphans; replaced
+      // with the actual page labels).
+      // Phase 53b — `tabMy` + `tabAll` removed (single-user view).
+      pageTitle: 'Work history',
+      pageSubtitle: 'Track your shift performance over time',
+      roomsCleaned: 'Rooms cleaned',
+      tasksToday: 'Today',
+      tasksThisWeek: 'This week',
+      recentLogTitle: 'Recent work log',
+      noLog: 'No completed tasks yet',
+      started: 'Started',
+      finished: 'Finished',
+    },
+    // Phase 53 — labels threaded to TaskCard's started/finished prefix
+    // (used by the dashboard + tasks/rooms pages via the same component).
+    tasks: {
+      started: 'Started',
+      finished: 'Finished',
     },
   },
 

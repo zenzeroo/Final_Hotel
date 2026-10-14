@@ -156,9 +156,11 @@ export function WalkInForm({ room }: WalkInFormProps) {
                 onChange={(v) => {
                   setCheckIn(v)
                   if (v >= checkOut) {
-                    const next = new Date(v)
-                    next.setDate(next.getDate() + 1)
-                    setCheckOut(next.toISOString().slice(0, 10))
+                    // Phase 49 — use addDaysLocalIso (Bangkok TZ) instead
+                    // of new Date(v).toISOString().slice(0,10) to avoid
+                    // the UTC off-by-one bug for Bangkok users at
+                    // 00:00-06:59.
+                    setCheckOut(addDaysLocalIso(v, 1))
                   }
                 }}
               />

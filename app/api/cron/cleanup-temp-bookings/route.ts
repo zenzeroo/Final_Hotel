@@ -38,18 +38,31 @@ export async function GET(request: NextRequest) {
 
   try {
     const admin = await createAdminClient()
-    const { data, error } = await admin.rpc('cleanup_abandoned_temp_bookings')
+    // Phase 52 — also run the new unpaid-confirmed cleanup RPC. Vercel
+    // Hobby = 1 cron/day, so we bundle both into a single round-trip.
+    // Lazy expiry is the primary mechanism; this cron is hygiene only.
+    const [tempRes, unpaidRes] = await Promise.all([
+      admin.rpc('cleanup_abandoned_temp_bookings'),
+      admin.rpc('cleanup_abandoned_unpaid_bookings'),
+    ])
 
-    if (error) {
+    if (tempRes.error) {
       return NextResponse.json(
-        { ok: false, error: error.message },
+        { ok: false, error: tempRes.error.message },
+        { status: 500 },
+      )
+    }
+    if (unpaidRes.error) {
+      return NextResponse.json(
+        { ok: false, error: unpaidRes.error.message },
         { status: 500 },
       )
     }
 
     return NextResponse.json({
       ok: true,
-      expired: data ?? 0,
+      temp_expired: tempRes.data ?? 0,
+      unpaid_expired: unpaidRes.data ?? 0,
       ranAt: new Date().toISOString(),
     })
   } catch (e) {

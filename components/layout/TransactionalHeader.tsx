@@ -7,8 +7,17 @@ interface TransactionalHeaderProps {
 }
 
 /**
- * Minimal header for transactional flows (booking confirmation, payment).
- * Suppresses main nav — keeps just a back button + brand.
+ * Server component (Phase 52 fix — was briefly a client component
+ * to support an `onBack` prop for the unpaid-booking leave-guard).
+ * The leave-guard back button is now a separate client component
+ * (`components/booking/LeaveGuardBackButton.tsx`) that the page mounts
+ * alongside this header. Functions cannot cross the RSC boundary,
+ * so passing `onBack` from a server file is forbidden.
+ *
+ * Always renders a plain `<Link href={backHref}>` for the back control.
+ * When the leave-guard is active, the page also renders a fixed-
+ * position button overlay (LeaveGuardBackButton) that sits on top of
+ * this Link and intercepts the click.
  */
 export function TransactionalHeader({ backHref, title }: TransactionalHeaderProps) {
   return (

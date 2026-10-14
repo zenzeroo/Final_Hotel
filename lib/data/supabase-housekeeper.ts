@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
+import { getTodayBangkok } from '@/lib/dates'
 import type {
   HousekeepingTask, MaintenanceReport, RoomUnitBasic,
   DashboardStats, WorkHistoryData, MaintenanceStatus, MaintenanceSeverity,
@@ -124,10 +125,6 @@ export async function getMyWorkHistoryForUser(userId: string): Promise<WorkHisto
   return computeHistory(userId)
 }
 
-export async function getAllWorkHistory(): Promise<WorkHistoryData> {
-  return computeHistory(null)
-}
-
 async function computeHistory(userId: string | null): Promise<WorkHistoryData> {
   const supabase = await createClient()
   let query = supabase.from('housekeeping_tasks').select(`
@@ -141,27 +138,20 @@ async function computeHistory(userId: string | null): Promise<WorkHistoryData> {
   const completed = (data ?? []) as unknown as HousekeepingTask[]
 
   const roomsCleaned = completed.length
-  const durations = completed
-    .filter(t => t.started_at && t.completed_at)
-    .map(t => (new Date(t.completed_at!).getTime() - new Date(t.started_at!).getTime()) / 60000)
-  const avgMinutes = durations.length ? Math.round(durations.reduce((s, n) => s + n, 0) / durations.length) : null
-  const today = new Date().toISOString().slice(0, 10)
+  // Phase 53 — `today` uses Bangkok-day boundary (CLAUDE.md pitfall #1)
+  // instead of UTC `toISOString().slice(0,10)`. The `tasksThisWeek`
+  // window stays a sliding 7-day window (server local TZ is fine for that).
+  const today = getTodayBangkok()
   const tasksToday = completed.filter(t => t.completed_at?.startsWith(today)).length
   const tasksThisWeek = completed.filter(t => {
     if (!t.completed_at) return false
     return Date.now() - new Date(t.completed_at).getTime() < 7 * 86400000
   }).length
 
-  const dailyPerformance: { date: string; count: number }[] = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10)
-    const count = completed.filter(t => t.completed_at?.startsWith(d)).length
-    dailyPerformance.push({ date: d.slice(5), count })
-  }
-
   return {
-    roomsCleaned, avgMinutes, tasksToday, tasksThisWeek,
-    dailyPerformance,
+    roomsCleaned,
+    tasksToday,
+    tasksThisWeek,
     recentLog: completed.slice(0, 20) as unknown as HousekeepingTask[],
   }
 }

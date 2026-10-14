@@ -7,8 +7,8 @@ import { roleHomePath, type UserRole } from './getSession'
  * Proxy (Next.js 16 — replaces middleware.ts).
  * Refreshes Supabase auth cookie on every request & enforces protected routes.
  *
- * Public routes: /, /rooms, /rooms/[id], /login, /register, /api/*
- * Protected routes: /bookings, /bookings/*, /account/*
+ * Public routes: /, /rooms, /rooms/[id], /bookings, /bookings/*, /login, /register, /api/*
+ * Protected routes: /account, /account/*, /reception/*, /housekeeper/*, /manager/*, /admin/*
  *
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/proxy
  */
@@ -39,8 +39,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protected routes
-  const protectedPaths = ['/bookings', '/account', '/reception', '/housekeeper', '/manager', '/admin']
+  // Protected routes. /bookings is intentionally NOT here — logged-out
+  // visitors see a styled "please sign in" placeholder card on the page
+  // itself (app/(booking)/bookings/page.tsx) instead of being auto-
+  // redirected. The (booking) layout still keeps staff out via a
+  // role check. Every other customer-only path still redirects.
+  const protectedPaths = ['/account', '/reception', '/housekeeper', '/manager', '/admin']
   const isProtected = protectedPaths.some((p) => request.nextUrl.pathname.startsWith(p))
 
   if (!user && isProtected) {

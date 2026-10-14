@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { useState, useTransition, useMemo, useEffect } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { useFormStatus } from 'react-dom'
 import {
   createBooking,
@@ -83,42 +83,11 @@ function SubmitButton({
 }
 
 /**
- * Phase 42 — Live countdown chip for the existing temp booking's hold.
- * Re-renders every 1s. When the timer hits 0, shows "หมดเวลาแล้ว".
+ * Phase 50 — HoldCountdown removed. The leave-guard (BookingHoldGuard)
+ * now owns the entire hold lifecycle: 30s heartbeat extends the lease
+ * silently, the idle-guard releases on 5 min no interaction, and the
+ * leave dialog intercepts navigation. No user-facing timer.
  */
-function HoldCountdown({ expiresAt }: { expiresAt: string }) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [])
-
-  const target = new Date(expiresAt).getTime()
-  const remainingMs = Math.max(0, target - now)
-  const isExpired = remainingMs === 0
-
-  if (isExpired) {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-error/10 text-error text-caption font-semibold">
-        <MaterialIcon name="timer_off" size={14} />
-        หมดเวลาแล้ว
-      </span>
-    )
-  }
-
-  const totalSec = Math.floor(remainingMs / 1000)
-  const mm = Math.floor(totalSec / 60)
-  const ss = totalSec % 60
-  const mmStr = String(mm).padStart(2, '0')
-  const ssStr = String(ss).padStart(2, '0')
-
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-warning/10 text-warning text-caption font-semibold">
-      <MaterialIcon name="timer" size={14} />
-      หมดเวลาใน {mmStr}:{ssStr}
-    </span>
-  )
-}
 
 export function BookingForm(props: BookingFormProps) {
   const { room, quote, minNightsBlocked, settings } = props
@@ -132,14 +101,18 @@ export function BookingForm(props: BookingFormProps) {
   const guests = existing?.guests ?? props.guests ?? 1
   const initialFullName =
     existing?.booker_full_name ?? props.profile?.fullName ?? ''
-  const initialEmail = existing?.booker_email ?? props.profile?.email ?? ''
+  // Phase 51 — the booking email is locked to the authenticated account.
+  // It is read from the existing temp booking (bookingId path) or the
+  // profile prop (legacy path, where the page reads from auth.users.email).
+  // It is NEVER collected from the form — the server action derives it
+  // from the session again (defense in depth) before passing to the RPC.
+  const lockedEmail = existing?.booker_email ?? props.profile?.email ?? ''
   const initialPhone = existing?.booker_phone ?? props.profile?.phone ?? ''
 
   const router = useRouter()
   const [state, setState] = useState<CreateBookingResult | null>(null)
   const [isPending, startTransition] = useTransition()
   const [fullName, setFullName] = useState(initialFullName)
-  const [email, setEmail] = useState(initialEmail)
   const [phone, setPhone] = useState(
     initialPhone && initialPhone !== '0000000000' ? initialPhone : '',
   )
@@ -176,7 +149,6 @@ export function BookingForm(props: BookingFormProps) {
         const result = await completeTempBookingAction({
           bookingId: existing.id,
           bookerFullName: fullName,
-          bookerEmail: email,
           bookerPhone: phone,
           specialRequest: specialRequest || undefined,
           promoCode: promoCode || undefined,
@@ -200,7 +172,6 @@ export function BookingForm(props: BookingFormProps) {
         checkOut,
         guests,
         bookerFullName: fullName,
-        bookerEmail: email,
         bookerPhone: phone,
         specialRequest: specialRequest || undefined,
         promoCode: promoCode || undefined,
@@ -227,17 +198,6 @@ export function BookingForm(props: BookingFormProps) {
           </div>
         )}
 
-        {isCompletingExisting && existing?.hold_expires_at && (
-          <div className="px-4 py-3 bg-warning/10 border border-warning/30 rounded-lg text-body-md text-on-surface flex items-center gap-3 flex-wrap">
-            <MaterialIcon name="timer" size={20} className="text-warning" />
-            <span>
-              การจองนี้จะหมดเวลาเมื่อไม่มีการเคลื่อนไหว หากหมดเวลาก่อนยืนยัน
-              ห้องจะถูกปล่อยให้ผู้ใช้อื่น
-            </span>
-            <HoldCountdown expiresAt={existing.hold_expires_at} />
-          </div>
-        )}
-
         {minNightsBlocked && (
           <div className="px-4 py-3 bg-warning/10 border border-warning/30 rounded-lg text-body-md text-warning">
             เรทฤดูกาลที่ใช้อยู่กำหนดจำนวนคืนขั้นต่ำมากกว่าที่เลือก กรุณาเปลี่ยนวันที่หรือเลือกห้องอื่น
@@ -258,13 +218,29 @@ export function BookingForm(props: BookingFormProps) {
               />
             </Field>
             <Field label="อีเมล" required>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
-              />
+              {/* Phase 51 — email is locked to the authenticated account.
+                  readOnly + aria-readonly keeps the field focusable + selectable
+                  (a `disabled` input would be skipped by some screen readers and
+                  lose text selection). The lock icon + helper text signal the
+                  intent visually. The server action derives the email from the
+                  session regardless of any value the form sends. */}
+              <div className="relative">
+                <input
+                  type="email"
+                  value={lockedEmail}
+                  readOnly
+                  aria-readonly="true"
+                  className="w-full bg-surface-container border border-outline-variant rounded-lg py-3 pl-4 pr-12 text-body-md text-on-surface-variant cursor-not-allowed"
+                />
+                <MaterialIcon
+                  name="lock"
+                  aria-label="อีเมลถูกล็อก"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none"
+                />
+              </div>
+              <p className="font-caption text-caption text-on-surface-variant">
+                อีเมลผูกกับบัญชีของคุณ ใช้เพื่อรับการยืนยันการจอง
+              </p>
             </Field>
             <Field label="เบอร์โทรศัพท์" required>
               <input

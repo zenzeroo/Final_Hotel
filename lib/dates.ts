@@ -49,6 +49,56 @@ export function formatDateRange(
 }
 
 /**
+ * Compact date range string for narrow UI surfaces (tab pills, badges).
+ * Examples (current calendar year):
+ *   "2026-10-07","2026-10-07" → "7 ต.ค."
+ *   "2026-10-07","2026-10-08" → "7 – 8 ต.ค."
+ *   "2025-12-31","2026-01-02" → "31 ธ.ค. 2025 – 2 ม.ค. 2026"
+ *
+ * Drops the year when both endpoints fall in the same calendar year —
+ * keeps pills compact. Year-crossing falls back to the full
+ * `formatDateRange` so neither end is ambiguous. Forces Gregorian
+ * calendar explicitly via `calendar: 'gregory'` to avoid the Buddhist
+ * Era default that `th-TH` would otherwise render.
+ */
+export function formatDateRangeCompact(
+  isoFrom: string,
+  isoTo: string,
+  locale = 'th-TH',
+): string {
+  const dFrom = new Date(isoFrom)
+  const dTo = new Date(isoTo)
+  if (Number.isNaN(dFrom.getTime()) || Number.isNaN(dTo.getTime())) return ''
+
+  const monthFmt = new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    calendar: 'gregory',
+  })
+  const dayFmt = new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+  })
+
+  // Same day → just "D MMM" (drops year for compactness — caller is
+  // typically the today-tab pill on /reception/check-in-out where the
+  // year is implied by the surrounding UI).
+  if (isoFrom === isoTo) {
+    return `${dayFmt.format(dFrom)} ${monthFmt.format(dFrom)}`
+  }
+
+  const sameYear = dFrom.getFullYear() === dTo.getFullYear()
+  if (sameYear) {
+    // "D – D MMM" — day-only span with month on the closing date.
+    const dayFrom = dayFmt.format(dFrom)
+    const dayTo = dayFmt.format(dTo)
+    const monthTo = monthFmt.format(dTo)
+    return `${dayFrom} – ${dayTo} ${monthTo}`
+  }
+
+  // Year-crossing — fall back to full format on both ends.
+  return formatDateRange(isoFrom, isoTo, locale)
+}
+
+/**
  * Format ISO date as Gregorian numeric DD/MM/YYYY.
  * Example: "2026-09-23" → "23/09/2026"
  *
@@ -66,6 +116,51 @@ export function formatDateNumeric(iso: string, locale = 'th-TH'): string {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    calendar: 'gregory',
+  }).format(d)
+}
+
+/**
+ * Phase 53 — Asia/Bangkok + Gregorian short date for the housekeeper
+ * history page. Pinned `timeZone` + `calendar` so server (Node/UTC
+ * default) and client (any browser locale) render identical strings.
+ * Returns "14 ต.ค. 2026" (th) or "14 Oct 2026" (en).
+ */
+export function formatBangkokDate(
+  iso: string,
+  locale: 'th-TH' | 'en-GB' = 'th-TH',
+): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Bangkok',
+    calendar: 'gregory',
+  }).format(d)
+}
+
+/**
+ * Phase 53 — Asia/Bangkok 24-hour time for the housekeeper history
+ * page. Returns "14:01" (th or en — both use 24h by default). The
+ * existing `formatTime` uses the runtime's local TZ which can drift
+ * between server (Node) and client (browser) and trigger hydration
+ * mismatches; this helper is explicit and safe.
+ */
+export function formatBangkokTime(
+  iso: string,
+  locale: 'th-TH' | 'en-GB' = 'th-TH',
+): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Bangkok',
     calendar: 'gregory',
   }).format(d)
 }
@@ -116,22 +211,40 @@ export function getLocalIsoDate(d: Date = new Date()): string {
 }
 
 /**
- * Today in the **server's** local timezone, ISO YYYY-MM-DD. Equivalent
- * to `getLocalIsoDate(new Date())` — provided as a named shortcut for
- * `<input min=…>` sites.
+ * Today in **Asia/Bangkok** timezone, ISO YYYY-MM-DD. Returns the same
+ * value on server and client regardless of the host's local timezone
+ * — the implementation uses `Intl.DateTimeFormat` with an explicit
+ * `timeZone: 'Asia/Bangkok'` so a browser running in UTC (or any
+ * other TZ) still gets the Bangkok-anchored date. This is the canonical
+ * "today" used by every check-in validation, <input min=…> attribute,
+ * and server-side past-date check.
+ *
+ * CRITICAL: do NOT use `new Date().toISOString().slice(0, 10)` as a
+ * "today" replacement — that returns UTC and is off-by-one for
+ * Bangkok users at 00:00-06:59 local time.
  */
-export function getTodayLocalIso(): string {
-  return getLocalIsoDate()
+export function getTodayBangkok(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
 }
 
 /**
- * Tomorrow in the server's local timezone (today + 1 day). Use for
- * default checkout values.
+ * Tomorrow in **Asia/Bangkok** timezone, ISO YYYY-MM-DD. TZ-safe via
+ * `Intl.DateTimeFormat` (mirrors `getTodayBangkok()`).
  */
-export function getTomorrowLocalIso(): string {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return getLocalIsoDate(d)
+export function getTomorrowBangkok(): string {
+  const today = new Date(`${getTodayBangkok()}T00:00:00+07:00`)
+  today.setDate(today.getDate() + 1)
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(today)
 }
 
 /**
@@ -146,11 +259,11 @@ export function addDaysLocalIso(iso: string, days: number): string {
 }
 
 /**
- * Minimum legal check-in date in local time. Hotels require at least 1
- * day of advance booking — same-day check-in is not allowed. Use this
- * as both the `<input type="date" min>` attribute and the default
- * check-in value.
+ * Minimum legal check-in date in **Asia/Bangkok** timezone. Phase 49
+ * changed policy to allow same-day check-in (was previously tomorrow).
+ * Use this as both the `<input type="date" min>` attribute and the
+ * default check-in value.
  */
 export function getMinCheckInLocalIso(): string {
-  return getTomorrowLocalIso()
+  return getTodayBangkok()
 }

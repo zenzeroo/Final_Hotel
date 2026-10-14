@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculatePrice, calculateNights, generateBookingCode } from '@/lib/pricing'
+import { getTodayBangkok } from '@/lib/dates'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/manager'
 import { getDefaultCancellationPolicy, getPromotionByCode } from '@/lib/data/bookings'
@@ -20,7 +21,11 @@ const createBookingSchema = z.object({
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   guests: z.coerce.number().int().min(1).max(10),
   bookerFullName: z.string().min(1).max(120),
-  bookerEmail: z.string().email(),
+  // Phase 51 — bookerEmail is no longer accepted from the client.
+  // The session email is derived from auth.getUser() in the action body
+  // and passed straight to the RPC, which also re-derives it (defense
+  // in depth). Walk-in flow (service_role) still uses bookerEmail via
+  // a separate schema in app/actions/walk-in-booking.ts.
   bookerPhone: z
     .string()
     .trim()
@@ -56,6 +61,18 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   } = await supabase.auth.getUser()
   if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
 
+  // Phase 51 — derive the booking email from the authenticated account.
+  // The form no longer collects email (it's read-only on the customer
+  // BookingForm, bound to the account). The RPC also re-derives it for
+  // defense in depth.
+  const sessionEmail = user.email ?? ''
+  if (!sessionEmail) {
+    return {
+      error:
+        'ไม่พบอีเมลของบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่เพื่ออัปเดตข้อมูลก่อนทำการจอง',
+    }
+  }
+
   // Phase 36 — block suspended customers from booking. App-layer guard
   // (per CLAUDE.md zenzero-rls-recursion-fix) because Supabase auth itself
   // doesn't read profiles and inline EXISTS-on-profiles triggers 42P17.
@@ -85,7 +102,10 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   if (data.checkIn >= data.checkOut) {
     return { error: 'วันที่เช็คเอาท์ต้องมาหลังวันเช็คอิน' }
   }
-  const today = new Date().toISOString().slice(0, 10)
+  // Phase 49 — use Bangkok-TZ "today" (not UTC) so Bangkok users at
+  // 00:00-06:59 don't get yesterday's date. Same-day check-in IS
+  // allowed — only past dates are rejected.
+  const today = getTodayBangkok()
   if (data.checkIn < today) {
     return { error: 'วันที่เช็คอินต้องไม่เป็นอดีต' }
   }
@@ -187,7 +207,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     p_promotion_id: promotion?.id ?? null,
     p_cancellation_policy_id: policy?.id ?? null,
     p_booker_full_name: data.bookerFullName,
-    p_booker_email: data.bookerEmail,
+    p_booker_email: sessionEmail,
     p_booker_phone: data.bookerPhone,
     p_special_request: data.specialRequest ?? null,
     p_channel: 'web',
@@ -216,14 +236,14 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       .select('id, booking_code, check_in, check_out, nights, total, currency, booker_email, booker_full_name, room_type:room_types(name)')
       .eq('id', bookingId)
       .single()
-    if (booking && data.bookerEmail) {
+    if (booking && sessionEmail) {
       const roomTypeName = (booking.room_type as { name?: string } | null)?.name ?? 'ห้องพัก'
       const { BookingConfirmationEmail } = await import(
         '@/lib/email/templates/booking-confirmation'
       )
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
       await sendEmail({
-        to: data.bookerEmail,
+        to: sessionEmail,
         template: 'booking_confirmation',
         subject: `[Zenzero] ยืนยันการจอง ${booking.booking_code} — ${booking.check_in}`,
         react: BookingConfirmationEmail({
@@ -314,8 +334,9 @@ export async function createTempBookingAction(
     return { error: 'บัญชีของคุณถูกระงับ กรุณาติดต่อเจ้าหน้าที่' }
   }
 
-  // Validate dates against today's minimum (1 day advance — same as SearchBar).
-  const today = new Date().toISOString().slice(0, 10)
+  // Validate dates against today's minimum (Bangkok TZ). Phase 49
+  // allows same-day check-in — only past dates are rejected.
+  const today = getTodayBangkok()
   if (data.checkIn < today) {
     return { error: 'วันที่เช็คอินต้องไม่เป็นอดีต' }
   }
@@ -372,7 +393,7 @@ export async function createTempBookingAction(
       p_booker_full_name: bookerFullName || 'ผู้เข้าพัก',
       p_booker_email: bookerEmail,
       p_booker_phone: safeBookerPhone,
-      p_hold_minutes: 2,
+      p_hold_minutes: 3,
     },
   )
 
@@ -394,14 +415,20 @@ export async function createTempBookingAction(
   return {
     ok: true,
     bookingId,
-    expiresAt: new Date(Date.now() + 2 * 60 * 1000).toISOString(),
+    // Phase 50 — lease is now 3 minutes (extended by heartbeat every
+    // 30s on /bookings/new). The client uses the heartbeat result
+    // to track the actual expires_at; this initial value is mostly
+    // informational for the page that initiated the booking.
+    expiresAt: new Date(Date.now() + 3 * 60 * 1000).toISOString(),
   }
 }
 
 const completeTempBookingSchema = z.object({
   bookingId: z.string().uuid(),
   bookerFullName: z.string().min(1).max(120),
-  bookerEmail: z.string().email(),
+  // Phase 51 — bookerEmail is no longer accepted from the client.
+  // The session email is derived in the action body and the RPC
+  // re-derives it for defense in depth.
   bookerPhone: z
     .string()
     .trim()
@@ -448,6 +475,17 @@ export async function completeTempBookingAction(
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+
+  // Phase 51 — derive the booking email from the authenticated account.
+  // The form no longer collects email (locked on the customer form).
+  // The RPC also re-derives it for defense in depth.
+  const sessionEmail = user.email ?? ''
+  if (!sessionEmail) {
+    return {
+      error:
+        'ไม่พบอีเมลของบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่เพื่ออัปเดตข้อมูลก่อนทำการจอง',
+    }
+  }
 
   // Phase 36 — block suspended customers.
   const { data: customerProfile } = await supabase
@@ -559,7 +597,7 @@ export async function completeTempBookingAction(
     p_booking_id: data.bookingId,
     p_user_id: user.id,
     p_booker_full_name: data.bookerFullName,
-    p_booker_email: data.bookerEmail,
+    p_booker_email: sessionEmail,
     p_booker_phone: data.bookerPhone,
     p_special_request: data.specialRequest ?? null,
     p_promotion_id: promotion?.id ?? null,
@@ -594,7 +632,7 @@ export async function completeTempBookingAction(
       )
       .eq('id', data.bookingId)
       .single()
-    if (booking && data.bookerEmail) {
+    if (booking && sessionEmail) {
       const roomTypeName =
         (booking.room_type as { name?: string } | null)?.name ?? 'ห้องพัก'
       const { BookingConfirmationEmail } = await import(
@@ -602,7 +640,7 @@ export async function completeTempBookingAction(
       )
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
       await sendEmail({
-        to: data.bookerEmail,
+        to: sessionEmail,
         template: 'booking_confirmation',
         subject: `[Zenzero] ยืนยันการจอง ${booking.booking_code} — ${booking.check_in}`,
         react: BookingConfirmationEmail({
@@ -666,6 +704,100 @@ export async function cancelTempBookingAction(
   revalidatePath(`/bookings/${bookingId}`)
 
   return { ok: true }
+}
+
+// ============================================================================
+// Phase 50 — Lease heartbeat + explicit release (server actions)
+// ============================================================================
+
+export interface TouchBookingHoldResult {
+  ok: boolean
+  reason?: 'not_authenticated' | 'not_found' | 'not_owner' | 'not_temp_pending' | 'lapsed'
+  expiresAt?: string
+}
+
+/**
+ * Phase 50 — Heartbeat ping. Called by the leave-guard on
+ * /bookings/new every ~30s while the page is mounted to extend the
+ * rolling lease by 3 minutes. The server returns whether the lease
+ * is still alive; the client uses this to decide whether to continue
+ * rendering the form (ok:true) or surface a "การจองนี้หมดอายุแล้ว"
+ * dialog and send the user back to /rooms (ok:false).
+ *
+ * Idempotent — many parallel pings from the same user are safe (the
+ * UPDATE just keeps advancing hold_expires_at).
+ */
+export async function touchBookingHoldAction(
+  bookingId: string,
+): Promise<TouchBookingHoldResult> {
+  if (!isUuid(bookingId)) {
+    return { ok: false, reason: 'not_found' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false, reason: 'not_authenticated' }
+
+  const { data, error } = await supabase.rpc('touch_booking_hold', {
+    p_booking_id: bookingId,
+  })
+
+  if (error) {
+    return { ok: false, reason: 'not_found' }
+  }
+
+  // The RPC returns a JSONB object. Normalize to our result shape.
+  const result = (data ?? {}) as { ok?: boolean; reason?: string; expires_at?: string }
+  if (result.ok) {
+    return { ok: true, expiresAt: result.expires_at }
+  }
+  return { ok: false, reason: (result.reason as TouchBookingHoldResult['reason']) ?? 'lapsed' }
+}
+
+export interface ReleaseBookingHoldResult {
+  ok: boolean
+  reason?: 'not_authenticated' | 'not_owner'
+  released?: boolean
+}
+
+/**
+ * Phase 50 — Explicit release. Called by:
+ *   1. The leave-guard "ออกจากหน้านี้" button on /bookings/new
+ *   2. The idle auto-release (5 min no interaction → 60s countdown)
+ *
+ * Idempotent + owner-checked. Sets status='cancelled' and clears
+ * hold_expires_at. Always returns ok:true unless the caller is not
+ * the owner (defensive: don't allow a user to release someone else's
+ * hold).
+ */
+export async function releaseBookingHoldAction(
+  bookingId: string,
+): Promise<ReleaseBookingHoldResult> {
+  if (!isUuid(bookingId)) {
+    return { ok: false, reason: 'not_owner' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false, reason: 'not_authenticated' }
+
+  const { data, error } = await supabase.rpc('release_booking_hold', {
+    p_booking_id: bookingId,
+  })
+
+  if (error) {
+    return { ok: false, reason: 'not_owner' }
+  }
+
+  const result = (data ?? {}) as { ok?: boolean; reason?: string; released?: boolean }
+  if (result.ok) {
+    return { ok: true, released: !!result.released }
+  }
+  return { ok: false, reason: (result.reason as ReleaseBookingHoldResult['reason']) ?? 'not_owner' }
 }
 
 /**
@@ -899,13 +1031,19 @@ export async function cancelBookingByStaff(
  * fires the cancellation_notice template. Centralised because both the
  * guest `cancelBooking` and the staff `cancelBookingByStaff` paths need
  * the same email.
+ *
+ * Phase 52 — exported (was previously module-private) so the new
+ * `cancelUnpaidBookingAction` can reuse it for the no-refund case.
+ * Reads the booking row to populate the template; refund/policy numbers
+ * are passed in for the paid path (template body has dedicated fields)
+ * and default to 0 for the unpaid path.
  */
-async function fireCancellationNotice(args: {
+export async function fireCancellationNotice(args: {
   bookingId: string
-  policyName: string
-  penaltyAmount: number
-  refundAmount: number
-  refundRequestId: string | null
+  policyName?: string
+  penaltyAmount?: number
+  refundAmount?: number
+  refundRequestId?: string | null
 }): Promise<void> {
   const supabase = await createClient()
   const { data: booking } = await supabase
@@ -914,6 +1052,10 @@ async function fireCancellationNotice(args: {
     .eq('id', args.bookingId)
     .single()
   if (!booking || !booking.booker_email) return
+  const refundAmount = args.refundAmount ?? 0
+  const penaltyAmount = args.penaltyAmount ?? Number(booking.total)
+  const policyName = args.policyName ?? '—'
+  const refundRequestId = args.refundRequestId ?? null
   const { CancellationNoticeEmail } = await import(
     '@/lib/email/templates/cancellation-notice'
   )
@@ -921,15 +1063,15 @@ async function fireCancellationNotice(args: {
   await sendEmail({
     to: booking.booker_email,
     template: 'cancellation_notice',
-    subject: `[Zenzero] ยกเลิกการจอง ${booking.booking_code} — นโยบาย ${args.policyName}`,
+    subject: `[Zenzero] ยกเลิกการจอง ${booking.booking_code} — นโยบาย ${policyName}`,
     react: CancellationNoticeEmail({
       bookingCode: booking.booking_code,
       guestName: booking.booker_full_name ?? '',
-      policyName: args.policyName,
-      penaltyAmount: args.penaltyAmount,
-      refundAmount: args.refundAmount,
+      policyName,
+      penaltyAmount,
+      refundAmount,
       currency: booking.currency,
-      noRefund: args.refundAmount === 0,
+      noRefund: refundAmount === 0,
       viewUrl: `${appUrl}/bookings/${booking.id}`,
     }),
     eventKey: `cancellation_notice:booking:${booking.id}`,

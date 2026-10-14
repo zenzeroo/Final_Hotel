@@ -164,6 +164,7 @@ function BookingStatusBadge({
   status,
 }: {
   // Phase 42 — added 'temp_pending' + 'expired' (Phase 42 temp bookings).
+  // Phase 52 — added 'payment_expired' (30-min payment deadline lapsed).
   status:
     | 'pending'
     | 'confirmed'
@@ -172,6 +173,7 @@ function BookingStatusBadge({
     | 'cancelled'
     | 'temp_pending'
     | 'expired'
+    | 'payment_expired'
 }) {
   const map = {
     pending: { label: 'รอดำเนินการ', cls: 'bg-surface-container-high text-on-surface-variant' },
@@ -181,6 +183,8 @@ function BookingStatusBadge({
     cancelled: { label: 'ยกเลิก', cls: 'bg-error-container text-on-error-container' },
     temp_pending: { label: 'รอกรอกข้อมูล', cls: 'bg-warning-container text-on-warning-container' },
     expired: { label: 'หมดเวลา', cls: 'bg-error-container text-on-error-container' },
+    // Phase 52 — 30-min payment deadline lapsed
+    payment_expired: { label: 'หมดเวลาชำระเงิน', cls: 'bg-error-container text-on-error-container' },
   } as const
   const { label, cls } = map[status]
   return (

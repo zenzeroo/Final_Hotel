@@ -51,6 +51,23 @@ const createCheckoutSessionSchema = z.object({
  *     returns the same session instead of creating two.
  *   - The `create_payment_session` RPC also dedupes on existing pending
  *     rows so an in-flight retry uses the same `payments.id`.
+ *
+ * Phase 52 follow-up — server-side re-validation BEFORE creating the
+ * session:
+ *   - booking owned by the caller
+ *   - status='confirmed'|'temp_pending' + payment_status='unpaid'
+ *   - lapsed_reason is NULL (not already expired)
+ *   - payment_due_at > now() (Stage 1 or Stage 2 still alive)
+ *   - has_capacity_for_booking(bookingId) returns true (defense in
+ *     depth — the create_booking RPC is authoritative, but a slot
+ *     could have been released by lazy-expiry between the read and
+ *     this Pay click)
+ *
+ * Stage 2 trigger: after the Stripe session is created, extend
+ * `bookings.payment_due_at` to match the session's `expires_at`
+ * (now + 30 min). Without this, the 5-min Stage 1 window would lap
+ * while the customer is on the Stripe hosted page (PromptPay needs
+ * a bank-app switch).
  */
 export async function createCheckoutSessionAction(
   input: { bookingId: string },
@@ -66,6 +83,22 @@ export async function createCheckoutSessionAction(
     return { ok: false, error: 'Payment gateway not configured' }
   }
 
+  // Phase 52 follow-up — server-side re-validation. The create_payment_session
+  // RPC below also gates on some of these (owner, status, payment_status)
+  // but doesn't check lapsed_reason or capacity. The precheck is the
+  // single source of truth for the "can I open Stripe right now?" check.
+  const sessionUser = await getSession()
+  if (!sessionUser) {
+    return { ok: false, error: 'กรุณาเข้าสู่ระบบ' }
+  }
+  const precheckErr = await precheckPayableBooking(
+    parsed.data.bookingId,
+    sessionUser.id,
+  )
+  if (precheckErr) {
+    return { ok: false, error: precheckErr }
+  }
+
   // 1. Reserve the payment row (owner/staff enforced via RPC).
   let payment
   try {
@@ -78,6 +111,13 @@ export async function createCheckoutSessionAction(
   const appUrl = env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const successUrl = `${appUrl}/bookings/${parsed.data.bookingId}?session_id={CHECKOUT_SESSION_ID}`
   const cancelUrl = `${appUrl}/bookings/${parsed.data.bookingId}?cancelled=1`
+
+  // Phase 52 follow-up — Stage 2: 30-min Stripe session. Stripe's API
+  // hard floor is 30 minutes — cannot set it sooner. The DB
+  // `payment_due_at` (currently 5 min from Stage 1) is extended to
+  // match this below.
+  const sessionExpiresAtMs = Date.now() + 30 * 60 * 1000
+  const expiresAtUnix = Math.floor(sessionExpiresAtMs / 1000)
 
   let session
   try {
@@ -99,6 +139,7 @@ export async function createCheckoutSessionAction(
         ],
         success_url: successUrl,
         cancel_url: cancelUrl,
+        expires_at: expiresAtUnix,
         metadata: {
           booking_id: parsed.data.bookingId,
           payment_id: payment.id,
@@ -129,6 +170,32 @@ export async function createCheckoutSessionAction(
   } catch (e) {
     // Non-fatal — webhook handler will still find the booking via metadata.
     console.warn('[createCheckoutSessionAction] failed to persist session_id:', e)
+  }
+
+  // 4. Stage 2 — extend the DB `payment_due_at` to match the Stripe
+  //    session's `expires_at`. Without this, the 5-min Stage 1 window
+  //    would lap while the customer is on the Stripe hosted page
+  //    (PromptPay needs a bank-app switch). Best-effort: if the RPC
+  //    fails, the booking is still payable; the worst case is the
+  //    customer coming back to a freshly-expired row, which the
+  //    `resetPaymentWindowAction` (called on `?cancelled=1`) would
+  //    then re-open.
+  try {
+    const extendRes = await extendPaymentDeadlineAction({
+      bookingId: parsed.data.bookingId,
+      newPaymentDueAtIso: new Date(sessionExpiresAtMs).toISOString(),
+    })
+    if (!extendRes.ok) {
+      console.warn(
+        '[createCheckoutSessionAction] extendPaymentDeadlineAction failed:',
+        extendRes.error,
+      )
+    }
+  } catch (e) {
+    console.warn(
+      '[createCheckoutSessionAction] extendPaymentDeadlineAction threw:',
+      e,
+    )
   }
 
   return { ok: true, data: { url: session.url } }
@@ -295,4 +362,346 @@ export async function pollBookingPaymentStatusAction(
   }
   const status = await getBookingPaymentStatus(bookingId, session.id)
   return { ok: true, data: { paymentStatus: status } }
+}
+
+// ============================================================================
+// Phase 52 follow-up — Two-stage payment window
+// ============================================================================
+
+/**
+ * Server-side re-validation before creating the Stripe Checkout Session.
+ * Re-reads the booking (NOT just trusting the form payload) and checks:
+ *   - booking is owned by the caller (RLS via createClient)
+ *   - status is 'confirmed' (or 'temp_pending') + payment_status='unpaid'
+ *   - lapsed_reason is NULL (i.e. not already expired)
+ *   - payment_due_at > now() (Stage 1 or Stage 2 still alive)
+ *   - has_capacity_for_booking(bookingId) returns true (defense in depth;
+ *     the create_booking RPC is authoritative, but this catches a room
+ *     that was released by another customer between lazy-expiry and
+ *     this Pay click)
+ *
+ * Returns the localized error string on failure, or null on success.
+ * Kept as a small helper so the same pre-checks can run in
+ * createCheckoutSessionAction and (if needed) other places.
+ */
+async function precheckPayableBooking(
+  bookingId: string,
+  userId: string,
+): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('id, user_id, status, payment_status, lapsed_reason, payment_due_at')
+    .eq('id', bookingId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (!booking) return 'ไม่พบการจองนี้'
+  if (booking.status === 'cancelled') {
+    return 'การจองนี้ถูกยกเลิกแล้ว'
+  }
+  if (
+    booking.status !== 'confirmed' &&
+    booking.status !== 'temp_pending'
+  ) {
+    return 'การจองนี้ไม่อยู่ในสถานะที่ชำระเงินได้'
+  }
+  if (booking.payment_status === 'paid') {
+    return 'การจองนี้ชำระเงินแล้ว'
+  }
+  if (booking.payment_status !== 'unpaid') {
+    return 'การจองนี้ไม่อยู่ในสถานะที่ชำระเงินได้'
+  }
+  if (booking.lapsed_reason !== null) {
+    return 'การจองนี้หมดเวลาชำระเงินแล้ว'
+  }
+  if (
+    booking.payment_due_at !== null &&
+    new Date(booking.payment_due_at).getTime() <= Date.now()
+  ) {
+    return 'การจองนี้หมดเวลาชำระเงินแล้ว'
+  }
+
+  // Capacity re-check (defense in depth — the lazy-expiry on the read
+  // path may not have run yet, so a just-released slot could still
+  // appear occupied from the read side).
+  const admin = await createAdminClient()
+  const { data: hasCap } = await admin.rpc('has_capacity_for_booking', {
+    p_booking_id: bookingId,
+  })
+  if (hasCap === false) {
+    return 'ห้องพักไม่ว่างในช่วงวันที่เลือก กรุณาเลือกห้องอื่น'
+  }
+
+  return null
+}
+
+/**
+ * Stage 2 — extend the DB payment deadline to match the Stripe
+ * Checkout Session's `expires_at`. Called by createCheckoutSessionAction
+ * after the session is created.
+ *
+ * Owner-checked at the action layer; the RPC also re-validates state.
+ * Failure is non-fatal for the user — the booking is still payable, the
+ * just-30-minute-window timer didn't sync to DB. The webhook's race
+ * branch will handle any late deadline.
+ */
+export async function extendPaymentDeadlineAction(
+  input: { bookingId: string; newPaymentDueAtIso: string },
+): Promise<ActionResult> {
+  const parsed = z
+    .object({
+      bookingId: z.string().regex(UUID_RE, 'bookingId must be a UUID'),
+      newPaymentDueAtIso: z.string().datetime(),
+    })
+    .safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: 'ข้อมูลไม่ถูกต้อง' }
+  }
+
+  const session = await getSession()
+  if (!session) {
+    return { ok: false, error: 'กรุณาเข้าสู่ระบบ' }
+  }
+
+  const supabase = await createClient()
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('id, user_id')
+    .eq('id', parsed.data.bookingId)
+    .eq('user_id', session.id)
+    .maybeSingle()
+  if (!booking) {
+    return { ok: false, error: 'ไม่พบการจองนี้' }
+  }
+
+  // Use admin client — the RPC grants EXECUTE to authenticated +
+  // service_role but uses auth.uid() which is fine; the user-context
+  // createClient should also work. Using admin keeps the column
+  // RLS exception (writeable by RPCs only) consistent.
+  const admin = await createAdminClient()
+  const newDue = new Date(parsed.data.newPaymentDueAtIso)
+  const { error } = await admin.rpc('extend_payment_due_at', {
+    p_booking_id: parsed.data.bookingId,
+    p_new_payment_due: newDue.toISOString(),
+  })
+  if (error) {
+    return {
+      ok: false,
+      error: 'ไม่สามารถขยายเวลาชำระเงินได้: ' + translateSupabaseError(error.message),
+    }
+  }
+  return { ok: true }
+}
+
+/**
+ * Reset the 5-min payment window + un-expire the booking if needed.
+ * Called server-side by /bookings/[id]?cancelled=1 when the customer
+ * returns from Stripe without paying. Also expires any pending Stripe
+ * session (best-effort) so the abandoned tab is closed.
+ *
+ * Fire-and-forget from the page server component — the response
+ * renders the banner regardless of whether the reset succeeded; the
+ * next read will trigger the lazy-expiry helper if a real deadline
+ * actually lapsed.
+ */
+export async function resetPaymentWindowAction(
+  input: { bookingId: string },
+): Promise<ActionResult<{ outcome: 'reset' | 'restored' | 'noop' }>> {
+  const parsed = z
+    .object({ bookingId: z.string().regex(UUID_RE, 'bookingId must be a UUID') })
+    .safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: 'ข้อมูลไม่ถูกต้อง' }
+  }
+
+  const session = await getSession()
+  if (!session) {
+    return { ok: false, error: 'กรุณาเข้าสู่ระบบ' }
+  }
+
+  const supabase = await createClient()
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('id, user_id, status, payment_status, lapsed_reason')
+    .eq('id', parsed.data.bookingId)
+    .eq('user_id', session.id)
+    .maybeSingle()
+  if (!booking) {
+    return { ok: false, error: 'ไม่พบการจองนี้' }
+  }
+  if (booking.payment_status !== 'unpaid') {
+    // No-op: booking is already paid/cancelled/whatever.
+    return { ok: true, data: { outcome: 'noop' } }
+  }
+
+  // 1. Expire any pending Stripe session (best-effort, same pattern
+  //    as expireCheckoutSessionAction). The next Pay click will
+  //    create a new session.
+  const { data: payment } = await supabase
+    .from('payments')
+    .select('id, provider_session_id, status')
+    .eq('booking_id', parsed.data.bookingId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (
+    payment &&
+    payment.status === 'pending' &&
+    payment.provider_session_id &&
+    hasPaymentGateway &&
+    stripe
+  ) {
+    try {
+      await stripe.checkout.sessions.expire(payment.provider_session_id)
+    } catch (e) {
+      console.warn(
+        '[resetPaymentWindowAction] stripe.expire failed:',
+        e instanceof Error ? e.message : String(e),
+      )
+    }
+  }
+
+  // 2. Call the DB RPC. Service-role only, so use admin client.
+  const admin = await createAdminClient()
+  const { data, error } = await admin.rpc('reset_payment_window', {
+    p_booking_id: parsed.data.bookingId,
+  })
+  if (error) {
+    return {
+      ok: false,
+      error: 'ไม่สามารถรีเซ็ตเวลาชำระเงินได้: ' + translateSupabaseError(error.message),
+    }
+  }
+  return {
+    ok: true,
+    data: { outcome: (data as 'reset' | 'restored' | null) ?? 'reset' },
+  }
+}
+
+// ============================================================================
+// Phase 52 — Stripe Checkout Session expiration (for unpaid-cancel flow)
+// ============================================================================
+
+const expireCheckoutSessionSchema = z.object({
+  bookingId: z.string().regex(UUID_RE, 'bookingId must be a UUID'),
+})
+
+/**
+ * Phase 52 — Expire the Stripe Checkout Session for an unpaid booking.
+ *
+ * Called by the leave-guard on /bookings/[id] when the customer confirms
+ * "ยกเลิกรายการ" (cancel the booking) — we want the customer's abandoned
+ * Stripe tab to be closed so they can't come back later and pay for a
+ * booking we just cancelled. Without this, the Stripe tab would still be
+ * live for up to 30 min (matches our DB `payment_due_at`), and the
+ * `checkout.session.completed` webhook would race the cancel — auto-
+ * refund logic in the webhook route handles that case, but proactively
+ * expiring here is the cleaner path.
+ *
+ * Owner-checked: only the booking owner can call this. The Stripe
+ * `sessions.expire` API is idempotent (returns the same session).
+ *
+ * Returns:
+ *   - { ok: true } on both Stripe expire + DB expire success
+ *   - { ok: true, warning: string } if Stripe call failed but DB flipped
+ *     (the customer can't pay via the abandoned tab; webhook will
+ *     auto-refund if it somehow lands)
+ *   - { ok: false, error: string } on auth/validation failure
+ *
+ * Note: `expire_payment_session` RPC is service-role only — we use the
+ * admin client here. RLS on `payments` would block the user-context
+ * update anyway.
+ */
+export async function expireCheckoutSessionAction(
+  input: { bookingId: string },
+): Promise<ActionResult<{ expired: boolean }>> {
+  const parsed = expireCheckoutSessionSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: 'ข้อมูลไม่ถูกต้อง' }
+  }
+
+  const session = await getSession()
+  if (!session) {
+    return { ok: false, error: 'กรุณาเข้าสู่ระบบ' }
+  }
+
+  const supabase = await createClient()
+
+  // 1. Verify ownership + current state. The cancel-unpaid action calls
+  //    this AFTER flipping bookings.status to 'cancelled', so we don't
+  //    re-check status here — just ownership.
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('id, user_id, status, payment_status')
+    .eq('id', parsed.data.bookingId)
+    .eq('user_id', session.id)
+    .maybeSingle()
+  if (!booking) {
+    return { ok: false, error: 'ไม่พบการจองนี้' }
+  }
+
+  // 2. Find the latest pending payment row (the one that has the open
+  //    Stripe session attached). If none, nothing to expire — return ok.
+  const { data: payment } = await supabase
+    .from('payments')
+    .select('id, provider_session_id, status')
+    .eq('booking_id', parsed.data.bookingId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!payment || payment.status !== 'pending' || !payment.provider_session_id) {
+    // No active Stripe session to expire (e.g. already paid, or never
+    // opened a checkout). Return ok with expired:false so the caller
+    // can proceed without surfacing an error.
+    return { ok: true, data: { expired: false } }
+  }
+
+  // 3. Call Stripe API to expire the session (best-effort). If Stripe
+  //    is misconfigured or the session is already gone, log and proceed
+  //    to the DB flip — the webhook's auto-refund logic will catch any
+  //    late-arriving checkout.session.completed event.
+  let stripeOk = true
+  let stripeError: string | null = null
+  if (hasPaymentGateway && stripe) {
+    try {
+      await stripe.checkout.sessions.expire(payment.provider_session_id)
+    } catch (e) {
+      stripeOk = false
+      stripeError = e instanceof Error ? e.message : String(e)
+      console.warn(
+        '[expireCheckoutSessionAction] stripe.expire failed:',
+        stripeError,
+      )
+    }
+  }
+
+  // 4. Flip the payments row to 'expired' via the existing RPC.
+  //    service-role only, so we use the admin client.
+  const admin = await createAdminClient()
+  try {
+    await admin.rpc('expire_payment_session', {
+      p_session_id: payment.provider_session_id,
+      p_event_id: `manual-cancel:${parsed.data.bookingId}`,
+    })
+  } catch (e) {
+    return {
+      ok: false,
+      error: 'ไม่สามารถอัปเดตสถานะการชำระเงินได้: ' +
+        (e instanceof Error ? e.message : String(e)),
+    }
+  }
+
+  if (!stripeOk) {
+    // DB is in the right state; surface a non-fatal warning so the
+    // caller can decide whether to retry or log.
+    return {
+      ok: true,
+      data: { expired: true },
+      ...(stripeError ? { warning: stripeError } : {}),
+    } as ActionResult<{ expired: boolean }>
+  }
+
+  return { ok: true, data: { expired: true } }
 }

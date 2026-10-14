@@ -8,7 +8,7 @@ import { searchRooms } from '@/lib/data/rooms'
 import type { SearchFilters } from '@/lib/data/types'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
-import { getTomorrowLocalIso, addDaysLocalIso } from '@/lib/dates'
+import { getTomorrowBangkok, addDaysLocalIso } from '@/lib/dates'
 
 // Server-render on demand (Supabase data + searchParams)
 export const dynamic = 'force-dynamic'
@@ -29,7 +29,7 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
   const todayPlus1 =
     typeof searchParams.checkin === 'string' && searchParams.checkin
       ? searchParams.checkin
-      : getTomorrowLocalIso()
+      : getTomorrowBangkok()
   const todayPlus2 =
     typeof searchParams.checkout === 'string' &&
     searchParams.checkout &&

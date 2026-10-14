@@ -239,7 +239,6 @@ function fieldLabelLocalized(field: string, locale: Locale): string {
     fullName: { th: 'ชื่อ-นามสกุล', en: 'full name' },
     full_name: { th: 'ชื่อ-นามสกุล', en: 'full name' },
     bookerFullName: { th: 'ชื่อ-นามสกุล', en: 'full name' },
-    bookerEmail: { th: 'อีเมล', en: 'email' },
     bookerPhone: { th: 'เบอร์โทรศัพท์', en: 'phone number' },
     phone: { th: 'เบอร์โทรศัพท์', en: 'phone number' },
     birthdate: { th: 'วันเกิด', en: 'date of birth' },

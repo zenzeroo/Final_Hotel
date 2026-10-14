@@ -66,6 +66,152 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           typeof session.payment_intent === 'string'
             ? session.payment_intent
             : ''
+        const bookingId = (session.metadata?.booking_id ?? null) as string | null
+
+        // Phase 52 follow-up — RACE check (recommended default:
+        // re-confirm if capacity is still free, otherwise auto-refund).
+        //   1. If the booking is still active (confirmed+unpaid or
+        //      temp_pending+unpaid), this is the normal happy path.
+        //   2. If the booking is in a terminal state (cancelled,
+        //      expired, etc.), check capacity. If free: re-confirm
+        //      (flip bookings.status back to 'confirmed' and
+        //      payment_status='paid'). If full: auto-refund.
+        if (bookingId) {
+          const { data: booking } = await admin
+            .from('bookings')
+            .select('id, status, payment_status, booker_email, booker_full_name, booking_code, total, currency')
+            .eq('id', bookingId)
+            .single()
+          if (
+            booking &&
+            (booking.status === 'cancelled' ||
+              booking.status === 'expired' ||
+              booking.status === 'payment_expired')
+          ) {
+            // Capacity check (the booking was terminal because the
+            // customer cancelled or the deadline lapsed; we want to
+            // honor the payment only if the room is still free).
+            const { data: hasCap } = await admin.rpc(
+              'has_capacity_for_booking',
+              { p_booking_id: bookingId },
+            )
+
+            if (hasCap === true) {
+              // RECONFIRM — restore the booking to 'confirmed' + 'paid'
+              // and audit. The customer's history will show a normal
+              // paid booking. We don't re-create the payment row (the
+              // existing pending one flips to 'succeeded' via
+              // confirm_payment_session).
+              await admin.rpc('confirm_payment_session', {
+                p_session_id: session.id,
+                p_event_id: event.id,
+                p_payment_id: paymentIntentId,
+              })
+              // Restore the row to 'confirmed' if it was 'cancelled' or
+              // 'expired' (the RPC doesn't touch bookings.status, just
+              // payments + bookings.payment_status). Walk-in records
+              // (which were 'cancelled' deliberately) get the same
+              // treatment — we re-open them. The customer gets a paid
+              // booking either way.
+              await admin
+                .from('bookings')
+                .update({ status: 'confirmed' })
+                .eq('id', bookingId)
+              await admin.from('booking_events').insert({
+                booking_id: bookingId,
+                actor_id: null,
+                actor_role: 'admin',
+                event_type: 'payment_recovered',
+                description: `Stripe charge arrived for ${booking.status} booking — recovered (capacity was free)`,
+                metadata: {
+                  event_id: event.id,
+                  payment_intent: paymentIntentId || null,
+                },
+              })
+              // Fire payment_receipt so the customer gets the email.
+              await firePaymentReceipt(bookingId, session.id, 'card').catch(
+                (e) => console.error('[payment_receipt webhook] failed:', e),
+              )
+              return NextResponse.json({
+                received: true,
+                action: 'payment_recovered',
+              })
+            }
+
+            // AUTO-REFUND — capacity is taken, the customer paid for a
+            // room that's no longer theirs. Refund + audit + email.
+            let refundOk = true
+            let refundErr: string | null = null
+            if (paymentIntentId) {
+              try {
+                await stripe.refunds.create(
+                  { payment_intent: paymentIntentId },
+                  { idempotencyKey: `auto-refund:${event.id}` },
+                )
+              } catch (e) {
+                refundOk = false
+                refundErr = e instanceof Error ? e.message : String(e)
+                console.error('[webhook] auto-refund failed:', refundErr)
+                // Still proceed to audit + email — the DB is the source
+                // of truth and Stripe will retry the refund later.
+              }
+            }
+            await admin.from('booking_events').insert({
+              booking_id: bookingId,
+              actor_id: null,
+              actor_role: 'admin',
+              event_type: 'auto_refund',
+              description: `Stripe charge arrived for ${booking.status} booking — auto-refunded (capacity full)`,
+              metadata: {
+                event_id: event.id,
+                payment_intent: paymentIntentId || null,
+                refund_ok: refundOk,
+                refund_error: refundErr,
+              },
+            })
+            // Notify the customer.
+            if (booking.booker_email) {
+              try {
+                const { RefundNoticeEmail } = await import(
+                  '@/lib/email/templates/refund-notice'
+                )
+                const appUrl = env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+                await sendEmail({
+                  to: booking.booker_email,
+                  template: 'refund_notice',
+                  subject: `[Zenzero] คืนเงินการจอง ${booking.booking_code}`,
+                  react: RefundNoticeEmail({
+                    bookingCode: booking.booking_code,
+                    guestName: booking.booker_full_name ?? '',
+                    refundAmount: Number(booking.total),
+                    currency: booking.currency,
+                    viewUrl: `${appUrl}/bookings/${booking.id}`,
+                    // Auto-refund (race) = full refund of the original
+                    // booking total, not a partial.
+                    partial: false,
+                    etaDays: 7,
+                  }),
+                  eventKey: `refund_notice:auto:${bookingId}:${event.id}`,
+                  bookingId,
+                  metadata: {
+                    trigger: 'auto_refund_race',
+                    event_id: event.id,
+                  },
+                })
+              } catch (e) {
+                console.error('[webhook] auto-refund email failed:', e)
+              }
+            }
+            // Return 200 so Stripe stops retrying. The race was handled.
+            return NextResponse.json({
+              received: true,
+              action: 'auto_refund',
+              refundOk,
+            })
+          }
+        }
+
+        // Normal happy path — booking is still active.
         const { error } = await admin.rpc('confirm_payment_session', {
           p_session_id: session.id,
           p_event_id: event.id,
@@ -76,7 +222,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Phase 20 #25 — fire payment_receipt after the DB flip succeeded.
         // The RPC wrote the payments row; load it + booking + guest for the
         // template body. Fire-and-forget — webhook must return 200 quickly.
-        const bookingId = (session.metadata?.booking_id ?? null) as string | null
         if (bookingId) {
           await firePaymentReceipt(bookingId, session.id, 'card').catch((e) =>
             console.error('[payment_receipt webhook] failed:', e),

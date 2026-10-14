@@ -8,6 +8,7 @@ import { TransactionalHeader } from '@/components/layout/TransactionalHeader'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { BookingForm } from './BookingForm'
+import { BookingHoldGuard } from './BookingHoldGuard'
 import { calculateNights } from '@/lib/pricing'
 
 export const dynamic = 'force-dynamic'
@@ -97,6 +98,14 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
           </div>
         </main>
         <Footer />
+        {/* Phase 50 — leave-guard / heartbeat / idle-guard for the
+            in-progress booking hold. Sits outside <main> so its modal
+            overlays the entire viewport. Disabled after the form
+            submits successfully (parent flips via guardDisabled). */}
+        <BookingHoldGuard
+          bookingId={existing.id}
+          leaveHref={`/rooms/${room.slug}`}
+        />
       </>
     )
   }

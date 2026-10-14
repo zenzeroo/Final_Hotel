@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -29,9 +29,16 @@ type Tab = 'active' | 'checkedIn' | 'cancelled'
 function statusLabel(
   status: Booking['status'],
   paymentStatus: Booking['payment_status'],
+  lapsedReason: Booking['lapsed_reason'],
   t: ReturnType<typeof useT>,
 ) {
   // Phase 42 — new statuses before the legacy fallthrough.
+  // Phase 52 — added 'awaitingPayment' for confirmed+unpaid rows.
+  // Phase 52 follow-up — 'expired' is now shared between two flows;
+  // `lapsed_reason` column disambiguates the label.
+  if (status === 'expired' && lapsedReason === 'payment_deadline') {
+    return t('bookings.statusExpiredPayment')
+  }
   if (status === 'expired') return t('bookings.statusExpired')
   if (status === 'temp_pending') return t('bookings.statusTempPending')
   if (status === 'cancelled') return t('bookings.statusCancelled')
@@ -39,12 +46,18 @@ function statusLabel(
   if (status === 'checked_in') return t('bookings.statusCheckedIn')
   if (paymentStatus === 'paid') return t('bookings.statusPaid')
   if (paymentStatus === 'refunded') return t('bookings.statusRefunded')
+  // Phase 52 — `confirmed + payment_status='unpaid'` reads as
+  // "รอชำระเงิน" / "Awaiting payment" (canonical, shared with
+  // /bookings/[id]:StatusBadge).
+  if (paymentStatus === 'unpaid') return t('bookings.awaitingPayment')
   return t('bookings.statusPending')
 }
 
 function statusClass(status: Booking['status'], paymentStatus: Booking['payment_status']) {
   // Phase 42 — distinct classes for temp_pending (amber) + expired (error red).
+  // Phase 52 — added 'payment_expired' (error red, same as 'cancelled' / 'expired').
   if (status === 'expired') return 'bg-error/10 text-error'
+  if (status === 'payment_expired') return 'bg-error/10 text-error'
   if (status === 'temp_pending') return 'bg-warning/15 text-warning'
   if (status === 'cancelled') return 'bg-error/10 text-error'
   if (status === 'checked_out') return 'bg-surface-container text-on-surface-variant'
@@ -53,51 +66,10 @@ function statusClass(status: Booking['status'], paymentStatus: Booking['payment_
 }
 
 /**
- * Phase 42 — Live countdown chip for temp_pending bookings. Re-renders every 1s.
- * When the timer hits 0, refreshes the page so the lazy-expiry helper picks up
- * the new 'expired' status and the booking moves to the Cancelled tab.
+ * Phase 50 — TempCountdown removed. The lease is now invisible: the
+ * /bookings/new page extends it via heartbeat, and abandoned holds
+ * free themselves via the existing lazy-expiry helper. No timer UI.
  */
-function TempCountdown({ expiresAt }: { expiresAt: string }) {
-  const router = useRouter()
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [])
-
-  const target = new Date(expiresAt).getTime()
-  const remainingMs = Math.max(0, target - now)
-  const isExpired = remainingMs === 0
-
-  useEffect(() => {
-    if (isExpired) {
-      // Once the timer hits 0, refresh so the page picks up the new 'expired' status.
-      router.refresh()
-    }
-  }, [isExpired, router])
-
-  if (isExpired) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error/10 text-error text-caption font-semibold">
-        <MaterialIcon name="timer_off" size={12} />
-        หมดเวลาแล้ว
-      </span>
-    )
-  }
-
-  const totalSec = Math.floor(remainingMs / 1000)
-  const mm = Math.floor(totalSec / 60)
-  const ss = totalSec % 60
-  const mmStr = String(mm).padStart(2, '0')
-  const ssStr = String(ss).padStart(2, '0')
-
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-caption font-semibold">
-      <MaterialIcon name="timer" size={12} />
-      {mmStr}:{ssStr}
-    </span>
-  )
-}
 
 export function BookingHistory({ bookings }: BookingHistoryProps) {
   const [tab, setTab] = useState<Tab>('active')
@@ -114,6 +86,7 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
 
   // Phase 42 — Active tab now also includes 'temp_pending' (Phase 42 temporary bookings).
   // 'expired' goes into the Cancelled tab (semantically: no longer in use).
+  // Phase 52 — 'payment_expired' (30-min deadline lapsed) also goes to Cancelled.
   const activeBookings = bookings.filter(
     (b) =>
       b.status === 'pending' ||
@@ -124,7 +97,10 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
     (b) => b.status === 'checked_in' || b.status === 'checked_out',
   )
   const cancelledBookings = bookings.filter(
-    (b) => b.status === 'cancelled' || b.status === 'expired',
+    (b) =>
+      b.status === 'cancelled' ||
+      b.status === 'expired' ||
+      b.status === 'payment_expired',
   )
 
   const counts = {
@@ -340,6 +316,9 @@ function BookingRow({
 }) {
   const isCancelled = booking.status === 'cancelled'
   const isExpired = booking.status === 'expired'
+  // Phase 52 — payment_expired = 30-min deadline lapsed. Treat like
+  // cancelled/expired in the action row (no Pay button, no Continue).
+  const isPaymentExpired = booking.status === 'payment_expired'
   const isCheckedIn = booking.status === 'checked_in'
   const isCheckedOut = booking.status === 'checked_out'
   const isTempPending = booking.status === 'temp_pending'
@@ -371,13 +350,10 @@ function BookingRow({
               {booking.room_type?.name_th ?? t('bookings.roomName')}
             </h3>
             <div className="flex items-center gap-2 shrink-0">
-              {isTempPending && booking.hold_expires_at && (
-                <TempCountdown expiresAt={booking.hold_expires_at} />
-              )}
               <span
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-caption font-semibold ${statusClass(booking.status, booking.payment_status)}`}
               >
-                {statusLabel(booking.status, booking.payment_status, t)}
+                {statusLabel(booking.status, booking.payment_status, booking.lapsed_reason, t)}
               </span>
             </div>
           </div>
@@ -404,7 +380,7 @@ function BookingRow({
       </Link>
 
       {/* Actions */}
-      {!isCancelled && !isExpired && !isCheckedIn && !isCheckedOut && (
+      {!isCancelled && !isExpired && !isPaymentExpired && !isCheckedIn && !isCheckedOut && (
         <div className="flex items-center gap-2 px-4 md:px-6 pb-4 flex-wrap">
           {isTempPending ? (
             // Phase 42 — temp_pending: primary action "ดำเนินการต่อ" + secondary "ยกเลิก"

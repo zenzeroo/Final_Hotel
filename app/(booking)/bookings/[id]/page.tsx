@@ -8,6 +8,8 @@ import { ConfirmationActions } from './ConfirmationActions'
 import { WriteReviewPrompt } from './WriteReviewPrompt'
 import { PaymentSuccessModal } from '@/components/payment/PaymentSuccessModal'
 import { RefundStatusBadge } from '@/components/booking/RefundStatusBadge'
+import { LeaveGuardProvider } from '@/components/booking/LeaveGuardProvider'
+import { LeaveGuardBackButton } from '@/components/booking/LeaveGuardBackButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
@@ -17,8 +19,29 @@ import { getT } from '@/lib/i18n/t'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
 import { formatDate } from '@/lib/dates'
 import Image from 'next/image'
+import { CancelledFromStripeBanner } from './CancelledFromStripeBanner'
+import { resetPaymentWindowAction } from '@/app/actions/payment'
 
 export const dynamic = 'force-dynamic'
+
+/**
+ * Phase 52 follow-up — server-side Asia/Bangkok time formatter.
+ *
+ * Renders the same string on server (Node) and client (browser) by
+ * pinning the timezone explicitly. Node's default Intl timezone is
+ * UTC, which produces a different HH:mm than the user's local clock
+ * for any time east/west of UTC — that's the hydration error the
+ * Phase 52 form step hit earlier. The explicit `timeZone: 'Asia/Bangkok'`
+ * plus the locale ensures both ends produce identical output.
+ */
+function formatTimeBangkok(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Bangkok',
+    calendar: 'gregory',
+  }).format(new Date(iso))
+}
 
 function StatusBadge({
   status,
@@ -30,7 +53,9 @@ function StatusBadge({
   t: ReturnType<typeof getT>
 }) {
   const isPaid = paymentStatus === 'paid'
+  const isUnpaid = paymentStatus === 'unpaid'
   const isCancelled = status === 'cancelled'
+  const isPaymentExpired = status === 'payment_expired'
   const isCheckedOut = status === 'checked_out'
 
   if (isCancelled) {
@@ -38,6 +63,26 @@ function StatusBadge({
       <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold uppercase tracking-wider">
         <MaterialIcon name="cancel" size={16} />
         {t('bookings.statusCancelled')}
+      </span>
+    )
+  }
+  if (isPaymentExpired) {
+    return (
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold uppercase tracking-wider">
+        <MaterialIcon name="timer_off" size={16} />
+        {t('bookings.statusPaymentExpired')}
+      </span>
+    )
+  }
+  // Phase 52 — "Awaiting payment" badge for confirmed+unpaid.
+  // Rendered BEFORE the paid branch so a cancelled+unpaid (re-)booked
+  // row doesn't get the wrong badge. Warning amber signals "needs
+  // attention" (a non-urgent call to action — pay before the deadline).
+  if (isUnpaid) {
+    return (
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/15 text-warning text-label-md font-semibold uppercase tracking-wider">
+        <MaterialIcon name="schedule" size={16} />
+        {t('bookings.awaitingPayment')}
       </span>
     )
   }
@@ -111,6 +156,31 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
   // lands, ~seconds after manager approval).
   const refundStatus = await getRefundStatusForBooking(booking.id, session.id)
 
+  // Phase 52 — gate the leave-guard on the same condition:
+  // confirmed (or temp_pending) + payment_status='unpaid'. When true,
+  // the page mounts <LeaveGuardProvider> (which owns the leave dialog
+  // state) + <LeaveGuardBackButton> (the fixed-position overlay that
+  // intercepts the header's back-button area). When false, the
+  // header's plain <Link> is the only back control.
+  const isUnpaidActive =
+    booking.payment_status === 'unpaid' &&
+    (booking.status === 'confirmed' || booking.status === 'temp_pending')
+
+  // Phase 52 follow-up — return-from-Stripe cancel_url: reset the
+  // 5-min window + un-expire if needed. Server-side, fire-and-forget
+  // (we don't block the render on it). The visible banner still shows
+  // unconditionally; the next read will pick up the post-reset state.
+  if (cancelledByUser && isUnpaidActive) {
+    try {
+      await resetPaymentWindowAction({ bookingId: booking.id })
+    } catch (e) {
+      console.warn(
+        '[bookings/[id]] resetPaymentWindowAction failed:',
+        e,
+      )
+    }
+  }
+
   return (
     <>
       <TopNavBar />
@@ -125,9 +195,24 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
           initialPaymentStatus={booking.payment_status}
         />
       )}
-      <main className="flex-1 bg-background">
+      {/*
+        Phase 52 follow-up (RSC fix) — the page wraps the main
+        content in <LeaveGuardProvider> only when the booking is
+        unpaid+active. For paid/cancelled/expired bookings, no
+        provider is mounted and the header's plain <Link> is the
+        only back control. The provider receives only serializable
+        props (bookingId, enabled, backHref) — no function props
+        cross the server→client boundary.
+      */}
+      <LeaveGuardProvider
+        bookingId={booking.id}
+        enabled={isUnpaidActive}
+        backHref="/bookings"
+      >
+        {isUnpaidActive && <LeaveGuardBackButton />}
         <TransactionalHeader backHref="/bookings" />
-        <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">
+        <main className="flex-1 bg-background">
+          <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">
           <div className="flex items-center gap-3 mb-2 flex-wrap">
             <h1 className="font-display text-3xl text-primary">{t('bookingDetail.title')}</h1>
             <StatusBadge status={booking.status} paymentStatus={booking.payment_status} t={t} />
@@ -143,13 +228,11 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
             {t('bookingDetail.bookingCode')}: <span className="font-mono font-semibold">#{booking.booking_code}</span>
           </p>
 
-          {cancelledByUser && (
-            <div className="mb-6 px-4 py-3 bg-warning/10 border border-warning/30 rounded-lg flex items-center gap-3">
-              <MaterialIcon name="info" size={20} />
-              <p className="text-body-md text-on-surface">
-                {t('bookingDetail.cancelSuccess')}
-              </p>
-            </div>
+          {cancelledByUser && booking.status !== 'cancelled' && booking.payment_status === 'unpaid' && (
+            // Phase 52 — only show the actionable banner when the booking
+            // is still unpaid+active. After cancel, the page renders the
+            // standard cancelled state (no banner needed).
+            <CancelledFromStripeBanner bookingId={booking.id} />
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-8">
@@ -224,6 +307,14 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                     {policy.description && (
                       <p className="text-caption text-on-surface-variant">{policy.description}</p>
                     )}
+                    {/* Phase 52 — free-cancel hint for confirmed+unpaid
+                        bookings. Signals to the customer that they can
+                        cancel without penalty (no payment taken yet). */}
+                    {isUnpaidActive && (
+                      <p className="text-caption text-success font-medium mt-1">
+                        {t('bookingDetail.freeCancelUnpaid')}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-body-md text-on-surface-variant">
@@ -274,6 +365,30 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
         </div>
       </main>
       <Footer />
+      {/* Phase 52 follow-up — server-rendered deadline strip (no live
+          countdown). Pinned to Asia/Bangkok so the server (Node/UTC
+          default) and client (browser local) render identical text
+          — see the formatTimeBangkok helper above. Sits outside
+          <main> so it stays visible as the user scrolls. */}
+      {isUnpaidActive && booking.payment_due_at && (
+        <div className="bg-warning/10 border-t border-warning/30">
+          <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+            <p className="font-caption text-caption text-on-surface font-semibold">
+              {t('bookingDetail.payBeforeHelp', {
+                time: formatTimeBangkok(booking.payment_due_at, localeBcp),
+              })}
+            </p>
+            <p className="font-caption text-caption text-on-surface-variant">
+              {t('bookings.unpaidDeadlineSubtext')}
+            </p>
+          </div>
+        </div>
+      )}
+      {/* Phase 52 follow-up — leave-guard provider is mounted above
+          (wraps the main content + the back-button overlay). The
+          BookingUnpaidGuard is GONE — its responsibilities are
+          absorbed by LeaveGuardProvider. */}
+    </LeaveGuardProvider>
     </>
   )
 }

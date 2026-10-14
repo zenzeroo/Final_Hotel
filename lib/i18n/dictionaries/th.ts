@@ -251,12 +251,60 @@ export const th = {
     statusRefunded: 'คืนเงินแล้ว',
     statusCheckedIn: 'เข้าพักอยู่',
     statusCheckedOut: 'เช็คเอาท์แล้ว',
-    // Phase 42 — temp_pending (awaiting details) + expired (lazy or daily cron).
-    statusTempPending: 'รอกรอกข้อมูล',
+    // Phase 50 — temp_pending (lease held by heartbeat) + expired
+    // (lease lapsed via lazy-expiry helper or daily cron). No user-
+    // facing countdown — the lease is invisible.
+    statusTempPending: 'กำลังกรอกข้อมูล',
     statusExpired: 'หมดเวลา',
-    tempExpiresIn: 'หมดเวลาใน {time}',
+    // Phase 52 — canonical "Awaiting payment" label for confirmed+unpaid
+    // bookings. Used by StatusBadge on /bookings/[id] AND by statusLabel
+    // in BookingHistory. Distinct from `statusPending` (legacy 'pending'
+    // enum value) and from `bookingDetail.paymentPending` (the
+    // in-flight spinner copy on the Pay button).
+    awaitingPayment: 'รอชำระเงิน',
+    // Phase 52 follow-up — used by BookingHistory.statusLabel when the
+    // row's lapsed_reason='payment_deadline' (5-min deadline lapsed
+    // before Pay click). Distinct from `statusExpired` which is the
+    // temp-pending hold-lapsed label.
+    statusExpiredPayment: 'หมดเวลาชำระเงิน',
     tempExpired: 'หมดเวลาแล้ว',
     expiredHint: 'การจองนี้หมดเวลาแล้ว กรุณาจองใหม่อีกครั้ง',
+    // Phase 50 — leave-guard dialogs (back / in-app link / idle).
+    leaveGuardTitle: 'คุณต้องการกรอกข้อมูลเพื่อจองต่อไหม?',
+    leaveGuardBody: 'หากคุณออกจากหน้านี้ ห้องพักจะถูกปล่อยให้ผู้ใช้อื่นทันที',
+    leaveGuardStay: 'กรอกข้อมูลต่อ',
+    leaveGuardLeave: 'ออกจากหน้านี้',
+    idleGuardTitle: 'ยังอยู่หรือไม่?',
+    idleGuardBody: 'ตรวจไม่พบการใช้งานในขณะนี้ หากไม่มีการเคลื่อนไหว ห้องพักจะถูกปล่อยอัตโนมัติ',
+    idleGuardCountdown: 'ปล่อยห้องอัตโนมัติใน {seconds} วินาที',
+    holdLapsedTitle: 'การจองนี้หมดอายุแล้ว',
+    holdLapsedBody: 'ห้องพักถูกปล่อยให้ผู้อื่นแล้ว กรุณาเลือกห้องและวันที่ใหม่อีกครั้ง',
+    holdLapsedOk: 'เลือกห้องใหม่',
+    // Phase 52 — leave-guard for /bookings/[id] unpaid active bookings.
+    // Treats leaving the page (back / in-app link / refresh) as a request
+    // to cancel the booking. No heartbeat or idle-guard here — the 30-min
+    // payment deadline is server-enforced via lazy-expiry + cron.
+    statusPaymentExpired: 'หมดเวลาชำระเงิน',
+    unpaidCancelTitle: 'ต้องการยกเลิกรายการจองนี้ไหม?',
+    unpaidCancelBody: 'หากคุณออกจากหน้านี้ ห้องจะถูกปล่อยให้ผู้ใช้อื่นทันที',
+    unpaidCancelStay: 'ชำระเงินต่อ',
+    unpaidCancelConfirm: 'ยกเลิกรายการ',
+    unpaidReturnBanner: 'ยังไม่ได้ชำระเงิน',
+    unpaidReturnPay: 'ชำระเงิน',
+    unpaidReturnCancel: 'ยกเลิกรายการ',
+    unpaidDeadlineHelp: 'กรุณาชำระเงินภายใน {time}',
+    unpaidDeadlineSubtext: 'หากไม่ชำระเงินภายในเวลาที่กำหนด ห้องจะถูกปล่อยอัตโนมัติ',
+    // Phase 53 — placeholder view shown to logged-out visitors on
+    // /bookings. The page itself renders an <EmptyState> + a primary
+    // CTA (go to login with `?next=/bookings`) and a secondary CTA
+    // (browse rooms without signing in). Server also emits
+    // `robots: { index: false }` for this view.
+    loginRequired: {
+      title: 'เข้าสู่ระบมเพื่อดูประวัติการจองของคุณ',
+      body: 'กรุณาเข้าสู่ระบมเพื่อดูประวัติการจอง และจัดการการจองของคุณ',
+      goToLogin: 'ไปที่หน้าเข้าสู่ระบม',
+      browseAsGuest: 'เลือกดูห้องพักโดยไม่ต้องเข้าสู่ระบม',
+    },
   },
 
   // Booking detail page
@@ -277,9 +325,27 @@ export const th = {
     serviceFee: 'ค่าบริการ',
     totalPrice: 'ยอดรวม',
     paymentStatus: 'สถานะการชำระเงิน',
+    // paymentPending = the in-flight spinner copy on the Pay button
+    // (e.g. "รอชำระเงิน…"). Distinct from `bookings.awaitingPayment`
+    // which is the status-badge label for a confirmed+unpaid booking.
     paymentPending: 'รอชำระเงิน',
     paymentPaid: 'ชำระแล้ว',
     paymentRefunded: 'คืนเงินแล้ว',
+    // Phase 52 — static label for the Pay button on /bookings/[id].
+    payNow: 'ชำระเงิน',
+    // Phase 52 — free-cancel hint shown under the cancellation policy
+    // card for confirmed+unpaid bookings (no penalty if the customer
+    // cancels before paying).
+    freeCancelUnpaid: 'ยังไม่ได้ชำระเงิน ยกเลิกได้โดยไม่มีค่าใช้จ่าย',
+    // Phase 52 follow-up — server-rendered deadline strip on
+    // /bookings/[id]. The {time} placeholder is the formatted Asia/
+    // Bangkok HH:mm (server-side, hydration-safe).
+    payBeforeHelp: 'กรุณากดชำระเงินภายใน {time}',
+    paymentWindowExpired: 'การจองนี้หมดเวลาชำระเงินแล้ว กรุณาจองใหม่อีกครั้ง',
+    // Late-payment webhook recovery (capacity was free, payment honored).
+    reconcilePaidAfterExpire: 'การจองของคุณได้รับการยืนยันแล้ว',
+    // Late-payment webhook refund (capacity was taken, payment refunded).
+    reconcilePaidAfterRefund: 'การชำระเงินสำเร็จหลังจากยกเลิก — เราได้คืนเงินให้คุณแล้ว',
     actions: 'การดำเนินการ',
     cancelBooking: 'ยกเลิกการจอง',
     cancelConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้?',
@@ -304,6 +370,12 @@ export const th = {
     refundStatusRejected: 'คำขอถูกปฏิเสธ',
     writeReview: 'เขียนรีวิว',
     reviewSubmitted: 'ส่งรีวิวเรียบร้อย',
+  },
+
+  // Booking form (customer /bookings/new) — Phase 51
+  bookingForm: {
+    // Helper text under the locked email field.
+    emailLockedHint: 'อีเมลผูกกับบัญชีของคุณ ใช้เพื่อรับการยืนยันการจอง',
   },
 
   // Manager dashboard
@@ -339,26 +411,13 @@ export const th = {
       rates: 'ราคา',
     },
     maintenancePage: {
+      // Phase 53b — simplified to two sections (pending vs fixed).
+      // Removed: filter tabs, action buttons, severity/status labels,
+      // and dialog copy (no longer reachable from this page).
       title: 'รายงานการซ่อมบำรุง',
-      subtitle: 'ตรวจสอบและยืนยันการปิดห้องที่ได้รับแจ้งจากแม่บ้าน',
-      confirmClosure: 'ยืนยันปิดห้อง',
-      resolveReport: 'แก้ไขแล้ว',
-      resolutionNote: 'บันทึกการแก้ไข',
-      openCount: 'เปิดอยู่ (รอยืนยัน)',
-      inProgressCount: 'กำลังดำเนินการ',
-      resolvedCount: 'แก้ไขแล้ว',
-      noReports: 'ไม่มีรายงานที่ตรงกับตัวกรองนี้',
-      statusOpen: 'เปิดอยู่',
-      statusInProgress: 'กำลังดำเนินการ',
-      statusResolved: 'แก้ไขแล้ว',
-      severityLow: 'ต่ำ',
-      severityMedium: 'ปานกลาง',
-      severityHigh: 'สูง',
-      severityCritical: 'วิกฤต',
-      confirmDialogTitle: 'ยืนยันการปิดห้อง',
-      confirmDialogBody: 'ห้องจะถูกตั้งสถานะเป็น "ปิดซ่อมบำรุง" และรายงานจะย้ายไปอยู่ในสถานะ "กำลังดำเนินการ"',
-      resolveDialogTitle: 'แก้ไขรายงานเสร็จสิ้น',
-      resolveDialogBody: 'รายงานจะถูกปิดและห้องจะกลับมาเป็นสถานะ "ว่าง" พร้อมรับแขกใหม่',
+      subtitle: 'ติดตามปัญหาที่แจ้งเข้ามาทั้งโรงแรม',
+      sectionOpen: 'ยังไม่เก้ไข',
+      sectionFixed: 'เก้ไขแล้ว',
     },
     bookingsPage: {
       title: 'จัดการการจอง',
@@ -649,10 +708,24 @@ export const th = {
       typeOther: 'อื่นๆ',
     },
     historyPage: {
-      title: 'ประวัติการทำงาน',
-      noHistory: 'ยังไม่มีประวัติ',
-      avgTime: 'เวลาเฉลี่ย',
-      minutes: 'นาที',
+      // Phase 53 — full i18n set (was 4 keys, all orphans; replaced
+      // with the actual page labels).
+      // Phase 53b — `tabMy` + `tabAll` removed (single-user view).
+      pageTitle: 'วิเคราะห์ประวัติการทำงาน',
+      pageSubtitle: 'ติดตามผลงานกะของคุณตลอดช่วงเวลาที่ผ่านมา',
+      roomsCleaned: 'ห้องที่ทำความสะอาดแล้ว',
+      tasksToday: 'วันนี้',
+      tasksThisWeek: 'สัปดาห์นี้',
+      recentLogTitle: 'บันทึกงานล่าสุด',
+      noLog: 'ยังไม่มีงานที่เสร็จสิ้น',
+      started: 'เริ่ม',
+      finished: 'เสร็จ',
+    },
+    // Phase 53 — labels threaded to TaskCard's started/finished prefix
+    // (used by the dashboard + tasks/rooms pages via the same component).
+    tasks: {
+      started: 'เริ่ม',
+      finished: 'เสร็จ',
     },
   },
 

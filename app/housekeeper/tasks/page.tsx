@@ -3,6 +3,7 @@ import { getMyTasksForUser, getUnassignedTasks } from '@/lib/data/housekeeper'
 import { getNextCheckInForRooms } from '@/lib/data/manager'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { getT } from '@/lib/i18n/t'
 import { TaskCard } from '@/components/housekeeping/TaskCard'
 import { HousekeeperMyTasksTabs } from '@/components/housekeeping/HousekeeperMyTasksTabs'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
@@ -22,6 +23,7 @@ export default async function MyTasksPage(props: {
   const session = await getSession()
   const locale = await getLocale()
   const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
+  const t = getT(locale)
 
   const [myTasks, unassigned] = await Promise.all([
     getMyTasksForUser(session!.id),
@@ -74,8 +76,14 @@ export default async function MyTasksPage(props: {
             </div>
           ) : (
             <div className="space-y-3">
-              {myTasksWithEta.map(t => (
-                <TaskCard key={t.id} task={t} variant="my" localeBcp={localeBcp} />
+              {myTasksWithEta.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  variant="my"
+                  localeBcp={localeBcp}
+                  labels={{ started: t('housekeeper.tasks.started'), finished: t('housekeeper.tasks.finished') }}
+                />
               ))}
             </div>
           )}
@@ -99,7 +107,13 @@ export default async function MyTasksPage(props: {
           ) : (
             <div className="space-y-3">
               {unassignedWithEta.map(t => (
-                <TaskCard key={t.id} task={t} variant="unassigned" localeBcp={localeBcp} />
+                <TaskCard
+                  key={t.id}
+                  task={t}
+                  variant="unassigned"
+                  localeBcp={localeBcp}
+                  labels={{ started: '', finished: '' }}
+                />
               ))}
             </div>
           )}

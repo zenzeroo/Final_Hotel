@@ -126,8 +126,14 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 //   new recompute_all_room_ratings() SECURITY DEFINER that re-aggregates every active
 //   room_type in one shot. Closes the gap where seed rating_avg/rating_count from
 //   20260819_room_types.sql drifted forever (trigger only fires on reviews mutations).
+// 20261008 = Phase 50 booking hold lease — touch_booking_hold() + release_booking_hold()
+//   SECURITY DEFINER RPCs for the rolling 3-min lease + heartbeat pattern. Replaces
+//   Phase 42's hard 2-min timeout with a heartbeat-extendable lease. Also drops the
+//   p_hold_minutes default from create_temp_booking (caller must pass 3 explicitly)
+//   and adds max-1 enforcement (a new booking cancels any prior active hold for the
+//   same user, with audit row).
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)|202610(01|02|03|04|05|06)_.*\.sql$/.test(f))
+  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)|202610(01|02|03|04|05|06|07|08|09|10|11)_.*\.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 

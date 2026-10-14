@@ -204,10 +204,8 @@ export interface DashboardStats {
 
 export interface WorkHistoryData {
   roomsCleaned: number
-  avgMinutes: number | null
   tasksToday: number
   tasksThisWeek: number
-  dailyPerformance: { date: string; count: number }[]
   recentLog: HousekeepingTask[]
 }
 

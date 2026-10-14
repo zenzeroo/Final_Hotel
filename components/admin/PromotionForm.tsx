@@ -11,7 +11,7 @@ import {
 } from '@/app/actions/promotions'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { DatePickerField } from '@/components/ui/DatePickerField'
-import { getTodayLocalIso } from '@/lib/dates'
+import { getTodayBangkok } from '@/lib/dates'
 import { r2Url } from '@/lib/r2/publicUrl'
 
 interface PromotionFormProps {
@@ -254,7 +254,7 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
         <Field label="วันเริ่มต้น" required>
           <DatePickerField
             name="valid_from"
-            min={getTodayLocalIso()}
+            min={getTodayBangkok()}
             defaultValue={initial?.valid_from ?? ''}
             onChange={(v) => setValidFrom(v)}
             required
@@ -264,7 +264,7 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
         <Field label="วันสิ้นสุด" required>
           <DatePickerField
             name="valid_until"
-            min={validFrom || getTodayLocalIso()}
+            min={validFrom || getTodayBangkok()}
             defaultValue={initial?.valid_until ?? ''}
             required
           />
