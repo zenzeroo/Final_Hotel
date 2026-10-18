@@ -402,5 +402,15 @@ await step('Test 6: Auth guard — housekeeper cannot createRoomTypeAction', asy
   return 'HTTP ' + res.status + '; guard slug absent from HTML (auth guard held ✓)'
 })
 
+// Cleanup — the created room type used to be left behind (test-rt-* rows piled up).
+{
+  const { createClient } = await import('@supabase/supabase-js')
+  const svc = createClient(BASE, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { persistSession: false },
+  })
+  const { error } = await svc.from('room_types').delete().in('slug', [NEW_SLUG, 'guard-rt-' + ts])
+  console.log(error ? `Cleanup failed: ${error.message}` : `Cleanup: removed ${NEW_SLUG}`)
+}
+
 console.log('\n' + (failed === 0 ? '✅' : '⚠️') + '  ' + passed + ' passed, ' + failed + ' failed')
 process.exit(failed === 0 ? 0 : 1)

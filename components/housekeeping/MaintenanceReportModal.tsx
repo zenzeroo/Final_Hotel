@@ -5,24 +5,26 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Modal } from '@/components/ui/Modal'
 import { reportMaintenance } from '@/app/actions/housekeeping'
 import type { RoomUnitBasic, MaintenanceIssueType, MaintenanceSeverity } from '@/lib/data/types'
+import { useT } from '@/lib/i18n/useT'
 
 const ISSUE_TYPES: { value: MaintenanceIssueType; label: string }[] = [
-  { value: 'plumbing', label: 'ประปา' },
-  { value: 'electrical', label: 'ไฟฟ้า' },
-  { value: 'hvac', label: 'แอร์/เครื่องปรับอากาศ' },
-  { value: 'furniture', label: 'เฟอร์นิเจอร์' },
-  { value: 'appliance', label: 'เครื่องใช้ไฟฟ้า' },
-  { value: 'other', label: 'อื่นๆ' },
+  { value: 'plumbing', label: 'staff.issueType.plumbing' },
+  { value: 'electrical', label: 'staff.issueType.electrical' },
+  { value: 'hvac', label: 'staff.issueType.hvac' },
+  { value: 'furniture', label: 'staff.issueType.furniture' },
+  { value: 'appliance', label: 'staff.issueType.appliance' },
+  { value: 'other', label: 'staff.issueType.other' },
 ]
 
 const SEVERITIES: { value: MaintenanceSeverity; label: string }[] = [
-  { value: 'low', label: 'ต่ำ' },
-  { value: 'medium', label: 'ปานกลาง' },
-  { value: 'high', label: 'สูง' },
-  { value: 'critical', label: 'วิกฤต (ห้องถูกตั้งสถานะปิด)' },
+  { value: 'low', label: 'staff.severity.low' },
+  { value: 'medium', label: 'staff.severity.medium' },
+  { value: 'high', label: 'staff.severity.high' },
+  { value: 'critical', label: 'staff.maintenanceForm.criticalHint' },
 ]
 
 export function MaintenanceReportModal({ roomUnits }: { roomUnits: RoomUnitBasic[] }) {
+  const t = useT()
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -55,53 +57,53 @@ export function MaintenanceReportModal({ roomUnits }: { roomUnits: RoomUnitBasic
         className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md text-caption uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
       >
         <MaterialIcon name="build" size={18} />
-        รายงานใหม่
+        {t('staff.maintenanceForm.openButton')}
       </button>
 
       <Modal
         open={isOpen}
         onClose={() => setIsOpen(false)}
-        title="แจ้งปัญหาการซ่อมบำรุง"
+        title={t('staff.maintenanceForm.title')}
         showCloseButton
         maxWidthClass="max-w-md"
         body={
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">ห้อง</label>
+              <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">{t('staff.maintenanceForm.room')}</label>
               <select name="room_unit_id" required className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-low text-body-md focus:outline-none focus:ring-2 focus:ring-secondary">
-                <option value="">เลือกห้อง...</option>
+                <option value="">{t('staff.maintenanceForm.selectRoom')}</option>
                 {roomUnits.map(u => (
                   <option key={u.id} value={u.id}>
-                    {u.floor}·{u.unit_label} — {u.room_type?.name ?? 'ห้อง'}
+                    {u.floor}·{u.unit_label} — {u.room_type?.name ?? t('staff.maintenanceForm.roomFallback')}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">ประเภทปัญหา</label>
+              <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">{t('staff.maintenanceForm.issueType')}</label>
               <select name="issue_type" required className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-low text-body-md focus:outline-none focus:ring-2 focus:ring-secondary">
-                {ISSUE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                {ISSUE_TYPES.map(it => <option key={it.value} value={it.value}>{t(it.label)}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">ความรุนแรง</label>
+              <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">{t('staff.maintenanceForm.severity')}</label>
               <select name="severity" required defaultValue="medium" className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-low text-body-md focus:outline-none focus:ring-2 focus:ring-secondary">
-                {SEVERITIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {SEVERITIES.map(s => <option key={s.value} value={s.value}>{t(s.label)}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">หัวข้อ</label>
-              <input name="title" required maxLength={100} className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-low text-body-md focus:outline-none focus:ring-2 focus:ring-secondary" placeholder="สรุปสั้นๆ" />
+              <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">{t('staff.maintenanceForm.subject')}</label>
+              <input name="title" required maxLength={100} className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-low text-body-md focus:outline-none focus:ring-2 focus:ring-secondary" placeholder={t('staff.maintenanceForm.subjectPlaceholder')} />
             </div>
             <div>
-              <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">คำอธิบาย (ไม่บังคับ)</label>
+              <label className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1.5">{t('staff.maintenanceForm.description')}</label>
               <textarea name="description" rows={3} className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-low text-body-md focus:outline-none focus:ring-2 focus:ring-secondary" />
             </div>
             {error && <p className="text-body-md text-error">{error}</p>}
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setIsOpen(false)} className="flex-1 px-4 py-2 border border-outline-variant rounded-md text-body-md text-primary hover:bg-primary-fixed hover:border-primary-fixed transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary">ยกเลิก</button>
+              <button type="button" onClick={() => setIsOpen(false)} className="flex-1 px-4 py-2 border border-outline-variant rounded-md text-body-md text-primary hover:bg-primary-fixed hover:border-primary-fixed transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary">{t('staff.maintenanceForm.cancel')}</button>
               <button type="submit" disabled={isPending} className="flex-1 px-4 py-2 bg-primary text-on-primary rounded-md text-caption uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50">
-                {isPending ? 'กำลังส่ง...' : 'ส่ง'}
+                {isPending ? t('staff.maintenanceForm.submitting') : t('staff.maintenanceForm.submit')}
               </button>
             </div>
           </form>

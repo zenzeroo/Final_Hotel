@@ -3,6 +3,7 @@
 import { useTransition } from 'react'
 import { togglePromotionAction } from '@/app/actions/promotions'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface TogglePromotionButtonProps {
   promotionId: string
@@ -10,6 +11,7 @@ interface TogglePromotionButtonProps {
 }
 
 export function TogglePromotionButton({ promotionId, isActive }: TogglePromotionButtonProps) {
+  const t = useT()
   const [pending, startTransition] = useTransition()
 
   return (
@@ -30,14 +32,14 @@ export function TogglePromotionButton({ promotionId, isActive }: TogglePromotion
             ? 'bg-primary text-on-primary hover:bg-primary-fixed hover:text-primary'
             : 'bg-surface-container-high text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
         }`}
-        title={isActive ? 'คลิกเพื่อปิดใช้งาน' : 'คลิกเพื่อเปิดใช้งาน'}
+        title={isActive ? t('manager.promotionsTable.clickToDeactivate') : t('manager.promotionsTable.clickToActivate')}
       >
         <MaterialIcon
           name={isActive ? 'toggle_on' : 'toggle_off'}
           size={16}
           filled={isActive}
         />
-        {pending ? '...' : isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+        {pending ? '...' : isActive ? t('manager.promotionsTable.active') : t('manager.promotionsTable.inactive')}
       </button>
     </form>
   )

@@ -11,6 +11,7 @@ import {
 import { createCheckoutSessionAction } from '@/app/actions/payment'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { AlertModal } from '@/components/ui/AlertModal'
+import { useToast } from '@/components/ui/Toast'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { formatTHB } from '@/lib/pricing'
@@ -82,6 +83,7 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
   const [confirmIsRefund, setConfirmIsRefund] = useState(false)
   const [confirmIsTemp, setConfirmIsTemp] = useState(false)
   const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const toast = useToast()
   const [payError, setPayError] = useState<string | null>(null)
 
   // Phase 42 — Active tab now also includes 'temp_pending' (Phase 42 temporary bookings).
@@ -148,10 +150,10 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
       startTransition(async () => {
         const result = await cancelTempBookingAction(bookingId)
         if (!result.ok || result.error) {
-          setAlertMessage(result.error ?? 'ไม่สามารถยกเลิกการจอง')
+          toast.error(result.error ?? 'ไม่สามารถยกเลิกการจอง')
           return
         }
-        setAlertMessage(t('bookings.cancelSuccess'))
+        toast.success(t('bookings.cancelSuccess'))
         router.refresh()
       })
       return
@@ -161,7 +163,7 @@ export function BookingHistory({ bookings }: BookingHistoryProps) {
     startTransition(async () => {
       const result = await cancelBooking(bookingId)
       if (result?.error) {
-        setAlertMessage(result.error)
+        toast.error(result.error)
         return
       }
       const refund = Number(result.refundAmount ?? 0)

@@ -1,6 +1,8 @@
 import { getAllRoomUnits } from '@/lib/data/housekeeper'
 import { RoomStatusCard } from '@/components/housekeeping/RoomStatusCard'
 import type { RoomUnitStatus } from '@/lib/data/types'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,20 +20,11 @@ const STATUS_FILTERS: ('all' | FilterStatus)[] = [
   'out_of_order',
 ]
 
-const STATUS_FILTER_LABELS: Record<'all' | FilterStatus, string> = {
-  all: 'ทั้งหมด',
-  available: 'ว่าง',
-  occupied: 'มีแขก',
-  cleaning: 'กำลังทำความสะอาด',
-  maintenance: 'ปิดซ่อมบำรุง',
-  out_of_order: 'ปิดใช้งาน',
-  // Phase 30.1 — DB CHECK widened to include these 4 new values.
-  waiting_cleaning: 'รอทำคว�สะอาด',
-  inspection: 'กำลังตรวจสอบ',
-  checkout: 'เช็คเอาท์แล้ว',
-}
+/** Filter pill label: 'all' + `staff.status.*` (Phase 27.E). */
+const filterLabelKey = (f: 'all' | FilterStatus) => (f === 'all' ? 'staff.filterAll' : `staff.status.${f}`)
 
 export default async function RoomStatusOverview({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  const t = getT(await getLocale())
   const params = await searchParams
   const filter = ((params.status as string) || 'all') as 'all' | RoomUnitStatus
   const units = await getAllRoomUnits()
@@ -43,8 +36,8 @@ export default async function RoomStatusOverview({ searchParams }: { searchParam
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-8">
-        <h1 className="font-headline-md text-headline-md text-primary mb-2">ภาพรวมสถานะห้อง</h1>
-        <p className="text-body-lg text-on-surface-variant">ห้องพักทุกห้องและสถานะปัจจุบัน</p>
+        <h1 className="font-headline-md text-headline-md text-primary mb-2">{t('housekeeper.roomsPage.heading')}</h1>
+        <p className="text-body-lg text-on-surface-variant">{t('housekeeper.roomsPage.subtitle')}</p>
       </header>
 
       <nav className="flex gap-2 mb-8 flex-wrap">
@@ -58,13 +51,13 @@ export default async function RoomStatusOverview({ searchParams }: { searchParam
                 : 'bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
             }`}
           >
-            {STATUS_FILTER_LABELS[f]}
+            {t(filterLabelKey(f))}
           </a>
         ))}
       </nav>
 
       {filtered.length === 0 ? (
-        <p className="text-body-md text-on-surface-variant italic">ไม่มีห้องที่ตรงกับตัวกรองนี้</p>
+        <p className="text-body-md text-on-surface-variant italic">{t('housekeeper.roomsPage.noMatchingRooms')}</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(u => <RoomStatusCard key={u.id} unit={u} />)}

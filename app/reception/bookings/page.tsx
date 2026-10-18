@@ -5,12 +5,15 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Pagination } from '@/components/ui/Pagination'
 import { BookingFilters } from './BookingFilters'
 import { BookingTableRow } from './BookingTableRow'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
 const PAGE_SIZE = 20
 
 export default async function ReceptionBookingsPage(props: PageProps<'/reception/bookings'>) {
+  const t = getT(await getLocale())
   const searchParams = await props.searchParams
 
   const statusFilter = typeof searchParams.status === 'string' ? searchParams.status : 'all'
@@ -49,11 +52,11 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
     <div className="p-6 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display text-3xl text-primary">จัดการการจอง</h1>
+          <h1 className="font-display text-3xl text-primary">{t('reception.bookingsPage.heading')}</h1>
           <p className="text-body-md text-on-surface-variant mt-1">
             {total > 0
-              ? `${total} รายการ · หน้า ${page} / ${totalPages}`
-              : '0 รายการ'}
+              ? t('reception.bookingsPage.countPaged', { total, page, pages: totalPages })
+              : t('reception.bookingsPage.countZero')}
           </p>
         </div>
         <Link
@@ -70,7 +73,7 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
       {bookings.length === 0 ? (
         <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-2xl border border-outline-variant">
           <MaterialIcon name="search_off" size={48} className="text-outline-variant mx-auto mb-3" />
-          <p className="text-body-md text-on-surface-variant">ไม่พบการจอง</p>
+          <p className="text-body-md text-on-surface-variant">{t('reception.bookingsPage.empty')}</p>
         </div>
       ) : (
         <>
@@ -78,13 +81,13 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
             <table className="w-full">
               <thead className="bg-surface-container">
                 <tr>
-                  <Th>รหัส</Th>
-                  <Th>ลูกค้า</Th>
-                  <Th>ห้อง</Th>
-                  <Th>เช็คอิน / เอาท์</Th>
-                  <Th>สถานะ</Th>
-                  <Th align="right">ยอดรวม</Th>
-                  <Th align="right">ดำเนินการ</Th>
+                  <Th>{t('reception.bookingsPage.colCode')}</Th>
+                  <Th>{t('reception.bookingsPage.colGuest')}</Th>
+                  <Th>{t('reception.bookingsPage.colRoom')}</Th>
+                  <Th>{t('reception.bookingsPage.colDates')}</Th>
+                  <Th>{t('reception.bookingsPage.colStatus')}</Th>
+                  <Th align="right">{t('reception.bookingsPage.colTotal')}</Th>
+                  <Th align="right">{t('reception.bookingsPage.colActions')}</Th>
                 </tr>
               </thead>
               <tbody>

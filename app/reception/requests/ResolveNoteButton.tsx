@@ -1,18 +1,20 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { AlertModal } from '@/components/ui/AlertModal'
+import { useToast } from '@/components/ui/Toast'
+import { useT } from '@/lib/i18n/useT'
 
 interface ResolveNoteButtonProps {
   noteId: string
 }
 
 export function ResolveNoteButton({ noteId }: ResolveNoteButtonProps) {
+  const t = useT()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const toast = useToast()
 
   const handleClick = () => {
     startTransition(async () => {
@@ -25,7 +27,7 @@ export function ResolveNoteButton({ noteId }: ResolveNoteButtonProps) {
         .eq('id', noteId)
 
       if (error) {
-        setAlertMessage('ไม่สามารถอัปเดต: ' + error.message)
+        toast.error(t('reception.common.updateFailed', { detail: error.message }))
         return
       }
 
@@ -46,11 +48,8 @@ export function ResolveNoteButton({ noteId }: ResolveNoteButtonProps) {
         ) : (
           <MaterialIcon name="check" size={14} />
         )}
-        ปิดงาน
+        {t('reception.requestsPage.close')}
       </button>
-      {alertMessage && (
-        <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
-      )}
     </>
   )
 }

@@ -1,30 +1,34 @@
 import type { AuditLogEntry } from '@/lib/data/types'
+import type { Locale } from '@/lib/i18n/config'
+import { getT } from '@/lib/i18n/t'
 
 interface AuditLogTableProps {
   entries: AuditLogEntry[]
+  locale: Locale
 }
 
-export function AuditLogTable({ entries }: AuditLogTableProps) {
+export function AuditLogTable({ entries, locale }: AuditLogTableProps) {
+  const t = getT(locale)
   if (entries.length === 0) {
     return (
       <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-        <h3 className="font-headline-sm text-headline-sm text-primary mb-2">บันทึกการตรวจสอบ</h3>
-        <p className="text-body-md text-on-surface-variant italic">ยังไม่มีรายการตรวจสอบ</p>
+        <h3 className="font-headline-sm text-headline-sm text-primary mb-2">{t('manager.bookingsPage.auditTitle')}</h3>
+        <p className="text-body-md text-on-surface-variant italic">{t('manager.bookingsPage.auditEmpty')}</p>
       </div>
     )
   }
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">บันทึกการตรวจสอบ</h3>
+      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">{t('manager.bookingsPage.auditTitle')}</h3>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-body-md">
           <thead className="text-label-md uppercase tracking-wider text-on-surface-variant border-b border-outline-variant">
             <tr>
-              <th className="py-3 pr-4">เวลา</th>
-              <th className="py-3 pr-4">รหัสเจ้าหน้าที่</th>
-              <th className="py-3 pr-4">การกระทำ</th>
-              <th className="py-3 pr-4">เป้าหมาย</th>
-              <th className="py-3 pr-4">รายละเอียด</th>
+              <th className="py-3 pr-4">{t('manager.bookingsPage.colTime')}</th>
+              <th className="py-3 pr-4">{t('manager.bookingsPage.colStaff')}</th>
+              <th className="py-3 pr-4">{t('manager.bookingsPage.colAction')}</th>
+              <th className="py-3 pr-4">{t('manager.bookingsPage.colTarget')}</th>
+              <th className="py-3 pr-4">{t('manager.bookingsPage.colDetails')}</th>
             </tr>
           </thead>
           <tbody>

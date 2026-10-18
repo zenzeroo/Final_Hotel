@@ -157,18 +157,21 @@ export async function approveRefundAction(formData: FormData): Promise<ActionRes
       const adminEmail = await createAdminClient()
       const { data: booking } = await adminEmail
         .from('bookings')
-        .select('id, booking_code, booker_email, booker_full_name, currency')
+        .select('id, user_id, booking_code, booker_email, booker_full_name, currency')
         .eq('id', rr.booking_id)
         .single()
       if (booking && booking.booker_email) {
         const { sendEmail } = await import('@/lib/email/resend')
-        const { RefundNoticeEmail } = await import('@/lib/email/templates/refund-notice')
+        const { RefundNoticeEmail, refundNoticeSubject } = await import('@/lib/email/templates/refund-notice')
+        const { getRecipientLocale } = await import('@/lib/email/recipient-locale')
+        const emailLocale = await getRecipientLocale({ userId: booking.user_id })
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
         await sendEmail({
           to: booking.booker_email,
           template: 'refund_notice',
-          subject: `[Zenzero] คืนเงินการจอง ${booking.booking_code}`,
+          subject: refundNoticeSubject({ bookingCode: booking.booking_code, locale: emailLocale }),
           react: RefundNoticeEmail({
+            locale: emailLocale,
             bookingCode: booking.booking_code,
             guestName: booking.booker_full_name ?? '',
             refundAmount: Number(rr.amount),

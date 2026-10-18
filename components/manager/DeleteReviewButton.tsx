@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Modal } from '@/components/ui/Modal'
 import { deleteReviewAction } from '@/app/actions/reviews'
+import { useT } from '@/lib/i18n/useT'
 
 interface DeleteReviewButtonProps {
   reviewId: string
@@ -11,6 +12,7 @@ interface DeleteReviewButtonProps {
 }
 
 export function DeleteReviewButton({ reviewId, guestName }: DeleteReviewButtonProps) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -35,20 +37,18 @@ export function DeleteReviewButton({ reviewId, guestName }: DeleteReviewButtonPr
         className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-caption text-error hover:bg-error-container transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-error disabled:opacity-50"
       >
         <MaterialIcon name="delete" size={14} />
-        ลบถาวร
+        {t('manager.reviewsPage.deleteForever')}
       </button>
 
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="ลบรีวิวนี้ถาวร?"
+        title={t('manager.reviewsPage.deleteTitle')}
         showCloseButton
         body={
           <form action={handleSubmit}>
             <p className="text-body-md text-on-surface-variant mb-4">
-              รีวิวจาก <span className="font-semibold">{guestName}</span>{' '}
-              จะถูกลบออกจากระบบอย่างถาวรและไม่สามารถกู้คืนได้
-              การดำเนินการนี้มีไว้สำหรับผู้ดูแลระบบเท่านั้น
+              {t('manager.reviewsPage.deleteBody', { name: guestName })}
             </p>
             <input type="hidden" name="reviewId" value={reviewId} />
 
@@ -65,14 +65,14 @@ export function DeleteReviewButton({ reviewId, guestName }: DeleteReviewButtonPr
                 disabled={pending}
                 className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50"
               >
-                ยกเลิก
+                {t('manager.common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={pending}
                 className="px-4 py-2 rounded-md bg-error text-on-error text-body-md font-semibold disabled:opacity-50"
               >
-                {pending ? 'กำลังลบ...' : 'ลบถาวร'}
+                {pending ? t('manager.reviewsPage.deleting') : t('manager.reviewsPage.deleteForever')}
               </button>
             </div>
           </form>

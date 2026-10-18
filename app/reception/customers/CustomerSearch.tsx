@@ -3,12 +3,14 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface CustomerSearchProps {
   initialQuery: string
 }
 
 export function CustomerSearch({ initialQuery }: CustomerSearchProps) {
+  const t = useT()
   const router = useRouter()
   const params = useSearchParams()
   const [q, setQ] = useState(initialQuery)
@@ -37,7 +39,7 @@ export function CustomerSearch({ initialQuery }: CustomerSearchProps) {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="ชื่อ-นามสกุล หรือเบอร์โทรศัพท์"
+          placeholder={t('reception.customersPage.inputPlaceholder')}
           className="w-full bg-surface-container-lowest border border-outline-variant rounded-full pl-12 pr-4 py-3 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
         />
       </div>
@@ -45,7 +47,7 @@ export function CustomerSearch({ initialQuery }: CustomerSearchProps) {
         type="submit"
         className="px-6 py-3 bg-primary text-secondary rounded-full font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
       >
-        ค้นหา
+        {t('reception.customersPage.search')}
       </button>
     </form>
   )

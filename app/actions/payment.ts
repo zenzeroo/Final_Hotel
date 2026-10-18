@@ -283,12 +283,13 @@ export async function markCashPaidAction(
     // here with a fresh admin client to keep the dependencies local.
     try {
       const { sendEmail } = await import('@/lib/email/resend')
-      const { PaymentReceiptEmail } = await import('@/lib/email/templates/payment-receipt')
+      const { PaymentReceiptEmail, paymentReceiptSubject } = await import('@/lib/email/templates/payment-receipt')
+      const { getRecipientLocale } = await import('@/lib/email/recipient-locale')
       const { createAdminClient } = await import('@/lib/supabase/admin')
       const admin = await createAdminClient()
       const { data: freshBooking } = await admin
         .from('bookings')
-        .select('id, booking_code, booker_email, booker_full_name, total, currency')
+        .select('id, user_id, booking_code, booker_email, booker_full_name, total, currency')
         .eq('id', booking.id)
         .single()
       if (freshBooking && freshBooking.booker_email) {
@@ -301,12 +302,14 @@ export async function markCashPaidAction(
           .limit(1)
           .maybeSingle()
         if (payment) {
+          const emailLocale = await getRecipientLocale({ userId: freshBooking.user_id })
           const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
           await sendEmail({
             to: freshBooking.booker_email,
             template: 'payment_receipt',
-            subject: `[Zenzero] ใบเสร็จการจอง ${freshBooking.booking_code}`,
+            subject: paymentReceiptSubject({ bookingCode: freshBooking.booking_code, locale: emailLocale }),
             react: PaymentReceiptEmail({
+              locale: emailLocale,
               bookingCode: freshBooking.booking_code,
               guestName: freshBooking.booker_full_name ?? '',
               amount: Number(payment.amount),

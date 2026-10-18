@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Modal } from '@/components/ui/Modal'
 import { createStaffAction } from '@/app/actions/admin/staff'
+import { useT } from '@/lib/i18n/useT'
 
 /**
  * Phase 33 — Modal pop-up wrapper for the staff creation flow.
@@ -24,6 +25,7 @@ import { createStaffAction } from '@/app/actions/admin/staff'
  * the table auto-refreshes on next render trigger after success.
  */
 export function AddStaffModal() {
+  const t = useT()
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -66,13 +68,13 @@ export function AddStaffModal() {
         className="inline-flex items-center gap-2 bg-primary text-on-primary rounded-lg px-4 py-2 hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         <MaterialIcon name="person_add" size={18} />
-        เพิ่มพนักงาน
+        {t('admin.staffPage.add')}
       </button>
 
       <Modal
         open={isOpen}
         onClose={handleClose}
-        title={showSuccess ? 'สร้างบัญชีพนักงานสำเร็จ' : 'เพิ่มพนักงานใหม่'}
+        title={showSuccess ? t('admin.staffPage.createdTitle') : t('admin.staffPage.addTitle')}
         showCloseButton
         maxWidthClass="max-w-2xl"
         closeOnBackdrop={!isPending}
@@ -101,14 +103,14 @@ function SuccessState({
   password: string
   onDone: () => void
 }) {
+  const t = useT()
   return (
     <div className="flex flex-col items-center text-center py-2">
       <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container mb-3">
         <MaterialIcon name="check_circle" size={28} />
       </div>
       <p className="text-body-md text-on-surface mb-4">
-        กรุณาส่งรหัสผ่านเริ่มต้นนี้ให้พนักงานด้วยตัวเอง
-        (ระบบจะไม่แสดงอีก):
+        {t('admin.staffPage.passwordNote')}
       </p>
       <code className="block bg-secondary-container text-on-secondary-container px-6 py-3 rounded-lg font-mono text-body-lg mb-6 select-all">
         {password}
@@ -119,7 +121,7 @@ function SuccessState({
         className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary-fixed hover:text-primary transition-colors"
       >
         <MaterialIcon name="check" size={18} />
-        เสร็จสิ้น
+        {t('admin.staffPage.done')}
       </button>
     </div>
   )
@@ -157,21 +159,22 @@ function Field({
 }
 
 function FormGrid() {
+  const t = useT()
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="ชื่อ-นามสกุล" required>
+        <Field label={t('admin.common.fullName')} required>
           <input
             name="full_name"
             type="text"
-            placeholder="สมชาย ใจดี"
+            placeholder={t('admin.staffPage.namePlaceholder')}
             required
             maxLength={120}
             className={inputClass}
           />
         </Field>
 
-        <Field label="อีเมล" required>
+        <Field label={t('admin.common.email')} required>
           <input
             name="email"
             type="email"
@@ -183,7 +186,7 @@ function FormGrid() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="เบอร์โทร" required>
+        <Field label={t('admin.common.phone')} required>
           <input
             name="phone"
             type="tel"
@@ -202,21 +205,21 @@ function FormGrid() {
           />
         </Field>
 
-        <Field label="บทบาท" required>
+        <Field label={t('admin.common.role')} required>
           <select name="role" defaultValue="reception" className={inputClass}>
-            <option value="reception">พนักงานต้อนรับ</option>
-            <option value="housekeeper">พนักงานทำความสะอาด</option>
-            <option value="manager">ผู้จัดการ</option>
-            <option value="admin">ผู้ดูแลระบบ</option>
+            <option value="reception">{t('admin.common.roleReception')}</option>
+            <option value="housekeeper">{t('admin.common.roleHousekeeper')}</option>
+            <option value="manager">{t('admin.common.roleManager')}</option>
+            <option value="admin">{t('admin.common.roleAdmin')}</option>
           </select>
         </Field>
       </div>
 
-      <Field label="รหัสผ่านเริ่มต้น (≥ 8 ตัวอักษร)" required>
+      <Field label={t('admin.staffPage.initialPassword')} required>
         <input
           name="password"
           type="text"
-          placeholder="เช่น Welcome2026!"
+          placeholder={t('admin.staffPage.passwordPlaceholder')}
           required
           minLength={8}
           maxLength={72}
@@ -234,6 +237,7 @@ function FormActions({
   isPending: boolean
   onCancel: () => void
 }) {
+  const t = useT()
   return (
     <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
       <button
@@ -242,7 +246,7 @@ function FormActions({
         disabled={isPending}
         className="flex-1 inline-flex items-center justify-center px-6 py-3 border border-outline-variant rounded-lg text-label-md uppercase tracking-wider text-primary hover:bg-primary-fixed hover:border-primary-fixed transition-colors disabled:opacity-50"
       >
-        ยกเลิก
+        {t('admin.common.cancel')}
       </button>
       <button
         type="submit"
@@ -252,12 +256,12 @@ function FormActions({
         {isPending ? (
           <>
             <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-            กำลังเพิ่มพนักงาน…
+            {t('admin.staffPage.adding')}
           </>
         ) : (
           <>
             <MaterialIcon name="person_add" size={18} />
-            เพิ่มพนักงาน
+            {t('admin.staffPage.add')}
           </>
         )}
       </button>

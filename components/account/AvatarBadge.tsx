@@ -1,4 +1,7 @@
+'use client'
+
 import { r2Url } from '@/lib/r2/publicUrl'
+import { useT } from '@/lib/i18n/useT'
 
 interface AvatarBadgeProps {
   avatarKey: string | null
@@ -24,6 +27,7 @@ export function AvatarBadge({
   size = 20,
   className = '',
 }: AvatarBadgeProps) {
+  const t = useT()
   const url = r2Url(avatarKey)
   return (
     <div
@@ -34,7 +38,7 @@ export function AvatarBadge({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={url}
-          alt={`รูปโปรไฟล์ของ ${fullName}`}
+          alt={t('profile.avatarAlt', { name: fullName })}
           className="w-full h-full object-cover"
         />
       ) : (

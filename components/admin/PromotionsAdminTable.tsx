@@ -11,6 +11,7 @@ import { TogglePromotionButton } from '@/components/manager/TogglePromotionButto
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { deletePromotionAction } from '@/app/actions/promotions'
+import { useT } from '@/lib/i18n/useT'
 
 interface PromotionsAdminTableProps {
   promotions: Promotion[]
@@ -26,6 +27,7 @@ function isUpcoming(p: Promotion, now: Date): boolean {
 }
 
 function DeleteButton({ id, code }: { id: string; code: string }) {
+  const t = useT()
   const [pending, startTransition] = useTransition()
   const [confirmMessage, setConfirmMessage] = useState<string | null>(null)
 
@@ -46,7 +48,7 @@ function DeleteButton({ id, code }: { id: string; code: string }) {
           // practice the CenterModal/ConfirmModal path runs first.
           void fd
           setConfirmMessage(
-            `ลบโปรโมชั่น "${code}"? การกระทำนี้ไม่สามารถยกเลิกได้`,
+            t('admin.promotions.deleteConfirm', { code }),
           )
         }}
         className="inline"
@@ -56,11 +58,11 @@ function DeleteButton({ id, code }: { id: string; code: string }) {
           type="button"
           onClick={() =>
             setConfirmMessage(
-              `ลบโปรโมชั่น "${code}"? การกระทำนี้ไม่สามารถยกเลิกได้`,
+              t('admin.promotions.deleteConfirm', { code }),
             )
           }
           disabled={pending}
-          title={`ลบ ${code}`}
+          title={t('admin.promotions.deleteTitle', { code })}
           className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-error hover:bg-error-container transition-colors disabled:opacity-60"
         >
           <MaterialIcon name="delete" size={18} />
@@ -71,7 +73,7 @@ function DeleteButton({ id, code }: { id: string; code: string }) {
           open
           body={confirmMessage}
           variant="danger"
-          okLabel="ลบ"
+          okLabel={t('admin.common.delete')}
           onCancel={() => setConfirmMessage(null)}
           onConfirm={handleConfirm}
         />
@@ -81,12 +83,13 @@ function DeleteButton({ id, code }: { id: string; code: string }) {
 }
 
 export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTableProps) {
+  const t = useT()
   const localeBcp = LOCALE_BCP47[useLocale()]
   if (promotions.length === 0) {
     return (
       <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-12 text-center">
         <MaterialIcon name="local_offer" size={48} className="text-on-surface-variant mb-3" />
-        <p className="text-body-lg text-on-surface-variant">ยังไม่มีโปรโมชั่น</p>
+        <p className="text-body-lg text-on-surface-variant">{t('admin.promotions.empty')}</p>
       </div>
     )
   }
@@ -97,14 +100,14 @@ export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTablePr
         <table className="w-full">
           <thead className="bg-surface-container-low border-b border-outline-variant">
             <tr className="text-label-md uppercase tracking-wider text-on-surface-variant">
-              <th className="text-left px-4 py-3 font-medium">โค้ด</th>
-              <th className="text-left px-4 py-3 font-medium">ชื่อ</th>
-              <th className="text-left px-4 py-3 font-medium">ส่วนลด</th>
-              <th className="text-left px-4 py-3 font-medium">ใช้ได้กับ</th>
-              <th className="text-left px-4 py-3 font-medium">คืนขั้นต่ำ</th>
-              <th className="text-left px-4 py-3 font-medium">ช่วงเวลา</th>
-              <th className="text-left px-4 py-3 font-medium">สถานะ</th>
-              <th className="text-right px-4 py-3 font-medium">จัดการ</th>
+              <th className="text-left px-4 py-3 font-medium">{t('admin.promotions.colCode')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('admin.promotions.colName')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('admin.promotions.colDiscount')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('admin.promotions.colAppliesTo')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('admin.promotions.colMinNights')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('admin.promotions.colPeriod')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('admin.common.status')}</th>
+              <th className="text-right px-4 py-3 font-medium">{t('admin.common.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant">
@@ -134,10 +137,10 @@ export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTablePr
                   <td className="px-4 py-4 text-caption text-on-surface-variant">
                     {p.applies_to_room_types && p.applies_to_room_types.length > 0
                       ? p.applies_to_room_types.join(', ')
-                      : 'ทั้งหมด'}
+                      : t('admin.common.all')}
                   </td>
                   <td className="px-4 py-4 text-body-md text-on-surface">
-                    {p.min_nights} คืน
+                    {t('admin.promotions.nights', { count: p.min_nights })}
                   </td>
                   <td className="px-4 py-4 text-caption text-on-surface-variant">
                     {formatDateRange(p.valid_from, p.valid_until, localeBcp)}
@@ -147,19 +150,19 @@ export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTablePr
                       {expired && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] uppercase tracking-wider font-semibold">
                           <MaterialIcon name="schedule" size={12} />
-                          หมดอายุ
+                          {t('admin.promotions.expired')}
                         </span>
                       )}
                       {upcoming && !expired && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] uppercase tracking-wider font-semibold">
                           <MaterialIcon name="event_upcoming" size={12} />
-                          เร็วๆ นี้
+                          {t('admin.promotions.upcoming')}
                         </span>
                       )}
                       {!p.is_active && !expired && !upcoming && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-[10px] uppercase tracking-wider font-semibold">
                           <MaterialIcon name="pause" size={12} />
-                          ปิดใช้งาน
+                          {t('admin.promotions.inactive')}
                         </span>
                       )}
                     </div>
@@ -169,7 +172,7 @@ export function PromotionsAdminTable({ promotions, now }: PromotionsAdminTablePr
                       <TogglePromotionButton promotionId={p.id} isActive={p.is_active} />
                       <Link
                         href={`/admin/promotions/${p.id}/edit`}
-                        title="แก้ไข"
+                        title={t('admin.common.edit')}
                         className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
                       >
                         <MaterialIcon name="edit" size={18} />

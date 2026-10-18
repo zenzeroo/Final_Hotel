@@ -1,81 +1,88 @@
 import { getReportsData } from '@/lib/data/manager'
-import { RevenueLineChart } from '@/components/manager/RevenueLineChart'
-import { OccupancyBarChart } from '@/components/manager/OccupancyBarChart'
-import { HorizontalBarChart } from '@/components/manager/HorizontalBarChart'
-import { ChannelsDonutChart } from '@/components/manager/ChannelsDonutChart'
-import { CancellationStatCard } from '@/components/manager/CancellationStatCard'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { defaultReportRange, parseReportRange } from '@/lib/dates'
+import type { ReportMetric } from '@/lib/data/types'
+import { ReportTrendChart } from '@/components/manager/ReportTrendChart'
+import { RankedBarChart } from '@/components/manager/RankedBarChart'
+import { ReportsDateRange } from '@/components/manager/ReportsDateRange'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
+import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ManagerReportsPage() {
-  const data = await getReportsData()
+const param = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
+
+const METRICS: readonly ReportMetric[] = ['revenue', 'bookings', 'adr', 'occupancy', 'cancellations']
+const parseMetric = (v: string | undefined): ReportMetric =>
+  METRICS.includes(v as ReportMetric) ? (v as ReportMetric) : 'revenue'
+
+// Range bounds are calendar dates — format at UTC so the server timezone
+// can never shift them by a day.
+const formatDay = (iso: string, locale: Locale) =>
+  new Intl.DateTimeFormat(LOCALE_BCP47[locale], {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+    calendar: 'gregory',
+  }).format(new Date(`${iso}T00:00:00Z`))
+
+export default async function ManagerReportsPage(props: PageProps<'/manager/reports'>) {
+  const locale = await getLocale()
+  const t = getT(locale)
+  const sp = await props.searchParams
+  const range = parseReportRange(param(sp.from), param(sp.to))
+  const data = await getReportsData(range)
+  const def = defaultReportRange()
+  const isDefault = range.from === def.from && range.to === def.to
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
-      <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
+      <header className="mb-8 flex items-end justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            รายงานและการวิเคราะห์
+            {t('manager.reportsPage.heading')}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            ภาพรวมผลงาน · 7 วันล่าสุด และเทียบปีก่อน
+            {formatDay(range.from, locale)} – {formatDay(range.to, locale)} ·{' '}
+            {t('manager.reportsPage.rangeDays', { count: range.days })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-outline text-body-md text-primary hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
-          >
-            <MaterialIcon name="picture_as_pdf" size={18} />
-            ส่งออก PDF
-          </button>
-          <a
-            href="/api/manager/reports/export"
-            download
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-secondary text-body-md font-semibold"
-          >
-            <MaterialIcon name="table_view" size={18} />
-            ส่งออก Excel
-          </a>
-        </div>
+        <ReportsDateRange from={range.from} to={range.to} isDefault={isDefault} />
       </header>
 
       <section className="mb-8">
-        <RevenueLineChart
-          data={data.dailyRevenue}
-          total={data.totalRevenue7d}
-          trendPct={data.totalRevenueTrendPct}
+        <ReportTrendChart
+          data={data.trend}
+          summary={data.trendSummary}
+          hasOccupancyLastYear={data.hasOccupancyLastYear}
+          granularity={range.granularity}
+          days={range.days}
+          initialMetric={parseMetric(param(sp.metric))}
+          cancellation={{
+            ratePct: data.cancellationRatePct,
+            trendPct: data.cancellationTrendPct,
+            totalBookings: data.totalBookings,
+          }}
         />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2">
-          <OccupancyBarChart data={data.occupancyYoY} />
-        </div>
-        <CancellationStatCard
-          ratePct={data.cancellationRatePct}
-          trendPct={data.cancellationTrendPct}
-          totalBookings={data.totalBookings7d}
-        />
-      </section>
-
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <HorizontalBarChart
-          title="ห้องที่ถูกจองมากที่สุด"
+      {/* Two columns — room names need the width to stay readable. */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <RankedBarChart
+          title={t('manager.reportsPage.mostBooked')}
           labels={data.mostBookedRooms.map((r) => r.name)}
           values={data.mostBookedRooms.map((r) => r.count)}
           format="count"
-          label="การจอง"
+          label={t('manager.reportsPage.bookingsLabel')}
         />
-        <HorizontalBarChart
-          title="ประเภทห้องที่มีรายได้สูงสุด"
+        <RankedBarChart
+          title={t('manager.reportsPage.topRevenue')}
           labels={data.highestRevenueRoomTypes.map((r) => r.name)}
           values={data.highestRevenueRoomTypes.map((r) => r.revenue)}
           format="thb"
-          label="รายได้"
+          label={t('manager.reportsPage.revenueLabel')}
         />
-        <ChannelsDonutChart channels={data.channels} />
       </section>
     </div>
   )

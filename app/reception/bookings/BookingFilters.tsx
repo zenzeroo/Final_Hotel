@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface BookingFiltersProps {
   initialStatus: string
@@ -10,14 +11,15 @@ interface BookingFiltersProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'all', label: 'ทั้งหมด' },
-  { value: 'confirmed', label: 'รอชำระ' },
-  { value: 'checked_in', label: 'เข้าพัก' },
-  { value: 'checked_out', label: 'เช็คเอาท์' },
-  { value: 'cancelled', label: 'ยกเลิก' },
+  { value: 'all', label: 'reception.bookingsPage.filterAll' },
+  { value: 'confirmed', label: 'reception.bookingsPage.filterUnpaid' },
+  { value: 'checked_in', label: 'reception.bookingsPage.filterCheckedIn' },
+  { value: 'checked_out', label: 'reception.bookingsPage.filterCheckedOut' },
+  { value: 'cancelled', label: 'reception.bookingsPage.filterCancelled' },
 ]
 
 export function BookingFilters({ initialStatus, initialSearch }: BookingFiltersProps) {
+  const t = useT()
   const router = useRouter()
   const params = useSearchParams()
   const [search, setSearch] = useState(initialSearch)
@@ -58,7 +60,7 @@ export function BookingFilters({ initialStatus, initialSearch }: BookingFiltersP
                   : 'bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
               }`}
             >
-              {opt.label}
+              {t(opt.label)}
             </button>
           )
         })}
@@ -76,7 +78,7 @@ export function BookingFilters({ initialStatus, initialSearch }: BookingFiltersP
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหารหัส / ชื่อ / อีเมล"
+            placeholder={t('reception.bookingsPage.searchPlaceholder')}
             className="bg-surface-container-low border border-outline-variant rounded-lg pl-10 pr-3 py-2 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors w-64"
           />
         </div>

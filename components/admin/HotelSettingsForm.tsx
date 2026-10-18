@@ -6,6 +6,9 @@ import type { HotelSettings } from '@/lib/data/types'
 import { updateHotelSettingsAction } from '@/app/actions/admin/settings'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatDateTime } from '@/lib/dates'
+import { useLocale } from '@/lib/i18n/useT'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { useT } from '@/lib/i18n/useT'
 
 interface HotelSettingsFormProps {
   settings: HotelSettings
@@ -40,6 +43,7 @@ const inputClass =
   'w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors'
 
 function SubmitButton() {
+  const t = useT()
   const { pending } = useFormStatus()
   return (
     <button
@@ -50,12 +54,12 @@ function SubmitButton() {
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-          กำลังบันทึก…
+          {t('admin.settingsPage.saving')}
         </>
       ) : (
         <>
           <MaterialIcon name="save" size={18} />
-          บันทึกการตั้งค่า
+          {t('admin.settingsPage.saveSettings')}
         </>
       )}
     </button>
@@ -63,6 +67,8 @@ function SubmitButton() {
 }
 
 export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
+  const t = useT()
+  const locale = useLocale()
   const wrapped = async (
     _state: FormState | null,
     formData: FormData,
@@ -84,12 +90,12 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
       {state?.success && (
         <div className="px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg text-body-md inline-flex items-center gap-2">
           <MaterialIcon name="check_circle" size={18} />
-          บันทึกการตั้งค่าเรียบร้อย
+          {t('admin.settingsPage.saveSuccess')}
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="ชื่อโรงแรม (EN)" required>
+        <Field label={t('admin.settingsPage.nameEn')} required>
           <input
             name="name"
             type="text"
@@ -100,19 +106,19 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
           />
         </Field>
 
-        <Field label="ชื่อโรงแรม (TH)">
+        <Field label={t('admin.settingsPage.nameTh')}>
           <input
             name="name_th"
             type="text"
             defaultValue={settings.name_th ?? ''}
             maxLength={120}
-            placeholder="โรงแรมเซนเซโร่"
+            placeholder={t('admin.settingsPage.nameThPlaceholder')}
             className={inputClass}
           />
         </Field>
       </div>
 
-      <Field label="ที่อยู่" required>
+      <Field label={t('admin.settingsPage.address')} required>
         <textarea
           name="address"
           defaultValue={settings.address}
@@ -124,7 +130,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
       </Field>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="เบอร์โทรศัพท์" required>
+        <Field label={t('admin.settingsPage.phone')} required>
           <input
             name="phone"
             type="tel"
@@ -143,7 +149,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
           />
         </Field>
 
-        <Field label="อีเมล" required>
+        <Field label={t('admin.settingsPage.email')} required>
           <input
             name="email"
             type="email"
@@ -155,7 +161,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Field label="อัตราภาษี (0–1)" required>
+        <Field label={t('admin.settingsPage.taxRate')} required>
           <input
             name="tax_rate"
             type="number"
@@ -168,7 +174,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
           />
         </Field>
 
-        <Field label="ค่าบริการรีสอร์ท (THB)" required>
+        <Field label={t('admin.settingsPage.resortFee')} required>
           <input
             name="resort_fee"
             type="number"
@@ -180,7 +186,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
           />
         </Field>
 
-        <Field label="สกุลเงิน" required>
+        <Field label={t('admin.settingsPage.currency')} required>
           <input
             name="currency"
             type="text"
@@ -193,7 +199,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Field label="เช็คอิน (HH:MM)" required>
+        <Field label={t('admin.settingsPage.checkIn')} required>
           <input
             name="check_in_time"
             type="time"
@@ -203,7 +209,7 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
           />
         </Field>
 
-        <Field label="เช็คเอาท์ (HH:MM)" required>
+        <Field label={t('admin.settingsPage.checkOut')} required>
           <input
             name="check_out_time"
             type="time"
@@ -213,20 +219,20 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
           />
         </Field>
 
-        <Field label="ภาษาเริ่มต้น" required>
+        <Field label={t('admin.settingsPage.localeDefault')} required>
           <select
             name="locale_default"
             defaultValue={settings.locale_default}
             required
             className={inputClass}
           >
-            <option value="th">ไทย (th)</option>
+            <option value="th">{t('admin.settingsPage.thai')}</option>
             <option value="en">English (en)</option>
           </select>
         </Field>
       </div>
 
-      <Field label="คีย์รูป Hero ใน R2">
+      <Field label={t('admin.settingsPage.heroKey')}>
         <input
           name="hero_image_key"
           type="text"
@@ -242,9 +248,8 @@ export function HotelSettingsForm({ settings }: HotelSettingsFormProps) {
       </div>
 
       <div className="text-caption text-on-surface-variant pt-4 border-t border-outline-variant">
-        อัปเดตล่าสุดเมื่อ{' '}
-        {formatDateTime(settings.updated_at)}
-        {settings.updated_by && ` (โดย ${settings.updated_by})`}
+        {t('admin.settingsPage.lastUpdated', { date: formatDateTime(settings.updated_at, LOCALE_BCP47[locale]) })}
+        {settings.updated_by && t('admin.settingsPage.updatedBy', { name: settings.updated_by })}
       </div>
     </form>
   )

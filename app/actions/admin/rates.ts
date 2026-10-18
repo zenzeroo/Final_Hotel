@@ -4,7 +4,15 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth/require'
 import { actionFail } from '@/lib/errors/supabase'
-import { createRoomType, updateRoomType, listRoomTypes } from '@/lib/data/rooms'
+import {
+  createRoomType,
+  updateRoomType,
+  isRoomTypeSlugTaken,
+  getAmenityCatalog,
+  createRoomUnit,
+  setRoomUnitActive,
+  SLUG_TAKEN_MESSAGE,
+} from '@/lib/data/rooms'
 import { createSeasonalRate } from '@/lib/data/manager'
 import {
   uploadImageToR2,
@@ -15,7 +23,7 @@ import {
 import { deleteObjectFromR2 } from '@/lib/r2/delete'
 import { createClient } from '@/lib/supabase/server'
 
-export type ActionResult = { ok: true } | { ok: false; error: string }
+export type ActionResult<T = void> = { ok: true; data?: T } | { ok: false; error: string }
 
 // =====================================================
 // Room type actions
@@ -32,23 +40,22 @@ const roomTypeSchema = z.object({
   view_label: z.string().max(80).nullable(),
   view_label_th: z.string().max(80).nullable(),
   type: z.enum(['Deluxe', 'Suite', 'Villa']),
+  bed_type: z.enum(['King', 'Queen', 'Twin']),
+  floor: z.number().int().min(1).max(50),
+  amenities: z
+    .array(z.string())
+    .refine((slugs) => slugs.every((s) => AMENITY_SLUGS.has(s)), 'Unknown amenity'),
   base_price: z.number().positive(),
   max_guests: z.number().int().min(1).max(20),
   size_sqm: z.number().positive(),
   is_active: z.boolean(),
 })
 
-/** Filter FormData entry collection down to actual `File` instances (skip empty placeholders). */
-function collectFiles(values: FormDataEntryValue[]): File[] {
-  return values.filter(
-    (v): v is File => v instanceof File && v.size > 0 && v.type.length > 0,
-  )
-}
+const AMENITY_SLUGS = new Set(getAmenityCatalog().map((a) => a.slug))
 
-export async function createRoomTypeAction(formData: FormData): Promise<ActionResult> {
-  await requireRole('admin', '/admin/rates')
-
-  const candidate = {
+/** Fields shared by the create + edit forms (images handled separately). */
+function readRoomTypeFields(formData: FormData) {
+  return {
     slug: String(formData.get('slug') ?? '').trim(),
     name: String(formData.get('name') ?? '').trim(),
     name_th: String(formData.get('name_th') ?? '').trim(),
@@ -59,72 +66,101 @@ export async function createRoomTypeAction(formData: FormData): Promise<ActionRe
     view_label: String(formData.get('view_label') ?? '').trim() || null,
     view_label_th: String(formData.get('view_label_th') ?? '').trim() || null,
     type: String(formData.get('type') ?? '') as 'Deluxe' | 'Suite' | 'Villa',
+    bed_type: String(formData.get('bed_type') ?? '') as 'King' | 'Queen' | 'Twin',
+    floor: Number(formData.get('floor') ?? 0),
+    amenities: formData.getAll('amenities').map(String),
     base_price: Number(formData.get('base_price') ?? 0),
     max_guests: Number(formData.get('max_guests') ?? 1),
     size_sqm: Number(formData.get('size_sqm') ?? 0),
     is_active: formData.get('is_active') === 'true',
   }
+}
 
-  const parsed = roomTypeSchema.safeParse(candidate)
+/** Filter FormData entry collection down to actual `File` instances (skip empty placeholders). */
+function collectFiles(values: FormDataEntryValue[]): File[] {
+  return values.filter(
+    (v): v is File => v instanceof File && v.size > 0 && v.type.length > 0,
+  )
+}
+
+export async function createRoomTypeAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  await requireRole('admin', '/admin/rates')
+
+  const parsed = roomTypeSchema.safeParse(readRoomTypeFields(formData))
   if (!parsed.success) {
     return { ok: false, error: 'Invalid input: ' + parsed.error.issues[0]?.message }
+  }
+
+  const heroFile = formData.get('hero_image_file')
+  if (!(heroFile instanceof File) || heroFile.size === 0 || heroFile.type.length === 0) return { ok: false, error: 'กรุณาอัปโหลดรูปหลัก (Hero)' }
+
+  // Check the slug before uploading anything, so a taken slug doesn't leave
+  // orphan images in R2.
+  try {
+    if (await isRoomTypeSlugTaken(parsed.data.slug)) return { ok: false, error: SLUG_TAKEN_MESSAGE }
+  } catch (e) {
+    return actionFail(e, 'Could not check slug')
   }
 
   // Upload hero + gallery files to R2 first — if upload fails we abort BEFORE
   // creating the room row (so we never end up with a room pointing at a half-uploaded
   // image set).
-  const heroFile = formData.get('hero_image_file')
   const galleryFiles = collectFiles(formData.getAll('gallery_image_files'))
-
   let hero_image_key = ''
   const gallery_keys: string[] = []
+  const uploaded: string[] = []
 
   try {
-    if (heroFile instanceof File && heroFile.size > 0 && heroFile.type.length > 0) {
-      const ext = pickExt(heroFile)
-      const key = roomImageKey(parsed.data.slug, 'hero', ext)
-      const result = await uploadImageToR2(heroFile, key)
-      hero_image_key = result.key
-    }
+    const heroKey = roomImageKey(parsed.data.slug, 'hero', pickExt(heroFile))
+    hero_image_key = (await uploadImageToR2(heroFile, heroKey)).key
+    uploaded.push(hero_image_key)
     for (const file of galleryFiles) {
-      const ext = pickExt(file)
-      const key = roomImageKey(parsed.data.slug, 'gallery', ext)
+      const key = roomImageKey(parsed.data.slug, 'gallery', pickExt(file))
       const result = await uploadImageToR2(file, key)
       gallery_keys.push(result.key)
+      uploaded.push(result.key)
     }
   } catch (e) {
+    await deleteUploaded(uploaded, 'createRoomTypeAction')
     if (e instanceof R2UploadError) return { ok: false, error: e.message }
     return actionFail(e, 'Image upload failed')
   }
 
-  const existing = await listRoomTypes({ isDeleted: false })
-  const createArgs = {
-    ...parsed.data,
-    bed_type: 'King' as const,
-    floor: existing.length > 0 ? Math.max(...existing.map((r) => r.floor)) + 1 : 1,
-    // Phase X — `type` now comes from parsed.data (user-picked via dropdown).
-    // Previously hardcoded to 'Deluxe'; now admin can pick Deluxe/Suite/Villa.
-    hero_image_key,
-    gallery_keys,
-    amenities: [] as string[],
-    rating_avg: 0,
-    rating_count: 0,
-    // Phase 32 — newly-created rooms default to non-deleted (active or inactive
-    // per the form's `is_active` checkbox; the toggle is independent of
-    // soft-delete which is only applied later via the admin tabbed view).
-    deleted_at: null as string | null,
-  }
-
+  let created
   try {
-    await createRoomType(createArgs)
+    created = await createRoomType({
+      ...parsed.data,
+      hero_image_key,
+      gallery_keys,
+      rating_avg: 0,
+      rating_count: 0,
+      // Phase 32 — new rows are never soft-deleted.
+      deleted_at: null,
+    })
   } catch (e) {
+    // The row was not created — the images uploaded above belong to nothing.
+    await deleteUploaded(uploaded, 'createRoomTypeAction')
     return actionFail(e, 'Could not create room type')
   }
 
   revalidatePath('/admin/rates')
+  revalidatePath('/admin/rates/room-types')
   revalidatePath('/manager/rates')
   revalidatePath('/rooms')
-  return { ok: true }
+  return { ok: true, data: { id: created.id } }
+}
+
+/** Best-effort R2 cleanup of keys uploaded by a request that then failed. */
+async function deleteUploaded(keys: string[], where: string) {
+  for (const key of keys) {
+    try {
+      await deleteObjectFromR2(key)
+    } catch (e) {
+      console.warn(`[${where}] R2 cleanup failed for key ${key}:`, e)
+    }
+  }
 }
 
 const roomTypeUpdateSchema = roomTypeSchema.partial().extend({
@@ -147,19 +183,7 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
 
   const candidate = {
     id: String(formData.get('id') ?? '').trim(),
-    slug: String(formData.get('slug') ?? '').trim(),
-    name: String(formData.get('name') ?? '').trim(),
-    name_th: String(formData.get('name_th') ?? '').trim(),
-    short_desc: String(formData.get('short_desc') ?? '').trim(),
-    short_desc_th: String(formData.get('short_desc_th') ?? '').trim() || null,
-    description: String(formData.get('description') ?? '').trim(),
-    description_th: String(formData.get('description_th') ?? '').trim() || null,
-    view_label: String(formData.get('view_label') ?? '').trim() || null,
-    view_label_th: String(formData.get('view_label_th') ?? '').trim() || null,
-    base_price: Number(formData.get('base_price') ?? 0),
-    max_guests: Number(formData.get('max_guests') ?? 1),
-    size_sqm: Number(formData.get('size_sqm') ?? 0),
-    is_active: formData.get('is_active') === 'true',
+    ...readRoomTypeFields(formData),
   }
 
   const parsed = roomTypeUpdateSchema.safeParse(candidate)
@@ -274,6 +298,7 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
   try {
     await updateRoomType({ id, patch })
   } catch (e) {
+    await deleteUploaded([...newHeroKeys, ...newGalleryKeys], 'updateRoomTypeAction')
     return actionFail(e, 'Could not update room type')
   }
 
@@ -434,6 +459,72 @@ export async function permanentlyDeleteRoomTypeAction(
   revalidatePath('/admin/rates')
   revalidatePath('/manager/rates')
   revalidatePath('/rooms')
+  return { ok: true }
+}
+
+// =====================================================
+// Physical room (room_units) actions
+// =====================================================
+
+const roomUnitSchema = z.object({
+  room_type_id: z.string().uuid('Invalid room type id'),
+  unit_label: z
+    .string()
+    .min(1, 'กรุณากรอกเลขห้อง')
+    .max(20)
+    .regex(/^[A-Za-z0-9-]+$/, 'เลขห้องใช้ได้เฉพาะตัวอักษรอังกฤษ ตัวเลข และ -'),
+  floor: z.number().int().min(1, 'ชั้นต้องอยู่ระหว่าง 1–50').max(50, 'ชั้นต้องอยู่ระหว่าง 1–50'),
+  view_label: z.string().max(80).nullable(),
+})
+
+// A unit change moves the sellable pool + the room grids.
+function revalidateUnitPages(roomTypeId: string) {
+  revalidatePath('/admin/rates/room-types')
+  revalidatePath(`/admin/rates/room-types/${roomTypeId}/edit`)
+  revalidatePath('/manager/rates')
+  revalidatePath('/manager/housekeeping')
+  revalidatePath('/reception/rooms')
+  revalidatePath('/rooms')
+}
+
+export async function createRoomUnitAction(formData: FormData): Promise<ActionResult> {
+  await requireRole('admin', '/admin/rates')
+  const parsed = roomUnitSchema.safeParse({
+    room_type_id: String(formData.get('room_type_id') ?? '').trim(),
+    unit_label: String(formData.get('unit_label') ?? '').trim(),
+    floor: Number(formData.get('floor') ?? 0),
+    view_label: String(formData.get('view_label') ?? '').trim() || null,
+  })
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+
+  try {
+    await createRoomUnit({
+      roomTypeId: parsed.data.room_type_id,
+      floor: parsed.data.floor,
+      unitLabel: parsed.data.unit_label,
+      viewLabel: parsed.data.view_label,
+    })
+  } catch (e) {
+    return actionFail(e, 'Could not add room')
+  }
+  revalidateUnitPages(parsed.data.room_type_id)
+  return { ok: true }
+}
+
+export async function setRoomUnitActiveAction(formData: FormData): Promise<ActionResult> {
+  await requireRole('admin', '/admin/rates')
+  const unitId = String(formData.get('unit_id') ?? '').trim()
+  const roomTypeId = String(formData.get('room_type_id') ?? '').trim()
+  const activeRaw = String(formData.get('is_active') ?? '')
+  if (!z.string().uuid().safeParse(unitId).success) return { ok: false, error: 'Invalid room id' }
+  if (activeRaw !== 'true' && activeRaw !== 'false') return { ok: false, error: 'Invalid is_active value' }
+
+  try {
+    await setRoomUnitActive({ unitId, active: activeRaw === 'true' })
+  } catch (e) {
+    return actionFail(e, activeRaw === 'true' ? 'Could not enable room' : 'Could not disable room')
+  }
+  revalidateUnitPages(roomTypeId)
   return { ok: true }
 }
 

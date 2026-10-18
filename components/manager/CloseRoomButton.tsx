@@ -1,19 +1,30 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import type { RoomUnitStatus } from '@/lib/data/types'
 import { closeRoomAction, reopenRoomAction } from '@/app/actions/rates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useToast } from '@/components/ui/Toast'
+import { isClosedStatus } from './roomStatusBuckets'
+import { useT } from '@/lib/i18n/useT'
 
 interface CloseRoomButtonProps {
   unitId: string
-  isClosed: boolean // true = currently maintenance / out_of_order (allow reopen)
+  status: RoomUnitStatus
 }
 
-export function CloseRoomButton({ unitId, isClosed }: CloseRoomButtonProps) {
+export function CloseRoomButton({ unitId, status }: CloseRoomButtonProps) {
+  const t = useT()
   const [pending, startTransition] = useTransition()
   const [confirmMessage, setConfirmMessage] = useState<string | null>(null)
-  const label = isClosed ? 'เปิดห้องใหม่' : 'ปิดห้อง'
+  const toast = useToast()
+
+  // A room with a guest in it can't be closed — the server refuses too.
+  if (status === 'occupied') return null
+
+  const isClosed = isClosedStatus(status)
+  const label = isClosed ? t('manager.roomsTable.reopen') : t('manager.roomsTable.close')
   const icon = isClosed ? 'check_circle' : 'build'
   const tone = isClosed
     ? 'text-primary hover:text-primary'
@@ -23,8 +34,8 @@ export function CloseRoomButton({ unitId, isClosed }: CloseRoomButtonProps) {
   function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault()
     const msg = isClosed
-      ? 'เปิดห้องนี้ให้แขกเข้าพักอีกครั้ง?'
-      : 'ปิดห้องนี้ — ห้องจะถูกตั้งเป็น "ซ่อมบำรุง" และไม่สามารถจองได้ ยืนยัน?'
+      ? t('manager.roomsTable.confirmReopen')
+      : t('manager.roomsTable.confirmClose')
     setConfirmMessage(msg)
   }
 
@@ -35,7 +46,10 @@ export function CloseRoomButton({ unitId, isClosed }: CloseRoomButtonProps) {
     const fd = new FormData()
     fd.set('unitId', unitId)
     startTransition(async () => {
-      await action(fd)
+      const result = await action(fd)
+      if (!result.ok) {
+        toast.error(result.error, { title: isClosed ? t('manager.roomsTable.reopenFailed') : t('manager.roomsTable.closeFailed') })
+      }
     })
   }
 
@@ -58,7 +72,7 @@ export function CloseRoomButton({ unitId, isClosed }: CloseRoomButtonProps) {
           onCancel={() => setConfirmMessage(null)}
           onConfirm={handleConfirm}
           variant={isClosed ? 'default' : 'danger'}
-          okLabel={isClosed ? 'เปิดห้อง' : 'ปิดห้อง'}
+          okLabel={isClosed ? t('manager.roomsTable.reopenOk') : t('manager.roomsTable.close')}
         />
       )}
     </>

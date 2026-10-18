@@ -6,6 +6,8 @@ import { HideReviewButton } from './HideReviewButton'
 import { UnhideReviewButton } from './UnhideReviewButton'
 import { DeleteReviewButton } from './DeleteReviewButton'
 import { formatDate, formatDateTime } from '@/lib/dates'
+import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
+import { getT } from '@/lib/i18n/t'
 
 interface ReviewRowProps {
   review: ReviewForModeration
@@ -13,12 +15,13 @@ interface ReviewRowProps {
   tab: 'pending' | 'approved' | 'hidden'
   /** Only admins see the delete button */
   isAdmin: boolean
+  locale: Locale
 }
 
 const STATUS_LABEL = {
-  pending: 'รออนุมัติ',
-  approved: 'อนุมัติแล้ว',
-  hidden: 'ซ่อนไว้',
+  pending: 'manager.reviewsPage.pending',
+  approved: 'manager.reviewsPage.approved',
+  hidden: 'manager.reviewsPage.hidden',
 } as const
 
 const STATUS_CLASS = {
@@ -27,7 +30,8 @@ const STATUS_CLASS = {
   hidden: 'bg-surface-variant text-on-surface-variant',
 } as const
 
-export function ReviewRow({ review, tab, isAdmin }: ReviewRowProps) {
+export function ReviewRow({ review, tab, isAdmin, locale }: ReviewRowProps) {
+  const t = getT(locale)
   return (
     <article className="bg-surface-container-lowest rounded-2xl shadow-level-1 border border-outline-variant p-5 flex flex-col gap-4">
       {/* Header */}
@@ -46,13 +50,13 @@ export function ReviewRow({ review, tab, isAdmin }: ReviewRowProps) {
             <span
               className={`inline-flex items-center px-2 py-0.5 rounded-full text-caption ${STATUS_CLASS[review.status]}`}
             >
-              {STATUS_LABEL[review.status]}
+              {t(STATUS_LABEL[review.status])}
             </span>
           </div>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <RatingStars value={review.rating} size={14} showValue={false} />
             <span className="text-caption text-on-surface-variant">
-              {formatDate(review.createdAt)}
+              {formatDate(review.createdAt, LOCALE_BCP47[locale])}
             </span>
             <span className="text-caption text-on-surface-variant inline-flex items-center gap-1">
               <MaterialIcon name="hotel" size={12} />
@@ -77,15 +81,17 @@ export function ReviewRow({ review, tab, isAdmin }: ReviewRowProps) {
           {review.body}
         </blockquote>
       ) : (
-        <p className="text-body-md text-on-surface-variant italic">— ไม่มีคำอธิบาย —</p>
+        <p className="text-body-md text-on-surface-variant italic">{t('manager.reviewsPage.noBody')}</p>
       )}
 
       {/* Audit trail */}
       {review.moderatedBy || review.moderatedAt ? (
         <p className="text-caption text-on-surface-variant border-t border-outline-variant pt-3">
-          ดำเนินการโดย {review.moderatedBy ?? '—'}{' '}
+          {t('manager.reviewsPage.moderatedBy', { name: review.moderatedBy ?? '—' })}{' '}
           {review.moderatedAt
-            ? `เมื่อ ${formatDateTime(review.moderatedAt)}`
+            ? t('manager.reviewsPage.moderatedAt', {
+                date: formatDateTime(review.moderatedAt, LOCALE_BCP47[locale]),
+              })
             : ''}
         </p>
       ) : null}

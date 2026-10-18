@@ -2,31 +2,36 @@ import { listRoomUnits, listSeasonalRates } from '@/lib/data/manager'
 import { RoomInventoryTable } from '@/components/manager/RoomInventoryTable'
 import { SeasonalRatesPreview } from '@/components/manager/SeasonalRatesPreview'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { roomBucket } from '@/components/manager/roomStatusBuckets'
+import { getTodayBangkok } from '@/lib/dates'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ManagerRatesPage() {
+  const locale = await getLocale()
+  const t = getT(locale)
   const [units, seasonalRates] = await Promise.all([
     listRoomUnits(),
     listSeasonalRates(),
   ])
 
-  const available = units.filter((u) => u.status === 'available').length
-  const occupied = units.filter((u) => u.status === 'occupied').length
-  const cleaning = units.filter((u) => u.status === 'cleaning').length
-  const closed = units.filter(
-    (u) => u.status === 'maintenance' || u.status === 'out_of_order',
-  ).length
+  const today = getTodayBangkok()
+  // Every one of the 9 statuses lands in exactly one card, so the cards sum to units.length.
+  const count = { available: 0, occupied: 0, cleaning: 0, closed: 0 }
+  for (const u of units) count[roomBucket(u.status)]++
+  const { available, occupied, cleaning, closed } = count
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            จัดการห้องและราคา
+            {t('manager.ratesPage.heading')}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            ปิด/เปิดห้องพักและดูช่วงลดราคา — การแก้ไขห้องและราคาทำได้ผ่าน Admin
+            {t('manager.ratesPage.subtitle')}
           </p>
         </div>
       </header>
@@ -36,10 +41,10 @@ export default async function ManagerRatesPage() {
         <MaterialIcon name="info" size={20} className="text-on-secondary-container shrink-0 mt-0.5" />
         <div>
           <p className="text-body-md text-on-secondary-container font-medium">
-            การแก้ไขห้องและราคาทำได้ผ่าน Admin เท่านั้น
+            {t('manager.ratesPage.adminOnlyTitle')}
           </p>
           <p className="text-caption text-on-secondary-container mt-0.5 opacity-80">
-            หน้านี้แสดงสถานะห้องพักและให้ปิด/เปิดห้องได้ — การเพิ่มประเภทห้องและแก้ราคาต้องทำผ่าน Admin Portal
+            {t('manager.ratesPage.adminOnlyBody')}
           </p>
         </div>
       </section>
@@ -49,7 +54,7 @@ export default async function ManagerRatesPage() {
         <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
           <div className="flex items-center justify-between mb-2">
             <p className="text-label-md uppercase tracking-wider text-on-surface-variant">
-              ว่าง
+              {t('manager.ratesPage.kpiAvailable')}
             </p>
             <MaterialIcon name="check_circle" size={18} className="text-primary" />
           </div>
@@ -58,7 +63,7 @@ export default async function ManagerRatesPage() {
         <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
           <div className="flex items-center justify-between mb-2">
             <p className="text-label-md uppercase tracking-wider text-on-surface-variant">
-              มีแขก
+              {t('manager.ratesPage.kpiOccupied')}
             </p>
             <MaterialIcon name="person" size={18} className="text-tertiary" />
           </div>
@@ -67,7 +72,7 @@ export default async function ManagerRatesPage() {
         <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
           <div className="flex items-center justify-between mb-2">
             <p className="text-label-md uppercase tracking-wider text-on-surface-variant">
-              ทำความสะอาด
+              {t('manager.ratesPage.kpiCleaning')}
             </p>
             <MaterialIcon name="cleaning_services" size={18} className="text-secondary" />
           </div>
@@ -76,7 +81,7 @@ export default async function ManagerRatesPage() {
         <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
           <div className="flex items-center justify-between mb-2">
             <p className="text-label-md uppercase tracking-wider text-on-surface-variant">
-              ปิดใช้งาน
+              {t('manager.ratesPage.kpiClosed')}
             </p>
             <MaterialIcon name="build" size={18} className="text-error" />
           </div>
@@ -86,16 +91,16 @@ export default async function ManagerRatesPage() {
 
       <section className="mb-12">
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          สถานะห้องพัก ({units.length} ห้อง)
+          {t('manager.ratesPage.roomStatusHeading', { count: units.length })}
         </h2>
-        <RoomInventoryTable units={units} />
+        <RoomInventoryTable units={units} rates={seasonalRates} today={today} locale={locale} />
       </section>
 
       <section className="mb-8">
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          ช่วงลดราคา
+          {t('manager.ratesPage.seasonalHeading')}
         </h2>
-        <SeasonalRatesPreview rates={seasonalRates} />
+        <SeasonalRatesPreview rates={seasonalRates} today={today} locale={locale} />
       </section>
     </div>
   )

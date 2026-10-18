@@ -7,6 +7,8 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { sanitizeNext } from '@/lib/auth/sanitize'
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
+import { getT } from '@/lib/i18n/t'
+import { getServerT } from '@/lib/i18n/server'
 import { isOver18 } from '@/lib/dates'
 
 // Sign-up schema — same phone regex used by BookingForm / WalkInForm /
@@ -117,7 +119,9 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
     const cookieStore = await cookies()
     const locale = toLocale(cookieStore.get(LOCALE_COOKIE)?.value)
     return {
-      error: 'ข้อมูลไม่ถูกต้อง: ' + translateZodIssues(parsed.error.issues, locale),
+      error: getT(locale)('actions.common.invalidInput', {
+        detail: translateZodIssues(parsed.error.issues, locale),
+      }),
     }
   }
   const formDataParsed = parsed.data
@@ -209,6 +213,7 @@ export async function signOut() {
  * `signInWithOAuth` itself fails before redirecting.
  */
 export async function signInWithGoogle(next: string): Promise<AuthState> {
+  const { locale } = await getServerT()
   const supabase = await createClient()
   const safeNext = sanitizeNext(next)
   const origin = await getOrigin()
@@ -241,7 +246,7 @@ export async function signInWithGoogle(next: string): Promise<AuthState> {
           'Supabase Dashboard → Authentication → Providers → Google',
       }
     }
-    return { error: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้: ' + translateSupabaseError(error.message) }
+    return { error: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้: ' + translateSupabaseError(error.message, locale) }
   }
   if (!data?.url) {
     return { error: 'ไม่ได้รับ URL จาก Google — กรุณาลองใหม่อีกครั้ง' }

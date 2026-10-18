@@ -214,12 +214,26 @@ export interface WorkHistoryData {
 // =====================================================
 export type DashboardAlertSeverity = 'critical' | 'warning' | 'info'
 
+/** Phase 54 — one aggregated alert per kind; text is localized at render. */
+export type DashboardAlertKind =
+  | 'maintenanceCritical'
+  | 'damageUrgent'
+  | 'refundsPending'
+  | 'noHousekeeperOnShift'
+  | 'orphanDirtyRooms'
+  | 'unassignedTasks'
+  | 'reviewsPending'
+
 export interface DashboardAlert {
   id: string
   severity: DashboardAlertSeverity
-  title: string
-  description: string
-  cta?: { label: string; href?: string }
+  kind: DashboardAlertKind
+  count: number
+  /** Room labels involved (rendered up to 5 + "+N"). */
+  rooms?: string[]
+  /** THB amount (refunds). */
+  amount?: number
+  href: string
 }
 
 export interface RevenueBarPoint {
@@ -229,8 +243,10 @@ export interface RevenueBarPoint {
 }
 
 export interface ManagerDashboardStats {
+  /** Phase 54 — paid bookings (paid + partial_refund) created today (Bangkok). */
   revenueToday: number
-  revenueTrendPct: number
+  /** Day-over-day %; `null` when yesterday had no revenue (no baseline). */
+  revenueTrendPct: number | null
   occupancyRatePct: number
   checkInsToday: number
   checkOutsToday: number
@@ -238,6 +254,7 @@ export interface ManagerDashboardStats {
   webBookings: number
   walkInBookings: number
   revenue7d: RevenueBarPoint[]
+  revenue30d: RevenueBarPoint[]
   alerts: DashboardAlert[]
 }
 
@@ -254,22 +271,22 @@ export interface RoomStatusCell {
 
 export interface FloorStatusGroup {
   floor: number
-  label: string
   assignedTo: string | null
   rooms: RoomStatusCell[]
 }
 
 export interface FloorAssignment {
   floor: number
-  label: string
   totalRooms: number
+  /** Phase 54 — not-yet-started tasks on this floor (unassigned + assigned). */
+  pendingTasks: number
   housekeeperId: string | null
   housekeeperName: string | null
 }
 
 export interface UnassignedTask {
   id: string
-  title: string
+  taskType: HousekeepingTaskType
   roomNumber: string
   requestedAt: string
   urgent: boolean
@@ -296,6 +313,39 @@ export interface AssignedTaskCard {
   estimatedMinutes?: number | null
   /** Phase 30: earliest future check-in for the room (urgency pill). */
   nextCheckIn?: string | null
+}
+
+/** Phase 54 — one task row on the manager's housekeeper detail page. */
+export interface HousekeeperDetailTask {
+  id: string
+  roomNumber: string
+  floor: number
+  roomTypeName: string
+  roomTypeNameTh: string | null
+  taskType: HousekeepingTaskType
+  priority: HousekeepingTaskPriority
+  status: HousekeepingTaskStatus
+  createdAt: string
+  startedAt: string | null
+  completedAt: string | null
+  estimatedMinutes: number | null
+  nextCheckIn: string | null
+  notes: string | null
+}
+
+/** Phase 54 — `/manager/housekeeping/staff/[id]`. */
+export interface HousekeeperDetail {
+  id: string
+  fullName: string
+  shiftPosition: ShiftPosition | null
+  isOnShift: boolean
+  floors: number[]
+  /** Σ estimated minutes of open tasks. */
+  loadMinutes: number
+  /** assigned + in_progress, sorted: in progress → priority → next check-in. */
+  openTasks: HousekeeperDetailTask[]
+  /** Completed today (Bangkok day), newest first. */
+  completedToday: HousekeeperDetailTask[]
 }
 
 export interface HousekeeperCard {
@@ -341,9 +391,15 @@ export interface DamageReport {
 
 export interface HousekeepingOverviewData {
   totalRooms: number
-  dirtyCount: number
-  cleaningCount: number
-  inspectedCount: number
+  /** Phase 54 — KPI buckets by room_units.status (the floor grid keeps its
+   * binary dirty/clean view; these counts are the precise breakdown). */
+  dirtyCount: number          // waiting_cleaning, checkout, cleaning, inspection
+  outOfServiceCount: number   // maintenance, out_of_order
+  readyCount: number          // available, ready
+  occupiedCount: number       // occupied
+  /** Phase 54 — dirty rooms with no active housekeeping task (invisible to
+   * auto-allocation until a task is created). */
+  orphanDirtyRooms: { id: string; unitLabel: string }[]
   floors: FloorStatusGroup[]
   floorAssignments: FloorAssignment[]
   unassignedTasks: UnassignedTask[]
@@ -415,10 +471,19 @@ export interface BookingsOversightData {
 // =====================================================
 // Manager types — Reports & Analytics
 // =====================================================
-export interface OccupancyMonthPoint {
-  month: string
-  last: number // last year %
-  current: number // current year %
+/** Date window of /manager/reports (Bangkok calendar days, both inclusive). */
+export interface ReportRange {
+  from: string // YYYY-MM-DD
+  to: string // YYYY-MM-DD
+  days: number
+  /** ≤ 31 days → one bar per day; longer → one bar per month. */
+  granularity: 'day' | 'month'
+}
+
+export interface OccupancyPoint {
+  period: string // YYYY-MM-DD (day) or YYYY-MM (month)
+  last: number | null // same period last year % (null when there is no last-year data)
+  current: number // %
 }
 
 export interface RankedRoom {
@@ -437,15 +502,38 @@ export interface ChannelSlice {
   color: string
 }
 
+/** Metrics the reports main chart can switch between. */
+export type ReportMetric = 'revenue' | 'bookings' | 'adr' | 'occupancy' | 'cancellations'
+
+/** One bucket (day or month) of every switchable metric on the reports main chart. */
+export interface ReportTrendPoint {
+  period: string // YYYY-MM-DD (day) or YYYY-MM (month)
+  label: string
+  revenue: number // paid revenue, by check-in
+  bookings: number // staying bookings, by check-in
+  adr: number // paid revenue ÷ paid room-nights, by check-in (whole baht)
+  occupancy: number // %
+  occupancyLast: number | null // same period last year % (null when last year has no data)
+  cancellations: number // cancelled bookings, by created_at (Bangkok)
+}
+
 export interface ReportsData {
-  totalRevenue7d: number
+  range: ReportRange
+  /** Per-bucket series for the main chart's metric dropdown. */
+  trend: ReportTrendPoint[]
+  /** Whole-range summary shown in the main chart header, per metric. */
+  trendSummary: Record<ReportMetric, number>
+  /** Whether `trend[].occupancyLast` carries last-year data. */
+  hasOccupancyLastYear: boolean
+  totalRevenue: number
   totalRevenueTrendPct: number
-  dailyRevenue: RevenueBarPoint[]
-  occupancyYoY: OccupancyMonthPoint[]
+  /** One point per day or per month, depending on `range.granularity`. */
+  revenue: RevenueBarPoint[]
+  occupancy: OccupancyPoint[]
   mostBookedRooms: RankedRoom[]
   highestRevenueRoomTypes: RankedRoomTypeRevenue[]
   channels: ChannelSlice[]
-  totalBookings7d: number
+  totalBookings: number
   cancellationRatePct: number
   cancellationTrendPct: number
 }
@@ -606,6 +694,14 @@ export interface ShiftSlot {
   staffId: string
   date: string // YYYY-MM-DD
   position: ShiftPosition
+}
+
+/** Phase 54 — a 7-day shift window. `dates` always has 7 entries so the
+ * schedule renders full columns even when no shifts exist yet. */
+export interface ShiftWeek {
+  weekStart: string // YYYY-MM-DD
+  dates: string[]
+  slots: ShiftSlot[]
 }
 
 export interface HotelSettings {

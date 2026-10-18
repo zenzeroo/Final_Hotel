@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom'
 import type { StaffMember } from '@/lib/data/types'
 import { updateStaffAction } from '@/app/actions/admin/staff'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface StaffFormProps {
   staff: StaffMember
@@ -40,6 +41,7 @@ const inputClass =
   'w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors'
 
 function SubmitButton() {
+  const t = useT()
   const { pending } = useFormStatus()
   return (
     <button
@@ -50,23 +52,25 @@ function SubmitButton() {
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-          กำลังบันทึก…
+          {t('admin.common.saving')}
         </>
       ) : (
-        'บันทึกการแก้ไข'
+        t('admin.common.saveChanges')
       )}
     </button>
   )
 }
 
+// Dictionary keys.
 const ROLE_LABEL: Record<StaffMember['role'], string> = {
-  reception: 'พนักงานต้อนรับ',
-  housekeeper: 'พนักงานทำความสะอาด',
-  manager: 'ผู้จัดการ',
-  admin: 'ผู้ดูแลระบบ',
+  reception: 'admin.common.roleReception',
+  housekeeper: 'admin.common.roleHousekeeper',
+  manager: 'admin.common.roleManager',
+  admin: 'admin.common.roleAdmin',
 }
 
 export function StaffForm({ staff, isSelf }: StaffFormProps) {
+  const t = useT()
   const wrapped = async (
     _state: FormState | null,
     formData: FormData,
@@ -88,14 +92,14 @@ export function StaffForm({ staff, isSelf }: StaffFormProps) {
       {state?.success && (
         <div className="px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg text-body-md inline-flex items-center gap-2">
           <MaterialIcon name="check_circle" size={18} />
-          บันทึกสำเร็จ
+          {t('admin.common.saved')}
         </div>
       )}
 
       <input type="hidden" name="id" value={staff.id} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="ชื่อ-นามสกุล" required>
+        <Field label={t('admin.common.fullName')} required>
           <input
             name="full_name"
             type="text"
@@ -106,7 +110,7 @@ export function StaffForm({ staff, isSelf }: StaffFormProps) {
           />
         </Field>
 
-        <Field label="อีเมล (อ่านอย่างเดียว)">
+        <Field label={t('admin.staffPage.emailReadOnly')}>
           <input
             type="email"
             value={staff.email}
@@ -117,7 +121,7 @@ export function StaffForm({ staff, isSelf }: StaffFormProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="เบอร์โทร" required>
+        <Field label={t('admin.common.phone')} required>
           <input
             name="phone"
             type="tel"
@@ -136,22 +140,22 @@ export function StaffForm({ staff, isSelf }: StaffFormProps) {
           />
         </Field>
 
-        <Field label="บทบาท" required>
+        <Field label={t('admin.common.role')} required>
           <select
             name="role"
             defaultValue={staff.role}
             disabled={isSelf}
             className={`${inputClass} ${isSelf ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
-            <option value="reception">{ROLE_LABEL.reception}</option>
-            <option value="housekeeper">{ROLE_LABEL.housekeeper}</option>
-            <option value="manager">{ROLE_LABEL.manager}</option>
-            <option value="admin">{ROLE_LABEL.admin}</option>
+            <option value="reception">{t(ROLE_LABEL.reception)}</option>
+            <option value="housekeeper">{t(ROLE_LABEL.housekeeper)}</option>
+            <option value="manager">{t(ROLE_LABEL.manager)}</option>
+            <option value="admin">{t(ROLE_LABEL.admin)}</option>
           </select>
         </Field>
       </div>
 
-      <Field label="สถานะ">
+      <Field label={t('admin.common.status')}>
         <label className="inline-flex items-center gap-2 mt-2">
           <input
             type="checkbox"
@@ -161,11 +165,11 @@ export function StaffForm({ staff, isSelf }: StaffFormProps) {
             disabled={isSelf}
             className="w-5 h-5 rounded border-outline-variant disabled:opacity-60"
           />
-          <span className="text-body-md text-on-surface">ใช้งานอยู่</span>
+          <span className="text-body-md text-on-surface">{t('admin.staffPage.activeNow')}</span>
         </label>
         {isSelf && (
           <p className="text-caption text-on-surface-variant mt-1">
-            ไม่สามารถเปลี่ยนบทบาทหรือปิดใช้งานบัญชีตัวเองได้
+            {t('admin.staffPage.selfNote')}
           </p>
         )}
       </Field>
@@ -176,7 +180,7 @@ export function StaffForm({ staff, isSelf }: StaffFormProps) {
           href="/admin/staff"
           className="inline-flex items-center justify-center px-6 py-3 bg-surface-container-low border border-outline-variant rounded-lg font-medium text-body-md hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
         >
-          ยกเลิก
+          {t('admin.common.cancel')}
         </a>
       </div>
     </form>

@@ -3,6 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface CheckInOutListSearchProps {
   /** Server-resolved initial search (URL ?q= or empty). */
@@ -27,6 +28,7 @@ interface CheckInOutListSearchProps {
  * user clears the input.
  */
 export function CheckInOutListSearch({ initialQuery }: CheckInOutListSearchProps) {
+  const t = useT()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -69,8 +71,8 @@ export function CheckInOutListSearch({ initialQuery }: CheckInOutListSearchProps
         type="search"
         value={query}
         onChange={(e) => handleChange(e.target.value)}
-        placeholder="ค้นหาชื่อ / รหัสการจอง / อีเมล"
-        aria-label="ค้นหารายการในหน้านี้"
+        placeholder={t('reception.checkInOutPage.searchPlaceholder')}
+        aria-label={t('reception.checkInOutPage.searchAria')}
         className="w-full bg-surface-container-low border border-outline-variant rounded-lg pl-10 pr-3 py-2 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
       />
     </div>

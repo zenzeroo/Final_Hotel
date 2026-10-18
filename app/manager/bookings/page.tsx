@@ -4,6 +4,8 @@ import { BookingsTable } from '@/components/manager/BookingsTable'
 import { RefundCard } from '@/components/manager/RefundCard'
 import { AuditLogTable } from '@/components/manager/AuditLogTable'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,15 +21,16 @@ export default async function ManagerBookingsPage(props: {
     ? ((searchParams.tab as Tab) ?? 'main')
     : 'main'
 
-  const data = await getBookingsOversight()
+  const [data, locale] = await Promise.all([getBookingsOversight(), getLocale()])
+  const t = getT(locale)
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-headline-md text-headline-md text-primary">ดูแลการจอง</h1>
+          <h1 className="font-headline-md text-headline-md text-primary">{t('manager.bookingsPage.heading')}</h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            ตรวจสอบการจอง คำขอคืนเงิน และกิจกรรมของเจ้าหน้าที่
+            {t('manager.bookingsPage.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -35,7 +38,7 @@ export default async function ManagerBookingsPage(props: {
             <MaterialIcon name="search" size={16} className="text-on-surface-variant" />
             <input
               type="search"
-              placeholder="ค้นหาการจอง..."
+              placeholder={t('manager.bookingsPage.searchPlaceholder')}
               className="bg-transparent text-body-md outline-none w-48"
             />
           </div>
@@ -45,7 +48,7 @@ export default async function ManagerBookingsPage(props: {
       <BookingsOversightTabs active={tab} refundCount={data.refundRequests.length} />
 
       {tab === 'main' ? (
-        <BookingsTable bookings={data.bookings} activeCount={data.activeCount} />
+        <BookingsTable bookings={data.bookings} activeCount={data.activeCount} locale={locale} />
       ) : null}
 
       {tab === 'refunds' ? (
@@ -53,7 +56,7 @@ export default async function ManagerBookingsPage(props: {
           {data.refundRequests.length === 0 ? (
             <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
               <p className="text-body-md text-on-surface-variant italic">
-                ไม่มีคำขอคืนเงินที่รอดำเนินการ
+                {t('manager.bookingsPage.noPendingRefunds')}
               </p>
             </div>
           ) : (
@@ -66,7 +69,7 @@ export default async function ManagerBookingsPage(props: {
         </section>
       ) : null}
 
-      {tab === 'audit' ? <AuditLogTable entries={data.auditLog} /> : null}
+      {tab === 'audit' ? <AuditLogTable entries={data.auditLog} locale={locale} /> : null}
     </div>
   )
 }

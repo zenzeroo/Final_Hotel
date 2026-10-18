@@ -25,6 +25,7 @@ import { env, hasPaymentGateway } from '@/lib/env'
 import { stripe } from '@/lib/payments/stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/resend'
+import { getRecipientLocale } from '@/lib/email/recipient-locale'
 
 export const dynamic = 'force-dynamic'
 
@@ -172,15 +173,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             // Notify the customer.
             if (booking.booker_email) {
               try {
-                const { RefundNoticeEmail } = await import(
+                const { RefundNoticeEmail, refundNoticeSubject } = await import(
                   '@/lib/email/templates/refund-notice'
                 )
+                const emailLocale = await getRecipientLocale({ bookingId })
                 const appUrl = env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
                 await sendEmail({
                   to: booking.booker_email,
                   template: 'refund_notice',
-                  subject: `[Zenzero] คืนเงินการจอง ${booking.booking_code}`,
+                  subject: refundNoticeSubject({ bookingCode: booking.booking_code, locale: emailLocale }),
                   react: RefundNoticeEmail({
+                    locale: emailLocale,
+                    auto: true,
                     bookingCode: booking.booking_code,
                     guestName: booking.booker_full_name ?? '',
                     refundAmount: Number(booking.total),
@@ -287,7 +291,7 @@ async function firePaymentReceipt(
   const admin = await createAdminClient()
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, booking_code, booker_email, booker_full_name, total, currency')
+    .select('id, user_id, booking_code, booker_email, booker_full_name, total, currency')
     .eq('id', bookingId)
     .single()
   if (!booking || !booking.booker_email) return
@@ -301,13 +305,15 @@ async function firePaymentReceipt(
     .maybeSingle()
   if (!payment) return
 
-  const { PaymentReceiptEmail } = await import('@/lib/email/templates/payment-receipt')
+  const { PaymentReceiptEmail, paymentReceiptSubject } = await import('@/lib/email/templates/payment-receipt')
+  const emailLocale = await getRecipientLocale({ userId: booking.user_id })
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   await sendEmail({
     to: booking.booker_email,
     template: 'payment_receipt',
-    subject: `[Zenzero] ใบเสร็จการจอง ${booking.booking_code}`,
+    subject: paymentReceiptSubject({ bookingCode: booking.booking_code, locale: emailLocale }),
     react: PaymentReceiptEmail({
+      locale: emailLocale,
       bookingCode: booking.booking_code,
       guestName: booking.booker_full_name ?? '',
       amount: Number(payment.amount),

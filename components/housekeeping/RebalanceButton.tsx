@@ -12,6 +12,7 @@ import { useState, useTransition } from 'react'
 import { runAutoAllocation } from '@/app/actions/housekeeping'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { AlertModal } from '@/components/ui/AlertModal'
+import { useToast } from '@/components/ui/Toast'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useT } from '@/lib/i18n/useT'
 
@@ -24,7 +25,7 @@ export function RebalanceButton({ unassignedCount, availableHousekeepers }: Reba
   const t = useT()
   const [isPending, startTransition] = useTransition()
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const toast = useToast()
   const [successSummary, setSuccessSummary] = useState<{
     assigned: number
     skipped: number
@@ -60,7 +61,7 @@ export function RebalanceButton({ unassignedCount, availableHousekeepers }: Reba
           warnings: result.data.warnings,
         })
       } else if (!result.ok) {
-        setAlertMessage(result.error)
+        toast.error(result.error)
       }
     })
   }
@@ -84,7 +85,7 @@ export function RebalanceButton({ unassignedCount, availableHousekeepers }: Reba
           open
           body={t('manager.housekeepingPage.confirmRebalance', { count: unassignedCount }) as string}
           okLabel={t('manager.housekeepingPage.rebalance')}
-          cancelLabel={t('common.cancel') ?? 'ยกเลิก'}
+          cancelLabel={t('manager.housekeepingPage.cancel')}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={handleConfirm}
         />
@@ -109,9 +110,6 @@ export function RebalanceButton({ unassignedCount, availableHousekeepers }: Reba
         />
       )}
 
-      {alertMessage && (
-        <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
-      )}
     </>
   )
 }

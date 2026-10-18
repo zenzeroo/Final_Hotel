@@ -2,25 +2,30 @@ import Link from 'next/link'
 import { getRecentEvents } from '@/lib/data/staff'
 import { formatDateTime } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
+// `label` is a dictionary key (reception.historyPage.ev*).
 const EVENT_TYPE_META: Record<string, { label: string; color: string; icon: string }> = {
-  created: { label: 'สร้างการจอง', color: 'bg-primary/10 text-primary', icon: 'add_circle' },
-  confirmed: { label: 'ยืนยัน', color: 'bg-primary/10 text-primary', icon: 'verified' },
-  checked_in: { label: 'เช็คอิน', color: 'bg-secondary/20 text-secondary', icon: 'login' },
-  checked_out: { label: 'เช็คเอาท์', color: 'bg-surface-container text-on-surface-variant', icon: 'logout' },
-  cancelled: { label: 'ยกเลิก', color: 'bg-error/10 text-error', icon: 'cancel' },
-  paid: { label: 'ชำระเงิน', color: 'bg-primary/10 text-primary', icon: 'credit_card' },
-  note_added: { label: 'เพิ่มบันทึก', color: 'bg-surface-container text-on-surface-variant', icon: 'note_add' },
-  status_changed: { label: 'เปลี่ยนสถานะ', color: 'bg-surface-container text-on-surface-variant', icon: 'sync' },
+  created: { label: 'reception.historyPage.evCreated', color: 'bg-primary/10 text-primary', icon: 'add_circle' },
+  confirmed: { label: 'reception.historyPage.evConfirmed', color: 'bg-primary/10 text-primary', icon: 'verified' },
+  checked_in: { label: 'reception.historyPage.evCheckedIn', color: 'bg-secondary/20 text-secondary', icon: 'login' },
+  checked_out: { label: 'reception.historyPage.evCheckedOut', color: 'bg-surface-container text-on-surface-variant', icon: 'logout' },
+  cancelled: { label: 'reception.historyPage.evCancelled', color: 'bg-error/10 text-error', icon: 'cancel' },
+  paid: { label: 'reception.historyPage.evPaid', color: 'bg-primary/10 text-primary', icon: 'credit_card' },
+  note_added: { label: 'reception.historyPage.evNoteAdded', color: 'bg-surface-container text-on-surface-variant', icon: 'note_add' },
+  status_changed: { label: 'reception.historyPage.evStatusChanged', color: 'bg-surface-container text-on-surface-variant', icon: 'sync' },
 }
 
 const ROLE_LABEL: Record<string, string> = {
-  user: 'ลูกค้า',
-  reception: 'พนักงานต้อนรับ',
-  housekeeper: 'พนักงานทำความสะอาด',
-  admin: 'ผู้ดูแล',
+  user: 'reception.historyPage.roleUser',
+  reception: 'reception.historyPage.roleReception',
+  housekeeper: 'reception.historyPage.roleHousekeeper',
+  manager: 'reception.historyPage.roleManager',
+  admin: 'reception.historyPage.roleAdmin',
 }
 
 interface RecentEventRow {
@@ -33,23 +38,25 @@ interface RecentEventRow {
 }
 
 export default async function ActionHistoryPage() {
+  const locale = await getLocale()
+  const t = getT(locale)
   const events = await getRecentEvents(50)
 
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-primary">ประวัติการดำเนินการ</h1>
+        <h1 className="font-display text-3xl text-primary">{t('reception.historyPage.heading')}</h1>
         <p className="text-body-md text-on-surface-variant mt-1">
-          บันทึกกิจกรรมล่าสุดในระบบ · {events.length} รายการ
+          {t('reception.historyPage.subtitle', { count: events.length })}
         </p>
       </div>
 
       {events.length === 0 ? (
         <div className="text-center py-16 bg-surface-container-lowest rounded-2xl border border-outline-variant">
           <MaterialIcon name="history" size={48} className="text-outline-variant mx-auto mb-3" />
-          <p className="text-body-md text-on-surface-variant">ยังไม่มีประวัติการดำเนินการ</p>
+          <p className="text-body-md text-on-surface-variant">{t('reception.historyPage.empty')}</p>
           <p className="text-caption text-on-surface-variant mt-1">
-            เมื่อมีการจอง/เช็คอิน/เช็คเอาท์/ยกเลิก จะแสดงที่นี่
+            {t('reception.historyPage.emptyHint')}
           </p>
         </div>
       ) : (
@@ -74,10 +81,10 @@ export default async function ActionHistoryPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption font-semibold ${meta.color}`}>
-                        {meta.label}
+                        {t(meta.label)}
                       </span>
                       <span className="text-caption text-on-surface-variant">
-                        {formatDateTime(e.created_at)}
+                        {formatDateTime(e.created_at, LOCALE_BCP47[locale])}
                       </span>
                     </div>
                     <p className="text-body-md text-on-surface mt-1">{e.description}</p>
@@ -85,7 +92,7 @@ export default async function ActionHistoryPage() {
                       {e.actor?.[0] && (
                         <span className="inline-flex items-center gap-1.5">
                           <MaterialIcon name="person" size={14} />
-                          {e.actor[0].full_name} · {ROLE_LABEL[e.actor[0].role] ?? e.actor[0].role}
+                          {e.actor[0].full_name} · {ROLE_LABEL[e.actor[0].role] ? t(ROLE_LABEL[e.actor[0].role]) : e.actor[0].role}
                         </span>
                       )}
                       {e.booking_id && (

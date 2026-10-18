@@ -3,13 +3,14 @@
 import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Modal } from '@/components/ui/Modal'
-import { AlertModal } from '@/components/ui/AlertModal'
+import { useToast } from '@/components/ui/Toast'
 import { r2Url } from '@/lib/r2/publicUrl'
 import {
   addHeroSlideFromRoomTypeAction,
   addHeroSlideFromPromotionAction,
   addHeroSlideCustomAction,
 } from '@/app/actions/admin/hero-carousel'
+import { useT } from '@/lib/i18n/useT'
 
 interface RoomTypeOption {
   id: string
@@ -40,9 +41,10 @@ export function AddHeroSlideButton({
   usedRoomTypeIds,
   usedPromotionIds,
 }: AddHeroSlideButtonProps) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('room_type')
-  const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const toast = useToast()
   const [isPending, startTransition] = useTransition()
 
   function handleSuccess() {
@@ -55,11 +57,11 @@ export function AddHeroSlideButton({
         type="button"
         onClick={() => setOpen(true)}
         disabled={disabled}
-        title={disabled ? 'ถึงขีดจำกัด 8 สไลด์แล้ว — ปิดใช้งานหรือลบสไลด์อื่นก่อน' : undefined}
+        title={disabled ? t('admin.heroCarousel.limitReached') : undefined}
         className="inline-flex items-center gap-2 bg-primary text-on-primary rounded-lg px-4 py-2 hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <MaterialIcon name="add" size={18} />
-        <span className="text-label-md uppercase tracking-wider font-semibold">เพิ่มสไลด์</span>
+        <span className="text-label-md uppercase tracking-wider font-semibold">{t('admin.heroCarousel.addSlide')}</span>
       </button>
 
       <Modal
@@ -67,7 +69,7 @@ export function AddHeroSlideButton({
         onClose={() => {
           if (!isPending) setOpen(false)
         }}
-        title="เพิ่มสไลด์ใหม่"
+        title={t('admin.heroCarousel.addSlideTitle')}
         maxWidthClass="max-w-2xl"
         showCloseButton
         body={
@@ -75,19 +77,19 @@ export function AddHeroSlideButton({
             {/* Tab switcher */}
             <div className="flex items-center gap-2 border-b border-outline-variant">
               <TabButton
-                label="จากห้องพัก"
+                label={t('admin.heroCarousel.fromRoom')}
                 icon="hotel"
                 active={tab === 'room_type'}
                 onClick={() => setTab('room_type')}
               />
               <TabButton
-                label="จากโปรโมชั่น"
+                label={t('admin.heroCarousel.fromPromotion')}
                 icon="sell"
                 active={tab === 'promotion'}
                 onClick={() => setTab('promotion')}
               />
               <TabButton
-                label="อัปโหลดเอง"
+                label={t('admin.heroCarousel.upload')}
                 icon="upload"
                 active={tab === 'custom'}
                 onClick={() => setTab('custom')}
@@ -101,7 +103,7 @@ export function AddHeroSlideButton({
                 usedRoomTypeIds={usedRoomTypeIds}
                 isPending={isPending}
                 onAdded={handleSuccess}
-                onError={setAlertMessage}
+                onError={toast.error}
                 startTransition={startTransition}
               />
             )}
@@ -111,7 +113,7 @@ export function AddHeroSlideButton({
                 usedPromotionIds={usedPromotionIds}
                 isPending={isPending}
                 onAdded={handleSuccess}
-                onError={setAlertMessage}
+                onError={toast.error}
                 startTransition={startTransition}
               />
             )}
@@ -119,7 +121,7 @@ export function AddHeroSlideButton({
               <CustomUploadTab
                 isPending={isPending}
                 onAdded={handleSuccess}
-                onError={setAlertMessage}
+                onError={toast.error}
                 startTransition={startTransition}
               />
             )}
@@ -127,9 +129,6 @@ export function AddHeroSlideButton({
         }
       />
 
-      {alertMessage && (
-        <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
-      )}
     </>
   )
 }
@@ -180,10 +179,11 @@ function RoomTypePickerTab({
   onError: (msg: string) => void
   startTransition: (cb: () => Promise<void>) => void
 }) {
+  const t = useT()
   if (roomTypes.length === 0) {
     return (
       <p className="text-body-md text-on-surface-variant py-4">
-        ไม่มีห้องพักที่มีรูป Hero — เพิ่มรูป Hero ให้ห้องพักก่อน
+        {t('admin.heroCarousel.noRoomsWithHero')}
       </p>
     )
   }
@@ -192,7 +192,7 @@ function RoomTypePickerTab({
     startTransition(async () => {
       const result = await addHeroSlideFromRoomTypeAction({ roomTypeId })
       if (result.ok) onAdded()
-      else onError(result.error ?? 'ไม่สามารถเพิ่มสไลด์ได้')
+      else onError(result.error ?? t('admin.heroCarousel.addFailed'))
     })
   }
 
@@ -221,7 +221,7 @@ function RoomTypePickerTab({
             </div>
             {used && (
               <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-primary text-on-primary text-[10px] uppercase tracking-wider font-semibold">
-                ใช้แล้ว
+                {t('admin.heroCarousel.used')}
               </div>
             )}
           </button>
@@ -250,10 +250,11 @@ function PromotionPickerTab({
   onError: (msg: string) => void
   startTransition: (cb: () => Promise<void>) => void
 }) {
+  const t = useT()
   if (promotions.length === 0) {
     return (
       <p className="text-body-md text-on-surface-variant py-4">
-        ไม่มีโปรโมชั่นที่เปิดใช้งานและมีรูป — เพิ่มรูปให้โปรโมชั่นก่อน
+        {t('admin.heroCarousel.noPromotionsWithImage')}
       </p>
     )
   }
@@ -262,7 +263,7 @@ function PromotionPickerTab({
     startTransition(async () => {
       const result = await addHeroSlideFromPromotionAction({ promotionId })
       if (result.ok) onAdded()
-      else onError(result.error ?? 'ไม่สามารถเพิ่มสไลด์ได้')
+      else onError(result.error ?? t('admin.heroCarousel.addFailed'))
     })
   }
 
@@ -291,7 +292,7 @@ function PromotionPickerTab({
             </div>
             {used && (
               <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-primary text-on-primary text-[10px] uppercase tracking-wider font-semibold">
-                ใช้แล้ว
+                {t('admin.heroCarousel.used')}
               </div>
             )}
           </button>
@@ -316,13 +317,14 @@ function CustomUploadTab({
   onError: (msg: string) => void
   startTransition: (cb: () => Promise<void>) => void
 }) {
+  const t = useT()
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const form = e.currentTarget
     const fd = new FormData(form)
     const file = fd.get('customImage')
     if (!(file instanceof File) || file.size === 0) {
-      onError('กรุณาเลือกไฟล์รูปภาพ')
+      onError(t('admin.heroCarousel.chooseImage'))
       return
     }
     startTransition(async () => {
@@ -330,7 +332,7 @@ function CustomUploadTab({
       if (result.ok) {
         form.reset()
         onAdded()
-      } else onError(result.error ?? 'ไม่สามารถเพิ่มสไลด์ได้')
+      } else onError(result.error ?? t('admin.heroCarousel.addFailed'))
     })
   }
 
@@ -341,7 +343,7 @@ function CustomUploadTab({
     >
       <div className="flex flex-col gap-2">
         <label className="text-label-md text-on-surface" htmlFor="customImage">
-          รูปภาพ <span className="text-error">*</span>
+          {t('admin.heroCarousel.image')} <span className="text-error">*</span>
         </label>
         <input
           id="customImage"
@@ -355,21 +357,21 @@ function CustomUploadTab({
 
       <div className="flex flex-col gap-2">
         <label className="text-label-md text-on-surface" htmlFor="customCaptionTh">
-          คำบรรยาย (ภาษาไทย)
+          {t('admin.heroCarousel.captionTh')}
         </label>
         <input
           id="customCaptionTh"
           name="customCaptionTh"
           type="text"
           maxLength={500}
-          placeholder="เช่น ห้องพักใหม่เปิดให้บริการแล้ว"
+          placeholder={t('admin.heroCarousel.captionThPlaceholder')}
           className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
         />
       </div>
 
       <div className="flex flex-col gap-2">
         <label className="text-label-md text-on-surface" htmlFor="customCaption">
-          คำบรรยาย (English)
+          {t('admin.heroCarousel.captionEn')}
         </label>
         <input
           id="customCaption"
@@ -390,12 +392,12 @@ function CustomUploadTab({
           {isPending ? (
             <>
               <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-              กำลังอัปโหลด…
+              {t('admin.heroCarousel.uploading')}
             </>
           ) : (
             <>
               <MaterialIcon name="upload" size={18} />
-              อัปโหลดและเพิ่มสไลด์
+              {t('admin.heroCarousel.uploadAndAdd')}
             </>
           )}
         </button>

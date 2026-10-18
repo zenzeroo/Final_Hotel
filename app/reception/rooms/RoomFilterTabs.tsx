@@ -1,6 +1,7 @@
 'use client'
 
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface RoomFilterTabsProps {
   current: string
@@ -9,14 +10,15 @@ interface RoomFilterTabsProps {
 }
 
 const TABS = [
-  { value: 'all', label: 'ทั้งหมด' },
-  { value: 'available', label: 'ว่าง' },
-  { value: 'occupied', label: 'มีแขก' },
-  { value: 'cleaning', label: 'รอทำความสะอาด' },
-  { value: 'maintenance', label: 'ปรับปรุง' },
+  { value: 'all', label: 'reception.roomsPage.filterAll' },
+  { value: 'available', label: 'reception.roomsPage.statusAvailable' },
+  { value: 'occupied', label: 'reception.roomsPage.statusOccupied' },
+  { value: 'cleaning', label: 'reception.roomsPage.statusCleaning' },
+  { value: 'maintenance', label: 'reception.roomsPage.statusMaintenance' },
 ]
 
 export function RoomFilterTabs({ current, counts, statusMeta }: RoomFilterTabsProps) {
+  const t = useT()
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-1">
       {TABS.map((tab) => {
@@ -35,7 +37,7 @@ export function RoomFilterTabs({ current, counts, statusMeta }: RoomFilterTabsPr
             }`}
           >
             {meta && <MaterialIcon name={meta.icon} size={16} />}
-            {tab.label}
+            {t(tab.label)}
             <span className={`px-2 py-0.5 rounded-full text-caption ${isActive ? 'bg-secondary/20 text-secondary' : 'bg-surface-container text-on-surface-variant'}`}>
               {count}
             </span>

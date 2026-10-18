@@ -13,6 +13,7 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { DatePickerField } from '@/components/ui/DatePickerField'
 import { getTodayBangkok } from '@/lib/dates'
 import { r2Url } from '@/lib/r2/publicUrl'
+import { useT } from '@/lib/i18n/useT'
 
 interface PromotionFormProps {
   mode: 'create' | 'edit'
@@ -49,6 +50,7 @@ const inputClass =
   'w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors'
 
 function SubmitButton({ label }: { label: string }) {
+  const t = useT()
   const { pending } = useFormStatus()
   return (
     <button
@@ -59,7 +61,7 @@ function SubmitButton({ label }: { label: string }) {
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-          กำลังบันทึก…
+          {t('admin.common.saving')}
         </>
       ) : (
         label
@@ -69,6 +71,7 @@ function SubmitButton({ label }: { label: string }) {
 }
 
 export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) {
+  const t = useT()
   // Track valid_from so valid_until's `min` can follow it (otherwise
   // min would have to read the DOM element or be a fixed date).
   const [validFrom, setValidFrom] = useState<string>(initial?.valid_from ?? '')
@@ -106,7 +109,7 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
       {mode === 'edit' && initial && <input type="hidden" name="id" value={initial.id} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="โค้ด" required>
+        <Field label={t('admin.promotionForm.code')} required>
           <input
             name="code"
             type="text"
@@ -118,12 +121,12 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
           />
         </Field>
 
-        <Field label="ชื่อโปรโมชั่น" required>
+        <Field label={t('admin.promotionForm.name')} required>
           <input
             name="name"
             type="text"
             defaultValue={initial?.name ?? ''}
-            placeholder="ส่วนลดฤดูร้อน"
+            placeholder={t('admin.promotionForm.namePlaceholder')}
             required
             maxLength={120}
             className={inputClass}
@@ -131,13 +134,13 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
         </Field>
       </div>
 
-      <Field label="คำอธิบาย">
+      <Field label={t('admin.promotionForm.description')}>
         <textarea
           name="description"
           defaultValue={initial?.description ?? ''}
           rows={2}
           maxLength={500}
-          placeholder="ส่วนลดพิเศษสำหรับการจองล่วงหน้า"
+          placeholder={t('admin.promotionForm.descriptionPlaceholder')}
           className={inputClass}
         />
       </Field>
@@ -147,7 +150,7 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
           to keep the promotion text-only. */}
       <fieldset className="flex flex-col gap-3 border border-outline-variant rounded-2xl p-4">
         <legend className="text-caption text-on-surface-variant uppercase tracking-wider px-2 -ml-2">
-          รูป Hero สำหรับหน้าแรก
+          {t('admin.promotionForm.heroImage')}
         </legend>
 
         {/* Existing image preview */}
@@ -155,7 +158,7 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
           <div className="relative w-full max-w-md aspect-video rounded-xl overflow-hidden bg-surface-container">
             <Image
               src={r2Url(initial.image_key)}
-              alt="รูป Hero ปัจจุบัน"
+              alt={t('admin.promotionForm.currentHeroAlt')}
               fill
               sizes="(max-width: 768px) 100vw, 448px"
               className="object-cover"
@@ -163,7 +166,7 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
           </div>
         )}
 
-        <Field label={initial?.image_key && !removeImage ? 'อัปโหลดรูปใหม่ (จะแทนที่รูปเดิม)' : 'อัปโหลดรูป Hero'}>
+        <Field label={initial?.image_key && !removeImage ? t('admin.promotionForm.uploadReplace') : t('admin.promotionForm.uploadHero')}>
           <input
             name="image_file"
             type="file"
@@ -188,29 +191,29 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
               onChange={(e) => setRemoveImage(e.target.checked)}
               className="w-4 h-4 accent-error"
             />
-            <span className="text-body-md text-error">ลบรูป Hero นี้</span>
+            <span className="text-body-md text-error">{t('admin.promotionForm.removeHero')}</span>
           </label>
         )}
 
         <p className="text-caption text-on-surface-variant">
-          รูปนี้จะใช้ในแครูเซลหน้าแรกเมื่อแอดมินเลือกโปรโมชั่นนี้เป็นสไลด์ — ไม่บังคับ
+          {t('admin.promotionForm.heroHint')}
         </p>
       </fieldset>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Field label="ประเภทส่วนลด" required>
+        <Field label={t('admin.promotionForm.discountType')} required>
           <select
             name="discount_type"
             value={discountType}
             onChange={(e) => setDiscountType(e.target.value as 'percent' | 'flat')}
             className={inputClass}
           >
-            <option value="percent">เปอร์เซ็นต์ (%)</option>
-            <option value="flat">จำนวนเงิน (THB)</option>
+            <option value="percent">{t('admin.promotionForm.typePercent')}</option>
+            <option value="flat">{t('admin.promotionForm.typeFlat')}</option>
           </select>
         </Field>
 
-        <Field label={discountType === 'percent' ? 'จำนวนเปอร์เซ็นต์' : 'มูลค่า'} required>
+        <Field label={discountType === 'percent' ? t('admin.promotionForm.percentValue') : t('admin.promotionForm.flatValue')} required>
           <input
             name="discount_value"
             type="number"
@@ -223,20 +226,20 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
         </Field>
 
         {discountType === 'percent' && (
-          <Field label="ส่วนลดสูงสุด (บาท)">
+          <Field label={t('admin.promotionForm.maxDiscount')}>
             <input
               name="max_discount_amount"
               type="number"
               min="0"
               step="1"
               defaultValue={initial?.max_discount_amount ?? ''}
-              placeholder="เว้นว่างไว้ = ไม่จำกัด"
+              placeholder={t('admin.promotionForm.unlimitedPlaceholder')}
               className={inputClass}
             />
           </Field>
         )}
 
-        <Field label={discountType === 'flat' ? 'ราคารวมขั้นต่ำ (บาท)' : 'คืนขั้นต่ำ'} required>
+        <Field label={discountType === 'flat' ? t('admin.promotionForm.minTotal') : t('admin.promotionForm.minNights')} required>
           <input
             name="min_nights"
             type="number"
@@ -251,7 +254,7 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="วันเริ่มต้น" required>
+        <Field label={t('admin.common.startDate')} required>
           <DatePickerField
             name="valid_from"
             min={getTodayBangkok()}
@@ -261,7 +264,7 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
           />
         </Field>
 
-        <Field label="วันสิ้นสุด" required>
+        <Field label={t('admin.common.endDate')} required>
           <DatePickerField
             name="valid_until"
             min={validFrom || getTodayBangkok()}
@@ -273,10 +276,10 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
 
       <fieldset className="flex flex-col gap-2">
         <legend className="block text-caption text-on-surface-variant uppercase tracking-wider mb-1">
-          ใช้ได้กับห้องพัก
+          {t('admin.promotionForm.appliesTo')}
         </legend>
         <p className="text-caption text-on-surface-variant mb-2">
-          เว้นว่างไว้ = ใช้ได้กับทุกประเภทห้อง
+          {t('admin.promotionForm.appliesToHint')}
         </p>
         <div className="flex flex-wrap gap-3">
           {roomTypes.map((type) => (
@@ -299,7 +302,7 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
         </div>
       </fieldset>
 
-      <Field label="สถานะ">
+      <Field label={t('admin.common.status')}>
         <label className="inline-flex items-center gap-2 mt-2">
           <input
             type="checkbox"
@@ -308,24 +311,24 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
             defaultChecked={initial?.is_active ?? true}
             className="w-5 h-5 rounded border-outline-variant"
           />
-          <span className="text-body-md text-on-surface">เปิดใช้งานทันที</span>
+          <span className="text-body-md text-on-surface">{t('admin.promotionForm.activeNow')}</span>
         </label>
       </Field>
 
       <div className="flex items-center gap-3 pt-2">
-        <SubmitButton label={mode === 'create' ? 'สร้างโปรโมชั่น' : 'บันทึกการแก้ไข'} />
+        <SubmitButton label={mode === 'create' ? t('admin.promotionForm.create') : t('admin.common.saveChanges')} />
         <a
           href="/admin/promotions"
           className="inline-flex items-center justify-center px-6 py-3 bg-surface-container-low border border-outline-variant rounded-lg font-medium text-body-md hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
         >
-          ยกเลิก
+          {t('admin.common.cancel')}
         </a>
       </div>
 
       {state?.success && (
         <div className="inline-flex items-center gap-2 text-body-md text-secondary">
           <MaterialIcon name="check_circle" size={18} />
-          บันทึกสำเร็จ
+          {t('admin.common.saved')}
         </div>
       )}
     </form>

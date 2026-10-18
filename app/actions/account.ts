@@ -1,9 +1,11 @@
 'use server'
 
+import { getServerT } from '@/lib/i18n/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth/require'
 import { actionFail } from '@/lib/errors/supabase'
+import { localizeIssueMessage } from '@/lib/errors/translate'
 import { createClient } from '@/lib/supabase/server'
 import {
   updateOwnProfile,
@@ -30,19 +32,19 @@ const basePhoneSchema = z.object({
     .trim()
     .regex(
       /^(|0{10}|[0-9]{10})$/,
-      'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก หรือเว้นว่างไว้เพื่อขอความช่วยเหลือ',
+      'validation.phone10OrEmpty',
     ),
 })
 
 // User (customer) retains full edit on name + birthdate.
 const userFullSchema = basePhoneSchema.extend({
-  fullName: z.string().trim().min(1, 'กรุณากรอกชื่อ-นามสกุล').max(120),
+  fullName: z.string().trim().min(1, 'validation.fullNameRequired').max(120),
   birthdate: z
     .string()
     .trim()
     .refine(
       (v) => v === '' || /^\d{4}-\d{2}-\d{2}$/.test(v),
-      'วันเกิดต้องอยู่ในรูปแบบ YYYY-MM-DD',
+      'validation.birthdateFormat',
     ),
 })
 
@@ -50,6 +52,7 @@ export async function updateProfileAction(
   _state: AccountActionResult | null,
   formData: FormData,
 ): Promise<AccountActionResult> {
+  const { locale, t } = await getServerT()
   // Accept any authenticated user; the data layer enforces owner-only
   // access via RLS (profiles.id = auth.uid()). Profile pages gate the
   // role match via `app/[role]/layout.tsx` redirects.
@@ -76,7 +79,7 @@ export async function updateProfileAction(
   }
   const parsed = schema.safeParse(rawCandidate)
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' }
+    return { ok: false, error: localizeIssueMessage(parsed.error.issues[0]?.message ?? t('actions.common.invalidInputPlain'), locale) }
   }
 
   try {
@@ -112,7 +115,7 @@ export async function updateProfileAction(
     revalidatePath('/housekeeper/profile')
     return { ok: true }
   } catch (e) {
-    return actionFail(e, 'ไม่สามารถบันทึกข้อมูลส่วนตัวได้')
+    return actionFail(e, t('actions.account.saveProfileFailed'))
   }
 }
 
@@ -122,29 +125,30 @@ export async function updateProfileAction(
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, 'กรุณากรอกรหัสผ่านปัจจุบัน'),
+    currentPassword: z.string().min(1, 'validation.currentPasswordRequired'),
     newPassword: z
       .string()
-      .min(8, 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร')
-      .max(72, 'รหัสผ่านใหม่ต้องไม่เกิน 72 ตัวอักษร'),
+      .min(8, 'validation.newPasswordMin')
+      .max(72, 'validation.newPasswordMax'),
     confirmNewPassword: z.string(),
   })
   .refine((d) => d.newPassword === d.confirmNewPassword, {
     path: ['confirmNewPassword'],
-    message: 'รหัสผ่านใหม่และการยืนยันไม่ตรงกัน',
+    message: 'validation.passwordMismatch',
   })
 
 export async function changePasswordAction(
   _state: AccountActionResult | null,
   formData: FormData,
 ): Promise<AccountActionResult> {
+  const { locale, t } = await getServerT()
   const session = await requireRole(
     ['user', 'reception', 'housekeeper', 'manager', 'admin'],
     '/account/profile',
   )
   const email = session.email
   if (!email) {
-    return { ok: false, error: 'ไม่พบอีเมลของบัญชี กรุณาติดต่อผู้ดูแลระบบ' }
+    return { ok: false, error: t('actions.account.noAccountEmail') }
   }
 
   const parsed = changePasswordSchema.safeParse({
@@ -155,7 +159,7 @@ export async function changePasswordAction(
   if (!parsed.success) {
     return {
       ok: false,
-      error: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง',
+      error: localizeIssueMessage(parsed.error.issues[0]?.message ?? t('actions.common.invalidInputPlain'), locale),
     }
   }
 
@@ -169,7 +173,7 @@ export async function changePasswordAction(
     password: parsed.data.currentPassword,
   })
   if (signInError) {
-    return { ok: false, error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' }
+    return { ok: false, error: t('actions.account.wrongCurrentPassword') }
   }
 
   // Step 2 — actually change the password.
@@ -177,7 +181,7 @@ export async function changePasswordAction(
     password: parsed.data.newPassword,
   })
   if (updateError) {
-    return actionFail(updateError, 'ไม่สามารถเปลี่ยนรหัสผ่านได้')
+    return actionFail(updateError, t('actions.account.changePasswordFailed'))
   }
 
   revalidatePath('/', 'layout')
@@ -195,6 +199,7 @@ export async function uploadAvatarAction(
   _state: AccountActionResult<{ avatarKey: string }> | null,
   formData: FormData,
 ): Promise<AccountActionResult<{ avatarKey: string }>> {
+  const { t } = await getServerT()
   const session = await requireRole(
     ['user', 'reception', 'housekeeper', 'manager', 'admin'],
     '/account/profile',
@@ -202,13 +207,13 @@ export async function uploadAvatarAction(
 
   const file = formData.get('file')
   if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: 'กรุณาเลือกไฟล์รูปภาพ' }
+    return { ok: false, error: t('actions.account.chooseImage') }
   }
   if (file.size > MAX_AVATAR_BYTES) {
-    return { ok: false, error: 'ไฟล์ต้องมีขนาดไม่เกิน 2 MB' }
+    return { ok: false, error: t('actions.account.fileTooLarge') }
   }
   if (!ALLOWED_MIME.includes(file.type as (typeof ALLOWED_MIME)[number])) {
-    return { ok: false, error: 'รองรับเฉพาะไฟล์ JPEG, PNG, WebP เท่านั้น' }
+    return { ok: false, error: t('actions.account.imageTypes') }
   }
 
   // Build an avatar key scoped to the user. crypto.randomUUID() prevents
@@ -230,7 +235,7 @@ export async function uploadAvatarAction(
     })
     await uploadOwnAvatar(avatarKey)
   } catch (e) {
-    return actionFail(e, 'ไม่สามารถอัปโหลดรูปโปรไฟล์ได้')
+    return actionFail(e, t('actions.account.uploadAvatarFailed'))
   }
 
   revalidatePath('/', 'layout')

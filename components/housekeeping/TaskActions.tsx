@@ -3,9 +3,10 @@
 import { useState, useTransition } from 'react'
 import { startTask, completeTask } from '@/app/actions/housekeeping'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { AlertModal } from '@/components/ui/AlertModal'
+import { useToast } from '@/components/ui/Toast'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { HousekeepingTaskStatus } from '@/lib/data/types'
+import { useT } from '@/lib/i18n/useT'
 
 export function TaskActions({
   taskId,
@@ -14,16 +15,17 @@ export function TaskActions({
   taskId: string
   status: HousekeepingTaskStatus
 }) {
+  const t = useT()
   const [isPending, startTransition] = useTransition()
   const [confirmAction, setConfirmAction] = useState<'start' | 'complete' | null>(null)
-  const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const toast = useToast()
 
   if (status !== 'assigned' && status !== 'in_progress') return null
 
   function getConfirmMessage(action: 'start' | 'complete'): string {
     return action === 'start'
-      ? 'เริ่มงานนี้เลยไหม? สถานะห้องจะเปลี่ยนเป็นกำลังทำความสะอาด'
-      : 'บันทึกว่าเสร็จสิ้นเลยไหม? ห้องจะกลับเป็นสถานะว่าง'
+      ? t('staff.taskAction.confirmStart')
+      : t('staff.taskAction.confirmComplete')
   }
 
   function handleConfirm() {
@@ -33,7 +35,7 @@ export function TaskActions({
     startTransition(async () => {
       const fn = action === 'start' ? startTask : completeTask
       const result = await fn(taskId)
-      if (!result.ok) setAlertMessage(result.error)
+      if (!result.ok) toast.error(result.error)
     })
   }
 
@@ -47,7 +49,7 @@ export function TaskActions({
             className="px-3 py-1.5 bg-primary text-on-primary rounded-md text-caption uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-50 flex items-center gap-1"
           >
             <MaterialIcon name="play_arrow" size={16} />
-            เริ่ม
+            {t('staff.taskAction.start')}
           </button>
         )}
         {status === 'in_progress' && (
@@ -57,7 +59,7 @@ export function TaskActions({
             className="px-3 py-1.5 bg-secondary-container text-on-secondary-container rounded-md text-caption uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-50 flex items-center gap-1"
           >
             <MaterialIcon name="check" size={16} />
-            เสร็จสิ้น
+            {t('staff.taskAction.complete')}
           </button>
         )}
       </div>
@@ -65,13 +67,10 @@ export function TaskActions({
         <ConfirmModal
           open
           body={getConfirmMessage(confirmAction)}
-          okLabel={confirmAction === 'start' ? 'เริ่ม' : 'เสร็จสิ้น'}
+          okLabel={confirmAction === 'start' ? t('staff.taskAction.start') : t('staff.taskAction.complete')}
           onCancel={() => setConfirmAction(null)}
           onConfirm={handleConfirm}
         />
-      )}
-      {alertMessage && (
-        <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
       )}
     </>
   )

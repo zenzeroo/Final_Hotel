@@ -5,6 +5,9 @@ import { formatTHB } from '@/lib/pricing'
 import { formatDate } from '@/lib/dates'
 import { BookingRowActions } from './BookingRowActions'
 import type { StaffBooking } from '@/lib/data/staff'
+import { useLocale } from '@/lib/i18n/useT'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { useT } from '@/lib/i18n/useT'
 
 interface BookingTableRowProps {
   booking: StaffBooking
@@ -20,6 +23,8 @@ interface BookingTableRowProps {
 // not supported (no real <a> element). The eye icon button remains the
 // keyboard-accessible entry point for the detail page.
 export function BookingTableRow({ booking: b }: BookingTableRowProps) {
+  const t = useT()
+  const locale = useLocale()
   const router = useRouter()
   const detailUrl = `/reception/bookings/${b.id}`
 
@@ -38,12 +43,12 @@ export function BookingTableRow({ booking: b }: BookingTableRowProps) {
       <Td>
         <p className="text-body-md text-on-surface">{b.room_type?.name_th}</p>
         <p className="text-caption text-on-surface-variant">
-          {b.guests} ท่าน · {b.nights} คืน
+          {t('reception.bookingsPage.guestsNights', { guests: b.guests, nights: b.nights })}
         </p>
       </Td>
       <Td>
-        <p className="text-body-md text-on-surface">{formatDate(b.check_in)}</p>
-        <p className="text-caption text-on-surface-variant">→ {formatDate(b.check_out)}</p>
+        <p className="text-body-md text-on-surface">{formatDate(b.check_in, LOCALE_BCP47[locale])}</p>
+        <p className="text-caption text-on-surface-variant">→ {formatDate(b.check_out, LOCALE_BCP47[locale])}</p>
       </Td>
       <Td>
         <span
@@ -52,7 +57,7 @@ export function BookingTableRow({ booking: b }: BookingTableRowProps) {
             b.payment_status,
           )}`}
         >
-          {statusLabel(b.status, b.payment_status)}
+          {t(statusLabel(b.status, b.payment_status))}
         </span>
       </Td>
       <Td align="right">
@@ -92,12 +97,13 @@ function Td({
 }
 
 function statusLabel(status: string, paymentStatus: string) {
-  if (status === 'cancelled') return 'ยกเลิก'
-  if (status === 'checked_in') return 'เข้าพัก'
-  if (status === 'checked_out') return 'เช็คเอาท์'
-  if (paymentStatus === 'paid') return 'ชำระแล้ว'
-  if (status === 'confirmed') return 'รอชำระ'
-  return 'รอ'
+  // Returns a dictionary key.
+  if (status === 'cancelled') return 'reception.bookingsPage.filterCancelled'
+  if (status === 'checked_in') return 'reception.bookingsPage.filterCheckedIn'
+  if (status === 'checked_out') return 'reception.bookingsPage.filterCheckedOut'
+  if (paymentStatus === 'paid') return 'reception.bookingsPage.statusPaid'
+  if (status === 'confirmed') return 'reception.bookingsPage.filterUnpaid'
+  return 'reception.bookingsPage.statusPending'
 }
 
 function statusClass(status: string, paymentStatus: string) {

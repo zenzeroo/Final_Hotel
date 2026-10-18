@@ -3,7 +3,8 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import Image from 'next/image'
-import type { RoomType } from '@/lib/data/types'
+import { useRouter } from 'next/navigation'
+import type { Amenity, RoomType } from '@/lib/data/types'
 import {
   createRoomTypeAction,
   updateRoomTypeAction,
@@ -11,10 +12,13 @@ import {
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { r2Url } from '@/lib/r2/publicUrl'
 import { roomTypeLabel } from '@/lib/format/roomType'
+import { useT } from '@/lib/i18n/useT'
 
 interface RoomTypeFormProps {
   mode: 'create' | 'edit'
   initial?: RoomType
+  /** Every amenity the site can render — shown as checkboxes. */
+  amenityCatalog: Amenity[]
 }
 
 interface FormState {
@@ -46,6 +50,7 @@ const inputClass =
   'w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors'
 
 function SubmitButton({ label }: { label: string }) {
+  const t = useT()
   const { pending } = useFormStatus()
   return (
     <button
@@ -56,7 +61,7 @@ function SubmitButton({ label }: { label: string }) {
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-          กำลังบันทึก…
+          {t('admin.common.saving')}
         </>
       ) : (
         label
@@ -79,7 +84,8 @@ function SubmitButton({ label }: { label: string }) {
  * (Same policy as the previous `deleteRoomTypeImageAction` — just deferred
  * to form submit now.)
  */
-function RoomImagesSection({ initial }: { initial?: RoomType }) {
+function RoomImagesSection({ initial, requireHero }: { initial?: RoomType; requireHero: boolean }) {
+  const t = useT()
   const initialHero = initial?.hero_image_key ?? ''
   const initialGallery = useMemo(
     () => initial?.gallery_keys ?? [],
@@ -162,7 +168,7 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
     <div className="flex flex-col gap-4 p-4 bg-surface-container-low border border-outline-variant rounded-lg">
       <div className="flex items-center gap-2">
         <MaterialIcon name="photo_library" size={20} className="text-secondary" />
-        <span className="text-label-lg text-on-surface font-semibold">รูปภาพห้อง</span>
+        <span className="text-label-lg text-on-surface font-semibold">{t('admin.roomTypeForm.photos')}</span>
       </div>
 
       {initial?.id && (
@@ -182,7 +188,7 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
           <div className="flex items-center gap-2">
             <MaterialIcon name="delete_sweep" size={18} />
             <span>
-              รอลบ {pendingDeleteCount} รูป — กด &quot;บันทึกการแก้ไข&quot; เพื่อยืนยัน
+              {t('admin.roomTypeForm.pendingDeleteAll', { count: pendingDeleteCount })}
             </span>
           </div>
           <button
@@ -193,7 +199,7 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
             }}
             className="text-body-sm text-error underline hover:no-underline"
           >
-            ยกเลิกทั้งหมด
+            {t('admin.roomTypeForm.undoAll')}
           </button>
         </div>
       )}
@@ -201,10 +207,13 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
       {/* Hero */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className="text-label-md text-on-surface">รูป Hero (ภาพหลัก)</span>
+          <span className="text-label-md text-on-surface">
+            {t('admin.roomTypeForm.hero')}
+            {requireHero && <span className="text-error">*</span>}
+          </span>
           {pendingHeroDelete && (
             <span className="text-caption text-error uppercase tracking-wider font-semibold">
-              จะถูกลบ
+              {t('admin.roomTypeForm.willDelete')}
             </span>
           )}
         </div>
@@ -227,7 +236,7 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
                 type="button"
                 onClick={canDeleteHero ? toggleHeroDelete : undefined}
                 disabled={!canDeleteHero}
-                title={canDeleteHero ? 'คลิกเพื่อลบ hero (จะลบเมื่อกดบันทึก)' : 'ต้องมีรูปอื่นในระบบก่อนลบ hero'}
+                title={canDeleteHero ? t('admin.roomTypeForm.heroDeleteTitle') : t('admin.roomTypeForm.heroDeleteBlocked')}
                 className="absolute top-2 right-2 inline-flex items-center justify-center w-8 h-8 rounded-full bg-error text-on-error opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity disabled:cursor-not-allowed disabled:bg-on-surface-variant"
               >
                 <MaterialIcon name="close" size={18} />
@@ -237,11 +246,11 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
               <button
                 type="button"
                 onClick={toggleHeroDelete}
-                title="ยกเลิกการลบ hero"
+                title={t('admin.roomTypeForm.heroUndoTitle')}
                 className="absolute top-2 right-2 inline-flex items-center justify-center gap-2 px-3 h-9 rounded-full bg-primary text-on-primary font-semibold text-label-sm uppercase tracking-wider shadow-(--shadow-level-1)"
               >
                 <MaterialIcon name="undo" size={16} />
-                ยกเลิก
+                {t('admin.common.cancel')}
               </button>
             )}
           </div>
@@ -250,21 +259,22 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
           type="file"
           name="hero_image_file"
           accept="image/jpeg,image/png,image/webp"
+          required={requireHero}
           onChange={handleHeroChange}
           className="block w-full text-body-sm text-on-surface file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-secondary file:font-semibold file:cursor-pointer hover:file:bg-primary-container file:transition-colors"
         />
         <span className="text-body-sm text-on-surface-variant">
-          JPEG / PNG / WebP, สูงสุด 10 MB · อัปโหลดใหม่จะแทนที่รูปเดิม
+          {t('admin.roomTypeForm.uploadHint')}
         </span>
       </div>
 
       {/* Gallery */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className="text-label-md text-on-surface">รูป Gallery (เพิ่มได้หลายรูป)</span>
+          <span className="text-label-md text-on-surface">{t('admin.roomTypeForm.gallery')}</span>
           {deletedKeys.size > 0 && (
             <span className="text-caption text-error uppercase tracking-wider font-semibold">
-              รอลบ {deletedKeys.size} รูป
+              {t('admin.roomTypeForm.pendingDelete', { count: deletedKeys.size })}
             </span>
           )}
         </div>
@@ -272,7 +282,7 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
         {visibleGallery.length > 0 && (
           <div className="flex flex-col gap-1.5">
             <span className="text-body-sm text-on-surface-variant">
-              รูป Gallery ปัจจุบัน ({visibleGallery.length} รูป):
+              {t('admin.roomTypeForm.currentGallery', { count: visibleGallery.length })}
             </span>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
               {visibleGallery.map((key) => {
@@ -296,7 +306,7 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
                       <button
                         type="button"
                         onClick={() => toggleGalleryDelete(key)}
-                        title="คลิกเพื่อลบ (จะลบเมื่อกดบันทึก)"
+                        title={t('admin.roomTypeForm.deleteTitle')}
                         className="absolute top-1 right-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-error text-on-error opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                       >
                         <MaterialIcon name="close" size={14} />
@@ -306,12 +316,12 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
                       <button
                         type="button"
                         onClick={() => toggleGalleryDelete(key)}
-                        title="ยกเลิกการลบ"
+                        title={t('admin.roomTypeForm.undoTitle')}
                         className="absolute inset-0 inline-flex items-center justify-center bg-black/40"
                       >
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary text-on-primary text-label-sm font-semibold uppercase tracking-wider">
                           <MaterialIcon name="undo" size={14} />
-                          ยกเลิก
+                          {t('admin.common.cancel')}
                         </span>
                       </button>
                     )}
@@ -325,7 +335,7 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
         {galleryPreviews.length > 0 && (
           <div className="flex flex-col gap-1.5">
             <span className="text-body-sm text-on-surface-variant">
-              รูปใหม่ที่จะเพิ่ม ({galleryPreviews.length} รูป):
+              {t('admin.roomTypeForm.newPhotos', { count: galleryPreviews.length })}
             </span>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
               {galleryPreviews.map((url, i) => (
@@ -356,20 +366,28 @@ function RoomImagesSection({ initial }: { initial?: RoomType }) {
           className="block w-full text-body-sm text-on-surface file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-secondary file:font-semibold file:cursor-pointer hover:file:bg-primary-container file:transition-colors"
         />
         <span className="text-body-sm text-on-surface-variant">
-          รูปใหม่จะถูกเพิ่มต่อท้าย gallery เดิม (ไม่ลบรูปเก่า) · คลิก × ที่รูปเพื่อส่งลบ
+          {t('admin.roomTypeForm.galleryHint')}
         </span>
       </div>
     </div>
   )
 }
 
-export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
+export function RoomTypeForm({ mode, initial, amenityCatalog }: RoomTypeFormProps) {
+  const t = useT()
+  const router = useRouter()
   const wrapped = async (
     _state: FormState | null,
     formData: FormData,
   ): Promise<FormState> => {
-    const rawAction = mode === 'create' ? createRoomTypeAction : updateRoomTypeAction
-    const result = await rawAction(formData)
+    if (mode === 'create') {
+      const result = await createRoomTypeAction(formData)
+      if (!result.ok) return { error: result.error }
+      // Land on the edit page — that is where the physical rooms are added.
+      if (result.data) router.push(`/admin/rates/room-types/${result.data.id}/edit?created=1`)
+      return { success: true }
+    }
+    const result = await updateRoomTypeAction(formData)
     if (!result.ok) return { error: result.error }
     return { success: true }
   }
@@ -386,14 +404,14 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
       {state?.success && (
         <div className="px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg text-body-md inline-flex items-center gap-2">
           <MaterialIcon name="check_circle" size={18} />
-          บันทึกสำเร็จ
+          {t('admin.common.saved')}
         </div>
       )}
 
       {mode === 'edit' && initial && <input type="hidden" name="id" value={initial.id} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Slug (ใช้ใน URL)" required>
+        <Field label={t('admin.roomTypeForm.slug')} required>
           <input
             name="slug"
             type="text"
@@ -406,7 +424,7 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
           />
         </Field>
 
-        <Field label="ราคาฐาน (THB/คืน)" required>
+        <Field label={t('admin.roomTypeForm.basePrice')} required>
           <input
             name="base_price"
             type="number"
@@ -491,50 +509,50 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
             🌐
           </span>
           <h3 className="font-headline-sm text-headline-sm text-primary">
-            ภาษาไทย (ไม่บังคับ — เว้นว่างไว้ = ใช้ภาษาอังกฤษ)
+            {t('admin.roomTypeForm.thaiSection')}
           </h3>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="ชื่อห้อง">
+          <Field label={t('admin.roomTypeForm.nameTh')}>
             <input
               name="name_th"
               type="text"
               defaultValue={initial?.name_th ?? ''}
-              placeholder="ห้องดีลักซ์วิวสวน"
+              placeholder={t('admin.roomTypeForm.nameThPlaceholder')}
               maxLength={120}
               className={inputClass}
             />
           </Field>
 
-          <Field label="ป้ายวิว (ไม่บังคับ)">
+          <Field label={t('admin.roomTypeForm.viewTh')}>
             <input
               name="view_label_th"
               type="text"
               defaultValue={initial?.view_label_th ?? ''}
-              placeholder="วิวสวน"
+              placeholder={t('admin.roomTypeForm.viewThPlaceholder')}
               maxLength={80}
               className={inputClass}
             />
           </Field>
         </div>
 
-        <Field label="คำอธิบายสั้น">
+        <Field label={t('admin.roomTypeForm.shortDescTh')}>
           <input
             name="short_desc_th"
             type="text"
             defaultValue={initial?.short_desc_th ?? ''}
-            placeholder="เว้นว่างไว้ = ใช้ภาษาอังกฤษ"
+            placeholder={t('admin.roomTypeForm.fallbackPlaceholder')}
             maxLength={300}
             className={inputClass}
           />
         </Field>
 
-        <Field label="คำอธิบายเต็ม">
+        <Field label={t('admin.roomTypeForm.longDescTh')}>
           <textarea
             name="description_th"
             defaultValue={initial?.description_th ?? ''}
-            placeholder="เว้นว่างไว้ = ใช้ภาษาอังกฤษ"
+            placeholder={t('admin.roomTypeForm.fallbackPlaceholder')}
             maxLength={2000}
             rows={3}
             className={inputClass}
@@ -542,7 +560,7 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
         </Field>
       </section>
 
-      <RoomImagesSection initial={initial} />
+      <RoomImagesSection initial={initial} requireHero={mode === 'create'} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Tier dropdown — Deluxe / Suite / Villa.
@@ -550,7 +568,7 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
             Labels use the existing `roomTypeLabel(type, locale)` helper for
             bilingual display matching SeasonalRateForm's {rt.name} ({rt.name_th})
             pattern at components/admin/SeasonalRateForm.tsx:112. */}
-        <Field label="ประเภทห้อง" required>
+        <Field label={t('admin.roomTypeForm.tier')} required>
           <select
             name="type"
             required
@@ -558,7 +576,7 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
             className={inputClass}
           >
             <option value="" disabled>
-              — เลือกประเภทห้อง —
+              {t('admin.roomTypeForm.tierPlaceholder')}
             </option>
             {(['Deluxe', 'Suite', 'Villa'] as const).map((t) => (
               <option key={t} value={t}>
@@ -568,7 +586,33 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
           </select>
         </Field>
 
-        <Field label="ขนาดห้อง (ตร.ม.)" required>
+        <Field label={t('admin.roomTypeForm.bed')} required>
+          <select
+            name="bed_type"
+            required
+            defaultValue={initial?.bed_type ?? 'King'}
+            className={inputClass}
+          >
+            <option value="King">King</option>
+            <option value="Queen">Queen</option>
+            <option value="Twin">Twin</option>
+          </select>
+        </Field>
+
+        <Field label={t('admin.roomTypeForm.floor')} required>
+          <input
+            name="floor"
+            type="number"
+            min="1"
+            max="50"
+            step="1"
+            defaultValue={initial?.floor ?? 1}
+            required
+            className={inputClass}
+          />
+        </Field>
+
+        <Field label={t('admin.roomTypeForm.size')} required>
           <input
             name="size_sqm"
             type="number"
@@ -581,7 +625,7 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
         </Field>
       </div>
 
-      <Field label="จำนวนผู้เข้าพักสูงสุด" required>
+      <Field label={t('admin.roomTypeForm.maxGuests')} required>
         <input
           name="max_guests"
           type="number"
@@ -594,7 +638,26 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
         />
       </Field>
 
-      <Field label="สถานะ">
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-label-md text-on-surface mb-1">{t('admin.roomTypeForm.amenities')}</legend>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {amenityCatalog.map((a) => (
+            <label key={a.slug} className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="amenities"
+                value={a.slug}
+                defaultChecked={initial?.amenities.includes(a.slug) ?? false}
+                className="w-5 h-5 rounded border-outline-variant"
+              />
+              <MaterialIcon name={a.icon} size={18} className="text-on-surface-variant" />
+              <span className="text-body-md text-on-surface">{a.name_th}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <Field label={t('admin.common.status')}>
         <label className="inline-flex items-center gap-2 mt-2">
           <input
             type="checkbox"
@@ -603,17 +666,17 @@ export function RoomTypeForm({ mode, initial }: RoomTypeFormProps) {
             defaultChecked={initial?.is_active ?? true}
             className="w-5 h-5 rounded border-outline-variant"
           />
-          <span className="text-body-md text-on-surface">เปิดให้จอง</span>
+          <span className="text-body-md text-on-surface">{t('admin.roomTypeForm.bookable')}</span>
         </label>
       </Field>
 
       <div className="flex items-center gap-3 pt-2">
-        <SubmitButton label={mode === 'create' ? 'สร้างประเภทห้อง' : 'บันทึกการแก้ไข'} />
+        <SubmitButton label={mode === 'create' ? t('admin.roomTypeForm.create') : t('admin.common.saveChanges')} />
         <a
           href="/admin/rates/room-types"
           className="inline-flex items-center justify-center px-6 py-3 bg-surface-container-low border border-outline-variant rounded-lg font-medium text-body-md hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
         >
-          ยกเลิก
+          {t('admin.common.cancel')}
         </a>
       </div>
     </form>

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
-import { getTodayBangkok } from '@/lib/dates'
+import { getTodayBangkok, toBangkokIsoDate } from '@/lib/dates'
 import type {
   HousekeepingTask, MaintenanceReport, RoomUnitBasic,
   DashboardStats, WorkHistoryData, MaintenanceStatus, MaintenanceSeverity,
@@ -121,37 +121,57 @@ export async function getAllRoomUnits(): Promise<RoomUnitBasic[]> {
   return ((data ?? []) as unknown as RoomUnitBasic[])
 }
 
-export async function getMyWorkHistoryForUser(userId: string): Promise<WorkHistoryData> {
-  return computeHistory(userId)
+export async function getMyWorkHistoryForUser(
+  userId: string,
+  options?: { monthFrom?: string; monthToExclusive?: string },
+): Promise<WorkHistoryData> {
+  return computeHistory(userId, options)
 }
 
-async function computeHistory(userId: string | null): Promise<WorkHistoryData> {
+async function computeHistory(
+  userId: string | null,
+  options?: { monthFrom?: string; monthToExclusive?: string },
+): Promise<WorkHistoryData> {
   const supabase = await createClient()
-  let query = supabase.from('housekeeping_tasks').select(`
+
+  // Phase 53b — month-scoped query: optional range filter (inclusive
+  // lower, exclusive upper) drives `roomsCleaned` (exact count, not
+  // capped by the row limit) + `recentLog`.
+  let monthQuery = supabase.from('housekeeping_tasks').select(`
     id, task_type, priority, status, started_at, completed_at, room_unit_id,
     room_unit:room_units(id, floor, unit_label, view_label, status,
       room_type:room_types(id, name, name_th, hero_image_key))
-  `).eq('status', 'completed').order('completed_at', { ascending: false }).limit(200)
-  if (userId) query = query.eq('assigned_to', userId)
-  const { data, error } = await query
-  if (error) wrapSupabaseError('', error)
-  const completed = (data ?? []) as unknown as HousekeepingTask[]
+  `, { count: 'exact' }).eq('status', 'completed').order('completed_at', { ascending: false }).limit(20)
+  if (userId) monthQuery = monthQuery.eq('assigned_to', userId)
+  if (options?.monthFrom) monthQuery = monthQuery.gte('completed_at', options.monthFrom)
+  if (options?.monthToExclusive) monthQuery = monthQuery.lt('completed_at', options.monthToExclusive)
 
-  const roomsCleaned = completed.length
-  // Phase 53 — `today` uses Bangkok-day boundary (CLAUDE.md pitfall #1)
-  // instead of UTC `toISOString().slice(0,10)`. The `tasksThisWeek`
-  // window stays a sliding 7-day window (server local TZ is fine for that).
+  // `tasksToday` + `tasksThisWeek` ignore the month filter — they always
+  // reflect the sliding last 7 days, so the user sees "this month"
+  // alongside "today" even when browsing a past month.
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
+  let recentQuery = supabase.from('housekeeping_tasks')
+    .select('completed_at')
+    .eq('status', 'completed')
+    .gte('completed_at', weekAgo)
+  if (userId) recentQuery = recentQuery.eq('assigned_to', userId)
+
+  const [monthRes, recentRes] = await Promise.all([monthQuery, recentQuery])
+  if (monthRes.error) wrapSupabaseError('', monthRes.error)
+  if (recentRes.error) wrapSupabaseError('', recentRes.error)
+  const completed = (monthRes.data ?? []) as unknown as HousekeepingTask[]
+  const recent = (recentRes.data ?? []) as { completed_at: string | null }[]
+
+  // Phase 53 — compare Bangkok calendar dates (CLAUDE.md pitfall #1);
+  // `completed_at` is UTC, so slicing its ISO string is off-by-one at
+  // 00:00-06:59 Bangkok time.
   const today = getTodayBangkok()
-  const tasksToday = completed.filter(t => t.completed_at?.startsWith(today)).length
-  const tasksThisWeek = completed.filter(t => {
-    if (!t.completed_at) return false
-    return Date.now() - new Date(t.completed_at).getTime() < 7 * 86400000
-  }).length
+  const tasksToday = recent.filter(t => t.completed_at && toBangkokIsoDate(t.completed_at) === today).length
 
   return {
-    roomsCleaned,
+    roomsCleaned: monthRes.count ?? completed.length,
     tasksToday,
-    tasksThisWeek,
-    recentLog: completed.slice(0, 20) as unknown as HousekeepingTask[],
+    tasksThisWeek: recent.length,
+    recentLog: completed,
   }
 }

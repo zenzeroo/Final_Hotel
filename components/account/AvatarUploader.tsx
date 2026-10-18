@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { r2Url } from '@/lib/r2/publicUrl'
 import { uploadAvatarAction } from '@/app/actions/account'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface AvatarUploaderProps {
   avatarKey: string | null
@@ -21,6 +22,7 @@ interface AvatarUploaderProps {
  * TopNavBar avatar pattern).
  */
 export function AvatarUploader({ avatarKey, fullName }: AvatarUploaderProps) {
+  const t = useT()
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -37,11 +39,11 @@ export function AvatarUploader({ avatarKey, fullName }: AvatarUploaderProps) {
   const handleFile = (file: File) => {
     setError(null)
     if (file.size > 2 * 1024 * 1024) {
-      setError('ไฟล์ต้องมีขนาดไม่เกิน 2 MB')
+      setError(t('profile.avatarTooLarge'))
       return
     }
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setError('รองรับเฉพาะ JPEG, PNG, WebP')
+      setError(t('profile.avatarTypes'))
       return
     }
     setPreview(URL.createObjectURL(file))
@@ -53,7 +55,7 @@ export function AvatarUploader({ avatarKey, fullName }: AvatarUploaderProps) {
         {preview || avatarKey ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            alt={`รูปโปรไฟล์ของ ${fullName}`}
+            alt={t('profile.avatarAlt', { name: fullName })}
             className="w-full h-full object-cover"
             src={preview || r2Url(avatarKey)}
           />
@@ -65,7 +67,7 @@ export function AvatarUploader({ avatarKey, fullName }: AvatarUploaderProps) {
       </div>
       <button
         type="button"
-        aria-label="เปลี่ยนรูปโปรไฟล์"
+        aria-label={t('profile.uploadPhoto')}
         onClick={handlePick}
         className="absolute bottom-0 right-0 bg-primary text-on-primary w-9 h-9 rounded-full flex items-center justify-center border-2 border-surface-container-lowest hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >

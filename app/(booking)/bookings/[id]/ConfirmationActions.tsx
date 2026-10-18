@@ -7,6 +7,7 @@ import { createCheckoutSessionAction } from '@/app/actions/payment'
 import { cancelUnpaidBookingAction } from '@/app/actions/booking-unpaid-cancel'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { AlertModal } from '@/components/ui/AlertModal'
+import { useToast } from '@/components/ui/Toast'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useT } from '@/lib/i18n/useT'
 import { formatTHB } from '@/lib/pricing'
@@ -29,6 +30,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
   const [payError, setPayError] = useState<string | null>(null)
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const toast = useToast()
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false)
 
   const isCancelled = status === 'cancelled'
@@ -60,7 +62,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
     startTransition(async () => {
       const p = await previewCancellation(bookingId)
       if (!p.ok) {
-        setAlertMessage(p.error ?? 'ไม่สามารถดูตัวอย่างการยกเลิกได้')
+        toast.error(p.error ?? 'ไม่สามารถดูตัวอย่างการยกเลิกได้')
         return
       }
       setPreview({ ...p, open: true })
@@ -77,7 +79,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
     startTransition(async () => {
       const result = await cancelBooking(bookingId)
       if (result?.error) {
-        setAlertMessage(result.error)
+        toast.error(result.error)
         return
       }
       const refund = Number(result.refundAmount ?? 0)
@@ -116,17 +118,17 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
     startTransition(async () => {
       const result = await cancelUnpaidBookingAction({ bookingId })
       if (!result.ok) {
-        setAlertMessage(result.error)
+        toast.error(result.error)
         return
       }
       if (result.data?.status === 'paid') {
         // Race reconciled as paid — refresh in place to show the paid
         // state instead of redirecting to the cancelled row in history.
-        setAlertMessage(t('bookingDetail.cancelSuccess'))
+        toast.success(t('bookingDetail.cancelSuccess'))
         router.refresh()
         return
       }
-      setAlertMessage(t('bookingDetail.cancelSuccess'))
+      toast.success(t('bookingDetail.cancelSuccess'))
       router.push('/bookings')
     })
   }

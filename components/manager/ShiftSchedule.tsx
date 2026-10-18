@@ -1,98 +1,145 @@
-import type { StaffMember, ShiftSlot } from '@/lib/data/types'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
+/**
+ * Phase 54 — editable 7-day shift schedule. Columns come from `week.dates`
+ * (always 7), not from the shift rows, so an empty week still renders a
+ * full grid to fill in. Each cell is a client `<ShiftCell>`.
+ */
+import type { StaffMember, ShiftWeek } from '@/lib/data/types'
 import { EmptyState } from '@/components/feedback/EmptyState'
-import { formatDate } from '@/lib/dates'
+import { ShiftCell } from './ShiftCell'
+import { SHIFT_STYLE, WORKING_SHIFTS, shiftLabelWithHours } from './shiftMeta'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import type { Locale } from '@/lib/i18n/config'
+import { getT } from '@/lib/i18n/t'
 
 interface ShiftScheduleProps {
   staff: StaffMember[]
-  shifts: ShiftSlot[]
+  week: ShiftWeek
+  today: string
+  locale: Locale
 }
 
-const POSITION_LABEL: Record<ShiftSlot['position'], { th: string; icon: string; tone: string }> = {
-  morning: { th: 'เช้า', icon: 'wb_sunny', tone: 'bg-secondary-container text-on-secondary-container' },
-  afternoon: { th: 'บ่าย', icon: 'wb_cloudy', tone: 'bg-primary-container text-on-primary-container' },
-  evening: { th: 'เย็น', icon: 'nightlight', tone: 'bg-tertiary-container text-on-tertiary-container' },
-  off: { th: 'พัก', icon: 'do_not_disturb_on', tone: 'bg-surface-container-high text-on-surface-variant' },
-}
-
-function formatDayHeader(dateStr: string): { weekday: string; day: string } {
+function formatDayHeader(dateStr: string, locale: Locale): { weekday: string; day: string } {
+  // Pin UTC: `dateStr` is a calendar date, so UTC midnight keeps the same
+  // weekday/day regardless of the server timezone.
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  const bcp = locale === 'en' ? 'en-GB' : 'th-TH'
   return {
-    weekday: new Intl.DateTimeFormat('th-TH', { weekday: 'short', calendar: 'gregory' }).format(new Date(dateStr)),
-    day: formatDate(dateStr),
+    weekday: new Intl.DateTimeFormat(bcp, { weekday: 'short', timeZone: 'UTC' }).format(d),
+    day: new Intl.DateTimeFormat(bcp, { day: 'numeric', month: 'short', timeZone: 'UTC', calendar: 'gregory' }).format(d),
   }
 }
 
-export function ShiftSchedule({ staff, shifts }: ShiftScheduleProps) {
-  // Empty branch — guard against silent empty-table on no-staff / no-shifts DB.
-  if (staff.length === 0) {
-    return (
-      <EmptyState
-        icon="event"
-        title="ยังไม่มีตารางเวร"
-        description="ต้องมีพนักงานในระบบและตารางเวรถึงจะแสดงได้"
-      />
-    )
+export function ShiftSchedule({ staff, week, today, locale }: ShiftScheduleProps) {
+  const t = getT(locale)
+  const activeStaff = staff.filter((s) => s.is_active)
+
+  if (activeStaff.length === 0) {
+    return <EmptyState icon="event" title={t('manager.staffPage.noStaff')} description="" />
   }
 
-  // Build unique date list (sorted)
-  const dates = Array.from(new Set(shifts.map((s) => s.date))).sort()
-  const slotsByKey = new Map<string, ShiftSlot>()
-  for (const slot of shifts) {
-    slotsByKey.set(`${slot.staffId}__${slot.date}`, slot)
-  }
+  const slotsByKey = new Map(week.slots.map((s) => [`${s.staffId}__${s.date}`, s.position]))
 
   return (
+    <>
+    <ul className="flex flex-wrap items-center gap-2 mb-3">
+      {WORKING_SHIFTS.map((p) => (
+        <li
+          key={p}
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-caption ${SHIFT_STYLE[p].tone}`}
+        >
+          <MaterialIcon name={SHIFT_STYLE[p].icon} size={14} />
+          {shiftLabelWithHours(t, p)}
+        </li>
+      ))}
+    </ul>
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 overflow-x-auto">
       <table className="w-full">
         <thead>
           <tr>
             <th className="sticky left-0 z-10 bg-surface-container-low px-4 py-3 text-left text-label-md uppercase tracking-wider text-on-surface-variant font-medium border-b border-r border-outline-variant">
-              พนักงาน
+              {t('manager.staffPage.shiftStaffCol')}
             </th>
-            {dates.map((d) => {
-              const head = formatDayHeader(d)
+            {week.dates.map((d) => {
+              const head = formatDayHeader(d, locale)
+              const isToday = d === today
               return (
                 <th
                   key={d}
-                  className="px-3 py-3 text-center text-label-md uppercase tracking-wider text-on-surface-variant font-medium border-b border-outline-variant"
+                  className={`px-3 py-3 text-center text-label-md uppercase tracking-wider font-medium border-b border-outline-variant ${
+                    isToday ? 'bg-secondary-container/40 text-secondary' : 'text-on-surface-variant'
+                  }`}
                 >
                   <div>{head.weekday}</div>
-                  <div className="text-caption normal-case text-primary font-semibold mt-1">
-                    {head.day}
-                  </div>
+                  <div className="text-caption normal-case text-primary font-semibold mt-1">{head.day}</div>
                 </th>
               )
             })}
           </tr>
         </thead>
         <tbody>
-          {staff.map((member) => (
+          {activeStaff.map((member) => (
             <tr key={member.id} className="border-b border-outline-variant last:border-b-0">
-              <td className="sticky left-0 z-10 bg-surface-container-lowest px-4 py-3 text-body-md font-medium text-primary border-r border-outline-variant">
+              <td className="sticky left-0 z-10 bg-surface-container-lowest px-4 py-3 text-body-md font-medium text-primary border-r border-outline-variant whitespace-nowrap">
                 {member.full_name}
               </td>
-              {dates.map((d) => {
-                const slot = slotsByKey.get(`${member.id}__${d}`)
-                const pos = slot ? POSITION_LABEL[slot.position] : null
-                return (
-                  <td key={d} className="px-2 py-3 text-center">
-                    {pos ? (
-                      <span
-                        title={`${pos.th} (${d})`}
-                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${pos.tone}`}
-                      >
-                        <MaterialIcon name={pos.icon} size={14} />
-                      </span>
-                    ) : (
-                      <span className="text-on-surface-variant text-caption">—</span>
-                    )}
-                  </td>
-                )
-              })}
+              {week.dates.map((d) => (
+                <td key={d} className="px-1 py-3 text-center whitespace-nowrap">
+                  <ShiftCell
+                    // Re-mount when the server value changes (e.g. after
+                    // "copy previous week") so the controlled state resyncs.
+                    key={`${member.id}__${d}__${slotsByKey.get(`${member.id}__${d}`) ?? ''}`}
+                    staffId={member.id}
+                    staffName={member.full_name}
+                    date={d}
+                    position={slotsByKey.get(`${member.id}__${d}`) ?? null}
+                  />
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
+        {/* Daily coverage: a day with nobody on shift disables auto-allocation. */}
+        <tfoot>
+          <tr className="border-t-2 border-outline-variant">
+            <th
+              scope="row"
+              className="sticky left-0 z-10 bg-surface-container-low px-4 py-3 text-left text-label-md uppercase tracking-wider text-on-surface-variant font-medium border-r border-outline-variant whitespace-nowrap"
+            >
+              {t('manager.staffPage.coverageRow')}
+            </th>
+            {week.dates.map((d) => {
+              const count = activeStaff.filter((m) => {
+                const p = slotsByKey.get(`${m.id}__${d}`)
+                return p !== undefined && p !== 'off'
+              }).length
+              return (
+                <td
+                  key={d}
+                  className={`px-2 py-3 text-center text-caption font-semibold ${
+                    count === 0
+                      ? 'bg-error-container text-on-error-container'
+                      : d === today
+                        ? 'bg-secondary-container/40 text-secondary'
+                        : 'text-on-surface-variant'
+                  }`}
+                  title={count === 0 ? t('manager.staffPage.coverageNone') : undefined}
+                >
+                  {count === 0 ? (
+                    <span className="inline-flex items-center gap-1">
+                      <MaterialIcon name="warning" size={14} />
+                      <span className="sr-only">{t('manager.staffPage.coverageNone')}</span>
+                      0
+                    </span>
+                  ) : (
+                    t('manager.staffPage.coverageCount', { count })
+                  )}
+                </td>
+              )
+            })}
+          </tr>
+        </tfoot>
       </table>
     </div>
+    </>
   )
 }

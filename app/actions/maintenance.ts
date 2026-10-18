@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/require'
 import { actionFail } from '@/lib/errors/supabase'
 import { isUuid } from '@/lib/ids'
+import { reopenRoomForCleaning } from '@/lib/data/manager'
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
@@ -67,24 +68,24 @@ export async function confirmMaintenanceRoomClosure(
   revalidatePath('/housekeeper/maintenance')
   revalidatePath('/housekeeper/rooms')
   revalidatePath('/manager/housekeeping')
+  revalidatePath('/manager/rates')
   return { ok: true }
 }
 
 /**
  * Phase 31 — Manager marks a maintenance report resolved and reopens
- * the room back to `available`.
+ * the room.
  *
  * Only valid when report is `in_progress` (must confirm before resolving).
- * Reverts `room_units.status` to `available` — we don't track previous
- * status (the pre-Phase-30 trigger could have been `occupied`, `cleaning`,
- * etc.), so `available` is the safe default. If a more nuanced restore
- * is needed, add a `previous_status` column via migration.
+ * The room goes to `waiting_cleaning` with a cleaning task (via the shared
+ * `reopenRoomForCleaning`), not straight to `available` — a room coming
+ * out of repair needs cleaning before it is sold again.
  */
 export async function resolveMaintenanceReport(
   reportId: string,
   resolutionNote?: string,
 ): Promise<ActionResult> {
-  await requireRole(['manager', 'admin'], '/manager')
+  const session = await requireRole(['manager', 'admin'], '/manager')
   if (!isUuid(reportId)) return { ok: false, error: 'Invalid report id' }
   if (resolutionNote && resolutionNote.length > 500) {
     return { ok: false, error: 'Resolution note too long (max 500)' }
@@ -118,18 +119,18 @@ export async function resolveMaintenanceReport(
 
   if (updateReportErr) return actionFail(updateReportErr, 'Could not resolve report')
 
-  // Revert room to available
-  const { error: updateRoomErr } = await supabase
-    .from('room_units')
-    .update({ status: 'available', updated_at: now })
-    .eq('id', report.room_unit_id)
-
-  if (updateRoomErr) return actionFail(updateRoomErr, 'Could not reopen room')
+  // Same reopen path as /manager/rates: room → waiting_cleaning + a cleaning task.
+  try {
+    await reopenRoomForCleaning(supabase, { unitId: report.room_unit_id, actorId: session.id })
+  } catch (e) {
+    return actionFail(e, 'Could not reopen room')
+  }
 
   revalidatePath('/manager/maintenance')
   revalidatePath('/reception/maintenance')
   revalidatePath('/housekeeper/maintenance')
   revalidatePath('/housekeeper/rooms')
   revalidatePath('/manager/housekeeping')
+  revalidatePath('/manager/rates')
   return { ok: true }
 }

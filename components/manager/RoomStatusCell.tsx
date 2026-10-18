@@ -1,38 +1,40 @@
 import type { RoomStatusCell as RoomStatusCellType } from '@/lib/data/types'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import type { Locale } from '@/lib/i18n/config'
+import { getT } from '@/lib/i18n/t'
 
-const STATUS_BG: Record<RoomStatusCellType['status'], string> = {
+export const STATUS_BG: Record<RoomStatusCellType['status'], string> = {
   dirty: 'bg-error-container text-on-error-container',
   cleaning: 'bg-secondary-container text-on-secondary-container',
   inspected: 'bg-primary-container text-on-primary-container',
 }
 
-const STATUS_LABEL: Record<RoomStatusCellType['status'], string> = {
-  dirty: 'สกปรก',
-  cleaning: 'กำลังทำความสะอาด',
-  inspected: 'พร้อมใช้',
+export const STATUS_KEY: Record<RoomStatusCellType['status'], string> = {
+  dirty: 'manager.housekeepingPage.cellDirty',
+  cleaning: 'manager.housekeepingPage.cellCleaning',
+  inspected: 'manager.housekeepingPage.cellReady',
 }
 
 interface RoomStatusCellProps {
   cell: RoomStatusCellType
+  locale: Locale
 }
 
-export function RoomStatusCell({ cell }: RoomStatusCellProps) {
+/** Compact tile: room number only; status = colour (see legend), guest = dot. */
+export function RoomStatusCell({ cell, locale }: RoomStatusCellProps) {
+  const t = getT(locale)
+  const label = t(STATUS_KEY[cell.status])
+  const room = t('manager.housekeepingPage.roomN', { room: cell.roomNumber })
+  const description = `${room} — ${label}${cell.occupied ? ` (${t('manager.housekeepingPage.cellHasGuest')})` : ''}`
   return (
     <div
-      className={`relative aspect-square rounded-md flex flex-col items-center justify-center text-center ${STATUS_BG[cell.status]}`}
-      title={`ห้อง ${cell.roomNumber} — ${STATUS_LABEL[cell.status]}${cell.occupied ? ' (มีแขก)' : ''}`}
+      role="img"
+      aria-label={description}
+      title={description}
+      className={`relative h-11 w-full rounded-md flex items-center justify-center text-label-md font-semibold tabular-nums ${STATUS_BG[cell.status]}`}
     >
-      <p className="font-headline-sm text-headline-sm leading-none">{cell.roomNumber}</p>
-      <p className="text-[10px] uppercase tracking-wider mt-1 opacity-80">
-        {STATUS_LABEL[cell.status]}
-      </p>
+      {cell.roomNumber}
       {cell.occupied ? (
-        <MaterialIcon
-          name="person"
-          size={14}
-          className="absolute top-1.5 right-1.5 opacity-80"
-        />
+        <span aria-hidden className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-current opacity-80" />
       ) : null}
     </div>
   )

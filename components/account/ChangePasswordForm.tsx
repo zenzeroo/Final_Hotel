@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom'
 import { changePasswordAction } from '@/app/actions/account'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { useT } from '@/lib/i18n/useT'
 
 interface FormState {
   error?: string
@@ -12,6 +13,7 @@ interface FormState {
 }
 
 function SubmitButton() {
+  const t = useT()
   const { pending } = useFormStatus()
   return (
     <button
@@ -22,10 +24,10 @@ function SubmitButton() {
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-          กำลังเปลี่ยน…
+          {t('profile.changing')}
         </>
       ) : (
-        'เปลี่ยนรหัสผ่าน'
+        t('profile.changePasswordSubmit')
       )}
     </button>
   )
@@ -37,6 +39,7 @@ function SubmitButton() {
  * new + confirm), submit, then collapse again on success.
  */
 export function ChangePasswordForm() {
+  const t = useT()
   const [open, setEditing] = useState(false)
 
   const wrapped = async (
@@ -53,13 +56,13 @@ export function ChangePasswordForm() {
   if (!open) {
     return (
       <div className="flex justify-between items-center bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container p-gutter md:p-[32px]">
-        <h3 className="font-headline-sm text-headline-sm text-primary">ความปลอดภัย</h3>
+        <h3 className="font-headline-sm text-headline-sm text-primary">{t('profile.security')}</h3>
         <button
           type="button"
           onClick={() => setEditing(true)}
           className="bg-transparent border border-primary text-primary px-6 py-2 rounded-full font-label-md text-label-md hover:bg-primary-fixed hover:border-primary-fixed transition-colors"
         >
-          แก้ไขรหัสผ่าน
+          {t('profile.changePassword')}
         </button>
       </div>
     )
@@ -68,7 +71,7 @@ export function ChangePasswordForm() {
   return (
     <div className="bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container">
       <h3 className="font-headline-sm text-headline-sm text-primary p-gutter md:p-[32px] pb-base">
-        แก้ไขรหัสผ่าน
+        {t('profile.changePassword')}
       </h3>
       <form
         action={async (formData) => {
@@ -86,19 +89,19 @@ export function ChangePasswordForm() {
         {state?.success && (
           <div className="px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg text-body-md inline-flex items-center gap-2">
             <MaterialIcon name="check_circle" size={18} />
-            เปลี่ยนรหัสผ่านสำเร็จ
+            {t('profile.passwordChanged')}
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
           <PasswordInput
             name="currentPassword"
-            placeholder="กรอกรหัสผ่านปัจจุบัน"
+            placeholder={t('profile.currentPasswordPlaceholder')}
             autoComplete="current-password"
             required
           />
           <PasswordInput
             name="newPassword"
-            placeholder="รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)"
+            placeholder={t('profile.newPasswordLabel')}
             autoComplete="new-password"
             minLength={8}
             maxLength={72}
@@ -106,7 +109,7 @@ export function ChangePasswordForm() {
           />
           <PasswordInput
             name="confirmNewPassword"
-            placeholder="พิมพ์รหัสผ่านใหม่อีกครั้ง"
+            placeholder={t('profile.confirmPasswordLabel')}
             autoComplete="new-password"
             minLength={8}
             maxLength={72}
@@ -119,7 +122,7 @@ export function ChangePasswordForm() {
             onClick={() => setEditing(false)}
             className="bg-transparent border border-outline-variant text-on-surface-variant px-6 py-2 rounded-full font-label-md text-label-md hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
           >
-            ยกเลิก
+            {t('profile.cancel')}
           </button>
           <SubmitButton />
         </div>

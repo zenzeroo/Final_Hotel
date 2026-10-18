@@ -24,13 +24,23 @@ import type {
   Promotion,
   StaffMember,
   ShiftSlot,
+  ShiftWeek,
+  ShiftPosition,
+  HousekeeperDetail,
+  HousekeeperDetailTask,
+  HousekeepingTaskType,
+  HousekeepingTaskPriority,
+  HousekeepingTaskStatus,
   HotelSettings,
   RoomUnitWithType,
   SeasonalRate,
   CancellationPolicy,
   HeroSlide,
   HeroSlideSourceType,
-  OccupancyMonthPoint,
+  OccupancyPoint,
+  ReportMetric,
+  ReportTrendPoint,
+  ReportRange,
   RankedRoom,
   RankedRoomTypeRevenue,
   ChannelSlice,
@@ -40,23 +50,8 @@ import type {
   HousekeeperWorkload,
 } from './types'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
-
-// =========================================================
-// Phase 9 — Date helpers (ISO day boundaries in the server's TZ).
-// The mock layer uses JS Date arithmetic in UTC; the live layer should
-// match by always slicing on YYYY-MM-DD via the database's `::date` cast
-// or a precomputed ISO prefix passed via the JS Date.
-// =========================================================
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function isoDaysAgo(n: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
-}
+import { chartColors } from '@/lib/chart-theme'
+import { addDaysIso, diffDaysIso, getTodayBangkok, parseReportRange, toBangkokIsoDate } from '@/lib/dates'
 
 // =========================================================
 // Phase 9C — Dashboard aggregations
@@ -113,37 +108,48 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
 
-  const today = todayIso()
-  const yesterday = isoDaysAgo(1)
-  const sevenDaysAgo = isoDaysAgo(6) // inclusive: today + 6 prior days = 7 buckets
+  // Phase 54 — every day boundary is the Bangkok calendar day (was UTC, so
+  // 00:00-06:59 local counted as "yesterday").
+  const today = getTodayBangkok()
+  const yesterday = addDaysIso(today, -1)
+  const dayStart = (d: string) => `${d}T00:00:00+07:00`
+  const todayStart = dayStart(today)
+  const tomorrowStart = dayStart(addDaysIso(today, 1))
+  const windowStart = dayStart(addDaysIso(today, -29)) // 30 daily buckets
 
   // Parallel queries — JS client multiplexes over a single HTTP/2 connection.
   const [
-    { data: revenueTodayRows, error: e1 },
-    { error: e2 },
+    { data: paidRows, error: e1 },
+    { data: newTodayRows, error: e2 },
     { count: checkInsToday, error: e3 },
     { count: checkOutsToday, error: e4 },
-    { count: newBookingsToday, error: e5 },
-    { count: inHouseBookings, error: e6 },
-    { count: totalActiveRooms, error: e7 },
-    { data: weekRows, error: e8 },
-    { data: urgentDamages, error: e9 },
-    { data: pendingRefunds, error: e10 },
-    { count: webBookings, error: e11 },
-    { count: walkInBookings, error: e12 },
+    { count: inHouseBookings, error: e5 },
+    { data: activeRooms, error: e6 },
+    { data: criticalMaint, error: e7 },
+    { data: urgentDamages, error: e8 },
+    { data: pendingRefunds, error: e9 },
+    { data: housekeepers, error: e10 },
+    { data: shiftsToday, error: e11 },
+    { data: openTaskRooms, error: e12 },
+    { count: unassignedTasks, error: e13 },
+    { count: pendingReviews, error: e14 },
   ] = await Promise.all([
+    // Phase 54 — revenue = bookings actually paid (incl. partially refunded),
+    // bucketed by Bangkok creation day. Previously summed every non-cancelled
+    // booking, so expired / unpaid holds were reported as revenue.
     supabase
       .from('bookings')
-      .select('total')
-      .gte('created_at', today + 'T00:00:00Z')
-      .lt('created_at', today + 'T23:59:59Z')
-      .neq('status', 'cancelled'),
+      .select('total, created_at')
+      .gte('created_at', windowStart)
+      .lt('created_at', tomorrowStart)
+      .in('payment_status', ['paid', 'partial_refund']),
+    // New bookings today = live bookings only (no temp holds / expired / cancelled).
     supabase
       .from('bookings')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', yesterday + 'T00:00:00Z')
-      .lt('created_at', yesterday + 'T23:59:59Z')
-      .neq('status', 'cancelled'),
+      .select('channel')
+      .gte('created_at', todayStart)
+      .lt('created_at', tomorrowStart)
+      .in('status', ['confirmed', 'checked_in', 'checked_out']),
     supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
@@ -152,155 +158,150 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
     supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
-      .eq('check_out', today),
-    supabase
-      .from('bookings')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', today + 'T00:00:00Z')
-      .lt('created_at', today + 'T23:59:59Z'),
+      .eq('check_out', today)
+      .in('status', ['checked_in', 'checked_out']),
     supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
       .lte('check_in', today)
       .gt('check_out', today)
       .in('status', ['confirmed', 'checked_in']),
+    // Active rooms (count for occupancy + dirty-room orphan detection).
+    supabase.from('room_units').select('id, unit_label, status').eq('is_active', true),
     supabase
-      .from('room_units')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_active', true),
-    supabase
-      .from('bookings')
-      .select('total, created_at')
-      .gte('created_at', sevenDaysAgo + 'T00:00:00Z')
-      .lte('created_at', today + 'T23:59:59Z')
-      .neq('status', 'cancelled'),
+      .from('maintenance_reports')
+      .select('id, room_unit:room_units!inner(unit_label)')
+      .eq('severity', 'critical')
+      .eq('status', 'open'),
     supabase
       .from('damage_reports')
-      .select('id, room_unit_id')
+      .select('id, room_unit:room_units!inner(unit_label)')
       .eq('resolved', false)
-      .eq('severity', 'urgent')
-      .limit(5),
+      .eq('severity', 'urgent'),
+    supabase.from('refund_requests').select('amount').eq('status', 'pending'),
+    supabase.from('profiles').select('id').eq('role', 'housekeeper').eq('is_active', true),
+    supabase.from('staff_shifts').select('staff_id').eq('shift_date', today).neq('position', 'off'),
     supabase
-      .from('refund_requests')
-      .select('id, amount')
-      .eq('status', 'pending')
-      .limit(5),
+      .from('housekeeping_tasks')
+      .select('room_unit_id')
+      .in('status', ['unassigned', 'assigned', 'in_progress'])
+      .not('room_unit_id', 'is', null),
     supabase
-      .from('bookings')
+      .from('housekeeping_tasks')
       .select('id', { count: 'exact', head: true })
-      .gte('created_at', today + 'T00:00:00Z')
-      .lt('created_at', today + 'T23:59:59Z')
-      .eq('channel', 'web'),
-    supabase
-      .from('bookings')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', today + 'T00:00:00Z')
-      .lt('created_at', today + 'T23:59:59Z')
-      .eq('channel', 'walk_in'),
+      .eq('status', 'unassigned'),
+    supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
   ])
 
   for (const [label, e] of [
-    ['revenueToday', e1],
-    ['revenueYesterday', e2],
+    ['paidRows', e1],
+    ['newTodayRows', e2],
     ['checkInsToday', e3],
     ['checkOutsToday', e4],
-    ['newBookingsToday', e5],
-    ['inHouseBookings', e6],
-    ['totalActiveRooms', e7],
-    ['weekRows', e8],
-    ['urgentDamages', e9],
-    ['pendingRefunds', e10],
-    ['webBookings', e11],
-    ['walkInBookings', e12],
+    ['inHouseBookings', e5],
+    ['activeRooms', e6],
+    ['criticalMaintenance', e7],
+    ['urgentDamages', e8],
+    ['pendingRefunds', e9],
+    ['housekeepers', e10],
+    ['shiftsToday', e11],
+    ['openTaskRooms', e12],
+    ['unassignedTasks', e13],
+    ['pendingReviews', e14],
   ] as const) {
     if (e) wrapSupabaseError(label, e)
   }
 
-  const revenueToday = (revenueTodayRows ?? []).reduce((sum, r) => sum + (r.total ?? 0), 0)
-  // Revenue trend is computed from created_at day-buckets above (weekRows),
-  // not from the (unused) revenueYesterday count.
-  const trendPct = computeDayOverDayTrend(weekRows ?? [], today, yesterday)
-  const occupancyRatePct =
-    totalActiveRooms && totalActiveRooms > 0
-      ? Math.round(((inHouseBookings ?? 0) / totalActiveRooms) * 100)
-      : 0
+  // Revenue per Bangkok day across the 30-day window.
+  const revenueByDay = new Map<string, number>()
+  for (const r of paidRows ?? []) {
+    const day = toBangkokIsoDate(r.created_at)
+    revenueByDay.set(day, (revenueByDay.get(day) ?? 0) + Number(r.total ?? 0))
+  }
+  const revenueToday = revenueByDay.get(today) ?? 0
+  const revenueYesterday = revenueByDay.get(yesterday) ?? 0
+  const revenueTrendPct =
+    revenueYesterday === 0 ? null : ((revenueToday - revenueYesterday) / revenueYesterday) * 100
+  const buckets = (days: number): RevenueBarPoint[] =>
+    Array.from({ length: days }, (_, i) => {
+      const date = addDaysIso(today, i - (days - 1))
+      return { date, revenue: revenueByDay.get(date) ?? 0 }
+    })
 
-  // Aggregate the 7-day window into daily revenue buckets.
-  const revenue7d = bucketRevenue7d(weekRows ?? [], today)
+  const newToday = newTodayRows ?? []
+  const totalActiveRooms = (activeRooms ?? []).length
+  const occupancyRatePct =
+    totalActiveRooms > 0 ? Math.round(((inHouseBookings ?? 0) / totalActiveRooms) * 100) : 0
+
+  // Phase 54 — one aggregated alert per kind (text localized at render).
+  const roomLabel = (row: { room_unit: unknown }) => {
+    const ru = (Array.isArray(row.room_unit) ? row.room_unit[0] : row.room_unit) as
+      | { unit_label: string }
+      | undefined
+    return ru?.unit_label ?? '—'
+  }
+  const roomsWithOpenTask = new Set((openTaskRooms ?? []).map((t) => t.room_unit_id))
+  const orphanRooms = (activeRooms ?? [])
+    .filter((r) => (r.status === 'waiting_cleaning' || r.status === 'checkout') && !roomsWithOpenTask.has(r.id))
+    .map((r) => r.unit_label)
+  const onShift = new Set((shiftsToday ?? []).map((s) => s.staff_id))
+  const hkOnShift = (housekeepers ?? []).filter((h) => onShift.has(h.id)).length
 
   const alerts: DashboardAlert[] = []
-  for (const d of urgentDamages ?? []) {
-    alerts.push({
-      id: 'damage-' + d.id,
-      severity: 'critical',
-      title: 'ด่วน: รายงานความเสียหาย',
-      description: 'ห้องพักมีรายงานความเสียหายที่ยังไม่ได้รับการแก้ไข',
-      cta: { label: 'ดูรายงาน', href: '/manager/housekeeping' },
-    })
+  const push = (a: Omit<DashboardAlert, 'id'>) => {
+    if (a.count > 0) alerts.push({ id: a.kind, ...a })
   }
-  for (const r of pendingRefunds ?? []) {
-    alerts.push({
-      id: 'refund-' + r.id,
-      severity: 'warning',
-      title: 'คำขอคืนเงินรออนุมัติ',
-      description: 'มีคำขอคืนเงินที่รอการตัดสินใจ',
-      cta: { label: 'ดูคำขอ', href: '/manager/bookings?tab=refunds' },
-    })
-  }
+  push({
+    kind: 'maintenanceCritical',
+    severity: 'critical',
+    count: (criticalMaint ?? []).length,
+    rooms: (criticalMaint ?? []).map(roomLabel),
+    href: '/manager/maintenance',
+  })
+  push({
+    kind: 'damageUrgent',
+    severity: 'critical',
+    count: (urgentDamages ?? []).length,
+    rooms: (urgentDamages ?? []).map(roomLabel),
+    href: '/manager/housekeeping',
+  })
+  push({
+    kind: 'refundsPending',
+    severity: 'warning',
+    count: (pendingRefunds ?? []).length,
+    amount: (pendingRefunds ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0),
+    href: '/manager/bookings?tab=refunds',
+  })
+  push({
+    kind: 'noHousekeeperOnShift',
+    severity: 'warning',
+    count: (housekeepers ?? []).length > 0 && hkOnShift === 0 ? 1 : 0,
+    href: '/manager/staff?tab=housekeeper#shifts',
+  })
+  push({
+    kind: 'orphanDirtyRooms',
+    severity: 'warning',
+    count: orphanRooms.length,
+    rooms: orphanRooms,
+    href: '/manager/housekeeping',
+  })
+  push({ kind: 'unassignedTasks', severity: 'info', count: unassignedTasks ?? 0, href: '/manager/housekeeping' })
+  push({ kind: 'reviewsPending', severity: 'info', count: pendingReviews ?? 0, href: '/manager/reviews' })
 
   return {
     revenueToday,
-    revenueTrendPct: trendPct,
+    revenueTrendPct,
     occupancyRatePct,
     checkInsToday: checkInsToday ?? 0,
     checkOutsToday: checkOutsToday ?? 0,
-    newBookingsToday: newBookingsToday ?? 0,
+    newBookingsToday: newToday.length,
     // Phase 12: real channel split from bookings.channel column.
-    // webBookings + walkInBookings may each be 0 on a quiet day; the KPI
-    // strip renders Web + Walk-in numbers independently.
-    webBookings: webBookings ?? 0,
-    walkInBookings: walkInBookings ?? 0,
-    revenue7d,
+    webBookings: newToday.filter((b) => b.channel === 'web').length,
+    walkInBookings: newToday.filter((b) => b.channel === 'walk_in').length,
+    revenue7d: buckets(7),
+    revenue30d: buckets(30),
     alerts,
   }
-}
-
-function computeDayOverDayTrend(
-  rows: { total: number; created_at: string }[],
-  today: string,
-  yesterday: string,
-): number {
-  let todayTotal = 0
-  let yesterdayTotal = 0
-  for (const r of rows) {
-    const day = r.created_at.slice(0, 10)
-    if (day === today) todayTotal += r.total ?? 0
-    else if (day === yesterday) yesterdayTotal += r.total ?? 0
-  }
-  if (yesterdayTotal === 0) return todayTotal > 0 ? 100 : 0
-  return ((todayTotal - yesterdayTotal) / yesterdayTotal) * 100
-}
-
-function bucketRevenue7d(
-  rows: { total: number; created_at: string }[],
-  today: string,
-): RevenueBarPoint[] {
-  const buckets: Record<string, number> = {}
-  for (let i = 6; i >= 0; i--) buckets[isoDaysAgo(i)] = 0
-  for (const r of rows) {
-    const day = r.created_at.slice(0, 10)
-    if (day in buckets) buckets[day] += r.total ?? 0
-  }
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  return Object.entries(buckets).map(([date, revenue]) => {
-    const d = new Date(date + 'T00:00:00Z')
-    const isToday = date === today
-    return {
-      date,
-      revenue,
-      label: isToday ? 'Today' : dayLabels[d.getUTCDay()] ?? '',
-    }
-  })
 }
 
 // Embedded select shape for damage_reports rows. Room unit + reporter profile
@@ -362,12 +363,15 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
   // Phase 28 additions: persisted floor_assignments, assigned/in-progress
   // tasks grouped by housekeeper, the housekeeper picker list.
   // Phase 30 additions: staff_shifts (workload %), v_next_checkin_per_room (ETA).
-  const today = todayIso()
+  // Phase 54: shift day is the Bangkok calendar day (was UTC — read
+  // yesterday's shifts at 00:00-06:59 local). The former `activeTasks`
+  // query duplicated `assignedByUser` (same filter) and was dropped.
+  const today = getTodayBangkok()
   const [
     { data: damageRows, error: e1 },
     { data: rooms, error: e2 },
     { data: unassignedTasksRaw, error: e3 },
-    { data: activeTasks, error: e4 },
+    { data: openTaskRooms, error: e4 },
     { data: persistedFloors, error: e5 },
     { data: assignedByUser, error: e6 },
     { data: housekeepers, error: e7 },
@@ -398,16 +402,13 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
       .eq('status', 'unassigned')
       .order('created_at', { ascending: true })
       .limit(20),
+    // Phase 54: room ids with any open task — used to detect dirty rooms
+    // that have no task at all (orphans the allocator can't see).
     supabase
       .from('housekeeping_tasks')
-      .select(
-        `
-        room_unit_id, assigned_to, status,
-        room_unit:room_units!inner(floor),
-        assignee:profiles!housekeeping_tasks_assigned_to_fkey(full_name)
-      `,
-      )
-      .in('status', ['assigned', 'in_progress']),
+      .select('room_unit_id, status')
+      .in('status', ['unassigned', 'assigned', 'in_progress'])
+      .not('room_unit_id', 'is', null),
     supabase
       .from('floor_assignments')
       .select('floor, housekeeper_id, housekeeper:profiles!floor_assignments_housekeeper_id_fkey(full_name)'),
@@ -445,7 +446,7 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     ['damageReports', e1],
     ['rooms', e2],
     ['unassignedTasks', e3],
-    ['activeTasks', e4],
+    ['openTaskRooms', e4],
     ['floorAssignments', e5],
     ['assignedByHousekeeper', e6],
     ['housekeepers', e7],
@@ -478,8 +479,8 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
   // room is ready/occupied → 'inspected' (green — clean or out-of-flow).
   // maintenance/out_of_order/checkout → 'dirty' (yellow — exclude from
   // guest flow, not ready for sale). 'cleaning' FloorRoomStatus is now
-  // unreachable (kept in the type union for future use). Side effect:
-  // cleaningCount KPI card always reads 0 — acceptable, matches user model.
+  // unreachable (kept in the type union for future use). Phase 54: the
+  // KPI cards no longer derive from this binary map — see ROOM_KPI_BUCKET.
   const ROOM_TO_FLOOR_STATUS: Record<string, 'dirty' | 'cleaning' | 'inspected'> = {
     available: 'inspected',
     occupied: 'inspected',
@@ -491,15 +492,32 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     maintenance: 'dirty',
     out_of_order: 'dirty',
   }
-  let dirtyCount = 0
-  let cleaningCount = 0
-  let inspectedCount = 0
-  for (const r of rooms ?? []) {
-    const s = ROOM_TO_FLOOR_STATUS[r.status] ?? 'dirty'
-    if (s === 'dirty') dirtyCount++
-    else if (s === 'cleaning') cleaningCount++
-    else inspectedCount++
+  // Phase 54 — precise KPI buckets. The old binary counts lumped
+  // maintenance rooms into "dirty" and occupied rooms into "ready", and the
+  // "cleaning" card was always 0.
+  const ROOM_KPI_BUCKET: Record<string, 'dirty' | 'outOfService' | 'ready' | 'occupied'> = {
+    waiting_cleaning: 'dirty',
+    checkout: 'dirty',
+    cleaning: 'dirty',
+    inspection: 'dirty',
+    maintenance: 'outOfService',
+    out_of_order: 'outOfService',
+    available: 'ready',
+    ready: 'ready',
+    occupied: 'occupied',
   }
+  const kpi = { dirty: 0, outOfService: 0, ready: 0, occupied: 0 }
+  for (const r of rooms ?? []) {
+    kpi[ROOM_KPI_BUCKET[r.status] ?? 'dirty']++
+  }
+
+  // Phase 54 — dirty rooms with no open task. Task cancellation flips the
+  // room back to 'waiting_cleaning' without creating a replacement task, so
+  // these accumulate silently and the auto-allocator never sees them.
+  const roomsWithOpenTask = new Set((openTaskRooms ?? []).map((t) => t.room_unit_id))
+  const orphanDirtyRooms = (rooms ?? [])
+    .filter((r) => (r.status === 'waiting_cleaning' || r.status === 'checkout') && !roomsWithOpenTask.has(r.id))
+    .map((r) => ({ id: r.id, unitLabel: r.unit_label }))
 
   // Build floors: group rooms by floor.
   const floorMap = new Map<number, RoomStatusCell[]>()
@@ -525,7 +543,7 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     }
   }
   // Fallback: derive from active tasks for floors without a persisted row.
-  for (const t of activeTasks ?? []) {
+  for (const t of assignedByUser ?? []) {
     const ru = Array.isArray(t.room_unit) ? t.room_unit[0] : t.room_unit
     if (!ru || floorAssignee.has(ru.floor)) continue
     const assignee = Array.isArray(t.assignee) ? t.assignee[0] : t.assignee
@@ -539,17 +557,25 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
       const a = floorAssignee.get(floor)
       return {
         floor,
-        label: `Floor ${floor}`,
         assignedTo: a?.name ?? null,
         rooms: cells,
       }
     })
 
+  // Phase 54 — not-yet-started tasks per floor (what "assign whole floor" moves).
+  const floorByRoomId = new Map((rooms ?? []).map((r) => [r.id, r.floor]))
+  const pendingByFloor = new Map<number, number>()
+  for (const t of openTaskRooms ?? []) {
+    if (t.status === 'in_progress') continue
+    const fl = floorByRoomId.get(t.room_unit_id)
+    if (fl !== undefined) pendingByFloor.set(fl, (pendingByFloor.get(fl) ?? 0) + 1)
+  }
+
   // Floor assignments: count rooms per floor + (persisted or derived) housekeeper.
   const floorAssignments: FloorAssignment[] = floors.map((f) => ({
     floor: f.floor,
-    label: f.label,
     totalRooms: f.rooms.length,
+    pendingTasks: pendingByFloor.get(f.floor) ?? 0,
     housekeeperId: floorAssignee.get(f.floor)?.id ?? null,
     housekeeperName: floorAssignee.get(f.floor)?.name ?? null,
   }))
@@ -558,7 +584,7 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
     const ru = Array.isArray(t.room_unit) ? t.room_unit[0] : t.room_unit
     return {
       id: t.id,
-      title: t.task_type.replace(/_/g, ' '),
+      taskType: t.task_type,
       roomNumber: ru?.unit_label ?? '—',
       requestedAt: t.created_at,
       urgent: t.priority === 'urgent' || t.priority === 'high',
@@ -621,7 +647,7 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
       : 0
   }
 
-  // Phase 30 — build housekeeperWorkloads for the WorkloadTable (includes HKs
+  // Phase 30 — build housekeeperWorkloads for on-shift ids + floor defaults (includes HKs
   // with 0 tasks who don't appear in assignedByHousekeeper).
   const floorsByHK = new Map<string, number[]>()
   for (const f of persistedFloors ?? []) {
@@ -665,9 +691,11 @@ export async function getHousekeepingOverview(): Promise<HousekeepingOverviewDat
 
   return {
     totalRooms,
-    dirtyCount,
-    cleaningCount,
-    inspectedCount,
+    dirtyCount: kpi.dirty,
+    outOfServiceCount: kpi.outOfService,
+    readyCount: kpi.ready,
+    occupiedCount: kpi.occupied,
+    orphanDirtyRooms,
     floors,
     floorAssignments,
     unassignedTasks,
@@ -700,7 +728,7 @@ export async function listHousekeepers(): Promise<HousekeeperOption[]> {
 export async function getHousekeeperWorkloads(): Promise<HousekeeperWorkload[]> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
-  const today = todayIso()
+  const today = getTodayBangkok()
   const [
     { data: hkRows, error: e1 },
     { data: shifts, error: e2 },
@@ -748,6 +776,116 @@ export async function getHousekeeperWorkloads(): Promise<HousekeeperWorkload[]> 
       floorDefaults: (floorsByHK.get(h.id) ?? []).sort((a, b) => a - b),
     }
   })
+}
+
+const DETAIL_TASK_SELECT = `
+  id, task_type, priority, status, created_at, started_at, completed_at, notes,
+  estimated_minutes, room_unit_id,
+  room_unit:room_units!inner(unit_label, floor, room_type:room_types(name, name_th))
+`
+
+type DetailTaskRow = {
+  id: string
+  task_type: HousekeepingTaskType
+  priority: HousekeepingTaskPriority
+  status: HousekeepingTaskStatus
+  created_at: string
+  started_at: string | null
+  completed_at: string | null
+  notes: string | null
+  estimated_minutes: number | null
+  room_unit_id: string
+  room_unit: unknown
+}
+
+const PRIORITY_RANK: Record<HousekeepingTaskPriority, number> = { urgent: 0, high: 1, normal: 2, low: 3 }
+
+/**
+ * Phase 54 — everything the manager's housekeeper detail page needs.
+ * Returns `null` when `id` is not an active-or-inactive housekeeper (→ 404).
+ */
+export async function getHousekeeperDetail(id: string): Promise<HousekeeperDetail | null> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const today = getTodayBangkok()
+  const dayStart = `${today}T00:00:00+07:00`
+  const dayEnd = `${addDaysIso(today, 1)}T00:00:00+07:00`
+
+  const [
+    { data: profile, error: e1 },
+    { data: shift, error: e2 },
+    { data: floorRows, error: e3 },
+    { data: openRows, error: e4 },
+    { data: doneRows, error: e5 },
+  ] = await Promise.all([
+    supabase.from('profiles').select('id, full_name, role').eq('id', id).maybeSingle(),
+    supabase.from('staff_shifts').select('position').eq('staff_id', id).eq('shift_date', today).maybeSingle(),
+    supabase.from('floor_assignments').select('floor').eq('housekeeper_id', id),
+    supabase
+      .from('housekeeping_tasks')
+      .select(DETAIL_TASK_SELECT)
+      .eq('assigned_to', id)
+      .in('status', ['assigned', 'in_progress']),
+    supabase
+      .from('housekeeping_tasks')
+      .select(DETAIL_TASK_SELECT)
+      .eq('assigned_to', id)
+      .eq('status', 'completed')
+      .gte('completed_at', dayStart)
+      .lt('completed_at', dayEnd)
+      .order('completed_at', { ascending: false }),
+  ])
+  for (const [label, e] of [['profile', e1], ['shift', e2], ['floors', e3], ['openTasks', e4], ['completedToday', e5]] as const) {
+    if (e) wrapSupabaseError(label, e)
+  }
+  if (!profile || profile.role !== 'housekeeper') return null
+
+  const open = (openRows ?? []) as unknown as DetailTaskRow[]
+  const nextCheckIns = await getNextCheckInForRooms([...new Set(open.map((t) => t.room_unit_id))])
+
+  const toTask = (t: DetailTaskRow): HousekeeperDetailTask => {
+    const ru = (Array.isArray(t.room_unit) ? t.room_unit[0] : t.room_unit) as
+      | { unit_label: string; floor: number; room_type: unknown }
+      | undefined
+    const rt = (Array.isArray(ru?.room_type) ? ru?.room_type[0] : ru?.room_type) as
+      | { name: string; name_th: string | null }
+      | undefined
+    return {
+      id: t.id,
+      roomNumber: ru?.unit_label ?? '—',
+      floor: ru?.floor ?? 0,
+      roomTypeName: rt?.name ?? '—',
+      roomTypeNameTh: rt?.name_th ?? null,
+      taskType: t.task_type,
+      priority: t.priority,
+      status: t.status,
+      createdAt: t.created_at,
+      startedAt: t.started_at,
+      completedAt: t.completed_at,
+      estimatedMinutes: t.estimated_minutes,
+      nextCheckIn: nextCheckIns.get(t.room_unit_id) ?? null,
+      notes: t.notes,
+    }
+  }
+
+  // In progress first, then priority, then soonest next check-in.
+  const openTasks = open.map(toTask).sort((a, b) =>
+    Number(b.status === 'in_progress') - Number(a.status === 'in_progress') ||
+    PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+    (a.nextCheckIn ?? '9999').localeCompare(b.nextCheckIn ?? '9999'),
+  )
+
+  const position = (shift?.position ?? null) as ShiftPosition | null
+  return {
+    id: profile.id,
+    fullName: profile.full_name ?? '—',
+    shiftPosition: position,
+    isOnShift: position !== null && position !== 'off',
+    floors: (floorRows ?? []).map((f) => f.floor).sort((a, b) => a - b),
+    loadMinutes: openTasks.reduce((s, t) => s + (t.estimatedMinutes ?? 0), 0),
+    openTasks,
+    completedToday: ((doneRows ?? []) as unknown as DetailTaskRow[]).map(toTask),
+  }
 }
 
 /**
@@ -929,173 +1067,221 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
   }
 }
 
-export async function getReportsData(): Promise<ReportsData> {
+export async function getReportsData(range: ReportRange = parseReportRange()): Promise<ReportsData> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
 
-  const today = todayIso()
-  const sevenDaysAgo = isoDaysAgo(6)
-  const fourteenDaysAgo = isoDaysAgo(13)
-  // Phase 12: live GROUP BY for the 5 analytics arrays. No precomputed
-  // analytics tables — relies on the 2 new indexes from migration 20260834:
-  //   idx_bookings_checkin_status, idx_bookings_roomtype_status.
-  const thirtyDaysAgo = isoDaysAgo(29)
-  // Same 30-day window one year prior for occupancyYoY.
-  const lastYearToday = new Date(today + 'T00:00:00Z')
-  lastYearToday.setUTCFullYear(lastYearToday.getUTCFullYear() - 1)
-  const lastYearThirtyAgo = new Date(thirtyDaysAgo + 'T00:00:00Z')
-  lastYearThirtyAgo.setUTCFullYear(lastYearThirtyAgo.getUTCFullYear() - 1)
-  const lastYearTodayIso = lastYearToday.toISOString().slice(0, 10)
-  const lastYearThirtyAgoIso = lastYearThirtyAgo.toISOString().slice(0, 10)
+  // All windows are Bangkok calendar days (`from`/`to` inclusive). Timestamp
+  // bounds use +07:00 so a booking made at 01:00 Bangkok lands on the right
+  // day (UTC would put it on the previous one).
+  const { from, to, days, granularity } = range
+  const today = getTodayBangkok()
+  const toExcl = addDaysIso(to, 1)
+  // Previous window of the same length, for the trend badges.
+  const prevFrom = addDaysIso(from, -days)
+  const bkk = (date: string) => `${date}T00:00:00+07:00`
+
+  // Real bookings — abandoned holds (temp_pending / expired / payment_expired)
+  // never became bookings and must not skew rates, rankings or channels.
+  // Only values that exist in the live `booking_status` enum — an unknown
+  // value (e.g. 'no_show') makes Postgres reject the whole query (22P02).
+  const REAL_STATUSES = ['confirmed', 'checked_in', 'checked_out', 'cancelled']
+  const STAYING_STATUSES = ['confirmed', 'checked_in', 'checked_out']
+  // Revenue = money actually received, keyed on the stay's check-in date.
+  const PAID_STATUSES = ['paid', 'partial_refund']
+
+  // Chart buckets: one per day, or one per calendar month clipped to the
+  // range. `start` inclusive, `end` exclusive (YYYY-MM-DD).
+  type Bucket = { key: string; start: string; end: string }
+  const buckets: Bucket[] = []
+  if (granularity === 'day') {
+    for (let d = from; d <= to; d = addDaysIso(d, 1)) {
+      buckets.push({ key: d, start: d, end: addDaysIso(d, 1) })
+    }
+  } else {
+    let start = from
+    while (start <= to) {
+      const [y, m] = start.split('-').map(Number)
+      const nextMonth = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10)
+      const end = nextMonth < toExcl ? nextMonth : toExcl
+      buckets.push({ key: start.slice(0, 7), start, end })
+      start = end
+    }
+  }
+  const bucketKey = (date: string) => (granularity === 'day' ? date : date.slice(0, 7))
+
+  // Same window one year earlier, for the occupancy comparison bars.
+  const lastYear = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number)
+    return new Date(Date.UTC(y - 1, m - 1, d)).toISOString().slice(0, 10)
+  }
 
   const [
-    { data: last7Rows, error: e1 },
-    { data: prev7Rows, error: e2 },
-    { data: last7Cancelled, error: e3 },
-    { data: prev7Cancelled, error: e4 },
-    { count: totalBookings7d, error: e5 },
-    { data: dailyRevenueRows, error: e6 },
-    { data: currentMonthRows, error: e7 },
-    { data: priorYearRows, error: e8 },
+    { data: revenueRows, error: e1 },
+    { count: realCount, error: e2 },
+    { count: cancelledCount, error: e4 },
+    { count: prevCancelledCount, error: e5 },
+    { count: activeRooms, error: e6 },
+    { data: occRows, error: e7 },
+    { data: occRowsLastYear, error: e8 },
     { data: roomTypeRows, error: e9 },
     { data: channelRows, error: e10 },
+    { data: cancelledRows, error: e11 },
   ] = await Promise.all([
+    // Paid revenue by check-in over the range (bars + header) and the
+    // previous window of equal length (trend). check_out → room-nights for ADR.
     supabase
       .from('bookings')
-      .select('total, created_at')
-      .gte('created_at', sevenDaysAgo + 'T00:00:00Z')
-      .lte('created_at', today + 'T23:59:59Z')
-      .neq('status', 'cancelled'),
-    supabase
-      .from('bookings')
-      .select('total')
-      .gte('created_at', fourteenDaysAgo + 'T00:00:00Z')
-      .lt('created_at', sevenDaysAgo + 'T00:00:00Z')
-      .neq('status', 'cancelled'),
+      .select('check_in, check_out, total')
+      .gte('check_in', prevFrom)
+      .lte('check_in', to)
+      .in('status', STAYING_STATUSES)
+      .in('payment_status', PAID_STATUSES),
     supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
-      .gte('created_at', sevenDaysAgo + 'T00:00:00Z')
-      .lte('created_at', today + 'T23:59:59Z')
+      .gte('created_at', bkk(from))
+      .lt('created_at', bkk(toExcl))
+      .in('status', REAL_STATUSES),
+    supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', bkk(from))
+      .lt('created_at', bkk(toExcl))
       .eq('status', 'cancelled'),
     supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
-      .gte('created_at', fourteenDaysAgo + 'T00:00:00Z')
-      .lt('created_at', sevenDaysAgo + 'T00:00:00Z')
+      .gte('created_at', bkk(prevFrom))
+      .lt('created_at', bkk(from))
       .eq('status', 'cancelled'),
+    supabase.from('room_units').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    // Stays overlapping the range (check_out is exclusive).
     supabase
       .from('bookings')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', sevenDaysAgo + 'T00:00:00Z')
-      .lte('created_at', today + 'T23:59:59Z'),
-    // dailyRevenue: 7-day window keyed on check_in (not created_at — that's
-    // when the booking was made, not when revenue was earned). Includes
-    // confirmed + checked_out (i.e. realised revenue; pending is excluded
-    // because the guest may still cancel).
+      .select('check_in, check_out')
+      .lt('check_in', toExcl)
+      .gt('check_out', from)
+      .in('status', STAYING_STATUSES),
     supabase
       .from('bookings')
-      .select('check_in, total')
-      .gte('check_in', sevenDaysAgo)
-      .lte('check_in', today)
-      .in('status', ['confirmed', 'checked_out']),
-    // occupancyYoY: current 30-day booking count + same range 1 year prior.
+      .select('check_in, check_out')
+      .lt('check_in', lastYear(toExcl))
+      .gt('check_out', lastYear(from))
+      .in('status', STAYING_STATUSES),
     supabase
       .from('bookings')
-      .select('check_in', { count: 'exact' })
-      .gte('check_in', thirtyDaysAgo)
-      .lte('check_in', today)
-      .in('status', ['confirmed', 'checked_in', 'checked_out']),
+      .select('check_in, room_type_id, total, room_type:room_types(name)')
+      .gte('check_in', from)
+      .lte('check_in', to)
+      .in('status', STAYING_STATUSES),
     supabase
       .from('bookings')
-      .select('check_in', { count: 'exact' })
-      .gte('check_in', lastYearThirtyAgoIso)
-      .lte('check_in', lastYearTodayIso)
-      .in('status', ['confirmed', 'checked_in', 'checked_out']),
-    // mostBookedRooms + highestRevenueRoomTypes: GROUP BY room_type_id with
-    // the embedded room_type name for label. SELECT only the columns we need
-    // to keep the row size small.
+      .select('channel')
+      .gte('check_in', from)
+      .lte('check_in', to)
+      .in('status', STAYING_STATUSES),
+    // Cancellations per bucket — same definition as the cancellation card.
     supabase
       .from('bookings')
-      .select('room_type_id, total, room_type:room_types(name)')
-      .in('status', ['confirmed', 'checked_in', 'checked_out']),
-    // channels: GROUP BY channel — used for the donut chart.
-    supabase.from('bookings').select('channel'),
+      .select('created_at')
+      .gte('created_at', bkk(from))
+      .lt('created_at', bkk(toExcl))
+      .eq('status', 'cancelled'),
   ])
   for (const [label, e] of [
-    ['last7Rows', e1],
-    ['prev7Rows', e2],
-    ['last7Cancelled', e3],
-    ['prev7Cancelled', e4],
-    ['totalBookings7d', e5],
-    ['dailyRevenueRows', e6],
-    ['currentMonthRows', e7],
-    ['priorYearRows', e8],
+    ['revenueRows', e1],
+    ['realCount', e2],
+    ['cancelledCount', e4],
+    ['prevCancelledCount', e5],
+    ['activeRooms', e6],
+    ['occRows', e7],
+    ['occRowsLastYear', e8],
     ['roomTypeRows', e9],
     ['channelRows', e10],
+    ['cancelledRows', e11],
   ] as const) {
     if (e) wrapSupabaseError(label, e)
   }
 
-  const totalRevenue7d = (last7Rows ?? []).reduce((sum, r) => sum + (r.total ?? 0), 0)
-  const prev7Revenue = (prev7Rows ?? []).reduce((sum, r) => sum + (r.total ?? 0), 0)
-
-  // Phase 10: real percent change vs prior 7-day window. Round to whole pct.
-  // If prior was 0 and current is positive, show +100% (consistent with how
-  // cancellationTrendPct handles the same edge case below).
-  const totalRevenueTrendPct =
-    prev7Revenue === 0
-      ? totalRevenue7d > 0
-        ? 100
-        : 0
-      : Math.round(((totalRevenue7d - prev7Revenue) / prev7Revenue) * 100)
-
-  const last7TotalCount = (totalBookings7d as number | null) ?? 0
-  const last7CancelledCount = (last7Cancelled as number | null) ?? 0
-  const prev7CancelledCount = (prev7Cancelled as number | null) ?? 0
-
-  const cancellationRatePct =
-    last7TotalCount > 0 ? Math.round((last7CancelledCount / last7TotalCount) * 100) : 0
-  const cancellationTrendPct =
-    prev7CancelledCount === 0
-      ? last7CancelledCount > 0
-        ? 100
-        : 0
-      : Math.round(((last7CancelledCount - prev7CancelledCount) / prev7CancelledCount) * 100)
-
-  // ── dailyRevenue: bucket client-side (matches bucketRevenue7d pattern) ──
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const dailyBuckets: Record<string, number> = {}
-  for (let i = 6; i >= 0; i--) dailyBuckets[isoDaysAgo(i)] = 0
-  for (const r of dailyRevenueRows ?? []) {
-    const day = r.check_in
-    if (day in dailyBuckets) dailyBuckets[day] += r.total ?? 0
-  }
-  const dailyRevenue: RevenueBarPoint[] = Object.entries(dailyBuckets).map(([date, revenue]) => {
-    const d = new Date(date + 'T00:00:00Z')
-    const isToday = date === today
-    return {
-      date,
-      revenue,
-      label: isToday ? 'Today' : dayLabels[d.getUTCDay()] ?? '',
+  // ── Revenue: header total, trend and bars share one definition ──
+  const revenueByBucket = new Map<string, number>(buckets.map((b) => [b.key, 0]))
+  // Paid room-nights per bucket (by check-in) — the ADR denominator.
+  const paidNightsByBucket = new Map<string, number>()
+  let prevRevenue = 0
+  for (const r of revenueRows ?? []) {
+    if (r.check_in < from) prevRevenue += r.total ?? 0
+    else {
+      const k = bucketKey(r.check_in)
+      revenueByBucket.set(k, (revenueByBucket.get(k) ?? 0) + (r.total ?? 0))
+      paidNightsByBucket.set(k, (paidNightsByBucket.get(k) ?? 0) + diffDaysIso(r.check_in, r.check_out))
     }
-  })
+  }
+  const totalRevenue = [...revenueByBucket.values()].reduce((s, v) => s + v, 0)
+  // Percent change vs the previous window; +100% when that window was 0.
+  const totalRevenueTrendPct =
+    prevRevenue === 0
+      ? totalRevenue > 0
+        ? 100
+        : 0
+      : Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100)
 
-  // ── occupancyYoY: system is < 1 year old in most installs → prior is 0
-  // rows. Return [] in that case. Otherwise build a single point comparing
-  // current 30d to the same window last year. ──
-  const priorCount = Array.isArray(priorYearRows) ? priorYearRows.length : 0
-  const currentCount = Array.isArray(currentMonthRows) ? currentMonthRows.length : 0
-  const occupancyYoY: OccupancyMonthPoint[] =
-    priorCount === 0
+  // Labels are formatted at UTC so they never shift with the server timezone.
+  const dayFmt = new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', timeZone: 'UTC', calendar: 'gregory' })
+  const monthFmt = new Intl.DateTimeFormat('th-TH', { month: 'short', year: '2-digit', timeZone: 'UTC', calendar: 'gregory' })
+  const bucketLabel = (b: Bucket) =>
+    granularity === 'day'
+      ? b.start === today
+        ? 'วันนี้'
+        : dayFmt.format(new Date(`${b.start}T00:00:00Z`))
+      : monthFmt.format(new Date(`${b.start}T00:00:00Z`))
+  const revenue: RevenueBarPoint[] = buckets.map((b) => ({
+    date: b.start,
+    revenue: revenueByBucket.get(b.key) ?? 0,
+    label: bucketLabel(b),
+  }))
+
+  // ── Cancellation rate over real bookings only ──
+  const totalBookings = realCount ?? 0
+  const cancelled = cancelledCount ?? 0
+  const prevCancelled = prevCancelledCount ?? 0
+  const cancellationRatePct = totalBookings > 0 ? Math.round((cancelled / totalBookings) * 100) : 0
+  const cancellationTrendPct =
+    prevCancelled === 0
+      ? cancelled > 0
+        ? 100
+        : 0
+      : Math.round(((cancelled - prevCancelled) / prevCancelled) * 100)
+
+  // ── Occupancy: booked room-nights ÷ (active rooms × days in bucket) ──
+  const rooms = activeRooms ?? 0
+  const DAY_MS = 86_400_000
+  const nightsIn = (rows: { check_in: string; check_out: string }[] | null, startIso: string, endIso: string) => {
+    const start = Date.parse(startIso)
+    const end = Date.parse(endIso)
+    let nights = 0
+    for (const r of rows ?? []) {
+      const lo = Math.max(start, Date.parse(r.check_in))
+      const hi = Math.min(end, Date.parse(r.check_out))
+      if (hi > lo) nights += Math.round((hi - lo) / DAY_MS)
+    }
+    return { nights, days: Math.round((end - start) / DAY_MS) }
+  }
+  const pct = (nights: number, bucketDays: number) =>
+    rooms > 0 && bucketDays > 0 ? Math.min(100, Math.round((nights / (rooms * bucketDays)) * 1000) / 10) : 0
+  const hasLastYear = (occRowsLastYear ?? []).length > 0
+  const occupancy: OccupancyPoint[] =
+    rooms === 0
       ? []
-      : [
-          {
-            month: today.slice(0, 7), // YYYY-MM
-            last: Math.min(100, Math.round((priorCount / 30) * 100)),
-            current: Math.min(100, Math.round((currentCount / 30) * 100)),
-          },
-        ]
+      : buckets.map((b) => {
+          const cur = nightsIn(occRows, b.start, b.end)
+          const prev = nightsIn(occRowsLastYear, lastYear(b.start), lastYear(b.end))
+          return {
+            period: b.key,
+            current: pct(cur.nights, cur.days),
+            last: hasLastYear ? pct(prev.nights, prev.days) : null,
+          }
+        })
 
   // ── mostBookedRooms + highestRevenueRoomTypes: group by room_type_id ──
   type RoomTypeAgg = { id: string | null; name: string; count: number; revenue: number }
@@ -1134,17 +1320,17 @@ export async function getReportsData(): Promise<ReportsData> {
     channelCounts[ch] = (channelCounts[ch] ?? 0) + 1
     channelTotal += 1
   }
-  // Fixed palette per channel — single source of truth for chart colors.
+  // Brand palette per channel — single source of truth for chart colours.
   const channelPalette: Record<string, string> = {
-    web: '#3b82f6',
-    walk_in: '#10b981',
-    phone: '#f59e0b',
-    ota: '#a855f7',
+    web: chartColors.primary,
+    walk_in: chartColors.secondary,
+    phone: chartColors.tertiary,
+    ota: chartColors.success,
   }
   const channelLabels: Record<string, string> = {
-    web: 'Online',
+    web: 'เว็บไซต์',
     walk_in: 'Walk-in',
-    phone: 'Phone',
+    phone: 'โทรศัพท์',
     ota: 'OTA',
   }
   const channels: ChannelSlice[] = Object.entries(channelCounts)
@@ -1152,20 +1338,54 @@ export async function getReportsData(): Promise<ReportsData> {
     .map(([key, count]) => ({
       label: channelLabels[key] ?? key,
       percent: channelTotal > 0 ? Math.round((count / channelTotal) * 100) : 0,
-      color: channelPalette[key] ?? '#94a3b8',
+      color: channelPalette[key] ?? chartColors.textMuted,
     }))
 
+  // ── Main-chart series: every switchable metric per bucket ──
+  const bookingsByBucket = new Map<string, number>()
+  for (const r of roomTypeRows ?? []) {
+    const k = bucketKey(r.check_in)
+    bookingsByBucket.set(k, (bookingsByBucket.get(k) ?? 0) + 1)
+  }
+  const cancelsByBucket = new Map<string, number>()
+  for (const r of cancelledRows ?? []) {
+    const k = bucketKey(toBangkokIsoDate(r.created_at))
+    cancelsByBucket.set(k, (cancelsByBucket.get(k) ?? 0) + 1)
+  }
+  const adrOf = (rev: number, nights: number) => (nights > 0 ? Math.round(rev / nights) : 0)
+  const trend: ReportTrendPoint[] = buckets.map((b, i) => ({
+    period: b.key,
+    label: bucketLabel(b),
+    revenue: revenueByBucket.get(b.key) ?? 0,
+    bookings: bookingsByBucket.get(b.key) ?? 0,
+    adr: adrOf(revenueByBucket.get(b.key) ?? 0, paidNightsByBucket.get(b.key) ?? 0),
+    occupancy: occupancy[i]?.current ?? 0,
+    occupancyLast: occupancy[i]?.last ?? null,
+    cancellations: cancelsByBucket.get(b.key) ?? 0,
+  }))
+  const totalPaidNights = [...paidNightsByBucket.values()].reduce((s, v) => s + v, 0)
+  const wholeRange = nightsIn(occRows, from, toExcl)
+  const trendSummary: Record<ReportMetric, number> = {
+    revenue: totalRevenue,
+    bookings: (roomTypeRows ?? []).length,
+    adr: adrOf(totalRevenue, totalPaidNights),
+    occupancy: pct(wholeRange.nights, wholeRange.days),
+    cancellations: cancelled,
+  }
+
   return {
-    totalRevenue7d,
+    range,
+    trend,
+    trendSummary,
+    hasOccupancyLastYear: hasLastYear,
+    totalRevenue,
     totalRevenueTrendPct,
-    // Phase 12: live aggregation. Empty arrays only when the underlying query
-    // returned 0 rows (e.g. a brand-new install with no bookings yet).
-    dailyRevenue,
-    occupancyYoY,
+    revenue,
+    occupancy,
     mostBookedRooms,
     highestRevenueRoomTypes,
     channels,
-    totalBookings7d: last7TotalCount,
+    totalBookings,
     cancellationRatePct,
     cancellationTrendPct,
   }
@@ -1313,23 +1533,31 @@ export async function listStaff(): Promise<StaffMember[]> {
   }))
 }
 
-export async function listShifts(): Promise<ShiftSlot[]> {
+/**
+ * Phase 54 — 7-day shift window starting at `weekStart` (default: today in
+ * Bangkok). `dates` is always the full 7 days so the schedule renders its
+ * columns even before any shift has been entered.
+ */
+export async function listShifts(weekStart: string = getTodayBangkok()): Promise<ShiftWeek> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
-  const today = todayIso()
-  const weekFromNow = isoDaysAgo(-6) // today + 6 days
+  const dates = Array.from({ length: 7 }, (_, i) => addDaysIso(weekStart, i))
   const { data, error } = await supabase
     .from('staff_shifts')
     .select('staff_id, shift_date, position')
-    .gte('shift_date', today)
-    .lte('shift_date', weekFromNow)
+    .gte('shift_date', dates[0])
+    .lte('shift_date', dates[6])
     .order('shift_date', { ascending: true })
   if (error) wrapSupabaseError('', error)
-  return (data ?? []).map((r) => ({
-    staffId: r.staff_id,
-    date: r.shift_date,
-    position: r.position as ShiftSlot['position'],
-  }))
+  return {
+    weekStart,
+    dates,
+    slots: (data ?? []).map((r) => ({
+      staffId: r.staff_id,
+      date: r.shift_date,
+      position: r.position as ShiftSlot['position'],
+    })),
+  }
 }
 
 export async function listRoomUnits(): Promise<RoomUnitWithType[]> {
@@ -1608,36 +1836,97 @@ export async function updateHotelSettings(args: Partial<HotelSettings>): Promise
   return data as HotelSettings
 }
 
-export async function closeRoomUnit(args: { unitId: string }): Promise<RoomUnitWithType> {
+/**
+ * Close a room for maintenance. Refuses while a guest is staying in it —
+ * the check-out trigger would otherwise flip it to waiting_cleaning and
+ * silently undo the closure. Already-closed rooms are a no-op.
+ */
+export async function closeRoomUnit(args: { unitId: string }): Promise<void> {
   const { createClient } = await import('@/lib/supabase/server')
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('room_units')
-    .update({ status: 'maintenance' })
-    .eq('id', args.unitId)
-    .select(`
-      id, floor, unit_label, view_label, status,
-      room_type:room_types(id, slug, name, name_th, base_price, hero_image_key)
-    `)
-    .single()
-  if (error) wrapSupabaseError('', error)
-  return data as unknown as RoomUnitWithType
+  await closeRoomForMaintenance(await createClient(), args)
 }
 
-export async function reopenRoomUnit(args: { unitId: string }): Promise<RoomUnitWithType> {
+type ServerSupabase = Awaited<ReturnType<typeof import('@/lib/supabase/server').createClient>>
+
+/** Client-agnostic core of closeRoomUnit (the integration test passes a service client). */
+export async function closeRoomForMaintenance(
+  supabase: ServerSupabase,
+  args: { unitId: string },
+): Promise<void> {
+  const [{ data: unit, error: unitErr }, { count: staying, error: stayErr }] = await Promise.all([
+    supabase.from('room_units').select('status').eq('id', args.unitId).maybeSingle(),
+    supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_unit_id', args.unitId)
+      .eq('status', 'checked_in'),
+  ])
+  if (unitErr) wrapSupabaseError('room_units', unitErr)
+  if (stayErr) wrapSupabaseError('bookings', stayErr)
+  if (!unit) throw new Error('ไม่พบห้องนี้')
+  if (unit.status === 'occupied' || (staying ?? 0) > 0) {
+    throw new Error('ห้องนี้มีแขกพักอยู่ — ปิดได้หลังเช็คเอาท์')
+  }
+  const { error } = await supabase
+    .from('room_units')
+    .update({ status: 'maintenance', updated_at: new Date().toISOString() })
+    .eq('id', args.unitId)
+    .not('status', 'in', '(maintenance,out_of_order)')
+  if (error) wrapSupabaseError('room_units', error)
+}
+
+/**
+ * Reopen a closed room. It goes to waiting_cleaning (not straight to
+ * available) with one cleaning task, and any maintenance report still
+ * in_progress for the room is resolved. Shared by the /manager/rates
+ * reopen button and resolveMaintenanceReport so both paths behave the same.
+ *
+ * Order matters: the room leaves `maintenance` before the task is inserted,
+ * because on_task_insert skips rooms that are still in maintenance.
+ */
+export async function reopenRoomForCleaning(
+  supabase: ServerSupabase,
+  args: { unitId: string; actorId: string },
+): Promise<void> {
+  const now = new Date().toISOString()
+  const { error: roomErr } = await supabase
+    .from('room_units')
+    .update({ status: 'waiting_cleaning', updated_at: now })
+    .eq('id', args.unitId)
+    .in('status', ['maintenance', 'out_of_order'])
+  if (roomErr) wrapSupabaseError('room_units', roomErr)
+
+  const { count: openTasks, error: taskReadErr } = await supabase
+    .from('housekeeping_tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('room_unit_id', args.unitId)
+    .in('status', ['unassigned', 'assigned', 'in_progress'])
+  if (taskReadErr) wrapSupabaseError('housekeeping_tasks', taskReadErr)
+  if ((openTasks ?? 0) === 0) {
+    const { error: taskErr } = await supabase.from('housekeeping_tasks').insert({
+      room_unit_id: args.unitId,
+      task_type: 'cleaning',
+      priority: 'normal',
+      status: 'unassigned',
+      assigned_to: null,
+      created_by: args.actorId,
+      booking_id: null,
+    })
+    if (taskErr) wrapSupabaseError('housekeeping_tasks', taskErr)
+  }
+
+  const { error: reportErr } = await supabase
+    .from('maintenance_reports')
+    .update({ status: 'resolved', resolved_at: now, updated_at: now })
+    .eq('room_unit_id', args.unitId)
+    .eq('status', 'in_progress')
+  if (reportErr) wrapSupabaseError('maintenance_reports', reportErr)
+}
+
+export async function reopenRoomUnit(args: { unitId: string; actorId: string }): Promise<void> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('room_units')
-    .update({ status: 'available' })
-    .eq('id', args.unitId)
-    .select(`
-      id, floor, unit_label, view_label, status,
-      room_type:room_types(id, slug, name, name_th, base_price, hero_image_key)
-    `)
-    .single()
-  if (error) wrapSupabaseError('', error)
-  return data as unknown as RoomUnitWithType
+  await reopenRoomForCleaning(supabase, args)
 }
 
 export async function setStaffActive(args: { staffId: string; isActive: boolean }): Promise<StaffMember> {

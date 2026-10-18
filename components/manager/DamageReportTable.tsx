@@ -2,15 +2,18 @@ import type { DamageReport as DamageReportType } from '@/lib/data/types'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ResolveDamageButton } from './ResolveDamageButton'
 import { formatTHB } from '@/lib/pricing'
-import { formatDate } from '@/lib/dates'
+import { formatBangkokDate } from '@/lib/dates'
+import type { Locale } from '@/lib/i18n/config'
+import { getT } from '@/lib/i18n/t'
 
 interface DamageReportTableProps {
   reports: DamageReportType[]
+  locale: Locale
 }
 
-const SEVERITY_LABEL: Record<DamageReportType['severity'], string> = {
-  normal: 'ปกติ',
-  urgent: 'เร่งด่วน',
+const SEVERITY_KEY: Record<DamageReportType['severity'], string> = {
+  normal: 'manager.housekeepingPage.damageSeverityNormal',
+  urgent: 'manager.housekeepingPage.damageSeverityUrgent',
 }
 
 const SEVERITY_CLASS: Record<DamageReportType['severity'], string> = {
@@ -18,29 +21,30 @@ const SEVERITY_CLASS: Record<DamageReportType['severity'], string> = {
   urgent: 'bg-error-container text-on-error-container',
 }
 
-export function DamageReportTable({ reports }: DamageReportTableProps) {
+export function DamageReportTable({ reports, locale }: DamageReportTableProps) {
+  const t = getT(locale)
   if (reports.length === 0) {
     return (
       <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-        <h3 className="font-headline-sm text-headline-sm text-primary mb-2">บันทึกรายงานความเสียหาย</h3>
-        <p className="text-body-md text-on-surface-variant italic">ไม่มีรายงานความเสียหาย</p>
+        <h3 className="font-headline-sm text-headline-sm text-primary mb-2">{t('manager.housekeepingPage.damageReports')}</h3>
+        <p className="text-body-md text-on-surface-variant italic">{t('manager.housekeepingPage.noDamageReports')}</p>
       </div>
     )
   }
   return (
     <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">บันทึกรายงานความเสียหาย</h3>
+      <h3 className="font-headline-sm text-headline-sm text-primary mb-4">{t('manager.housekeepingPage.damageReports')}</h3>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-body-md">
           <thead className="text-label-md uppercase tracking-wider text-on-surface-variant border-b border-outline-variant">
             <tr>
-              <th className="py-3 pr-4">ห้อง</th>
-              <th className="py-3 pr-4">รายงานโดย</th>
-              <th className="py-3 pr-4">คำอธิบาย</th>
-              <th className="py-3 pr-4">รูปภาพ</th>
-              <th className="py-3 pr-4">ความรุนแรง</th>
-              <th className="py-3 pr-4">ค่าใช้จ่าย</th>
-              <th className="py-3 pr-4">ดำเนินการ</th>
+              <th className="py-3 pr-4">{t('manager.housekeepingPage.damageColRoom')}</th>
+              <th className="py-3 pr-4">{t('manager.housekeepingPage.damageColReporter')}</th>
+              <th className="py-3 pr-4">{t('manager.housekeepingPage.damageColDescription')}</th>
+              <th className="py-3 pr-4">{t('manager.housekeepingPage.damageColPhoto')}</th>
+              <th className="py-3 pr-4">{t('manager.housekeepingPage.damageColSeverity')}</th>
+              <th className="py-3 pr-4">{t('manager.housekeepingPage.damageColCost')}</th>
+              <th className="py-3 pr-4">{t('manager.housekeepingPage.damageColAction')}</th>
             </tr>
           </thead>
           <tbody>
@@ -54,7 +58,7 @@ export function DamageReportTable({ reports }: DamageReportTableProps) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={r.photoUrl}
-                      alt={`Damage in room ${r.roomNumber}`}
+                      alt={t('manager.housekeepingPage.damagePhotoAlt', { room: r.roomNumber })}
                       className="w-12 h-12 object-cover rounded-md"
                     />
                   ) : (
@@ -67,7 +71,7 @@ export function DamageReportTable({ reports }: DamageReportTableProps) {
                   <span
                     className={`inline-flex items-center px-2 py-1 rounded-full text-caption ${SEVERITY_CLASS[r.severity]}`}
                   >
-                    {SEVERITY_LABEL[r.severity]}
+                    {t(SEVERITY_KEY[r.severity])}
                   </span>
                 </td>
                 <td className="py-3 pr-4">
@@ -80,7 +84,9 @@ export function DamageReportTable({ reports }: DamageReportTableProps) {
                 <td className="py-3 pr-4">
                   {r.resolved ? (
                     <span className="text-caption text-on-surface-variant">
-                      แก้ไขแล้ว {r.resolvedAt ? formatDate(r.resolvedAt) : ''}
+                      {t('manager.housekeepingPage.damageResolvedOn', {
+                        date: r.resolvedAt ? formatBangkokDate(r.resolvedAt, locale === 'en' ? 'en-GB' : 'th-TH') : '',
+                      })}
                     </span>
                   ) : (
                     <ResolveDamageButton reportId={r.id} defaultCost={r.costEstimate} />

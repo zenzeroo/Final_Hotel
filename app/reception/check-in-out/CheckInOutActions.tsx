@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface AvailableUnit {
   id: string
@@ -28,6 +29,7 @@ export function CheckInOutActions({
   label,
   availableUnits = [],
 }: CheckInOutActionsProps) {
+  const t = useT()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   // Default to the first available unit so a quick check-in (no select) still
@@ -48,7 +50,7 @@ export function CheckInOutActions({
       const roomUnitId = isCheckIn ? selectedUnitId : null
 
       if (isCheckIn && !roomUnitId) {
-        setError('กรุณาเลือกห้องก่อนเช็คอิน')
+        setError(t('reception.checkInOutPage.selectRoomFirst'))
         return
       }
 
@@ -76,11 +78,11 @@ export function CheckInOutActions({
             onChange={(e) => setSelectedUnitId(e.target.value)}
             disabled={isPending}
             className="px-2 py-1 rounded-full bg-surface-container-low border border-outline-variant text-caption text-on-surface focus:outline-none focus:border-secondary"
-            aria-label="เลือกห้อง"
+            aria-label={t('reception.checkInOutPage.selectRoom')}
           >
             {availableUnits.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.unit_label} (ชั้น {u.floor})
+                {t('reception.checkInOutPage.unitFloor', { unit: u.unit_label, floor: u.floor })}
               </option>
             ))}
           </select>

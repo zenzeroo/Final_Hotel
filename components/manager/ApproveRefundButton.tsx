@@ -3,12 +3,14 @@
 import { useTransition } from 'react'
 import { approveRefundAction } from '@/app/actions/manager'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface ApproveRefundButtonProps {
   refundId: string
 }
 
 export function ApproveRefundButton({ refundId }: ApproveRefundButtonProps) {
+  const t = useT()
   const [pending, startTransition] = useTransition()
   return (
     <form
@@ -23,7 +25,7 @@ export function ApproveRefundButton({ refundId }: ApproveRefundButtonProps) {
         className="inline-flex items-center gap-1 px-3 py-2 rounded-md bg-primary text-on-primary text-caption font-semibold hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50"
       >
         <MaterialIcon name="check" size={16} />
-        {pending ? '...' : 'อนุมัติ'}
+        {pending ? '...' : t('manager.common.approve')}
       </button>
     </form>
   )

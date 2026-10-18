@@ -4,6 +4,8 @@ import { listStaff } from '@/lib/data/manager'
 import { getSession } from '@/lib/supabase/getSession'
 import { StaffForm } from '@/components/admin/StaffForm'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +14,7 @@ export default async function EditStaffPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const t = getT(await getLocale())
   const { id } = await params
   const [session, staff] = await Promise.all([getSession(), listStaff()])
   const member = staff.find((s) => s.id === id)
@@ -26,12 +29,12 @@ export default async function EditStaffPage({
         className="inline-flex items-center gap-2 px-2 py-1 rounded text-body-md text-primary hover:bg-primary-fixed hover:text-primary mb-4"
       >
         <MaterialIcon name="arrow_back" size={18} />
-        กลับไปหน้ารายชื่อพนักงาน
+        {t('admin.staffPage.backToList')}
       </Link>
 
       <header className="mb-8">
         <h1 className="font-headline-md text-headline-md text-primary">
-          แก้ไขข้อมูลพนักงาน: {member.full_name}
+          {t('admin.staffPage.editHeading', { name: member.full_name })}
         </h1>
         <p className="text-body-lg text-on-surface-variant mt-2">{member.email}</p>
       </header>

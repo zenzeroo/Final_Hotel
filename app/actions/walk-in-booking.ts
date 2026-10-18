@@ -1,5 +1,6 @@
 'use server'
 
+import { getServerT } from '@/lib/i18n/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -35,7 +36,7 @@ const walkInSchema = z.object({
   bookerPhone: z
     .string()
     .trim()
-    .regex(/^[0-9]{10}$/, 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก ห้ามมีขีดหรือช่องว่าง'),
+    .regex(/^[0-9]{10}$/, 'validation.phone10'),
   specialRequest: z.string().max(500).optional().nullable(),
   promoCode: z.string().max(40).optional().nullable(),
   // Phase 17 — replaces the boolean `markAsPaid`. `card` will redirect to
@@ -53,9 +54,10 @@ export interface WalkInBookingResult {
 }
 
 export async function createWalkInBooking(input: WalkInBookingInput): Promise<WalkInBookingResult> {
+  const { locale, t } = await getServerT()
   const parsed = walkInSchema.safeParse(input)
   if (!parsed.success) {
-    return { error: 'ข้อมูลไม่ถูกต้อง: ' + translateZodIssues(parsed.error.issues) }
+    return { error: t('actions.common.invalidInput', { detail: translateZodIssues(parsed.error.issues, locale) }) }
   }
   const data = parsed.data
 
@@ -64,7 +66,7 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
   const {
     data: { user: caller },
   } = await supabase.auth.getUser()
-  if (!caller) return { error: 'กรุณาเข้าสู่ระบบ' }
+  if (!caller) return { error: t('actions.common.notLoggedIn') }
 
   // Caller's role lives in profiles; we read directly to avoid a recursive RLS trap.
   const { data: callerProfile, error: profileErr } = await supabase
@@ -72,9 +74,9 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
     .select('role')
     .eq('id', caller.id)
     .single()
-  if (profileErr || !callerProfile) return { error: 'ไม่พบข้อมูลผู้ใช้' }
+  if (profileErr || !callerProfile) return { error: t('actions.common.userNotFound') }
   if (!['reception', 'manager', 'admin'].includes(callerProfile.role)) {
-    return { error: 'ต้องเป็นเจ้าหน้าที่ (reception/manager/admin) เท่านั้น' }
+    return { error: t('actions.common.staffOnly') }
   }
 
   // ── 2. Validate room + dates (same logic as createBooking) ──
@@ -83,13 +85,13 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
     .select('base_price, max_guests, is_active')
     .eq('id', data.roomTypeId)
     .maybeSingle()
-  if (roomErr || !room) return { error: 'ไม่พบห้องพัก' }
-  if (!room.is_active) return { error: 'ห้องพักนี้ไม่พร้อมใช้งาน' }
+  if (roomErr || !room) return { error: t('actions.common.roomNotFound') }
+  if (!room.is_active) return { error: t('actions.common.roomInactive') }
   if (data.guests > room.max_guests) {
-    return { error: `ห้องนี้รองรับผู้เข้าพักสูงสุด ${room.max_guests} ท่าน` }
+    return { error: t('actions.common.maxGuests', { max: room.max_guests }) }
   }
   if (data.checkIn >= data.checkOut) {
-    return { error: 'วันที่เช็คเอาท์ต้องมาหลังวันเช็คอิน' }
+    return { error: t('actions.common.checkoutAfterCheckin') }
   }
   // Walk-in allows same-day check-in (no past-date guard needed).
 
@@ -109,11 +111,11 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
       rates: seasonalRates,
     })
   } catch (err) {
-    return { error: err instanceof Error ? err.message : 'วันที่ไม่ถูกต้อง' }
+    return { error: err instanceof Error ? err.message : t('actions.common.invalidDate') }
   }
   if (violatesMinNights(quote, seasonalRates)) {
     return {
-      error: 'การจองนี้ต้องพักขั้นต่ำตามที่กำหนดในเรทฤดูกาล',
+      error: t('actions.common.minNights'),
     }
   }
 
@@ -129,7 +131,7 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
     promotion: null,
     quote,
   }, walkInSettings)
-  if (price.nights === 0) return { error: 'จำนวนคืนต้องมากกว่า 0' }
+  if (price.nights === 0) return { error: t('actions.common.nightsPositive') }
 
   // ── 4. Find or create the guest's auth user via SERVICE ROLE ──
   const admin = await createAdminClient()
@@ -152,7 +154,7 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
       },
     })
     if (createErr || !created.user) {
-      return { error: 'ไม่สามารถสร้างบัญชีผู้เข้าพัก: ' + translateSupabaseError(createErr?.message) }
+      return { error: t('actions.walkIn.createGuestFailed', { detail: translateSupabaseError(createErr?.message, locale) }) }
     }
     guestUserId = created.user.id
     // `handle_new_user()` trigger auto-creates the profile row.
@@ -196,10 +198,10 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
     // P0001 = pool exhausted / no active rooms of this type
     if (rpcError?.code === 'P0001') {
       return {
-        error: 'ห้องพักไม่ว่างในช่วงวันที่เลือก กรุณาเลือกวันอื่นหรือประเภทอื่น',
+        error: t('actions.common.roomSoldOut'),
       }
     }
-    return { error: 'ไม่สามารถสร้างการจอง: ' + translateSupabaseError(rpcError?.message) }
+    return { error: t('actions.common.createBookingFailed', { detail: translateSupabaseError(rpcError?.message, locale) }) }
   }
 
   // Phase 17 — for cash walk-ins, flip payment_status to 'paid' AND record
@@ -251,14 +253,26 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
       .eq('id', bookingId)
       .single()
     if (booking && data.bookerEmail) {
-      const roomTypeName = (booking.room_type as { name?: string } | null)?.name ?? 'ห้องพัก'
-      const { BookingConfirmationEmail } = await import('@/lib/email/templates/booking-confirmation')
+      const { getRecipientLocale } = await import('@/lib/email/recipient-locale')
+      const { getT } = await import('@/lib/i18n/t')
+      const emailLocale = await getRecipientLocale({ userId: guestUserId })
+      const roomTypeName =
+        (booking.room_type as { name?: string } | null)?.name ??
+        getT(emailLocale)('email.common.roomFallback')
+      const { BookingConfirmationEmail, bookingConfirmationSubject } = await import(
+        '@/lib/email/templates/booking-confirmation'
+      )
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
       await sendEmail({
         to: data.bookerEmail,
         template: 'booking_confirmation',
-        subject: `[Zenzero] ยืนยันการจอง ${booking.booking_code} — ${booking.check_in}`,
+        subject: bookingConfirmationSubject({
+          bookingCode: booking.booking_code,
+          checkIn: booking.check_in,
+          locale: emailLocale,
+        }),
         react: BookingConfirmationEmail({
+          locale: emailLocale,
           bookingCode: booking.booking_code,
           guestName: booking.booker_full_name ?? '',
           roomTypeName,

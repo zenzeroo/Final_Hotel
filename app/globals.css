@@ -20,6 +20,19 @@
   --color-tertiary: #38181b;             /* Burgundy */
   --color-error: #ba1a1a;
 
+  /* Container / "on-" pairs (Phase 54). These were referenced by ~100
+     utilities (status badges, danger buttons, room grid…) but never
+     defined, so Tailwind emitted no colour for them. Material-3 style
+     pairs derived from the brand palette above. */
+  --color-on-primary-container: #c8ebd1;
+  --color-on-secondary-container: #261900;
+  --color-tertiary-container: #ffd9dc;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #38181b;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #410002;
+
   /* Surface Scale */
   --color-background: #faf9f6;           /* Soft Cream */
   --color-surface: #faf9f6;
@@ -71,6 +84,13 @@
   --text-body-md: 1rem;                  /* 16px */
   --text-label-md: 0.875rem;             /* 14px */
   --text-caption: 0.75rem;               /* 12px */
+
+  /* Phase 27.B — toast enter animation */
+  --animate-toast-in: toast-in 200ms ease-out;
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
 
 /* Material Symbols Outlined */

@@ -3,6 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatDateRangeCompact } from '@/lib/dates'
+import { useT } from '@/lib/i18n/useT'
 
 export type CheckInOutView = 'today' | 'upcoming' | 'inhouse'
 
@@ -68,6 +69,7 @@ export function CheckInOutViewTabs({
   checkout,
   activeTab,
 }: CheckInOutViewTabsProps) {
+  const t = useT()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -95,7 +97,7 @@ export function CheckInOutViewTabs({
   // is exactly today's single day; otherwise show a compact range
   // string so the label never lies about what's being shown.
   const isTodayRange = checkin === today && checkout === today
-  const todayLabel = isTodayRange ? 'วันนี้' : formatDateRangeCompact(checkin, checkout)
+  const todayLabel = isTodayRange ? t('reception.checkInOutPage.today') : formatDateRangeCompact(checkin, checkout)
 
   // Active-state style: underline + light surface background.
   // The border-b-2 + negative margin aligns the underline with the
@@ -143,7 +145,7 @@ export function CheckInOutViewTabs({
         className={`${baseTab} ${active === 'upcoming' ? activeClass : inactiveClass}`}
       >
         <MaterialIcon name="schedule" size={16} />
-        กำลังจะมา ({counts.upcoming})
+        {t('reception.checkInOutPage.tabUpcoming', { count: counts.upcoming })}
       </button>
       <button
         type="button"
@@ -153,7 +155,7 @@ export function CheckInOutViewTabs({
         className={`${baseTab} ${active === 'inhouse' ? activeClass : inactiveClass}`}
       >
         <MaterialIcon name="group" size={16} />
-        พักอยู่ในขณะนี้ ({counts.inhouse})
+        {t('reception.checkInOutPage.tabInHouse', { count: counts.inhouse })}
       </button>
     </div>
   )

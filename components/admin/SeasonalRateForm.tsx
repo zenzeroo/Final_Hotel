@@ -6,6 +6,7 @@ import type { RoomType } from '@/lib/data/types'
 import { createSeasonalRateAction } from '@/app/actions/admin/rates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { DatePickerField } from '@/components/ui/DatePickerField'
+import { useT } from '@/lib/i18n/useT'
 
 interface SeasonalRateFormProps {
   roomTypes: RoomType[]
@@ -40,6 +41,7 @@ const inputClass =
   'w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors'
 
 function SubmitButton({ label }: { label: string }) {
+  const t = useT()
   const { pending } = useFormStatus()
   return (
     <button
@@ -50,7 +52,7 @@ function SubmitButton({ label }: { label: string }) {
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-          กำลังบันทึก…
+          {t('admin.common.saving')}
         </>
       ) : (
         label
@@ -60,6 +62,7 @@ function SubmitButton({ label }: { label: string }) {
 }
 
 export function SeasonalRateForm({ roomTypes }: SeasonalRateFormProps) {
+  const t = useT()
   const wrapped = async (
     _state: FormState | null,
     formData: FormData,
@@ -77,10 +80,10 @@ export function SeasonalRateForm({ roomTypes }: SeasonalRateFormProps) {
         <MaterialIcon name="info" size={20} className="text-on-secondary-container shrink-0 mt-0.5" />
         <div>
           <p className="text-body-md text-on-surface font-medium">
-            กรุณาสร้างประเภทห้องอย่างน้อย 1 ประเภทก่อน
+            {t('admin.seasonalForm.needRoomType')}
           </p>
           <p className="text-caption text-on-surface-variant mt-1">
-            เพื่อผูกช่วงลดราคากับประเภทห้อง
+            {t('admin.seasonalForm.needRoomTypeHint')}
           </p>
         </div>
       </div>
@@ -97,17 +100,17 @@ export function SeasonalRateForm({ roomTypes }: SeasonalRateFormProps) {
       {state?.success && (
         <div className="px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg text-body-md inline-flex items-center gap-2">
           <MaterialIcon name="check_circle" size={18} />
-          บันทึกสำเร็จ
+          {t('admin.common.saved')}
         </div>
       )}
 
-      <Field label="ประเภทห้อง" required>
+      <Field label={t('admin.common.roomType')} required>
         <select
           name="room_type_id"
           required
           className={inputClass}
         >
-          <option value="">— เลือกประเภทห้อง —</option>
+          <option value="">{t('admin.common.roomTypePlaceholder')}</option>
           {roomTypes.map((rt) => (
             <option key={rt.id} value={rt.id}>
               {rt.name} ({rt.name_th})
@@ -116,7 +119,7 @@ export function SeasonalRateForm({ roomTypes }: SeasonalRateFormProps) {
         </select>
       </Field>
 
-      <Field label="ชื่อช่วงราคา" required>
+      <Field label={t('admin.seasonalForm.label')} required>
         <input
           name="label"
           type="text"
@@ -128,54 +131,54 @@ export function SeasonalRateForm({ roomTypes }: SeasonalRateFormProps) {
       </Field>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="วันเริ่มต้น" required>
+        <Field label={t('admin.common.startDate')} required>
           <DatePickerField name="start_date" required />
         </Field>
-        <Field label="วันสิ้นสุด" required>
+        <Field label={t('admin.common.endDate')} required>
           <DatePickerField name="end_date" required />
         </Field>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="ราคาคงที่ (THB/คืน)">
+        <Field label={t('admin.seasonalForm.flatPrice')}>
           <input
             name="flat_price"
             type="number"
             min="0"
             step="0.01"
-            placeholder="เว้นว่างถ้าใช้ตัวคูณ"
+            placeholder={t('admin.seasonalForm.flatPlaceholder')}
             className={inputClass}
           />
         </Field>
-        <Field label="ตัวคูณราคา (เช่น 1.25)">
+        <Field label={t('admin.seasonalForm.multiplier')}>
           <input
             name="price_multiplier"
             type="number"
             min="0"
             step="0.01"
-            placeholder="เว้นว่างถ้าใช้ราคาคงที่"
+            placeholder={t('admin.seasonalForm.multiplierPlaceholder')}
             className={inputClass}
           />
         </Field>
       </div>
 
       <p className="text-caption text-on-surface-variant -mt-3">
-        * ต้องระบุอย่างใดอย่างหนึ่ง (ราคาคงที่ หรือ ตัวคูณราคา)
+        {t('admin.seasonalForm.priceRequired')}
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="คืนขั้นต่ำ (override)">
+        <Field label={t('admin.seasonalForm.minNights')}>
           <input
             name="min_nights_override"
             type="number"
             min="1"
             max="60"
             step="1"
-            placeholder="เว้นว่างถ้าไม่กำหนด"
+            placeholder={t('admin.seasonalForm.minNightsPlaceholder')}
             className={inputClass}
           />
         </Field>
-        <Field label="Priority (สูงกว่าใช้แทน)">
+        <Field label={t('admin.seasonalForm.priority')}>
           <input
             name="priority"
             type="number"
@@ -189,7 +192,7 @@ export function SeasonalRateForm({ roomTypes }: SeasonalRateFormProps) {
         </Field>
       </div>
 
-      <Field label="สถานะ">
+      <Field label={t('admin.common.status')}>
         <label className="inline-flex items-center gap-2 mt-2">
           <input
             type="checkbox"
@@ -198,17 +201,17 @@ export function SeasonalRateForm({ roomTypes }: SeasonalRateFormProps) {
             defaultChecked
             className="w-5 h-5 rounded border-outline-variant"
           />
-          <span className="text-body-md text-on-surface">เปิดใช้งานช่วงราคานี้</span>
+          <span className="text-body-md text-on-surface">{t('admin.seasonalForm.activeThis')}</span>
         </label>
       </Field>
 
       <div className="flex items-center gap-3 pt-2">
-        <SubmitButton label="สร้างช่วงราคา" />
+        <SubmitButton label={t('admin.seasonalForm.create')} />
         <a
           href="/admin/promotions"
           className="inline-flex items-center justify-center px-6 py-3 bg-surface-container-low border border-outline-variant rounded-lg font-medium text-body-md hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
         >
-          ยกเลิก
+          {t('admin.common.cancel')}
         </a>
       </div>
     </form>

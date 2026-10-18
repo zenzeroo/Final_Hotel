@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { assignTask } from '@/app/actions/housekeeping'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Modal } from '@/components/ui/Modal'
-import { AlertModal } from '@/components/ui/AlertModal'
+import { useToast } from '@/components/ui/Toast'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useT } from '@/lib/i18n/useT'
 import type { HousekeeperOption } from '@/lib/data/types'
@@ -29,7 +29,7 @@ export function AssignTaskButton({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string>('')
   const [confirmMessage, setConfirmMessage] = useState<string | null>(null)
-  const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const toast = useToast()
 
   const isReassign = !!currentAssigneeId && currentAssigneeId !== selectedId
 
@@ -40,7 +40,7 @@ export function AssignTaskButton({
 
   function requestConfirm() {
     if (!selectedId) {
-      setAlertMessage(t('manager.housekeepingPage.notAssigned'))
+      toast.error(t('manager.housekeepingPage.notAssigned'))
       return
     }
     setPickerOpen(false)
@@ -56,7 +56,7 @@ export function AssignTaskButton({
     startTransition(async () => {
       const result = await assignTask(taskId, selectedId)
       if (!result.ok) {
-        setAlertMessage(result.error)
+        toast.error(result.error)
       }
     })
   }
@@ -117,7 +117,7 @@ export function AssignTaskButton({
                 onClick={() => setPickerOpen(false)}
                 className="flex-1 px-4 py-2 border border-outline-variant rounded-md text-body-md text-primary hover:bg-primary-fixed hover:border-primary-fixed transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
               >
-                {t('common.cancel') ?? 'ยกเลิก'}
+                {t('manager.housekeepingPage.cancel')}
               </button>
               <button
                 type="button"
@@ -140,9 +140,6 @@ export function AssignTaskButton({
           onCancel={() => setConfirmMessage(null)}
           onConfirm={handleConfirm}
         />
-      )}
-      {alertMessage && (
-        <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
       )}
     </>
   )

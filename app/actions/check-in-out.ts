@@ -145,19 +145,22 @@ export async function checkOutBookingAction(
     try {
       const { data: fullBooking } = await admin
         .from('bookings')
-        .select('id, booking_code, booker_email, booker_full_name, check_in, check_out, nights, total, currency')
+        .select('id, user_id, booking_code, booker_email, booker_full_name, check_in, check_out, nights, total, currency')
         .eq('id', parsed.data.bookingId)
         .single()
       if (fullBooking && fullBooking.booker_email) {
-        const { CheckoutThankYouEmail } = await import(
+        const { CheckoutThankYouEmail, checkoutThankYouSubject } = await import(
           '@/lib/email/templates/checkout-thank-you'
         )
+        const { getRecipientLocale } = await import('@/lib/email/recipient-locale')
+        const emailLocale = await getRecipientLocale({ userId: fullBooking.user_id })
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
         await sendEmail({
           to: fullBooking.booker_email,
           template: 'checkout_thank_you',
-          subject: `[Zenzero] ขอบคุณที่เข้าพัก — ${fullBooking.booking_code}`,
+          subject: checkoutThankYouSubject({ bookingCode: fullBooking.booking_code, locale: emailLocale }),
           react: CheckoutThankYouEmail({
+            locale: emailLocale,
             bookingCode: fullBooking.booking_code,
             guestName: fullBooking.booker_full_name ?? '',
             nightsStayed: fullBooking.nights ?? 0,

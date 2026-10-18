@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { requireRole } from '@/lib/auth/require'
 import { getOwnProfile } from '@/lib/data/supabase-account'
 import { AccountProfileContent } from '@/components/account/AccountProfileContent'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,23 +11,24 @@ export default async function ReceptionProfilePage() {
   await requireRole('reception', '/reception/profile')
   const profile = await getOwnProfile()
   if (!profile) notFound()
+  const t = getT(await getLocale())
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-8">
         <h1 className="font-headline-md text-headline-md text-primary">
-          โปรไฟล์ของฉัน
+          {t('staff.profilePage.title')}
         </h1>
         <p className="text-body-lg text-on-surface-variant mt-2">
-          จัดการข้อมูลส่วนตัวและรหัสผ่าน
+          {t('staff.profilePage.subtitle')}
         </p>
       </header>
       <AccountProfileContent
         profile={profile}
         role="reception"
         quickLinks={[
-          { href: '/reception', icon: 'dashboard', label: 'แดชบอร์ด' },
-          { href: '/reception/bookings', icon: 'bookmark', label: 'การจอง' },
+          { href: '/reception', icon: 'dashboard', label: t('staff.profilePage.linkDashboard') },
+          { href: '/reception/bookings', icon: 'bookmark', label: t('staff.profilePage.linkBookings') },
         ]}
       />
     </div>

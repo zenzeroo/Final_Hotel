@@ -1,10 +1,12 @@
+'use client'
+
 /**
  * Phase 30 — presentational workload progress bar.
  *
  * Props:
  *   - loadMinutes: current Σ estimated_minutes for this housekeeper
  *   - capacityMinutes: 480 when on shift (8h), 0 when off duty
- *   - label: optional override (default: "{load} / {capacity} นาที ({pct}%)")
+ *   - label: optional override (default: `staff.workload`)
  *
  * Color logic (uses design tokens from app/globals.css @theme):
  *   - <60%   → secondary (gold)
@@ -13,6 +15,7 @@
  *   - off duty → on-surface-variant (grey)
  */
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface WorkloadBarProps {
   loadMinutes: number
@@ -28,11 +31,13 @@ function colorClass(percent: number, isAvailable: boolean): string {
 }
 
 export function WorkloadBar({ loadMinutes, capacityMinutes, label }: WorkloadBarProps) {
+  const t = useT()
   const isAvailable = capacityMinutes > 0
   const percent = capacityMinutes > 0
     ? Math.min(100, Math.round((loadMinutes / capacityMinutes) * 100))
     : 0
-  const displayLabel = label ?? `${loadMinutes} / ${capacityMinutes} นาที (${percent}%)`
+  const displayLabel =
+    label ?? t('staff.workload', { load: loadMinutes, capacity: capacityMinutes, pct: percent })
   const barColor = isAvailable
     ? percent > 90 ? 'bg-error' : percent >= 60 ? 'bg-tertiary' : 'bg-secondary'
     : 'bg-on-surface-variant/40'

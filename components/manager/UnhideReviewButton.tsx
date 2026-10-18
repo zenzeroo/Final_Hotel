@@ -3,12 +3,14 @@
 import { useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { unhideReviewAction } from '@/app/actions/reviews'
+import { useT } from '@/lib/i18n/useT'
 
 interface UnhideReviewButtonProps {
   reviewId: string
 }
 
 export function UnhideReviewButton({ reviewId }: UnhideReviewButtonProps) {
+  const t = useT()
   const [pending, startTransition] = useTransition()
   return (
     <form
@@ -25,7 +27,7 @@ export function UnhideReviewButton({ reviewId }: UnhideReviewButtonProps) {
         className="inline-flex items-center gap-1 px-3 py-2 rounded-md bg-primary text-secondary text-caption font-semibold disabled:opacity-50"
       >
         <MaterialIcon name="visibility" size={14} />
-        {pending ? '...' : 'กู้คืน (อนุมัติ)'}
+        {pending ? '...' : t('manager.reviewsPage.restore')}
       </button>
     </form>
   )

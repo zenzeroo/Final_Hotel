@@ -8,6 +8,9 @@ import { DatePickerField } from '@/components/ui/DatePickerField'
 import type { AccountProfile } from '@/lib/data/types'
 import type { UserRole } from '@/lib/supabase/roles'
 import { formatDate } from '@/lib/dates'
+import { useLocale } from '@/lib/i18n/useT'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { useT } from '@/lib/i18n/useT'
 
 interface PersonalInfoFormProps {
   profile: AccountProfile
@@ -30,8 +33,6 @@ function isStaffRole(role: UserRole | 'user'): role is UserRole {
   return STAFF_ROLES.includes(role as UserRole)
 }
 
-const VERIFIED_DATA_HINT =
-  'ข้อมูลส่วนบุคคลที่ยืนยันตัวตนแล้ว หากต้องการเปลี่ยนกรุณาติดต่อผู้ดูแลระบบ'
 
 interface FormState {
   error?: string
@@ -62,6 +63,7 @@ function Field({
 }
 
 function SubmitButton() {
+  const t = useT()
   const { pending } = useFormStatus()
   return (
     <button
@@ -72,12 +74,12 @@ function SubmitButton() {
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-          กำลังบันทึก…
+          {t('profile.saving')}
         </>
       ) : (
         <>
           <MaterialIcon name="check" size={18} />
-          บันทึกการเปลี่ยนแปลง
+          {t('profile.save')}
         </>
       )}
     </button>
@@ -90,6 +92,8 @@ function SubmitButton() {
  * via useActionState. On successful submit, returns to view mode.
  */
 export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
+  const t = useT()
+  const locale = useLocale()
   const [editing, setEditing] = useState(false)
   const verifiedDataLocked = isStaffRole(role)
 
@@ -118,16 +122,16 @@ export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
     return (
       <div className="bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container">
         <div className="flex justify-between items-center p-gutter md:p-[32px] pb-base">
-          <h3 className="font-headline-sm text-headline-sm text-primary">ข้อมูลส่วนตัว</h3>
+          <h3 className="font-headline-sm text-headline-sm text-primary">{t('profile.personalInfo')}</h3>
         </div>
         <form action={formAction} className="px-gutter md:px-[32px] pb-gutter md:pb-[32px] flex flex-col gap-5">
           {hasInvalidDbPhone && (
             <div className="px-4 py-3 bg-error-container text-on-error-container rounded-lg text-body-md flex items-start gap-2">
               <MaterialIcon name="error" size={20} className="shrink-0 mt-0.5" />
               <div>
-                <strong>เบอร์โทรศัพท์ของคุณไม่ถูกต้อง</strong>
+                <strong>{t('profile.phoneInvalidTitle')}</strong>
                 <p className="text-body-sm mt-1">
-                  กรุณาติดต่อผู้ดูแลระบบเพื่ออัปเดตเบอร์โทรศัพท์
+                  {t('profile.phoneInvalidBody')}
                 </p>
               </div>
             </div>
@@ -140,11 +144,11 @@ export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
           {state?.success && (
             <div className="px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg text-body-md inline-flex items-center gap-2">
               <MaterialIcon name="check_circle" size={18} />
-              บันทึกสำเร็จ
+              {t('profile.saved')}
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-            <Field label="ชื่อ-นามสกุล (ตามบัตรประชาชน)" required={!verifiedDataLocked}>
+            <Field label={t('profile.fullNameId')} required={!verifiedDataLocked}>
               {verifiedDataLocked ? (
                 <div className="relative">
                   <input
@@ -166,10 +170,10 @@ export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
                 />
               )}
               <p className="font-caption text-caption text-on-surface-variant">
-                {VERIFIED_DATA_HINT}
+                {t('profile.verifiedDataHint')}
               </p>
             </Field>
-            <Field label="วันเกิด">
+            <Field label={t('profile.birthdate')}>
               {verifiedDataLocked ? (
                 <DatePickerField
                   defaultValue={profile.birthdate ?? ''}
@@ -182,10 +186,10 @@ export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
                 />
               )}
               <p className="font-caption text-caption text-on-surface-variant">
-                {VERIFIED_DATA_HINT}
+                {t('profile.verifiedDataHint')}
               </p>
             </Field>
-            <Field label="อีเมล">
+            <Field label={t('profile.email')}>
               <div className="relative">
                 <input
                   defaultValue={profile.email ?? ''}
@@ -198,10 +202,10 @@ export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
                 />
               </div>
               <p className="font-caption text-caption text-on-surface-variant">
-                อีเมลผูกกับบัญชีเข้าสู่ระบบ หากต้องการเปลี่ยนกรุณาติดต่อผู้ดูแลระบบ
+                {t('profile.emailLockedHint')}
               </p>
             </Field>
-            <Field label="เบอร์โทรศัพท์" required>
+            <Field label={t('profile.phone')} required>
               <input
                 name="phone"
                 type="tel"
@@ -219,11 +223,11 @@ export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
               {isPlaceholderPhone ? (
                 <div className="px-3 py-2 bg-warning-container text-on-warning-container rounded-md text-body-sm flex items-center gap-2">
                   <MaterialIcon name="warning" size={16} />
-                  เบอร์โทรศัพท์ของคุณยังไม่ได้ตั้ง — กรุณากรอกเบอร์จริงเพื่อให้ลูกค้าติดต่อท่านได้
+                  {t('profile.phoneMissingHint')}
                 </div>
               ) : (
                 <p className="font-caption text-caption text-on-surface-variant">
-                  ต้องเป็นตัวเลข 10 หลักเท่านั้น (ไม่มีขีด ไม่มีช่องว่าง)
+                  {t('profile.phoneFormatHint')}
                 </p>
               )}
             </Field>
@@ -236,7 +240,7 @@ export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
               }}
               className="bg-transparent border border-outline-variant text-on-surface-variant px-6 py-2 rounded-full font-label-md text-label-md hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
             >
-              ยกเลิก
+              {t('profile.cancel')}
             </button>
             <SubmitButton />
           </div>
@@ -249,25 +253,25 @@ export function PersonalInfoForm({ profile, role }: PersonalInfoFormProps) {
   return (
     <div className="bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container">
       <div className="flex justify-between items-center p-gutter md:p-[32px] pb-base">
-        <h3 className="font-headline-sm text-headline-sm text-primary">ข้อมูลส่วนตัว</h3>
+        <h3 className="font-headline-sm text-headline-sm text-primary">{t('profile.personalInfo')}</h3>
         <button
           type="button"
           onClick={() => setEditing(true)}
           className="text-secondary px-2 py-1 rounded hover:bg-primary-fixed hover:text-primary transition-colors flex items-center gap-1 font-label-md text-label-md"
         >
           <MaterialIcon name="edit" size={18} />
-          แก้ไข
+          {t('profile.edit')}
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter px-gutter md:px-[32px] pb-gutter md:pb-[32px]">
-        <Row label="ชื่อ-นามสกุล (ตามบัตรประชาชน)" value={profile.full_name ?? '—'} />
-        <Row label="วันเกิด" value={profile.birthdate ? formatThaiDate(profile.birthdate) : '—'} />
+        <Row label={t('profile.fullNameId')} value={profile.full_name ?? '—'} />
+        <Row label={t('profile.birthdate')} value={profile.birthdate ? formatThaiDate(profile.birthdate, LOCALE_BCP47[locale]) : '—'} />
         <Row
-          label="อีเมล"
+          label={t('profile.email')}
           value={profile.email ?? '—'}
           iconRight="lock"
         />
-        <Row label="เบอร์โทรศัพท์" value={profile.phone ?? '—'} />
+        <Row label={t('profile.phone')} value={profile.phone ?? '—'} />
       </div>
     </div>
   )
@@ -295,9 +299,9 @@ function Row({
   )
 }
 
-function formatThaiDate(iso: string): string {
+function formatThaiDate(iso: string, bcp: string): string {
   try {
-    return formatDate(iso)
+    return formatDate(iso, bcp)
   } catch {
     return iso
   }

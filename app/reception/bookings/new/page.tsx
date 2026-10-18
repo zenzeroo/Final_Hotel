@@ -5,10 +5,13 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { SearchBar } from '@/components/search/SearchBar'
 import { formatTHB } from '@/lib/pricing'
 import { getMinCheckInLocalIso, addDaysLocalIso } from '@/lib/dates'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
 export default async function WalkInBookingPage(props: PageProps<'/reception/bookings/new'>) {
+  const t = getT(await getLocale())
   const searchParams = await props.searchParams
 
   // Phase 45 — read dates/guests from URL so the SearchBar at the top can
@@ -62,9 +65,9 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-primary">การจองแบบ Walk-in</h1>
+        <h1 className="font-display text-3xl text-primary">{t('reception.walkIn.pickerHeading')}</h1>
         <p className="text-body-md text-on-surface-variant mt-1">
-          เลือกห้องพักเพื่อสร้างการจองสำหรับลูกค้าที่มาถึงโดยไม่ได้จองล่วงหน้า
+          {t('reception.walkIn.pickerSubtitle')}
         </p>
       </div>
 
@@ -88,10 +91,10 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
         <div className="bg-surface-container-low border border-outline-variant rounded-2xl p-10 text-center">
           <MaterialIcon name="event_busy" size={36} className="text-outline-variant mb-3" />
           <p className="text-body-lg text-on-surface-variant">
-            ไม่มีห้องว่างในช่วงวันที่เลือก ({checkin} – {checkout})
+            {t('reception.walkIn.noRooms', { from: checkin, to: checkout })}
           </p>
           <p className="text-body-md text-on-surface-variant mt-1">
-            ลองเปลี่ยนวันที่หรือจำนวนผู้เข้าพักด้านบน
+            {t('reception.walkIn.noRoomsHint')}
           </p>
         </div>
       ) : (
@@ -121,7 +124,7 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
                 </p>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <span className="text-caption text-on-surface-variant">เริ่มต้น</span>
+                    <span className="text-caption text-on-surface-variant">{t('reception.walkIn.from')}</span>
                     <span className="text-xl font-display font-bold text-primary ml-1 whitespace-nowrap">
                       {formatTHB(room.base_price)}
                     </span>
@@ -131,7 +134,7 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
                   </span>
                 </div>
                 <p className="text-caption text-on-surface-variant mt-2">
-                  สูงสุด {room.max_guests} ท่าน
+                  {t('reception.walkIn.maxGuests', { count: room.max_guests })}
                 </p>
               </div>
             </Link>

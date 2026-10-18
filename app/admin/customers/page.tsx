@@ -1,6 +1,8 @@
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { listCustomers, getCustomerBookingCount } from '@/lib/data/supabase-account'
 import { CustomersAdminTable } from '@/components/admin/CustomersAdminTable'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +18,7 @@ function normalizeStatus(raw: string | undefined): StatusFilter {
 export default async function AdminCustomersPage(props: {
   searchParams: Promise<{ q?: string; status?: string }>
 }) {
+  const t = getT(await getLocale())
   const sp = await props.searchParams
   const q = (sp.q ?? '').trim()
   const status = normalizeStatus(sp.status)
@@ -47,16 +50,16 @@ export default async function AdminCustomersPage(props: {
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            จัดการลูกค้า
+            {t('admin.customersPage.title')}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            ดู / ระงับ / ปลดระงับลูกค้าทั้งหมด
+            {t('admin.customersPage.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
             <MaterialIcon name="group" size={18} className="text-on-surface-variant" />
-            <span className="text-body-md text-on-surface-variant">{total} คน</span>
+            <span className="text-body-md text-on-surface-variant">{t('admin.customersPage.peopleCount', { count: total })}</span>
           </div>
         </div>
       </header>
@@ -64,19 +67,19 @@ export default async function AdminCustomersPage(props: {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
           <p className="text-label-md uppercase tracking-wider text-on-surface-variant mb-2">
-            ลูกค้าทั้งหมด
+            {t('admin.customersPage.kpiAll')}
           </p>
           <p className="font-display-lg text-display-lg-mobile text-primary">{total}</p>
         </div>
         <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
           <p className="text-label-md uppercase tracking-wider text-on-surface-variant mb-2">
-            ใช้งาน
+            {t('admin.customersPage.statusActive')}
           </p>
           <p className="font-display-lg text-display-lg-mobile text-secondary">{active}</p>
         </div>
         <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-5">
           <p className="text-label-md uppercase tracking-wider text-on-surface-variant mb-2">
-            ถูกระงับ
+            {t('admin.customersPage.statusSuspended')}
           </p>
           <p className="font-display-lg text-display-lg-mobile text-error">{suspended}</p>
         </div>
@@ -84,7 +87,7 @@ export default async function AdminCustomersPage(props: {
 
       <section>
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          ลูกค้าทั้งหมด
+          {t('admin.customersPage.listHeading')}
         </h2>
         <CustomersAdminTable
           customers={enriched}

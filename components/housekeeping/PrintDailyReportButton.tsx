@@ -10,6 +10,7 @@
  * relies on `@media print` CSS which isn't tuned for this layout yet).
  */
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface PrintDailyReportButtonProps {
   /** Optional className override for layout slots. */
@@ -17,6 +18,7 @@ interface PrintDailyReportButtonProps {
 }
 
 export function PrintDailyReportButton({ className }: PrintDailyReportButtonProps) {
+  const t = useT()
   function handleClick() {
     if (typeof window !== 'undefined') {
       window.print()
@@ -33,7 +35,7 @@ export function PrintDailyReportButton({ className }: PrintDailyReportButtonProp
       }
     >
       <MaterialIcon name="print" size={18} />
-      พิมพ์รายงานประจำวัน
+      {t('manager.housekeepingPage.printDailyReport')}
     </button>
   )
 }

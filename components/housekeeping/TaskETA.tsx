@@ -2,12 +2,13 @@
  * Phase 30 — ETA pill for the housekeeper My-Tasks page.
  *
  * Shows:
- *   - "~30 นาที" — total estimated minutes for this task (Phase 30)
- *   - "เช็คอิน XX:XX" — urgency warning when next check-in is <4h away
+ *   - `staff.minutesApprox` — total estimated minutes for this task (Phase 30)
+ *   - `staff.checkInAt` — urgency warning when next check-in is <4h away
  *
  * Server component (no hooks needed — accepts ISO strings + locale-aware formatter).
  */
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { getT } from '@/lib/i18n/t'
 
 interface TaskETAProps {
   estimatedMinutes: number | null
@@ -33,12 +34,13 @@ function formatCheckInTime(iso: string, localeBcp?: string): string {
 }
 
 export function TaskETA({ estimatedMinutes, nextCheckIn, localeBcp }: TaskETAProps) {
+  const t = getT(localeBcp?.startsWith('en') ? 'en' : 'th')
   const items: Array<{ icon: string; label: string; tone: string }> = []
 
   if (typeof estimatedMinutes === 'number' && estimatedMinutes > 0) {
     items.push({
       icon: 'schedule',
-      label: `~${estimatedMinutes} นาที`,
+      label: t('staff.minutesApprox', { count: estimatedMinutes }),
       tone: 'bg-secondary/10 text-secondary',
     })
   }
@@ -50,7 +52,7 @@ export function TaskETA({ estimatedMinutes, nextCheckIn, localeBcp }: TaskETAPro
     if (!Number.isNaN(ms) && ms > 0 && ms < URGENT_WINDOW_MS) {
       items.push({
         icon: 'priority_high',
-        label: `เช็คอิน ${formatCheckInTime(nextCheckIn, localeBcp)}`,
+        label: t('staff.checkInAt', { time: formatCheckInTime(nextCheckIn, localeBcp) }),
         tone: 'bg-error/10 text-error',
       })
     }

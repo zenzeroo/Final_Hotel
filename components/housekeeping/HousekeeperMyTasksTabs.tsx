@@ -2,16 +2,19 @@
  * Housekeeper tasks page tabs (`/housekeeper/tasks`).
  *
  * Mirrors `components/housekeeping/HousekeeperTasksTabs.tsx` (dashboard tabs):
- * server component, URL-driven state (via parent page's searchParams),
- * hardcoded Thai labels (Tabs primitive doesn't read from t()).
+ * client component (translates labels via useT), URL-driven state (via parent page's searchParams),
+ * labels are dictionary keys translated here (Tabs primitive renders `label` as-is).
  *
- * Tab 1 (default):  "งานของฉัน"              — tasks assigned to current HK
- * Tab 2:            "กลุ่มงานที่ยังไม่มีคนรับ" — unassigned pool
+ * Tab 1 (default):  mine        — tasks assigned to current HK
+ * Tab 2:            unassigned  — unassigned pool
  *
  * The badge shows the true count. When over `DISPLAY_CAP` (5), the `<Tabs>`
  * primitive renders "5+" automatically (via the `badgeCap` prop).
  */
+'use client'
+
 import { Tabs, type TabItem } from '@/components/ui/Tabs'
+import { useT } from '@/lib/i18n/useT'
 
 type Tab = 'mine' | 'unassigned'
 
@@ -28,13 +31,13 @@ const DISPLAY_CAP = 5
 const TAB_BASE: Omit<TabItem<Tab>, 'badge'>[] = [
   {
     key: 'mine',
-    label: 'งานของฉัน',
+    label: 'housekeeper.tasksPage.tabMine',
     icon: 'task_alt',
     href: '/housekeeper/tasks?tab=mine',
   },
   {
     key: 'unassigned',
-    label: 'กลุ่มงานที่ยังไม่มีคนรับ',
+    label: 'housekeeper.tasksPage.tabPool',
     icon: 'inbox',
     href: '/housekeeper/tasks?tab=unassigned',
   },
@@ -45,9 +48,11 @@ export function HousekeeperMyTasksTabs({
   mineCount,
   unassignedCount,
 }: HousekeeperMyTasksTabsProps) {
-  const tabs: TabItem<Tab>[] = TAB_BASE.map((t) => ({
-    ...t,
-    badge: t.key === 'mine' ? mineCount : unassignedCount,
+  const t = useT()
+  const tabs: TabItem<Tab>[] = TAB_BASE.map((tab) => ({
+    ...tab,
+    label: t(tab.label),
+    badge: tab.key === 'mine' ? mineCount : unassignedCount,
     badgeCap: DISPLAY_CAP,
   }))
   return <Tabs active={active} tabs={tabs} />

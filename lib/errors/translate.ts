@@ -15,6 +15,18 @@
  */
 
 import { toLocale, type Locale } from '@/lib/i18n/config'
+import { getT } from '@/lib/i18n/t'
+
+/** Zod messages that are dictionary keys (Phase 27.C) start with this prefix. */
+const VALIDATION_KEY_PREFIX = 'validation.'
+
+/**
+ * Resolve a single Zod issue message: dictionary keys (`validation.*`) are
+ * translated, anything else is returned unchanged.
+ */
+export function localizeIssueMessage(message: string, locale: Locale = 'th'): string {
+  return message.startsWith(VALIDATION_KEY_PREFIX) ? getT(locale)(message) : message
+}
 
 /** Generic fallbacks. */
 const GENERIC_FALLBACK: Record<Locale, string> = {
@@ -215,6 +227,7 @@ export function translateZodIssues(
     const field = issue.path && issue.path.length ? String(issue.path[0]) : null
     const fieldLabel = field ? fieldLabelLocalized(field, locale) : null
     const msg = issue.message
+    if (msg.startsWith(VALIDATION_KEY_PREFIX)) return getT(locale)(msg)
 
     for (const { pattern, th, en } of ZOD_PATTERNS) {
       if (pattern.test(msg)) {

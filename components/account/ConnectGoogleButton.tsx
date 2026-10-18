@@ -8,8 +8,10 @@ import {
 } from '@/app/actions/identity-link'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { GoogleLogo } from '@/components/ui/GoogleLogo'
+import { useT } from '@/lib/i18n/useT'
 
 function SubmitButton() {
+  const t = useT()
   const { pending } = useFormStatus()
   return (
     <button
@@ -20,12 +22,12 @@ function SubmitButton() {
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-on-surface border-t-transparent rounded-full animate-spin" />
-          กำลังเชื่อมต่อ…
+          {t('profile.connecting')}
         </>
       ) : (
         <>
           <GoogleLogo />
-          <span>เชื่อมต่อบัญชี Google</span>
+          <span>{t('profile.connectGoogle')}</span>
         </>
       )}
     </button>

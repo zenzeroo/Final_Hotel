@@ -47,8 +47,8 @@ export default async function MyTasksPage(props: {
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-8">
-        <h1 className="font-headline-md text-headline-md text-primary mb-2">งานของฉัน</h1>
-        <p className="text-body-lg text-on-surface-variant">งานที่มอบหมายให้คุณและกลุ่มงานที่ยังไม่มีคนรับ</p>
+        <h1 className="font-headline-md text-headline-md text-primary mb-2">{t('housekeeper.tasksPage.heading')}</h1>
+        <p className="text-body-lg text-on-surface-variant">{t('housekeeper.tasksPage.subtitle')}</p>
       </header>
 
       <HousekeeperMyTasksTabs
@@ -60,18 +60,18 @@ export default async function MyTasksPage(props: {
       {tab === 'mine' ? (
         <section>
           <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-            งานของฉัน ({myTasksWithEta.length})
+            {t('housekeeper.tasksPage.mineHeading', { count: myTasksWithEta.length })}
           </h2>
           {myTasksWithEta.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-10 text-center">
               <MaterialIcon name="task_alt" size={48} className="text-on-surface-variant" />
-              <p className="font-title-md text-title-md text-on-surface">ตอนนี้คุณยังไม่มีงานที่ได้รับมอบหมาย</p>
+              <p className="font-title-md text-title-md text-on-surface">{t('housekeeper.tasksPage.mineEmpty')}</p>
               <p className="text-body-md text-on-surface-variant">
-                ลองดูงานในกลุ่ม{' '}
+                {t('housekeeper.tasksPage.mineEmptyHintBefore')}{' '}
                 <a href="/housekeeper/tasks?tab=unassigned" className="text-primary underline">
-                  &quot;กลุ่มงานที่ยังไม่มีคนรับ&quot;
+                  &quot;{t('housekeeper.tasksPage.tabPool')}&quot;
                 </a>{' '}
-                แล้วกดรับงาน
+                {t('housekeeper.tasksPage.mineEmptyHintAfter')}
               </p>
             </div>
           ) : (
@@ -91,16 +91,16 @@ export default async function MyTasksPage(props: {
       ) : (
         <section>
           <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-            กลุ่มงานที่ยังไม่มีคนรับ ({unassignedWithEta.length})
+            {t('housekeeper.tasksPage.poolHeading', { count: unassignedWithEta.length })}
           </h2>
           {unassignedWithEta.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-10 text-center">
               <MaterialIcon name="check_circle" size={48} className="text-primary" />
-              <p className="font-title-md text-title-md text-on-surface">ไม่มีงานค้างในกลุ่ม ทำได้ดีมาก!</p>
+              <p className="font-title-md text-title-md text-on-surface">{t('housekeeper.tasksPage.poolEmpty')}</p>
               <p className="text-body-md text-on-surface-variant">
-                ทุกงานถูกรับไปดำเนินการแล้ว — เช็งงานของคุณได้ที่เมนู{' '}
+                {t('housekeeper.tasksPage.poolEmptyHint')}{' '}
                 <a href="/housekeeper/tasks?tab=mine" className="text-primary underline">
-                  &quot;งานของฉัน&quot;
+                  &quot;{t('housekeeper.tasksPage.tabMine')}&quot;
                 </a>
               </p>
             </div>

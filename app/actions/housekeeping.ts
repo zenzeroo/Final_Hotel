@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/require'
 import { actionFail, wrapSupabaseError } from '@/lib/errors/supabase'
 import { isUuid } from '@/lib/ids'
+import { getTodayBangkok } from '@/lib/dates'
 import type {
   HousekeepingTaskPriority,
   HousekeepingTaskType,
@@ -331,6 +332,121 @@ export async function setFloorAssignment(
   return { ok: true }
 }
 
+/**
+ * Phase 54 — hand a whole floor to one housekeeper: every not-yet-started
+ * task on the floor (`unassigned` + `assigned`) is (re)assigned to them, and
+ * the floor default in `floor_assignments` is set so the dashboard summary
+ * and auto-allocation agree. `in_progress` tasks are never moved — the
+ * status filter on the UPDATE also protects tasks started mid-request.
+ */
+export async function assignFloorTasksAction(
+  floor: number,
+  housekeeperId: string,
+): Promise<ActionResult<{ moved: number }>> {
+  const session = await requireRole(['reception', 'manager', 'admin'], '/manager')
+  if (!Number.isInteger(floor) || floor < 0 || floor > 99) {
+    return { ok: false, error: 'Invalid floor number' }
+  }
+  if (!isUuid(housekeeperId)) return { ok: false, error: 'Invalid housekeeper id' }
+
+  const supabase = await createClient()
+
+  const check = await validateHousekeeper(supabase, housekeeperId)
+  if (!check.ok) return check
+
+  const { data: rooms, error: roomsErr } = await supabase
+    .from('room_units')
+    .select('id')
+    .eq('floor', floor)
+    .eq('is_active', true)
+  if (roomsErr) return actionFail(roomsErr, 'Could not load rooms')
+
+  let moved = 0
+  const roomIds = (rooms ?? []).map((r) => r.id)
+  if (roomIds.length > 0) {
+    const { data, error } = await supabase
+      .from('housekeeping_tasks')
+      .update({
+        assigned_to: housekeeperId,
+        status: 'assigned',
+        updated_at: new Date().toISOString(),
+      })
+      .in('room_unit_id', roomIds)
+      .in('status', ['unassigned', 'assigned'])
+      .select('id')
+    if (error) return actionFail(error, 'Could not assign floor tasks')
+    moved = data?.length ?? 0
+  }
+
+  const { error: floorErr } = await supabase
+    .from('floor_assignments')
+    .upsert(
+      {
+        floor,
+        housekeeper_id: housekeeperId,
+        updated_by: session.id,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'floor' },
+    )
+  if (floorErr) return actionFail(floorErr, 'Could not save floor assignment')
+
+  revalidatePath('/manager/housekeeping')
+  revalidatePath('/housekeeper/tasks')
+  revalidatePath('/housekeeper')
+  return { ok: true, data: { moved } }
+}
+
+/**
+ * Phase 54 — create an unassigned cleaning task for every dirty room
+ * (`waiting_cleaning` / `checkout`) that has no open task. Such rooms are
+ * invisible to auto-allocation (e.g. after a task is cancelled, the
+ * `on_task_status_change` trigger flips the room back to 'waiting_cleaning'
+ * without a replacement task). The orphan list is recomputed here — the
+ * client only triggers the action.
+ */
+export async function createTasksForOrphanRoomsAction(): Promise<ActionResult<{ created: number }>> {
+  const session = await requireRole(['manager', 'admin'], '/manager')
+  const supabase = await createClient()
+
+  const [{ data: rooms, error: roomsErr }, { data: openTasks, error: tasksErr }] = await Promise.all([
+    supabase
+      .from('room_units')
+      .select('id')
+      .eq('is_active', true)
+      .in('status', ['waiting_cleaning', 'checkout']),
+    supabase
+      .from('housekeeping_tasks')
+      .select('room_unit_id')
+      .in('status', ['unassigned', 'assigned', 'in_progress'])
+      .not('room_unit_id', 'is', null),
+  ])
+  if (roomsErr) return actionFail(roomsErr, 'Could not load rooms')
+  if (tasksErr) return actionFail(tasksErr, 'Could not load tasks')
+
+  const withTask = new Set((openTasks ?? []).map((t) => t.room_unit_id))
+  const rows = (rooms ?? [])
+    .filter((r) => !withTask.has(r.id))
+    .map((r) => ({
+      room_unit_id: r.id,
+      task_type: 'cleaning' as const,
+      priority: 'normal' as const,
+      status: 'unassigned' as const,
+      assigned_to: null,
+      created_by: session.id,
+      booking_id: null,
+    }))
+  if (rows.length === 0) return { ok: true, data: { created: 0 } }
+
+  const { data, error } = await supabase.from('housekeeping_tasks').insert(rows).select('id')
+  if (error) return actionFail(error, 'Could not create tasks')
+
+  revalidatePath('/manager/housekeeping')
+  revalidatePath('/housekeeper/tasks')
+  revalidatePath('/housekeeper')
+  return { ok: true, data: { created: data?.length ?? 0 } }
+}
+
 // ----------------------------------------------------------------------------
 // Phase 30 — automatic allocation + inspection server actions
 // Manager/admin only. Algorithm runs server-side, RPC commits atomically.
@@ -344,7 +460,8 @@ export async function setFloorAssignment(
  */
 export async function buildAllocationSnapshot() {
   const supabase = await createClient()
-  const today = new Date().toISOString().slice(0, 10)
+  // Phase 54 — Bangkok calendar day (UTC read yesterday's shifts at 00:00-06:59).
+  const today = getTodayBangkok()
   const [
     { data: taskRows, error: e1 },
     { data: hkRows, error: e2 },

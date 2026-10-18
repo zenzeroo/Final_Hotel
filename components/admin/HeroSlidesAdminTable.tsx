@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
-import { AlertModal } from '@/components/ui/AlertModal'
+import { useToast } from '@/components/ui/Toast'
 import { r2Url } from '@/lib/r2/publicUrl'
 import {
   removeHeroSlideAction,
@@ -16,6 +16,7 @@ import { useLocale } from '@/lib/i18n/useT'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
 import { formatDate } from '@/lib/dates'
 import type { HeroSlideSourceType } from '@/lib/data/types'
+import { useT } from '@/lib/i18n/useT'
 
 interface SlideRow {
   id: string
@@ -63,16 +64,11 @@ function resolveImageKey(s: SlideRow): string | null {
 }
 
 export function HeroSlidesAdminTable({ slides }: HeroSlidesAdminTableProps) {
+  const t = useT()
   const locale = useLocale()
   const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
-  const t = (k: string) => {
-    // Tiny inline translation lookup — keys are passed straight through; the
-    // page-level component doesn't expose a `t` so we mirror its namespace.
-    return k
-  }
-
   const [confirmRemove, setConfirmRemove] = useState<SlideRow | null>(null)
-  const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const toast = useToast()
   const [, startTransition] = useTransition()
 
   function handleRemove(row: SlideRow) {
@@ -85,7 +81,7 @@ export function HeroSlidesAdminTable({ slides }: HeroSlidesAdminTableProps) {
     if (!row) return
     startTransition(async () => {
       const result = await removeHeroSlideAction(row.id)
-      if (!result.ok && result.error) setAlertMessage(result.error)
+      if (!result.ok && result.error) toast.error(result.error)
     })
   }
 
@@ -95,14 +91,14 @@ export function HeroSlidesAdminTable({ slides }: HeroSlidesAdminTableProps) {
         slideId: row.id,
         isActive: !row.is_active,
       })
-      if (!result.ok && result.error) setAlertMessage(result.error)
+      if (!result.ok && result.error) toast.error(result.error)
     })
   }
 
   function handleMove(row: SlideRow, direction: 'up' | 'down') {
     startTransition(async () => {
       const result = await moveHeroSlideAction({ slideId: row.id, direction })
-      if (!result.ok && result.error) setAlertMessage(result.error)
+      if (!result.ok && result.error) toast.error(result.error)
     })
   }
 
@@ -115,7 +111,7 @@ export function HeroSlidesAdminTable({ slides }: HeroSlidesAdminTableProps) {
           className="text-on-surface-variant mx-auto mb-3"
         />
         <p className="text-body-lg text-on-surface-variant">
-          ยังไม่มีสไลด์ในแครูเซล — กดปุ่ม &ldquo;เพิ่มสไลด์&rdquo; เพื่อเริ่มต้น
+          {t('admin.heroCarousel.empty')}
         </p>
       </div>
     )
@@ -197,18 +193,16 @@ export function HeroSlidesAdminTable({ slides }: HeroSlidesAdminTableProps) {
                   </div>
                 </div>
                 <h3 className="font-display text-lg text-primary truncate mb-1">
-                  {resolveSlideTitle(s, localeBcp)}
+                  {resolveSlideTitle(s, localeBcp, t)}
                 </h3>
-                {resolveSlideSubtitle(s, localeBcp) && (
+                {resolveSlideSubtitle(s, t) && (
                   <p className="text-body-md text-on-surface-variant line-clamp-2 mb-2">
-                    {resolveSlideSubtitle(s, localeBcp)}
+                    {resolveSlideSubtitle(s, t)}
                   </p>
                 )}
                 <p className="text-caption text-on-surface-variant font-mono">
                   {s.id.slice(0, 8)} •{' '}
-                  {localeBcp === 'th-TH'
-                    ? 'อัปเดตเมื่อ ' + formatDate(s.updated_at, localeBcp)
-                    : 'Updated ' + formatDate(s.updated_at, localeBcp)}
+                  {t('admin.heroCarousel.updatedAt', { date: formatDate(s.updated_at, localeBcp) })}
                 </p>
               </div>
 
@@ -218,7 +212,7 @@ export function HeroSlidesAdminTable({ slides }: HeroSlidesAdminTableProps) {
                   type="button"
                   onClick={() => handleMove(s, 'up')}
                   disabled={idx === 0}
-                  aria-label="ย้ายขึ้น"
+                  aria-label={t('admin.heroCarousel.moveUp')}
                   className="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-primary-fixed hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <MaterialIcon name="arrow_upward" size={18} />
@@ -227,7 +221,7 @@ export function HeroSlidesAdminTable({ slides }: HeroSlidesAdminTableProps) {
                   type="button"
                   onClick={() => handleMove(s, 'down')}
                   disabled={idx === slides.length - 1}
-                  aria-label="ย้ายลง"
+                  aria-label={t('admin.heroCarousel.moveDown')}
                   className="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-primary-fixed hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <MaterialIcon name="arrow_downward" size={18} />
@@ -235,7 +229,7 @@ export function HeroSlidesAdminTable({ slides }: HeroSlidesAdminTableProps) {
                 <button
                   type="button"
                   onClick={() => handleRemove(s)}
-                  aria-label="ลบสไลด์"
+                  aria-label={t('admin.heroCarousel.removeSlide')}
                   className="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-error text-error hover:bg-error hover:text-on-primary transition-colors"
                 >
                   <MaterialIcon name="delete" size={18} />
@@ -250,15 +244,12 @@ export function HeroSlidesAdminTable({ slides }: HeroSlidesAdminTableProps) {
         <ConfirmModal
           open
           variant="danger"
-          body={`ลบสไลด์นี้? การกระทำนี้ไม่สามารถยกเลิกได้`}
-          okLabel="ลบ"
-          cancelLabel="ยกเลิก"
+          body={t('admin.heroCarousel.removeConfirm')}
+          okLabel={t('admin.common.delete')}
+          cancelLabel={t('admin.common.cancel')}
           onCancel={() => setConfirmRemove(null)}
           onConfirm={confirmRemoveAction}
         />
-      )}
-      {alertMessage && (
-        <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
       )}
 
       {/* Spacer so the page-level Link href above renders alongside the table */}
@@ -275,27 +266,33 @@ export function HeroSlidesAdminTable({ slides }: HeroSlidesAdminTableProps) {
   )
 }
 
-function resolveSlideTitle(s: SlideRow, localeBcp: string): string {
+type Translate = (key: string, params?: Record<string, string | number>) => string
+
+function resolveSlideTitle(s: SlideRow, localeBcp: string, t: Translate): string {
   if (s.source_type === 'room_type') {
-    return localeBcp === 'th-TH'
-      ? (s.room_type_name_th ?? s.room_type_name ?? 'ห้องพัก')
-      : (s.room_type_name ?? s.room_type_name_th ?? 'Room')
+    return (
+      (localeBcp === 'th-TH'
+        ? (s.room_type_name_th ?? s.room_type_name)
+        : (s.room_type_name ?? s.room_type_name_th)) ?? t('admin.heroCarousel.roomFallback')
+    )
   }
   if (s.source_type === 'promotion') {
-    return s.promotion_name ?? 'โปรโมชั่น'
+    return s.promotion_name ?? t('admin.heroCarousel.promotionFallback')
   }
   // custom
-  return localeBcp === 'th-TH'
-    ? (s.custom_caption_th ?? s.custom_caption ?? 'ไม่มีคำบรรยาย')
-    : (s.custom_caption ?? s.custom_caption_th ?? 'No caption')
+  return (
+    (localeBcp === 'th-TH'
+      ? (s.custom_caption_th ?? s.custom_caption)
+      : (s.custom_caption ?? s.custom_caption_th)) ?? t('admin.heroCarousel.noCaption')
+  )
 }
 
-function resolveSlideSubtitle(s: SlideRow, localeBcp: string): string | null {
+function resolveSlideSubtitle(s: SlideRow, t: Translate): string | null {
   // No subheading in the DB schema (hero_slides has caption, not subheading).
   // Render a small status string per source type so the admin can scan the list.
-  if (s.source_type === 'room_type') return 'ใช้รูป hero_image_key ของห้องพัก'
-  if (s.source_type === 'promotion') return 'ใช้รูป image_key ของโปรโมชั่น'
-  return localeBcp === 'th-TH' ? 'รูปที่อัปโหลดเองโดยแอดมิน' : 'Custom uploaded image'
+  if (s.source_type === 'room_type') return t('admin.heroCarousel.subRoom')
+  if (s.source_type === 'promotion') return t('admin.heroCarousel.subPromotion')
+  return t('admin.heroCarousel.subCustom')
 }
 
 function ToggleButton({
@@ -305,13 +302,14 @@ function ToggleButton({
   isActive: boolean
   onChange: () => void
 }) {
+  const t = useT()
   return (
     <button
       type="button"
       onClick={onChange}
       role="switch"
       aria-checked={isActive}
-      aria-label={isActive ? 'ปิดใช้งานสไลด์' : 'เปิดใช้งานสไลด์'}
+      aria-label={isActive ? t('admin.heroCarousel.deactivateSlide') : t('admin.heroCarousel.activateSlide')}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
         isActive ? 'bg-primary' : 'bg-surface-container-high'
       }`}

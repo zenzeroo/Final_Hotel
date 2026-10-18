@@ -4,8 +4,10 @@ import { useState, useTransition } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { resolveMaintenanceReport } from '@/app/actions/maintenance'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 export function ResolveMaintenanceButton({ reportId }: { reportId: string }) {
+  const t = useT()
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -32,27 +34,27 @@ export function ResolveMaintenanceButton({ reportId }: { reportId: string }) {
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary text-on-primary text-caption font-semibold hover:bg-primary-fixed hover:text-primary transition-colors"
       >
         <MaterialIcon name="check_circle" size={16} />
-        แก้ไขแล้ว
+        {t('manager.maintenancePage.resolveReport')}
       </button>
       <Modal
         open={isOpen}
         onClose={() => setIsOpen(false)}
-        title="แก้ไขรายงานเสร็จสิ้น"
+        title={t('manager.maintenancePage.resolveDialogTitle')}
         body={
           <form action={handleSubmit} className="flex flex-col gap-4">
             <input type="hidden" name="reportId" value={reportId} />
             <p className="text-body-md text-on-surface">
-              รายงานจะถูกปิดและห้องจะกลับมาเป็นสถานะ <strong>ว่าง</strong> พร้อมรับแขกใหม่
+              {t('manager.maintenancePage.resolveBody')}
             </p>
             <label className="flex flex-col gap-1">
               <span className="text-caption text-on-surface-variant uppercase tracking-wider">
-                บันทึกการแก้ไข (ไม่บังคับ)
+                {t('manager.maintenancePage.resolutionNoteOptional')}
               </span>
               <textarea
                 name="resolutionNote"
                 rows={3}
                 maxLength={500}
-                placeholder="เช่น เปลี่ยนสายน้ำทิ้งใต้อ่างล้างหน้า ทดสอบการไหลปกติ"
+                placeholder={t('manager.maintenancePage.resolutionPlaceholder')}
                 className="px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md focus:outline-none focus:ring-2 focus:ring-secondary"
               />
             </label>
@@ -64,14 +66,14 @@ export function ResolveMaintenanceButton({ reportId }: { reportId: string }) {
                 disabled={isPending}
                 className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-surface-container disabled:opacity-50"
               >
-                ยกเลิก
+                {t('manager.common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isPending}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-on-primary text-body-md font-semibold hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-50"
               >
-                {isPending ? 'กำลังบันทึก...' : 'ยืนยันแก้ไขแล้ว'}
+                {isPending ? t('manager.common.saving') : t('manager.maintenancePage.confirmResolved')}
               </button>
             </div>
           </form>

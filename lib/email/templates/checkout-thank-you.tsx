@@ -8,6 +8,9 @@ import {
   Section,
   Text,
 } from '@react-email/components'
+import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
+import { getT } from '@/lib/i18n/t'
+import { formatEmailMoney } from '../format'
 
 export interface CheckoutThankYouData {
   bookingCode: string
@@ -18,9 +21,6 @@ export interface CheckoutThankYouData {
   reviewUrl: string
 }
 
-const formatTHB = (amount: number, currency: string): string =>
-  new Intl.NumberFormat('th-TH', { style: 'currency', currency, minimumFractionDigits: 0 }).format(amount)
-
 export function CheckoutThankYouEmail({
   bookingCode,
   guestName,
@@ -28,39 +28,36 @@ export function CheckoutThankYouEmail({
   total,
   currency,
   reviewUrl,
-}: CheckoutThankYouData) {
+  locale = 'th',
+}: CheckoutThankYouData & { locale?: Locale }) {
+  const t = getT(locale)
   return (
-    <Html lang="th">
+    <Html lang={LOCALE_BCP47[locale]}>
       <Head />
-      <Preview>{`ขอบคุณที่เข้าพักกับเรา — ${bookingCode}`}</Preview>
+      <Preview>{t('email.checkoutThankYou.preview', { code: bookingCode })}</Preview>
       <Body style={{ fontFamily: 'system-ui, sans-serif', backgroundColor: '#f5f5f0' }}>
         <Container style={{ maxWidth: 560, margin: '0 auto', padding: '32px 24px', backgroundColor: '#ffffff' }}>
           <Heading style={{ fontSize: 22, color: '#3d5a40', margin: 0 }}>
-            ขอบคุณที่เลือกพักกับเรา
+            {t('email.checkoutThankYou.heading')}
           </Heading>
-          <Text style={{ color: '#1a1a1a' }}>สวัสดีค่ะ คุณ{guestName}</Text>
-          <Text>
-            ขอบคุณที่เข้าพักกับ Zenzero Hotel เป็นเวลา {nightsStayed} คืน
-            หวังว่าจะได้ต้อนรับท่านอีกครั้งในโอกาสหน้า
-          </Text>
+          <Text style={{ color: '#1a1a1a' }}>{t('email.common.greeting', { name: guestName })}</Text>
+          <Text>{t('email.checkoutThankYou.body', { count: nightsStayed })}</Text>
           <Section style={{ borderTop: '1px solid #e0e0d0', borderBottom: '1px solid #e0e0d0', padding: '16px 0', margin: '16px 0' }}>
-            <Text style={{ margin: '4px 0' }}>รหัสการจอง: <strong>{bookingCode}</strong></Text>
+            <Text style={{ margin: '4px 0' }}>{t('email.common.bookingCode')}: <strong>{bookingCode}</strong></Text>
             <Text style={{ margin: '8px 0 4px', fontSize: 16 }}>
-              ยอดรวมค่าเข้าพัก: <strong>{formatTHB(total, currency)}</strong>
+              {t('email.checkoutThankYou.total')}: <strong>{formatEmailMoney(total, currency, locale)}</strong>
             </Text>
           </Section>
           <Text>
-            ร่วมแบ่งปันประสบการณ์ของท่าน:{' '}
-            <a href={reviewUrl} style={{ color: '#3d5a40' }}>เขียนรีวิว</a>
+            {t('email.checkoutThankYou.reviewPrompt')}{' '}
+            <a href={reviewUrl} style={{ color: '#3d5a40' }}>{t('email.checkoutThankYou.writeReview')}</a>
           </Text>
-          <Text style={{ color: '#666', fontSize: 14 }}>
-            ทีมงาน Zenzero Hotel
-          </Text>
+          <Text style={{ color: '#666', fontSize: 14 }}>{t('email.common.signature')}</Text>
         </Container>
       </Body>
     </Html>
   )
 }
 
-export const checkoutThankYouSubject = (data: CheckoutThankYouData) =>
-  `[Zenzero] ขอบคุณที่เข้าพัก — ${data.bookingCode}`
+export const checkoutThankYouSubject = (data: { bookingCode: string; locale?: Locale }) =>
+  getT(data.locale ?? 'th')('email.checkoutThankYou.subject', { code: data.bookingCode })

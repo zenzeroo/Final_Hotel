@@ -3,10 +3,13 @@ import { formatDiscount } from '@/lib/pricing'
 import { formatDateRange } from '@/lib/dates'
 import { TogglePromotionButton } from './TogglePromotionButton'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
+import { getT } from '@/lib/i18n/t'
 
 interface PromotionsTableProps {
   promotions: Promotion[]
   now: Date
+  locale: Locale
 }
 
 function isExpired(p: Promotion, now: Date): boolean {
@@ -17,12 +20,13 @@ function isUpcoming(p: Promotion, now: Date): boolean {
   return new Date(p.valid_from).getTime() > now.getTime()
 }
 
-export function PromotionsTable({ promotions, now }: PromotionsTableProps) {
+export function PromotionsTable({ promotions, now, locale }: PromotionsTableProps) {
+  const t = getT(locale)
   if (promotions.length === 0) {
     return (
       <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-12 text-center">
         <MaterialIcon name="local_offer" size={48} className="text-on-surface-variant mb-3" />
-        <p className="text-body-lg text-on-surface-variant">ยังไม่มีโปรโมชั่น</p>
+        <p className="text-body-lg text-on-surface-variant">{t('manager.promotionsTable.empty')}</p>
       </div>
     )
   }
@@ -33,13 +37,13 @@ export function PromotionsTable({ promotions, now }: PromotionsTableProps) {
         <table className="w-full">
           <thead className="bg-surface-container-low border-b border-outline-variant">
             <tr className="text-label-md uppercase tracking-wider text-on-surface-variant">
-              <th className="text-left px-4 py-3 font-medium">โค้ด</th>
-              <th className="text-left px-4 py-3 font-medium">ชื่อ</th>
-              <th className="text-left px-4 py-3 font-medium">ส่วนลด</th>
-              <th className="text-left px-4 py-3 font-medium">คืนขั้นต่ำ</th>
-              <th className="text-left px-4 py-3 font-medium">ช่วงเวลา</th>
-              <th className="text-left px-4 py-3 font-medium">สถานะ</th>
-              <th className="text-right px-4 py-3 font-medium">จัดการ</th>
+              <th className="text-left px-4 py-3 font-medium">{t('manager.promotionsTable.colCode')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('manager.promotionsTable.colName')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('manager.promotionsTable.colDiscount')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('manager.promotionsTable.colMinNights')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('manager.promotionsTable.colPeriod')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('manager.promotionsTable.colStatus')}</th>
+              <th className="text-right px-4 py-3 font-medium">{t('manager.promotionsTable.colActions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant">
@@ -67,29 +71,29 @@ export function PromotionsTable({ promotions, now }: PromotionsTableProps) {
                     </span>
                   </td>
                   <td className="px-4 py-4 text-body-md text-on-surface">
-                    {p.min_nights} คืน
+                    {t('manager.promotionsTable.nights', { count: p.min_nights })}
                   </td>
                   <td className="px-4 py-4 text-caption text-on-surface-variant">
-                    {formatDateRange(p.valid_from, p.valid_until)}
+                    {formatDateRange(p.valid_from, p.valid_until, LOCALE_BCP47[locale])}
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-col gap-1 items-start">
                       {expired && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] uppercase tracking-wider font-semibold">
                           <MaterialIcon name="schedule" size={12} />
-                          หมดอายุ
+                          {t('manager.promotionsTable.expired')}
                         </span>
                       )}
                       {upcoming && !expired && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] uppercase tracking-wider font-semibold">
                           <MaterialIcon name="event_upcoming" size={12} />
-                          เร็วๆ นี้
+                          {t('manager.promotionsTable.upcoming')}
                         </span>
                       )}
                       {!p.is_active && !expired && !upcoming && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-[10px] uppercase tracking-wider font-semibold">
                           <MaterialIcon name="pause" size={12} />
-                          ปิดใช้งาน
+                          {t('manager.promotionsTable.inactive')}
                         </span>
                       )}
                     </div>

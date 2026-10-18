@@ -1,8 +1,10 @@
 import Link from 'next/link'
-import { listRoomTypes } from '@/lib/data/rooms'
+import { listRoomTypes, countUnitsByRoomType } from '@/lib/data/rooms'
 import { Tabs, type TabItem } from '@/components/ui/Tabs'
 import { RoomTypesAdminTable } from '@/components/admin/RoomTypesAdminTable'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +15,7 @@ const TAB_KEYS: readonly Tab[] = ['active', 'inactive', 'deleted']
 export default async function AdminRoomTypesPage(props: {
   searchParams: Promise<{ tab?: string }>
 }) {
+  const t = getT(await getLocale())
   const { tab: rawTab } = await props.searchParams
   const tab: Tab = (TAB_KEYS as readonly string[]).includes(rawTab ?? '')
     ? (rawTab as Tab)
@@ -21,10 +24,11 @@ export default async function AdminRoomTypesPage(props: {
   // Parallel fetch all 3 lists — used both for the body table (the matching
   // list) AND the 3 tab badge counts. Cheap because each is a tiny filtered
   // count(*) query against an indexed column.
-  const [activeList, inactiveList, deletedList] = await Promise.all([
+  const [activeList, inactiveList, deletedList, unitCounts] = await Promise.all([
     listRoomTypes({ isActive: true, isDeleted: false }),
     listRoomTypes({ isActive: false, isDeleted: false }),
     listRoomTypes({ isDeleted: true }),
+    countUnitsByRoomType(),
   ])
 
   const roomTypes =
@@ -33,7 +37,7 @@ export default async function AdminRoomTypesPage(props: {
   const TABS: TabItem<Tab>[] = [
     {
       key: 'active',
-      label: 'เปิดใช้งาน',
+      label: t('admin.roomTypes.tabActive'),
       href: '/admin/rates/room-types?tab=active',
       icon: 'check_circle',
       badge: activeList.length,
@@ -41,7 +45,7 @@ export default async function AdminRoomTypesPage(props: {
     },
     {
       key: 'inactive',
-      label: 'ปิดชั่วคราว',
+      label: t('admin.roomTypes.tabInactive'),
       href: '/admin/rates/room-types?tab=inactive',
       icon: 'block',
       badge: inactiveList.length,
@@ -49,7 +53,7 @@ export default async function AdminRoomTypesPage(props: {
     },
     {
       key: 'deleted',
-      label: 'ถูกลบ',
+      label: t('admin.roomTypes.tabDeleted'),
       href: '/admin/rates/room-types?tab=deleted',
       icon: 'delete',
       badge: deletedList.length,
@@ -58,15 +62,15 @@ export default async function AdminRoomTypesPage(props: {
   ]
 
   const HEADER_SUBTITLE: Record<Tab, string> = {
-    active: 'จัดการประเภทห้องที่เปิดให้จอง — แก้ไข / ปิดชั่วคราว / ลบ',
-    inactive: 'ประเภทห้องที่ปิดการจองชั่วคราว — เปิดใช้งานกลับ / ย้ายไปถูกลบ',
-    deleted: 'ประวัติประเภทห้องที่ถูกลบ — กู้คืน / ลบถาวร',
+    active: t('admin.roomTypes.subtitleActive'),
+    inactive: t('admin.roomTypes.subtitleInactive'),
+    deleted: t('admin.roomTypes.subtitleDeleted'),
   }
 
   const SECTION_TITLE: Record<Tab, string> = {
-    active: 'ประเภทห้องที่เปิดใช้งาน',
-    inactive: 'ประเภทห้องที่ปิดชั่วคราว',
-    deleted: 'ประวัติประเภทห้องที่ถูกลบ',
+    active: t('admin.roomTypes.sectionActive'),
+    inactive: t('admin.roomTypes.sectionInactive'),
+    deleted: t('admin.roomTypes.sectionDeleted'),
   }
 
   const totalAll = activeList.length + inactiveList.length + deletedList.length
@@ -76,7 +80,7 @@ export default async function AdminRoomTypesPage(props: {
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            ประเภทห้อง
+            {t('admin.roomTypes.heading')}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
             {HEADER_SUBTITLE[tab]}
@@ -88,12 +92,12 @@ export default async function AdminRoomTypesPage(props: {
             className="inline-flex items-center gap-2 bg-primary text-on-primary rounded-lg px-4 py-2 hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
           >
             <MaterialIcon name="add" size={18} />
-            สร้างประเภทห้องใหม่
+            {t('admin.roomTypes.createNew')}
           </Link>
           <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-4 py-2">
             <MaterialIcon name="bed" size={18} className="text-on-surface-variant" />
             <span className="text-body-md text-on-surface-variant">
-              {totalAll} ประเภท
+              {t('admin.roomTypes.countTypes', { count: totalAll })}
             </span>
           </div>
         </div>
@@ -105,7 +109,7 @@ export default async function AdminRoomTypesPage(props: {
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
           {SECTION_TITLE[tab]}
         </h2>
-        <RoomTypesAdminTable roomTypes={roomTypes} tab={tab} />
+        <RoomTypesAdminTable roomTypes={roomTypes} tab={tab} unitCounts={unitCounts} />
       </section>
     </div>
   )

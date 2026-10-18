@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Modal } from '@/components/ui/Modal'
 import { resolveDamageReportAction } from '@/app/actions/manager'
+import { useT } from '@/lib/i18n/useT'
 
 interface ResolveDamageButtonProps {
   reportId: string
@@ -11,6 +12,7 @@ interface ResolveDamageButtonProps {
 }
 
 export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButtonProps) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -34,14 +36,14 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1 px-2 py-1 rounded text-caption text-primary underline underline-offset-4 hover:bg-primary-fixed"
       >
-        เรียกเก็บเงินลูกค้า
+        {t('manager.damage.charge')}
         <MaterialIcon name="arrow_forward" size={14} />
       </button>
 
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="แก้ไขรายงานความเสียหาย"
+        title={t('manager.damage.title')}
         showCloseButton
         body={
           <form action={handleSubmit}>
@@ -49,7 +51,7 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
 
             <label className="block mb-3">
               <span className="text-label-md uppercase tracking-wider text-on-surface-variant">
-                ค่าใช้จ่ายประมาณการ (THB)
+                {t('manager.damage.cost')}
               </span>
               <input
                 type="number"
@@ -64,14 +66,14 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
 
             <label className="block mb-3">
               <span className="text-label-md uppercase tracking-wider text-on-surface-variant">
-                บันทึกการแก้ไข
+                {t('manager.damage.note')}
               </span>
               <textarea
                 name="resolutionNote"
                 required
                 maxLength={500}
                 rows={3}
-                placeholder="เช่น ส่งซ่อมร้าน X, เปลี่ยนของใหม่"
+                placeholder={t('manager.damage.notePlaceholder')}
                 className="mt-1 w-full rounded-md border border-outline-variant px-3 py-2 bg-surface-container-low text-body-md"
               />
             </label>
@@ -89,14 +91,14 @@ export function ResolveDamageButton({ reportId, defaultCost }: ResolveDamageButt
                 disabled={pending}
                 className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-primary-fixed hover:text-primary disabled:opacity-50"
               >
-                ยกเลิก
+                {t('manager.common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={pending}
                 className="px-4 py-2 rounded-md bg-primary text-on-primary text-body-md font-semibold disabled:opacity-50"
               >
-                {pending ? 'กำลังบันทึก...' : 'ยืนยันการแก้ไข'}
+                {pending ? t('manager.common.saving') : t('manager.damage.confirm')}
               </button>
             </div>
           </form>

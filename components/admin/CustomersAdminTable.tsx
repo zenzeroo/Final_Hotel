@@ -6,6 +6,9 @@ import Link from 'next/link'
 import type { Customer } from '@/lib/data/types'
 import { formatDate } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useLocale } from '@/lib/i18n/useT'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { useT } from '@/lib/i18n/useT'
 
 interface CustomersAdminTableProps {
   customers: (Customer & { total_bookings: number })[]
@@ -30,6 +33,8 @@ export function CustomersAdminTable({
   currentQuery,
   currentStatus,
 }: CustomersAdminTableProps) {
+  const t = useT()
+  const locale = useLocale()
   const router = useRouter()
   const params = useSearchParams()
 
@@ -64,7 +69,7 @@ export function CustomersAdminTable({
             type="search"
             name="q"
             defaultValue={currentQuery}
-            placeholder="ค้นหาชื่อ อีเมล หรือเบอร์โทร..."
+            placeholder={t('admin.customersPage.search')}
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-2 pl-10 pr-4 text-body-md focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
           />
         </div>
@@ -73,37 +78,37 @@ export function CustomersAdminTable({
           className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary-fixed hover:text-primary transition-colors"
         >
           <MaterialIcon name="search" size={18} />
-          ค้นหา
+          {t('admin.common.search')}
         </button>
         {currentQuery && (
           <Link
             href="/admin/customers"
             className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-surface-container-low border border-outline-variant text-on-surface rounded-lg hover:bg-primary-fixed hover:text-primary transition-colors"
           >
-            ล้าง
+            {t('admin.common.clear')}
           </Link>
         )}
       </form>
 
       {/* Status filter radios */}
       <fieldset className="flex items-center gap-4 text-body-md">
-        <legend className="sr-only">สถานะ</legend>
+        <legend className="sr-only">{t('admin.common.status')}</legend>
         <StatusRadio
           value="all"
           current={currentStatus}
-          label="ทั้งหมด"
+          label={t('admin.customersPage.statusAll')}
           onSelect={updateStatus}
         />
         <StatusRadio
           value="active"
           current={currentStatus}
-          label="ใช้งาน"
+          label={t('admin.customersPage.statusActive')}
           onSelect={updateStatus}
         />
         <StatusRadio
           value="suspended"
           current={currentStatus}
-          label="ถูกระงับ"
+          label={t('admin.customersPage.statusSuspended')}
           onSelect={updateStatus}
         />
       </fieldset>
@@ -117,7 +122,7 @@ export function CustomersAdminTable({
             className="text-on-surface-variant mb-3"
           />
           <p className="text-body-lg text-on-surface-variant">
-            ยังไม่มีลูกค้า
+            {t('admin.customersPage.empty')}
           </p>
         </div>
       ) : (
@@ -126,12 +131,12 @@ export function CustomersAdminTable({
             <table className="w-full">
               <thead className="bg-surface-container-low border-b border-outline-variant">
                 <tr className="text-label-md uppercase tracking-wider text-on-surface-variant">
-                  <th className="text-left px-4 py-3 font-medium">ลูกค้า</th>
-                  <th className="text-left px-4 py-3 font-medium">อีเมล</th>
-                  <th className="text-left px-4 py-3 font-medium">เบอร์โทร</th>
-                  <th className="text-right px-4 py-3 font-medium">การจอง</th>
-                  <th className="text-left px-4 py-3 font-medium">สถานะ</th>
-                  <th className="text-right px-4 py-3 font-medium">จัดการ</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('admin.customersPage.colCustomer')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('admin.common.email')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('admin.common.phone')}</th>
+                  <th className="text-right px-4 py-3 font-medium">{t('admin.customersPage.totalBookings')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('admin.common.status')}</th>
+                  <th className="text-right px-4 py-3 font-medium">{t('admin.common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
@@ -145,10 +150,10 @@ export function CustomersAdminTable({
                         href={`/admin/customers/${c.id}`}
                         className="text-body-md font-medium text-primary hover:underline"
                       >
-                        {c.full_name ?? '(ไม่มีชื่อ)'}
+                        {c.full_name ?? t('admin.common.noName')}
                       </Link>
                       <p className="text-caption text-on-surface-variant mt-0.5">
-                        {formatDate(c.created_at, 'th-TH')}
+                        {formatDate(c.created_at, LOCALE_BCP47[locale])}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-body-md text-on-surface-variant">
@@ -164,16 +169,16 @@ export function CustomersAdminTable({
                       {c.is_suspended ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] uppercase tracking-wider font-semibold">
                           <MaterialIcon name="block" size={12} />
-                          ถูกระงับ
+                          {t('admin.customersPage.statusSuspended')}
                         </span>
                       ) : c.is_active ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] uppercase tracking-wider font-semibold">
                           <MaterialIcon name="check_circle" size={12} />
-                          ใช้งาน
+                          {t('admin.customersPage.statusActive')}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-[10px] uppercase tracking-wider font-semibold">
-                          ปิด
+                          {t('admin.common.off')}
                         </span>
                       )}
                     </td>
@@ -183,7 +188,7 @@ export function CustomersAdminTable({
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body-md rounded-lg border border-outline-variant hover:bg-primary-fixed hover:text-primary transition-colors"
                       >
                         <MaterialIcon name="chevron_right" size={16} />
-                        ดู
+                        {t('admin.common.view')}
                       </Link>
                     </td>
                   </tr>

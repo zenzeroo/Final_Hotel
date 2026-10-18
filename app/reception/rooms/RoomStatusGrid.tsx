@@ -1,9 +1,10 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { AlertModal } from '@/components/ui/AlertModal'
+import { useToast } from '@/components/ui/Toast'
+import { useT } from '@/lib/i18n/useT'
 
 interface RoomTypeSummary {
   name_th: string
@@ -31,9 +32,10 @@ const NEXT_STATUS: Record<string, string> = {
 }
 
 export function RoomStatusGrid({ rooms, statusMeta }: RoomStatusGridProps) {
+  const t = useT()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const toast = useToast()
 
   const handleStatusChange = (roomId: string, currentStatus: string) => {
     const next = NEXT_STATUS[currentStatus] ?? 'available'
@@ -47,7 +49,7 @@ export function RoomStatusGrid({ rooms, statusMeta }: RoomStatusGridProps) {
         .eq('id', roomId)
 
       if (error) {
-        setAlertMessage('ไม่สามารถอัปเดต: ' + error.message)
+        toast.error(t('reception.common.updateFailed', { detail: error.message }))
         return
       }
 
@@ -75,9 +77,9 @@ export function RoomStatusGrid({ rooms, statusMeta }: RoomStatusGridProps) {
                 <MaterialIcon name={meta.icon} size={18} className={meta.color} />
               </div>
               <p className="text-caption text-on-surface-variant truncate">
-                {room.room_type?.[0]?.name_th ?? 'ห้องพัก'}
+                {room.room_type?.[0]?.name_th ?? t('reception.common.roomFallback')}
               </p>
-              <p className={`text-caption font-semibold mt-1 ${meta.color}`}>{meta.label}</p>
+              <p className={`text-caption font-semibold mt-1 ${meta.color}`}>{t(meta.label)}</p>
               {room.view_label && (
                 <p className="text-caption text-on-surface-variant mt-1 truncate">{room.view_label}</p>
               )}
@@ -85,9 +87,6 @@ export function RoomStatusGrid({ rooms, statusMeta }: RoomStatusGridProps) {
           )
         })}
       </div>
-      {alertMessage && (
-        <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
-      )}
     </>
   )
 }

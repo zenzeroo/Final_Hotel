@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 export type CheckInOutTopic = 'checkin' | 'checkout'
 
@@ -39,6 +40,7 @@ export function CheckInOutTopicTabs({
   checkin,
   checkout,
 }: CheckInOutTopicTabsProps) {
+  const t = useT()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -73,7 +75,7 @@ export function CheckInOutTopicTabs({
         }`}
       >
         <MaterialIcon name="login" size={16} />
-        เช็คอิน
+        {t('reception.checkInOutPage.checkIn')}
       </button>
       <button
         type="button"
@@ -86,7 +88,7 @@ export function CheckInOutTopicTabs({
         }`}
       >
         <MaterialIcon name="logout" size={16} />
-        เช็คเอาท์
+        {t('reception.checkInOutPage.checkOut')}
       </button>
     </div>
   )

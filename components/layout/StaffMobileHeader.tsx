@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { MobileOverlay } from '../ui/MobileOverlay'
 import { StaffSidebarNav, type StaffRole } from './StaffSidebar'
+import { useT } from '@/lib/i18n/useT'
 
 interface StaffMobileHeaderProps {
   role: StaffRole
@@ -23,6 +24,7 @@ interface StaffMobileHeaderProps {
  * Hidden on md+ (the desktop `<StaffSidebar>` takes over).
  */
 export function StaffMobileHeader({ role, userName, avatarKey }: StaffMobileHeaderProps) {
+  const t = useT()
   const [open, setOpen] = useState(false)
 
   return (
@@ -32,7 +34,7 @@ export function StaffMobileHeader({ role, userName, avatarKey }: StaffMobileHead
           <button
             type="button"
             onClick={() => setOpen(true)}
-            aria-label="เปิดเมนู"
+            aria-label={t('staff.openMenu')}
             className="inline-flex items-center justify-center w-10 h-10 -ml-2 rounded-full hover:bg-primary-fixed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
           >
             <MaterialIcon name="menu" size={24} />
@@ -51,7 +53,7 @@ export function StaffMobileHeader({ role, userName, avatarKey }: StaffMobileHead
       <MobileOverlay
         open={open}
         onClose={() => setOpen(false)}
-        title="เมนู"
+        title={t('staff.menu')}
         panelClassName="bg-primary text-secondary"
       >
         <div className="bg-primary text-secondary h-full">

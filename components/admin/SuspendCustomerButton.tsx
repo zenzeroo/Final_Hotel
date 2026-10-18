@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Modal } from '@/components/ui/Modal'
 import { suspendCustomerAction } from '@/app/actions/admin/customers'
+import { useT } from '@/lib/i18n/useT'
 
 interface SuspendCustomerButtonProps {
   customerId: string
@@ -27,6 +28,7 @@ export function SuspendCustomerButton({
   customerId,
   customerName,
 }: SuspendCustomerButtonProps) {
+  const t = useT()
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -55,7 +57,7 @@ export function SuspendCustomerButton({
     })
   }
 
-  const displayName = customerName ?? 'ลูกค้ารายนี้'
+  const displayName = customerName ?? t('admin.customersPage.thisCustomer')
 
   return (
     <>
@@ -65,12 +67,12 @@ export function SuspendCustomerButton({
         className="inline-flex items-center gap-2 px-4 py-2 bg-error text-on-error rounded-lg hover:bg-error-container hover:text-error transition-colors"
       >
         <MaterialIcon name="block" size={18} />
-        ระงับบัญชี
+        {t('admin.customersPage.suspend')}
       </button>
       <Modal
         open={isOpen}
         onClose={handleClose}
-        title="ยืนยันระงับบัญชี"
+        title={t('admin.customersPage.confirmSuspend')}
         maxWidthClass="max-w-lg"
         showCloseButton
         closeOnBackdrop={!isPending}
@@ -87,12 +89,11 @@ export function SuspendCustomerButton({
               </div>
             )}
             <p className="text-body-md text-on-surface">
-              ระงับบัญชีของ <strong>{displayName}</strong>? ลูกค้าจะไม่สามารถ
-              เข้าสู่ระบบหรือทำการจองใหม่ได้จนกว่าจะปลดการระงับ
+              {t('admin.customersPage.suspendBody', { name: displayName })}
             </p>
             <label className="flex flex-col gap-1.5">
               <span className="text-label-md text-on-surface">
-                เหตุผล (ไม่บังคับ)
+                {t('admin.customersPage.suspendReason')}
               </span>
               <textarea
                 name="reason"
@@ -100,7 +101,7 @@ export function SuspendCustomerButton({
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
                 maxLength={500}
-                placeholder="เช่น ลูกค้าทำผิดนโยบาย, พฤติกรรมไม่เหมาะสม..."
+                placeholder={t('admin.customersPage.suspendPlaceholder')}
                 className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md focus:border-error focus:ring-1 focus:ring-error transition-colors"
               />
             </label>
@@ -111,7 +112,7 @@ export function SuspendCustomerButton({
                 disabled={isPending}
                 className="bg-transparent border border-outline-variant text-on-surface-variant px-4 py-2 rounded-lg hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors disabled:opacity-50"
               >
-                ยกเลิก
+                {t('admin.common.cancel')}
               </button>
               <button
                 type="submit"
@@ -121,12 +122,12 @@ export function SuspendCustomerButton({
                 {isPending ? (
                   <>
                     <span className="inline-block w-4 h-4 border-2 border-on-error border-t-transparent rounded-full animate-spin" />
-                    กำลังระงับ…
+                    {t('admin.customersPage.suspending')}
                   </>
                 ) : (
                   <>
                     <MaterialIcon name="block" size={18} />
-                    ยืนยันระงับบัญชี
+                    {t('admin.customersPage.confirmSuspend')}
                   </>
                 )}
               </button>

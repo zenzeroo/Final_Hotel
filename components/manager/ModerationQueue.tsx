@@ -1,4 +1,5 @@
 import type { ReviewForModeration } from '@/lib/data/types'
+import type { Locale } from '@/lib/i18n/config'
 import { ReviewRow } from './ReviewRow'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
@@ -7,6 +8,7 @@ interface ModerationQueueProps {
   tab: 'pending' | 'approved' | 'hidden'
   isAdmin: boolean
   emptyMessage: string
+  locale: Locale
 }
 
 export function ModerationQueue({
@@ -14,6 +16,7 @@ export function ModerationQueue({
   tab,
   isAdmin,
   emptyMessage,
+  locale,
 }: ModerationQueueProps) {
   if (reviews.length === 0) {
     return (
@@ -27,7 +30,7 @@ export function ModerationQueue({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {reviews.map((r) => (
-        <ReviewRow key={r.id} review={r} tab={tab} isAdmin={isAdmin} />
+        <ReviewRow key={r.id} review={r} tab={tab} isAdmin={isAdmin} locale={locale} />
       ))}
     </div>
   )

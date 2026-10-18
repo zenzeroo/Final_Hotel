@@ -204,7 +204,7 @@ export function SearchBar({
     >
       {/* Check-in */}
       <DateField
-        label="เช็คอิน"
+        label={t('roomsList.searchBar.checkIn')}
         value={checkin}
         min={getMinCheckInLocalIso()}
         onChange={handleCheckinChange}
@@ -212,7 +212,7 @@ export function SearchBar({
 
       {/* Check-out */}
       <DateField
-        label="เช็คเอาท์"
+        label={t('roomsList.searchBar.checkOut')}
         value={checkout}
         min={addDaysLocalIso(checkin, 1)}
         onChange={handleCheckoutChange}
@@ -226,13 +226,13 @@ export function SearchBar({
             : 'px-4 py-3 border border-outline-variant rounded-xl'
         }`}
       >
-        <span className="text-label-md text-on-surface-variant shrink-0">ผู้เข้าพัก</span>
+        <span className="text-label-md text-on-surface-variant shrink-0">{t('roomsList.searchBar.guests')}</span>
         <div className="flex items-center gap-3 ml-auto">
           <button
             type="button"
             onClick={() => handleGuestsChange(-1)}
             className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
-            aria-label="ลดจำนวนผู้เข้าพัก"
+            aria-label={t('roomsList.searchBar.decGuests')}
           >
             <MaterialIcon name="remove" size={16} />
           </button>
@@ -241,7 +241,7 @@ export function SearchBar({
             type="button"
             onClick={() => handleGuestsChange(+1)}
             className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
-            aria-label="เพิ่มจำนวนผู้เข้าพัก"
+            aria-label={t('roomsList.searchBar.incGuests')}
           >
             <MaterialIcon name="add" size={16} />
           </button>
@@ -264,7 +264,7 @@ export function SearchBar({
           className="md:rounded-full bg-primary text-on-primary px-6 py-3 md:py-2 rounded-xl font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
         >
           <MaterialIcon name="search" size={20} />
-          <span>ค้นหาห้องพัก</span>
+          <span>{t('roomsList.searchBar.search')}</span>
         </button>
       ) : null}
     </form>

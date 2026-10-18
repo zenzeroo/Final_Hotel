@@ -1,79 +1,81 @@
-import type { RoomUnitWithType, RoomUnitStatus } from '@/lib/data/types'
+import type { RoomUnitWithType, RoomUnitStatus, SeasonalRate } from '@/lib/data/types'
 import { formatTHB } from '@/lib/pricing'
 import { CloseRoomButton } from './CloseRoomButton'
+import { todayPrice } from './ratePrice'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { EmptyState } from '@/components/feedback/EmptyState'
+import type { Locale } from '@/lib/i18n/config'
+import { ROOM_STATUS_KEY } from './roomStatusBuckets'
+import { getT } from '@/lib/i18n/t'
 
 interface RoomInventoryTableProps {
   units: RoomUnitWithType[]
+  /** Seasonal rates — the price column shows tonight's price, not base_price. */
+  rates: SeasonalRate[]
+  /** Bangkok YYYY-MM-DD */
+  today: string
+  locale: Locale
 }
 
-const STATUS_LABEL: Record<RoomUnitStatus, { th: string; icon: string; chip: string; dot: string }> = {
+// Labels: ROOM_STATUS_KEY (staff.status.*).
+const STATUS_LABEL: Record<RoomUnitStatus, { icon: string; chip: string; dot: string }> = {
   available: {
-    th: 'ว่าง',
     icon: 'check_circle',
     chip: 'bg-primary-container text-on-primary-container',
     dot: 'bg-primary',
   },
   occupied: {
-    th: 'มีแขก',
     icon: 'person',
     chip: 'bg-tertiary-container text-on-tertiary-container',
     dot: 'bg-tertiary',
   },
   cleaning: {
-    th: 'กำลังทำความสะอาด',
     icon: 'cleaning_services',
     chip: 'bg-secondary-container text-on-secondary-container',
     dot: 'bg-secondary',
   },
   maintenance: {
-    th: 'ปิดซ่อมบำรุง',
     icon: 'build',
     chip: 'bg-error-container text-on-error-container',
     dot: 'bg-error',
   },
   out_of_order: {
-    th: 'ปิดใช้งาน',
     icon: 'block',
     chip: 'bg-surface-container-high text-on-surface-variant',
     dot: 'bg-on-surface-variant',
   },
   // Phase 30.1 — DB CHECK widened to include these 4 new values.
   waiting_cleaning: {
-    th: 'รอทำความสะอาด',
     icon: 'hourglass_empty',
     chip: 'bg-error-container text-on-error-container',
     dot: 'bg-error',
   },
   inspection: {
-    th: 'กำลังตรวจสอบ',
     icon: 'visibility',
     chip: 'bg-secondary-container text-on-secondary-container',
     dot: 'bg-secondary',
   },
   ready: {
-    th: 'พร้อมขาย',
     icon: 'verified',
     chip: 'bg-primary-container text-on-primary-container',
     dot: 'bg-primary',
   },
   checkout: {
-    th: 'เช็คเอาท์แล้ว',
     icon: 'logout',
     chip: 'bg-error-container text-on-error-container',
     dot: 'bg-error',
   },
 }
 
-export function RoomInventoryTable({ units }: RoomInventoryTableProps) {
+export function RoomInventoryTable({ units, rates, today, locale }: RoomInventoryTableProps) {
+  const t = getT(locale)
   // Empty branch — guard against silent blank space on no-room-units DB.
   if (units.length === 0) {
     return (
       <EmptyState
         icon="hotel"
-        title="ยังไม่มีห้องพักในระบบ"
-        description="เมื่อมีห้องพักในระบบ รายการจะแสดงที่นี่"
+        title={t('manager.roomsTable.empty')}
+        description={t('manager.roomsTable.emptyBody')}
       />
     )
   }
@@ -90,28 +92,28 @@ export function RoomInventoryTable({ units }: RoomInventoryTableProps) {
       {grouped.map(({ floor, units: floorUnits }) => (
         <section key={floor}>
           <h3 className="font-headline-xs text-headline-xs text-primary mb-3">
-            ชั้น {floor}{' '}
+            {t('manager.roomsTable.floorN', { floor })}{' '}
             <span className="text-caption text-on-surface-variant ml-2">
-              ({floorUnits.length} ห้อง)
+              {t('manager.roomsTable.roomsCount', { count: floorUnits.length })}
             </span>
           </h3>
           <div className="bg-surface-container-lowest rounded-lg shadow-level-1 overflow-x-auto overflow-y-hidden">
             <table className="w-full">
               <thead className="bg-surface-container-low border-b border-outline-variant">
                 <tr className="text-label-md uppercase tracking-wider text-on-surface-variant">
-                  <th className="text-left px-4 py-3 font-medium">ห้อง</th>
-                  <th className="text-left px-4 py-3 font-medium">ประเภท</th>
-                  <th className="text-left px-4 py-3 font-medium">วิว</th>
-                  <th className="text-right px-4 py-3 font-medium">ราคา/คืน</th>
-                  <th className="text-left px-4 py-3 font-medium">สถานะ</th>
-                  <th className="text-right px-4 py-3 font-medium">จัดการ</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('manager.roomsTable.colRoom')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('manager.roomsTable.colType')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('manager.roomsTable.colView')}</th>
+                  <th className="text-right px-4 py-3 font-medium">{t('manager.roomsTable.colTonight')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('manager.roomsTable.colStatus')}</th>
+                  <th className="text-right px-4 py-3 font-medium">{t('manager.roomsTable.colActions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
                 {floorUnits.map((unit) => {
                   const status = STATUS_LABEL[unit.status]
-                  const isClosed =
-                    unit.status === 'maintenance' || unit.status === 'out_of_order'
+                  const base = Number(unit.room_type.base_price)
+                  const tonight = todayPrice(base, rates, unit.room_type.id, today)
                   return (
                     <tr key={unit.id} className="hover:bg-primary-fixed transition-colors">
                       <td className="px-4 py-4">
@@ -134,19 +136,27 @@ export function RoomInventoryTable({ units }: RoomInventoryTableProps) {
                       </td>
                       <td className="px-4 py-4 text-right">
                         <span className="text-body-md font-semibold text-primary">
-                          {formatTHB(unit.room_type.base_price)}
+                          {formatTHB(tonight.price)}
                         </span>
+                        {tonight.price !== base && (
+                          <>
+                            <span className="block text-caption text-on-surface-variant line-through">
+                              {formatTHB(base)}
+                            </span>
+                            <span className="block text-caption text-secondary">{tonight.label}</span>
+                          </>
+                        )}
                       </td>
                       <td className="px-4 py-4">
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption font-semibold ${status.chip}`}
                         >
                           <MaterialIcon name={status.icon} size={12} />
-                          {status.th}
+                          {t(ROOM_STATUS_KEY[unit.status])}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <CloseRoomButton unitId={unit.id} isClosed={isClosed} />
+                        <CloseRoomButton unitId={unit.id} status={unit.status} />
                       </td>
                     </tr>
                   )

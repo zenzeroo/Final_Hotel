@@ -27,12 +27,12 @@ const XLSX_LABELS: Record<Locale, Record<string, string>> = {
     cancellationTrend: 'แนวโน้มการยกเลิก vs 7 วันก่อน (%)',
     dailyRevenue: 'รายได้รายวัน (7 วัน)',
     date: 'วันที่',
-    weekday: 'วันในสัปดาห์',
+    weekday: 'ป้ายกราฟ',
     revenue: 'รายได้ (THB)',
-    occupancyYoY: 'Occupancy YoY (30 วัน)',
-    month: 'เดือน',
+    occupancyYoY: 'อัตราการเข้าพัก 7 วัน',
+    month: 'วันที่',
     lastYear: 'ปีก่อน (%)',
-    thisYear: 'ปีนี้ (%)',
+    thisYear: 'ช่วงนี้ (%)',
     mostBookedRooms: 'ห้องที่ถูกจองมากที่สุด',
     roomType: 'ประเภทห้อง',
     bookingCount: 'จำนวนการจอง',
@@ -42,7 +42,7 @@ const XLSX_LABELS: Record<Locale, Record<string, string>> = {
     percent: 'สัดส่วน (%)',
     noData: 'ไม่มีข้อมูล',
     noDataBookings: 'ต้องมีการจองอย่างน้อย 1 รายการ',
-    noDataYear: 'ต้องมีการจองอย่างน้อย 1 ปี',
+    noDataYear: 'ยังไม่มีห้องที่เปิดใช้งาน',
   },
   en: {
     summary: 'Summary',
@@ -55,12 +55,12 @@ const XLSX_LABELS: Record<Locale, Record<string, string>> = {
     cancellationTrend: 'Cancellation Trend vs prev 7d (%)',
     dailyRevenue: 'Daily Revenue (7d)',
     date: 'Date',
-    weekday: 'Weekday',
+    weekday: 'Label',
     revenue: 'Revenue (THB)',
-    occupancyYoY: 'Occupancy YoY (30d)',
-    month: 'Month',
+    occupancyYoY: 'Occupancy (7d)',
+    month: 'Date',
     lastYear: 'Last Year (%)',
-    thisYear: 'This Year (%)',
+    thisYear: 'This Period (%)',
     mostBookedRooms: 'Most Booked Rooms',
     roomType: 'Room Type',
     bookingCount: 'Bookings',
@@ -70,7 +70,7 @@ const XLSX_LABELS: Record<Locale, Record<string, string>> = {
     percent: 'Percent (%)',
     noData: 'No data',
     noDataBookings: 'requires at least 1 booking',
-    noDataYear: 'requires at least 1 year of bookings',
+    noDataYear: 'no active rooms yet',
   },
 }
 
@@ -100,9 +100,9 @@ export async function GET() {
     { header: L.value, key: 'value', width: 24 },
   ]
   summary.addRows([
-    { metric: L.totalRevenue7d, value: data.totalRevenue7d },
+    { metric: L.totalRevenue7d, value: data.totalRevenue },
     { metric: L.revenueTrend, value: data.totalRevenueTrendPct },
-    { metric: L.totalBookings7d, value: data.totalBookings7d },
+    { metric: L.totalBookings7d, value: data.totalBookings },
     { metric: L.cancellationRate, value: data.cancellationRatePct },
     { metric: L.cancellationTrend, value: data.cancellationTrendPct },
   ])
@@ -116,7 +116,7 @@ export async function GET() {
     { header: L.weekday, key: 'label', width: 14 },
     { header: L.revenue, key: 'revenue', width: 18 },
   ]
-  daily.addRows(data.dailyRevenue.map((p) => ({
+  daily.addRows(data.revenue.map((p) => ({
     date: p.date,
     label: p.label ?? '',
     revenue: p.revenue,
@@ -131,14 +131,14 @@ export async function GET() {
     { header: L.lastYear, key: 'last', width: 14 },
     { header: L.thisYear, key: 'current', width: 14 },
   ]
-  if (data.occupancyYoY.length === 0) {
+  if (data.occupancy.length === 0) {
     occupancy.addRow({
       month: `${L.noData} (${L.noDataYear})`,
       last: '',
       current: '',
     })
   } else {
-    occupancy.addRows(data.occupancyYoY)
+    occupancy.addRows(data.occupancy.map((p) => ({ month: p.period, current: p.current, last: p.last ?? '' })))
   }
   styleSheet(occupancy)
   occupancy.getColumn('last').numFmt = '0.0"%"'

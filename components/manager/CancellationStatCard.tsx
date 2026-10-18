@@ -1,4 +1,7 @@
+'use client'
+
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface CancellationStatCardProps {
   ratePct: number
@@ -11,11 +14,12 @@ export function CancellationStatCard({
   trendPct,
   totalBookings,
 }: CancellationStatCardProps) {
+  const t = useT()
   const isDown = trendPct < 0
   return (
-    <div className="relative bg-primary text-secondary rounded-lg shadow-level-1 p-6 overflow-hidden transition-all duration-300 hover:shadow-(--shadow-ambient-lg) hover:-translate-y-1">
+    <div className="relative self-start bg-primary text-secondary rounded-lg shadow-level-1 p-5 overflow-hidden transition-all duration-300 hover:shadow-(--shadow-ambient-lg) hover:-translate-y-1">
       <div
-        className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20"
+        className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20"
         style={{
           background:
             'radial-gradient(circle, rgba(254,215,152,0.5) 0%, transparent 70%)',
@@ -23,9 +27,9 @@ export function CancellationStatCard({
         aria-hidden
       />
       <div className="relative">
-        <MaterialIcon name="event_busy" size={28} className="text-secondary mb-3" />
+        <MaterialIcon name="event_busy" size={22} className="text-secondary mb-2" />
         <p className="text-label-md uppercase tracking-wider text-secondary/70">
-          อัตราการยกเลิก
+          {t('manager.reportsPage.cancelRate')}
         </p>
         <p className="font-display text-display-lg-mobile text-secondary mt-1">
           {ratePct.toFixed(1)}%
@@ -45,7 +49,7 @@ export function CancellationStatCard({
             {Math.abs(trendPct).toFixed(1)}%
           </span>
           <span className="text-caption text-secondary/80">
-            จากการจอง {totalBookings} รายการ
+            {t('manager.reportsPage.cancelFrom', { count: totalBookings })}
           </span>
         </div>
       </div>

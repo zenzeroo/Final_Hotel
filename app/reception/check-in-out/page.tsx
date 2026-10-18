@@ -7,6 +7,7 @@ import {
   getTodayBangkok,
 } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
 import { CheckInOutActions } from './CheckInOutActions'
 import { CheckInOutDateRange } from './CheckInOutDateRange'
 import { CheckInOutListSearch } from './CheckInOutListSearch'
@@ -18,10 +19,14 @@ import {
   CheckInOutViewTabs,
   type CheckInOutView,
 } from './CheckInOutViewTabs'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CheckInOutPage(props: PageProps<'/reception/check-in-out'>) {
+  const locale = await getLocale()
+  const t = getT(locale)
   const searchParams = await props.searchParams
 
   // Phase 48c/48e — three independent URL-driven controls:
@@ -201,24 +206,23 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
   // multi-day → "A – B".
   const rangeLabel =
     checkin === checkout
-      ? formatDate(checkin)
-      : `${formatDate(checkin)} – ${formatDate(checkout)}`
-  const topicVerb = activeTab === 'checkin' ? 'เช็คอิน' : 'เช็คเอาท์'
-  const upcomingTopicVerb = activeTab === 'checkin' ? 'เช็คอิน' : 'เช็คเอาท์'
+      ? formatDate(checkin, LOCALE_BCP47[locale])
+      : `${formatDate(checkin, LOCALE_BCP47[locale])} – ${formatDate(checkout, LOCALE_BCP47[locale])}`
+  const topicVerb = t(activeTab === 'checkin' ? 'reception.checkInOutPage.verbCheckin' : 'reception.checkInOutPage.verbCheckout')
   const listTitle = isTodayRange
-    ? `${topicVerb}วันนี้`
-    : `${topicVerb} ${rangeLabel}`
+    ? t('reception.checkInOutPage.listToday', { verb: topicVerb })
+    : t('reception.checkInOutPage.listRange', { verb: topicVerb, range: rangeLabel })
   const emptyLabel = isTodayRange
-    ? `ไม่มี${topicVerb}วันนี้`
-    : `ไม่มี${topicVerb} ${rangeLabel}`
-  const actionVerb = activeTab === 'checkin' ? 'เช็คอิน' : 'เช็คเอาท์'
-  const upcomingTitle = `${upcomingTopicVerb}ที่กำลังจะมา`
-  const upcomingEmptyLabel = `ไม่มี${upcomingTopicVerb}ในช่วง 3 วันข้างหน้า`
+    ? t('reception.checkInOutPage.emptyToday', { verb: topicVerb })
+    : t('reception.checkInOutPage.emptyRange', { verb: topicVerb, range: rangeLabel })
+  const actionVerb = t(activeTab === 'checkin' ? 'reception.checkInOutPage.checkIn' : 'reception.checkInOutPage.checkOut')
+  const upcomingTitle = t('reception.checkInOutPage.upcomingTitle', { verb: topicVerb })
+  const upcomingEmptyLabel = t('reception.checkInOutPage.upcomingEmpty', { verb: topicVerb })
 
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-primary">เช็คอิน / เช็คเอาท์</h1>
+        <h1 className="font-display text-3xl text-primary">{t('reception.checkInOutPage.title')}</h1>
 
         {/* Phase 48f — Row 1: mode controls (topic toggle + date range).
             Wrapped in a flex container so they sit on one line on
@@ -285,7 +289,7 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
             <CheckInOutListSearch initialQuery={searchTerm} />
           </div>
           {list.length === 0 ? (
-            <EmptyStateWithCta message={emptyLabel} />
+            <EmptyStateWithCta locale={locale} message={emptyLabel} />
           ) : (
             <div className="flex flex-col gap-3">
               {list.map((b) => {
@@ -298,6 +302,7 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
                   matchingType.length > 0 ? matchingType : allAvailableUnits
                 return (
                   <GuestCard
+                    locale={locale}
                     key={b.id}
                     booking={b}
                     action={
@@ -308,7 +313,7 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
                       // action button is always shown.
                       activeTab === 'checkin' && b.status === 'checked_in' ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-caption font-semibold">
-                          <MaterialIcon name="verified" size={14} /> เข้าพักแล้ว
+                          <MaterialIcon name="verified" size={14} /> {t('reception.checkInOutPage.alreadyCheckedIn')}
                         </span>
                       ) : (
                         <CheckInOutActions
@@ -338,7 +343,7 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
             <div>
               <h2 className="font-display text-xl text-primary">{upcomingTitle}</h2>
               <p className="text-caption text-on-surface-variant">
-                {formatDate(upcomingFrom)} – {formatDate(upcomingTo)}
+                {formatDate(upcomingFrom, LOCALE_BCP47[locale])} – {formatDate(upcomingTo, LOCALE_BCP47[locale])}
               </p>
             </div>
             <span className="ml-auto px-3 py-1 rounded-full bg-secondary text-on-secondary text-caption font-semibold">
@@ -346,11 +351,12 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
             </span>
           </div>
           {upcoming.length === 0 ? (
-            <EmptyStateWithCta message={upcomingEmptyLabel} />
+            <EmptyStateWithCta locale={locale} message={upcomingEmptyLabel} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {upcoming.map((b) => (
                 <UpcomingCard
+                  locale={locale}
                   key={b.id}
                   booking={b}
                   topic={activeTab}
@@ -367,13 +373,13 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
             <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary">
               <MaterialIcon name="group" size={20} />
             </div>
-            <h2 className="font-display text-xl text-primary">แขกที่พักอยู่ในขณะนี้</h2>
+            <h2 className="font-display text-xl text-primary">{t('reception.checkInOutPage.inHouseTitle')}</h2>
             <span className="ml-auto px-3 py-1 rounded-full bg-primary text-secondary text-caption font-semibold">
               {inHouse.length}
             </span>
           </div>
           {inHouse.length === 0 ? (
-            <EmptyStateWithCta message="ไม่มีแขกที่เข้าพักอยู่" />
+            <EmptyStateWithCta locale={locale} message={t('reception.checkInOutPage.noInHouseGuests')} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {inHouse.map((b) => (
@@ -388,10 +394,10 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
                   </p>
                   <div className="mt-2 flex items-center gap-1.5 text-caption text-on-surface-variant">
                     <MaterialIcon name="event" size={14} />
-                    เช็คเอาท์ {formatDate(b.check_out)}
+                    {t('reception.checkInOutPage.checkoutOn', { date: formatDate(b.check_out, LOCALE_BCP47[locale]) })}
                   </div>
                   <div className="mt-1 text-caption text-on-surface-variant">
-                    {b.guests} ท่าน · {formatTHB(b.total)}
+                    {t('reception.common.guestsN', { count: b.guests })} · {formatTHB(b.total)}
                   </div>
                 </Link>
               ))}
@@ -421,10 +427,13 @@ interface UpcomingBooking extends GuestCardBooking {
 function GuestCard({
   booking,
   action,
+  locale,
 }: {
+  locale: Locale
   booking: GuestCardBooking
   action: React.ReactNode
 }) {
+  const t = getT(locale)
   return (
     <div className="p-4 bg-surface-container-low rounded-xl flex items-center gap-3">
       <Link
@@ -435,7 +444,7 @@ function GuestCard({
           {booking.booker_full_name}
         </p>
         <p className="text-caption text-on-surface-variant truncate">
-          {booking.room_type?.name_th} · {booking.guests} ท่าน
+          {booking.room_type?.name_th} · {t('reception.common.guestsN', { count: booking.guests })}
         </p>
         <p className="text-caption text-on-surface-variant mt-0.5 font-mono">
           #{booking.booking_code}
@@ -446,7 +455,8 @@ function GuestCard({
   )
 }
 
-function EmptyStateWithCta({ message }: { message: string }) {
+function EmptyStateWithCta({ message, locale }: { message: string; locale: Locale }) {
+  const t = getT(locale)
   // Phase 48f — empty states across all 3 views get a helpful "see all
   // bookings" link so reception isn't stuck at a dead end when no
   // results match the current filter.
@@ -458,7 +468,7 @@ function EmptyStateWithCta({ message }: { message: string }) {
         href="/reception/bookings"
         className="inline-flex items-center gap-2 text-label-md text-primary font-semibold uppercase tracking-wider px-4 py-2 rounded-full bg-primary/10 hover:bg-primary-fixed transition-colors"
       >
-        ดูการจองทั้งหมด
+        {t('reception.common.seeAllBookings')}
         <MaterialIcon name="arrow_forward" size={16} />
       </Link>
     </div>
@@ -468,14 +478,17 @@ function EmptyStateWithCta({ message }: { message: string }) {
 function UpcomingCard({
   booking,
   topic,
+  locale,
 }: {
+  locale: Locale
   booking: UpcomingBooking
   topic: CheckInOutTopic
 }) {
+  const t = getT(locale)
   // Phase 48e — UpcomingCard now takes the topic so the action verb
   // matches the active direction (เช็คอิน vs เช็คเอาท์) and the date
   // label in the card footer reads correctly for both.
-  const eventVerb = topic === 'checkin' ? 'เช็คอิน' : 'เช็คเอาท์'
+  const eventVerb = t(topic === 'checkin' ? 'reception.checkInOutPage.checkIn' : 'reception.checkInOutPage.checkOut')
   const eventDateIso = topic === 'checkin' ? booking.check_in : booking.check_out
   const eventDateColumn = topic === 'checkin' ? 'check_in' : 'check_out'
   return (
@@ -492,14 +505,14 @@ function UpcomingCard({
         </span>
       </div>
       <p className="mt-1 text-caption text-on-surface-variant truncate">
-        {booking.room_type?.name_th} · {booking.guests} ท่าน
+        {booking.room_type?.name_th} · {t('reception.common.guestsN', { count: booking.guests })}
       </p>
       <div className="mt-2 flex items-center gap-1.5 text-caption text-on-surface-variant">
         <MaterialIcon name="event" size={14} />
-        {eventVerb} {formatDate(eventDateIso)}
+        {t('reception.checkInOutPage.eventOn', { verb: eventVerb, date: formatDate(eventDateIso, LOCALE_BCP47[locale]) })}
       </div>
       <div className="mt-1 flex items-center justify-between text-caption text-on-surface-variant">
-        <span>{booking.nights} คืน</span>
+        <span>{t('reception.common.nightsN', { count: booking.nights })}</span>
         <span>{formatTHB(booking.total)}</span>
       </div>
     </Link>

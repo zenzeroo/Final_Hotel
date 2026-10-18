@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { unsuspendCustomerAction } from '@/app/actions/admin/customers'
+import { useT } from '@/lib/i18n/useT'
 
 interface UnsuspendCustomerButtonProps {
   customerId: string
@@ -21,6 +22,7 @@ export function UnsuspendCustomerButton({
   customerId,
   customerName,
 }: UnsuspendCustomerButtonProps) {
+  const t = useT()
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +41,7 @@ export function UnsuspendCustomerButton({
     })
   }
 
-  const displayName = customerName ?? 'ลูกค้ารายนี้'
+  const displayName = customerName ?? t('admin.customersPage.thisCustomer')
 
   return (
     <>
@@ -49,7 +51,7 @@ export function UnsuspendCustomerButton({
         className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-on-secondary rounded-lg hover:bg-secondary-container hover:text-secondary transition-colors"
       >
         <MaterialIcon name="check_circle" size={18} />
-        ปลดการระงับ
+        {t('admin.customersPage.unsuspend')}
       </button>
       <ConfirmModal
         open={isOpen}
@@ -59,7 +61,7 @@ export function UnsuspendCustomerButton({
           setError(null)
         }}
         onConfirm={handleConfirm}
-        title="ยืนยันปลดการระงับ"
+        title={t('admin.customersPage.confirmUnsuspend')}
         body={
           <div className="flex flex-col gap-3">
             {error && (
@@ -68,19 +70,18 @@ export function UnsuspendCustomerButton({
               </div>
             )}
             <p className="text-body-md text-on-surface">
-              ปลดการระงับบัญชีของ <strong>{displayName}</strong>? ลูกค้า
-              จะสามารถเข้าสู่ระบบและทำการจองได้ตามปกติ
+              {t('admin.customersPage.unsuspendBody', { name: displayName })}
             </p>
             {isPending && (
               <div className="flex items-center gap-2 text-body-md text-on-surface-variant">
                 <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-                กำลังดำเนินการ…
+                {t('admin.customersPage.processing')}
               </div>
             )}
           </div>
         }
-        okLabel={isPending ? 'กำลังดำเนินการ…' : 'ยืนยันปลดการระงับ'}
-        cancelLabel="ยกเลิก"
+        okLabel={isPending ? t('admin.customersPage.processing') : t('admin.customersPage.confirmUnsuspend')}
+        cancelLabel={t('admin.common.cancel')}
       />
     </>
   )

@@ -1,6 +1,7 @@
-import type { Amenity, RoomType, SearchFilters, SearchResult } from './types'
+import type { Amenity, RoomType, RoomUnitStatus, SearchFilters, SearchResult } from './types'
 import { hasSupabase } from '../env'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
+import { getTodayBangkok } from '@/lib/dates'
 
 /**
  * Supabase implementation — the only data layer (mock layer deleted).
@@ -232,6 +233,8 @@ export async function getRoomTypeById(id: string): Promise<RoomType | null> {
   return (data as RoomType) ?? null
 }
 
+export const SLUG_TAKEN_MESSAGE = 'Slug นี้ถูกใช้แล้ว — เปลี่ยน slug ใหม่'
+
 export async function createRoomType(args: Omit<RoomType, 'id'>): Promise<RoomType> {
   const supabase = await getClient()
   const { data, error } = await supabase
@@ -239,6 +242,7 @@ export async function createRoomType(args: Omit<RoomType, 'id'>): Promise<RoomTy
     .insert({ ...args, deleted_at: args.deleted_at ?? null })
     .select()
     .single()
+  if (error?.code === '23505') throw new Error(SLUG_TAKEN_MESSAGE)
   if (error) wrapSupabaseError('', error)
   return data as RoomType
 }
@@ -254,6 +258,7 @@ export async function updateRoomType(args: {
     .eq('id', args.id)
     .select()
     .single()
+  if (error?.code === '23505') throw new Error(SLUG_TAKEN_MESSAGE)
   if (error) wrapSupabaseError('', error)
   return data as RoomType
 }
@@ -307,4 +312,109 @@ const AMENITY_CATALOG: Amenity[] = [
 export async function getApprovedAmenities(slugs: readonly string[]): Promise<Amenity[]> {
   const set = new Set(slugs)
   return AMENITY_CATALOG.filter((a) => set.has(a.slug))
+}
+
+/** Full amenity catalog — admin room-type form renders it as checkboxes. */
+export function getAmenityCatalog(): Amenity[] {
+  return AMENITY_CATALOG
+}
+
+// =====================================================
+// Physical rooms (room_units) for a room type — admin
+// =====================================================
+
+export interface AdminRoomUnit {
+  id: string
+  floor: number
+  unit_label: string
+  view_label: string | null
+  status: RoomUnitStatus
+  is_active: boolean
+}
+
+type DbClient = Awaited<ReturnType<typeof getClient>>
+
+export async function listUnitsForRoomType(roomTypeId: string): Promise<AdminRoomUnit[]> {
+  const supabase = await getClient()
+  const { data, error } = await supabase
+    .from('room_units')
+    .select('id, floor, unit_label, view_label, status, is_active')
+    .eq('room_type_id', roomTypeId)
+    .order('floor', { ascending: true })
+    .order('unit_label', { ascending: true })
+  if (error) wrapSupabaseError('listUnitsForRoomType', error)
+  return (data ?? []) as AdminRoomUnit[]
+}
+
+/** Active unit count per room type — a type with 0 cannot be booked. */
+export async function countUnitsByRoomType(client?: DbClient): Promise<Record<string, number>> {
+  const supabase = client ?? (await getClient())
+  const { data, error } = await supabase
+    .from('room_units')
+    .select('room_type_id')
+    .eq('is_active', true)
+  if (error) wrapSupabaseError('countUnitsByRoomType', error)
+  const counts: Record<string, number> = {}
+  for (const u of data ?? []) counts[u.room_type_id] = (counts[u.room_type_id] ?? 0) + 1
+  return counts
+}
+
+/** Slug already used by any room type (incl. inactive / soft-deleted)? */
+export async function isRoomTypeSlugTaken(slug: string, client?: DbClient): Promise<boolean> {
+  const supabase = client ?? (await getClient())
+  const { data, error } = await supabase.from('room_types').select('id').eq('slug', slug).limit(1)
+  if (error) wrapSupabaseError('isRoomTypeSlugTaken', error)
+  return (data ?? []).length > 0
+}
+
+export async function createRoomUnit(
+  args: { roomTypeId: string; floor: number; unitLabel: string; viewLabel: string | null },
+  client?: DbClient,
+): Promise<void> {
+  const supabase = client ?? (await getClient())
+  const { error } = await supabase.from('room_units').insert({
+    room_type_id: args.roomTypeId,
+    floor: args.floor,
+    unit_label: args.unitLabel,
+    view_label: args.viewLabel,
+    status: 'available',
+    is_active: true,
+  })
+  if (error?.code === '23505') throw new Error('มีห้องเลขนี้ในชั้นนี้อยู่แล้ว')
+  if (error) wrapSupabaseError('createRoomUnit', error)
+}
+
+/**
+ * Turn a physical room on/off for sale. Turning it off is refused while a
+ * guest is in it or a confirmed/checked-in booking assigned to it is not over.
+ */
+export async function setRoomUnitActive(
+  args: { unitId: string; active: boolean },
+  client?: DbClient,
+): Promise<void> {
+  const supabase = client ?? (await getClient())
+  if (!args.active) {
+    const { data: unit, error: unitErr } = await supabase
+      .from('room_units')
+      .select('status')
+      .eq('id', args.unitId)
+      .maybeSingle()
+    if (unitErr) wrapSupabaseError('setRoomUnitActive', unitErr)
+    if (!unit) throw new Error('ไม่พบห้องนี้')
+    const { count, error: bkErr } = await supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_unit_id', args.unitId)
+      .in('status', ['confirmed', 'checked_in'])
+      .gt('check_out', getTodayBangkok())
+    if (bkErr) wrapSupabaseError('setRoomUnitActive', bkErr)
+    if (unit.status === 'occupied' || (count ?? 0) > 0) {
+      throw new Error('ห้องนี้มีการจอง/แขกพักอยู่ — ปิดไม่ได้')
+    }
+  }
+  const { error } = await supabase
+    .from('room_units')
+    .update({ is_active: args.active })
+    .eq('id', args.unitId)
+  if (error) wrapSupabaseError('setRoomUnitActive', error)
 }

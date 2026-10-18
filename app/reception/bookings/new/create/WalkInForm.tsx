@@ -7,6 +7,7 @@ import { calculateNights, calculatePrice, formatTHB } from '@/lib/pricing'
 import { getMinCheckInLocalIso, addDaysLocalIso } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { DatePickerField } from '@/components/ui/DatePickerField'
+import { useT } from '@/lib/i18n/useT'
 
 interface WalkInFormProps {
   room: {
@@ -21,6 +22,7 @@ interface WalkInFormProps {
 }
 
 export function WalkInForm({ room }: WalkInFormProps) {
+  const t = useT()
   const router = useRouter()
   const urlParams = useSearchParams()
   // Phase 45 — pre-fill dates/guests from URL params when the receptionist
@@ -106,9 +108,9 @@ export function WalkInForm({ room }: WalkInFormProps) {
         )}
 
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <h2 className="font-display text-xl text-primary mb-4">ข้อมูลลูกค้า</h2>
+          <h2 className="font-display text-xl text-primary mb-4">{t('reception.walkIn.guestInfo')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="ชื่อ-นามสกุล" required>
+            <Field label={t('reception.walkIn.fullName')} required>
               <input
                 type="text"
                 value={fullName}
@@ -117,7 +119,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
                 className="input"
               />
             </Field>
-            <Field label="อีเมล" required>
+            <Field label={t('reception.walkIn.email')} required>
               <input
                 type="email"
                 value={email}
@@ -126,7 +128,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
                 className="input"
               />
             </Field>
-            <Field label="เบอร์โทรศัพท์" required>
+            <Field label={t('reception.walkIn.phone')} required>
               <input
                 type="tel"
                 inputMode="numeric"
@@ -140,16 +142,16 @@ export function WalkInForm({ room }: WalkInFormProps) {
                 className="input"
               />
               <p className="font-caption text-caption text-on-surface-variant">
-                ต้องเป็นตัวเลข 10 หลักเท่านั้น (ไม่มีขีด ไม่มีช่องว่าง)
+                {t('reception.walkIn.phoneHint')}
               </p>
             </Field>
           </div>
         </div>
 
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <h2 className="font-display text-xl text-primary mb-4">วันที่เข้าพัก</h2>
+          <h2 className="font-display text-xl text-primary mb-4">{t('reception.walkIn.stayDates')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label="เช็คอิน" required>
+            <Field label={t('reception.walkIn.checkIn')} required>
               <DatePickerField
                 value={checkIn}
                 min={minCheckin}
@@ -165,14 +167,14 @@ export function WalkInForm({ room }: WalkInFormProps) {
                 }}
               />
             </Field>
-            <Field label="เช็คเอาท์" required>
+            <Field label={t('reception.walkIn.checkOut')} required>
               <DatePickerField
                 value={checkOut}
                 min={checkIn}
                 onChange={(v) => setCheckOut(v)}
               />
             </Field>
-            <Field label="ผู้เข้าพัก" required>
+            <Field label={t('reception.walkIn.guests')} required>
               <input
                 type="number"
                 min={1}
@@ -186,39 +188,39 @@ export function WalkInForm({ room }: WalkInFormProps) {
         </div>
 
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <h2 className="font-display text-xl text-primary mb-4">คำขอพิเศษ</h2>
+          <h2 className="font-display text-xl text-primary mb-4">{t('reception.walkIn.specialRequests')}</h2>
           <textarea
             value={specialRequest}
             onChange={(e) => setSpecialRequest(e.target.value)}
             rows={3}
-            placeholder="เช่น เตียงเสริม, แพ้อาหาร..."
+            placeholder={t('reception.walkIn.specialPlaceholder')}
             className="input resize-none w-full"
           />
         </div>
 
         <fieldset className="bg-surface-container-lowest rounded-xl border border-outline-variant p-4">
           <legend className="px-2 text-label-md text-on-surface font-semibold">
-            วิธีชำระเงิน
+            {t('reception.walkIn.paymentMethod')}
           </legend>
           <div className="flex flex-col gap-2">
             <PaymentOption
               value="cash"
-              label="เงินสด"
-              description="ลูกค้าชำระ ณ ตอนนี้ — ระบบบันทึกสถานะชำระเงินแล้วทันที"
+              label={t('reception.walkIn.payCash')}
+              description={t('reception.walkIn.payCashDesc')}
               selected={paymentMethod === 'cash'}
               onSelect={() => setPaymentMethod('cash')}
             />
             <PaymentOption
               value="card"
-              label="บัตรเครดิต / PromptPay"
-              description="เปิดหน้า Stripe Checkout เพื่อรับชำระเงินออนไลน์"
+              label={t('reception.walkIn.payCard')}
+              description={t('reception.walkIn.payCardDesc')}
               selected={paymentMethod === 'card'}
               onSelect={() => setPaymentMethod('card')}
             />
             <PaymentOption
               value="unpaid"
-              label="ชำระภายหลัง"
-              description="สร้างการจองไว้ก่อน — เก็บเงินที่เคาน์เตอร์ในภายหลัง"
+              label={t('reception.walkIn.payLater')}
+              description={t('reception.walkIn.payLaterDesc')}
               selected={paymentMethod === 'unpaid'}
               onSelect={() => setPaymentMethod('unpaid')}
             />
@@ -232,21 +234,21 @@ export function WalkInForm({ room }: WalkInFormProps) {
           <h2 className="font-display text-lg text-primary mb-3">{room.name_th}</h2>
           <div className="space-y-2 text-body-md">
             <div className="flex justify-between">
-              <span className="text-on-surface-variant">{formatTHB(room.base_price)} × {nights} คืน</span>
+              <span className="text-on-surface-variant">{t('reception.walkIn.priceXNights', { price: formatTHB(room.base_price), count: nights })}</span>
               <span className="text-on-surface">{formatTHB(price.baseSubtotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-on-surface-variant">ภาษี</span>
+              <span className="text-on-surface-variant">{t('reception.walkIn.tax')}</span>
               <span className="text-on-surface">{formatTHB(price.taxTotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-on-surface-variant">ค่าบริการรีสอร์ท</span>
+              <span className="text-on-surface-variant">{t('reception.walkIn.resortFee')}</span>
               <span className="text-on-surface">{formatTHB(price.feeTotal)}</span>
             </div>
           </div>
           <div className="my-4 border-t border-outline-variant" />
           <div className="flex justify-between items-baseline">
-            <span className="text-body-md font-bold text-primary">รวมทั้งสิ้น</span>
+            <span className="text-body-md font-bold text-primary">{t('reception.walkIn.grandTotal')}</span>
             <span className="text-2xl font-display font-bold text-primary">{formatTHB(price.total)}</span>
           </div>
 
@@ -258,12 +260,12 @@ export function WalkInForm({ room }: WalkInFormProps) {
             {isPending ? (
               <>
                 <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-                กำลังสร้าง…
+                {t('reception.walkIn.creating')}
               </>
             ) : (
               <>
                 <MaterialIcon name="check_circle" size={18} />
-                ยืนยันการจอง
+                {t('reception.walkIn.confirm')}
               </>
             )}
           </button>

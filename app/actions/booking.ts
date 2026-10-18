@@ -1,5 +1,7 @@
 'use server'
 
+import { getServerT } from '@/lib/i18n/server'
+import { getT } from '@/lib/i18n/t'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
@@ -14,6 +16,7 @@ import { isUuid } from '@/lib/ids'
 import type { RoomTypeName } from '@/lib/data/types'
 import { requireRole } from '@/lib/auth/require'
 import { sendEmail } from '@/lib/email/resend'
+import { getRecipientLocale } from '@/lib/email/recipient-locale'
 
 const createBookingSchema = z.object({
   roomTypeId: z.string().uuid(),
@@ -29,7 +32,7 @@ const createBookingSchema = z.object({
   bookerPhone: z
     .string()
     .trim()
-    .regex(/^[0-9]{10}$/, 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก ห้ามมีขีดหรือช่องว่าง'),
+    .regex(/^[0-9]{10}$/, 'validation.phone10'),
   specialRequest: z.string().max(500).optional().nullable(),
   promoCode: z.string().max(40).optional().nullable(),
 })
@@ -47,9 +50,10 @@ export interface CreateBookingResult {
  * Validates: dates, room availability, prices, user profile.
  */
 export async function createBooking(input: CreateBookingInput): Promise<CreateBookingResult> {
+  const { locale, t } = await getServerT()
   const parsed = createBookingSchema.safeParse(input)
   if (!parsed.success) {
-    return { error: 'ข้อมูลไม่ถูกต้อง: ' + translateZodIssues(parsed.error.issues) }
+    return { error: t('actions.common.invalidInput', { detail: translateZodIssues(parsed.error.issues, locale) }) }
   }
 
   const data = parsed.data
@@ -59,7 +63,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+  if (!user) return { error: t('actions.common.notLoggedIn') }
 
   // Phase 51 — derive the booking email from the authenticated account.
   // The form no longer collects email (it's read-only on the customer
@@ -69,7 +73,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   if (!sessionEmail) {
     return {
       error:
-        'ไม่พบอีเมลของบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่เพื่ออัปเดตข้อมูลก่อนทำการจอง',
+        t('actions.common.noAccountEmail'),
     }
   }
 
@@ -82,7 +86,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     .eq('id', user.id)
     .maybeSingle()
   if (customerProfile?.is_suspended) {
-    return { error: 'บัญชีของคุณถูกระงับ กรุณาติดต่อเจ้าหน้าที่' }
+    return { error: t('actions.common.suspended') }
   }
 
   // Get room
@@ -92,29 +96,29 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     .eq('id', data.roomTypeId)
     .maybeSingle()
 
-  if (roomErr || !room) return { error: 'ไม่พบห้องพัก' }
-  if (!room.is_active) return { error: 'ห้องพักนี้ไม่พร้อมใช้งาน' }
+  if (roomErr || !room) return { error: t('actions.common.roomNotFound') }
+  if (!room.is_active) return { error: t('actions.common.roomInactive') }
   if (data.guests > room.max_guests) {
-    return { error: `ห้องนี้รองรับผู้เข้าพักสูงสุด ${room.max_guests} ท่าน` }
+    return { error: t('actions.common.maxGuests', { max: room.max_guests }) }
   }
 
   // Validate dates
   if (data.checkIn >= data.checkOut) {
-    return { error: 'วันที่เช็คเอาท์ต้องมาหลังวันเช็คอิน' }
+    return { error: t('actions.common.checkoutAfterCheckin') }
   }
   // Phase 49 — use Bangkok-TZ "today" (not UTC) so Bangkok users at
   // 00:00-06:59 don't get yesterday's date. Same-day check-in IS
   // allowed — only past dates are rejected.
   const today = getTodayBangkok()
   if (data.checkIn < today) {
-    return { error: 'วันที่เช็คอินต้องไม่เป็นอดีต' }
+    return { error: t('actions.common.checkinNotPast') }
   }
 
   // Get promotion (if any)
   let promotion = null
   if (data.promoCode) {
     promotion = await getPromotionByCode(data.promoCode)
-    if (!promotion) return { error: 'รหัสโปรโมชั่นไม่ถูกต้อง' }
+    if (!promotion) return { error: t('actions.common.promoInvalid') }
     // Phase 27 — room-type scoping. applies_to_room_types === null/[] =
     // applies to all room types (backwards-compatible). Non-empty =
     // reject when the booking's room type isn't in the list.
@@ -123,7 +127,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       promotion.applies_to_room_types.length > 0 &&
       !promotion.applies_to_room_types.includes(room.type as RoomTypeName)
     ) {
-      return { error: 'รหัสโปรโมชั่นนี้ไม่สามารถใช้กับประเภทห้องพักนี้ได้' }
+      return { error: t('actions.common.promoNotForRoom') }
     }
   }
 
@@ -148,13 +152,13 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       rates: seasonalRates,
     })
   } catch (err) {
-    return { error: err instanceof Error ? err.message : 'วันที่ไม่ถูกต้อง' }
+    return { error: err instanceof Error ? err.message : t('actions.common.invalidDate') }
   }
 
   // Enforce min_nights_override on any applied seasonal rate.
   if (violatesMinNights(quote, seasonalRates)) {
     return {
-      error: 'การจองนี้ต้องพักขั้นต่ำตามที่กำหนดในเรทฤดูกาล (ดูรายละเอียดเรทพิเศษ)',
+      error: t('actions.common.minNights'),
     }
   }
 
@@ -181,7 +185,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   }, pricingSettings)
 
   if (price.nights === 0) {
-    return { error: 'จำนวนคืนต้องมากกว่า 0' }
+    return { error: t('actions.common.nightsPositive') }
   }
 
   // Phase 20 #23 — server action delegates the atomic insert + capacity check
@@ -218,10 +222,10 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     // P0001 = pool exhausted / no active rooms of this type
     if (rpcError?.code === 'P0001') {
       return {
-        error: 'ห้องพักประเภทนี้ไม่ว่างในช่วงวันที่เลือก กรุณาเลือกวันอื่นหรือประเภทอื่น',
+        error: t('actions.common.roomSoldOut'),
       }
     }
-    return { error: 'ไม่สามารถสร้างการจอง: ' + translateSupabaseError(rpcError?.message) }
+    return { error: t('actions.common.createBookingFailed', { detail: translateSupabaseError(rpcError?.message, locale) }) }
   }
 
   revalidatePath('/bookings')
@@ -237,16 +241,24 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       .eq('id', bookingId)
       .single()
     if (booking && sessionEmail) {
-      const roomTypeName = (booking.room_type as { name?: string } | null)?.name ?? 'ห้องพัก'
-      const { BookingConfirmationEmail } = await import(
+      const emailLocale = await getRecipientLocale({ userId: user.id })
+      const roomTypeName =
+        (booking.room_type as { name?: string } | null)?.name ??
+        getT(emailLocale)('email.common.roomFallback')
+      const { BookingConfirmationEmail, bookingConfirmationSubject } = await import(
         '@/lib/email/templates/booking-confirmation'
       )
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
       await sendEmail({
         to: sessionEmail,
         template: 'booking_confirmation',
-        subject: `[Zenzero] ยืนยันการจอง ${booking.booking_code} — ${booking.check_in}`,
+        subject: bookingConfirmationSubject({
+          bookingCode: booking.booking_code,
+          checkIn: booking.check_in,
+          locale: emailLocale,
+        }),
         react: BookingConfirmationEmail({
+          locale: emailLocale,
           bookingCode: booking.booking_code,
           guestName: booking.booker_full_name ?? '',
           roomTypeName,
@@ -312,9 +324,10 @@ export interface CreateTempBookingResult {
 export async function createTempBookingAction(
   input: CreateTempBookingInput,
 ): Promise<CreateTempBookingResult> {
+  const { locale, t } = await getServerT()
   const parsed = createTempBookingSchema.safeParse(input)
   if (!parsed.success) {
-    return { error: 'ข้อมูลไม่ถูกต้อง: ' + translateZodIssues(parsed.error.issues) }
+    return { error: t('actions.common.invalidInput', { detail: translateZodIssues(parsed.error.issues, locale) }) }
   }
   const data = parsed.data
 
@@ -322,7 +335,7 @@ export async function createTempBookingAction(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+  if (!user) return { error: t('actions.common.notLoggedIn') }
 
   // Phase 36 — block suspended customers (mirrors createBooking guard).
   const { data: customerProfile } = await supabase
@@ -331,17 +344,17 @@ export async function createTempBookingAction(
     .eq('id', user.id)
     .maybeSingle()
   if (customerProfile?.is_suspended) {
-    return { error: 'บัญชีของคุณถูกระงับ กรุณาติดต่อเจ้าหน้าที่' }
+    return { error: t('actions.common.suspended') }
   }
 
   // Validate dates against today's minimum (Bangkok TZ). Phase 49
   // allows same-day check-in — only past dates are rejected.
   const today = getTodayBangkok()
   if (data.checkIn < today) {
-    return { error: 'วันที่เช็คอินต้องไม่เป็นอดีต' }
+    return { error: t('actions.common.checkinNotPast') }
   }
   if (data.checkIn >= data.checkOut) {
-    return { error: 'วันที่เช็คเอาท์ต้องมาหลังวันเช็คอิน' }
+    return { error: t('actions.common.checkoutAfterCheckin') }
   }
 
   // Look up room for capacity + max_guests validation + price computation.
@@ -350,10 +363,10 @@ export async function createTempBookingAction(
     .select('base_price, max_guests, is_active')
     .eq('id', data.roomTypeId)
     .maybeSingle()
-  if (roomErr || !room) return { error: 'ไม่พบห้องพัก' }
-  if (!room.is_active) return { error: 'ห้องพักนี้ไม่พร้อมใช้งาน' }
+  if (roomErr || !room) return { error: t('actions.common.roomNotFound') }
+  if (!room.is_active) return { error: t('actions.common.roomInactive') }
   if (data.guests > room.max_guests) {
-    return { error: `ห้องนี้รองรับผู้เข้าพักสูงสุด ${room.max_guests} ท่าน` }
+    return { error: t('actions.common.maxGuests', { max: room.max_guests }) }
   }
 
   // Compute nights + base_subtotal for the temp booking. Don't include
@@ -361,7 +374,7 @@ export async function createTempBookingAction(
   // server-side at completion time via getPricingConstants.
   const nights = calculateNights(data.checkIn, data.checkOut)
   if (nights === 0) {
-    return { error: 'จำนวนคืนต้องมากกว่า 0' }
+    return { error: t('actions.common.nightsPositive') }
   }
   const baseSubtotal = room.base_price * nights
 
@@ -401,11 +414,11 @@ export async function createTempBookingAction(
     if (rpcError?.code === 'P0001') {
       return {
         error:
-          'ห้องพักประเภทนี้ไม่ว่างในช่วงวันที่เลือก กรุณาเลือกวันอื่นหรือประเภทอื่น',
+          t('actions.common.roomSoldOut'),
       }
     }
     return {
-      error: 'ไม่สามารถสร้างการจองชั่วคราว: ' + translateSupabaseError(rpcError?.message),
+      error: t('actions.booking.createTempFailed', { detail: translateSupabaseError(rpcError?.message, locale) }),
     }
   }
 
@@ -432,7 +445,7 @@ const completeTempBookingSchema = z.object({
   bookerPhone: z
     .string()
     .trim()
-    .regex(/^[0-9]{10}$/, 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หัน ห้ามมีขีดหรือช่องว่าง'),
+    .regex(/^[0-9]{10}$/, 'validation.phone10'),
   specialRequest: z.string().max(500).optional().nullable(),
   promoCode: z.string().max(40).optional().nullable(),
 })
@@ -460,21 +473,22 @@ export interface CompleteTempBookingResult {
 export async function completeTempBookingAction(
   input: CompleteTempBookingInput,
 ): Promise<CompleteTempBookingResult> {
+  const { locale, t } = await getServerT()
   const parsed = completeTempBookingSchema.safeParse(input)
   if (!parsed.success) {
-    return { error: 'ข้อมูลไม่ถูกต้อง: ' + translateZodIssues(parsed.error.issues) }
+    return { error: t('actions.common.invalidInput', { detail: translateZodIssues(parsed.error.issues, locale) }) }
   }
   const data = parsed.data
 
   if (!isUuid(data.bookingId)) {
-    return { error: 'รหัสการจองไม่ถูกต้อง' }
+    return { error: t('actions.common.invalidBookingId') }
   }
 
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+  if (!user) return { error: t('actions.common.notLoggedIn') }
 
   // Phase 51 — derive the booking email from the authenticated account.
   // The form no longer collects email (locked on the customer form).
@@ -483,7 +497,7 @@ export async function completeTempBookingAction(
   if (!sessionEmail) {
     return {
       error:
-        'ไม่พบอีเมลของบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่เพื่ออัปเดตข้อมูลก่อนทำการจอง',
+        t('actions.common.noAccountEmail'),
     }
   }
 
@@ -494,7 +508,7 @@ export async function completeTempBookingAction(
     .eq('id', user.id)
     .maybeSingle()
   if (customerProfile?.is_suspended) {
-    return { error: 'บัญชีของคุณถูกระงับ กรุณาติดต่อเจ้าหน้าที่' }
+    return { error: t('actions.common.suspended') }
   }
 
   // Load the existing temp booking. Confirms ownership + active state.
@@ -511,22 +525,22 @@ export async function completeTempBookingAction(
     .eq('user_id', user.id)
     .maybeSingle()
   if (existingErr) {
-    return { error: 'ไม่สามารถโหลดข้อมูลการจอง: ' + translateSupabaseError(existingErr.message) }
+    return { error: t('actions.booking.loadFailed', { detail: translateSupabaseError(existingErr.message, locale) }) }
   }
   if (!existing) {
-    return { error: 'ไม่พบการจองนี้' }
+    return { error: t('actions.common.bookingNotFound') }
   }
   if (existing.status !== 'temp_pending') {
     if (existing.status === 'expired') {
-      return { error: 'การจองนี้หมดเวลาแล้ว กรุณาจองใหม่อีกครั้ง' }
+      return { error: t('actions.booking.tempExpired') }
     }
     if (existing.status === 'cancelled') {
-      return { error: 'การจองนี้ถูกยกเลิกไปแล้ว' }
+      return { error: t('actions.booking.alreadyCancelled') }
     }
     if (existing.status === 'confirmed') {
-      return { error: 'การจองนี้ได้รับการยืนยันแล้ว' }
+      return { error: t('actions.booking.alreadyConfirmed') }
     }
-    return { error: 'การจองนี้อยู่ในสถานะที่ไม่สามารถแก้ไขได้: ' + existing.status }
+    return { error: t('actions.booking.statusNotEditable', { status: existing.status }) }
   }
 
   // Compute price with optional promotion + tax/fee.
@@ -535,15 +549,15 @@ export async function completeTempBookingAction(
     .select('base_price, max_guests')
     .eq('id', existing.room_type_id)
     .maybeSingle()
-  if (!room) return { error: 'ไม่พบห้องพัก' }
+  if (!room) return { error: t('actions.common.roomNotFound') }
   if (existing.guests > room.max_guests) {
-    return { error: `ห้องนี้รองรับผู้เข้าพักสูงสุด ${room.max_guests} ท่าน` }
+    return { error: t('actions.common.maxGuests', { max: room.max_guests }) }
   }
 
   let promotion = null
   if (data.promoCode) {
     promotion = await getPromotionByCode(data.promoCode)
-    if (!promotion) return { error: 'รหัสโปรโมชั่นไม่ถูกต้อง' }
+    if (!promotion) return { error: t('actions.common.promoInvalid') }
   }
 
   const policy = await getDefaultCancellationPolicy()
@@ -564,10 +578,10 @@ export async function completeTempBookingAction(
       rates: seasonalRates,
     })
   } catch (err) {
-    return { error: err instanceof Error ? err.message : 'วันที่ไม่ถูกต้อง' }
+    return { error: err instanceof Error ? err.message : t('actions.common.invalidDate') }
   }
   if (violatesMinNights(quote, seasonalRates)) {
-    return { error: 'การจองนี้ต้องพักขั้นต่ำตามที่กำหนดในเรทฤดูกาล' }
+    return { error: t('actions.common.minNights') }
   }
 
   const pricingSettings = await getPricingConstants()
@@ -590,7 +604,7 @@ export async function completeTempBookingAction(
     },
     pricingSettings,
   )
-  if (price.nights === 0) return { error: 'จำนวนคืนต้องมากกว่า 0' }
+  if (price.nights === 0) return { error: t('actions.common.nightsPositive') }
 
   // Call RPC — atomic UPDATE + audit row.
   const { error: rpcError } = await supabase.rpc('complete_temp_booking', {
@@ -612,12 +626,12 @@ export async function completeTempBookingAction(
 
   if (rpcError) {
     const code = (rpcError as { code?: string }).code
-    if (code === 'P0002') return { error: 'ไม่พบการจองนี้' }
-    if (code === '42501') return { error: 'ไม่ใช่การจองของคุณ' }
+    if (code === 'P0002') return { error: t('actions.common.bookingNotFound') }
+    if (code === '42501') return { error: t('actions.common.notYourBooking') }
     if (code === 'P0001') {
-      return { error: 'การจองนี้ไม่อยู่ในสถานะชั่วคราว กรุณาจองใหม่อีกครั้ง' }
+      return { error: t('actions.booking.notTempAnymore') }
     }
-    return { error: 'ไม่สามารถยืนยันการจอง: ' + translateSupabaseError(rpcError.message) }
+    return { error: t('actions.booking.confirmFailed', { detail: translateSupabaseError(rpcError.message, locale) }) }
   }
 
   revalidatePath('/bookings')
@@ -633,17 +647,24 @@ export async function completeTempBookingAction(
       .eq('id', data.bookingId)
       .single()
     if (booking && sessionEmail) {
+      const emailLocale = await getRecipientLocale({ userId: user.id })
       const roomTypeName =
-        (booking.room_type as { name?: string } | null)?.name ?? 'ห้องพัก'
-      const { BookingConfirmationEmail } = await import(
+        (booking.room_type as { name?: string } | null)?.name ??
+        getT(emailLocale)('email.common.roomFallback')
+      const { BookingConfirmationEmail, bookingConfirmationSubject } = await import(
         '@/lib/email/templates/booking-confirmation'
       )
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
       await sendEmail({
         to: sessionEmail,
         template: 'booking_confirmation',
-        subject: `[Zenzero] ยืนยันการจอง ${booking.booking_code} — ${booking.check_in}`,
+        subject: bookingConfirmationSubject({
+          bookingCode: booking.booking_code,
+          checkIn: booking.check_in,
+          locale: emailLocale,
+        }),
         react: BookingConfirmationEmail({
+          locale: emailLocale,
           bookingCode: booking.booking_code,
           guestName: booking.booker_full_name ?? '',
           roomTypeName,
@@ -677,13 +698,14 @@ export async function completeTempBookingAction(
 export async function cancelTempBookingAction(
   bookingId: string,
 ): Promise<{ ok?: boolean; error?: string }> {
-  if (!isUuid(bookingId)) return { error: 'รหัสการจองไม่ถูกต้อง' }
+  const { locale, t } = await getServerT()
+  if (!isUuid(bookingId)) return { error: t('actions.common.invalidBookingId') }
 
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+  if (!user) return { error: t('actions.common.notLoggedIn') }
 
   const { error } = await supabase.rpc('cancel_temp_booking', {
     p_booking_id: bookingId,
@@ -692,12 +714,12 @@ export async function cancelTempBookingAction(
 
   if (error) {
     const code = (error as { code?: string }).code
-    if (code === 'P0002') return { error: 'ไม่พบการจองนี้' }
-    if (code === '42501') return { error: 'ไม่ใช่การจองของคุณ' }
+    if (code === 'P0002') return { error: t('actions.common.bookingNotFound') }
+    if (code === '42501') return { error: t('actions.common.notYourBooking') }
     if (code === 'P0001') {
-      return { error: 'การจองนี้ไม่อยู่ในสถานะชั่วคราวแล้ว ไม่สามารถยกเลิกได้' }
+      return { error: t('actions.booking.tempNotCancellable') }
     }
-    return { error: 'ไม่สามารถยกเลิกการจอง: ' + translateSupabaseError(error.message) }
+    return { error: t('actions.booking.cancelFailed', { detail: translateSupabaseError(error.message, locale) }) }
   }
 
   revalidatePath('/bookings')
@@ -850,7 +872,8 @@ export interface PreviewCancellationResult {
 export async function previewCancellation(
   bookingId: string,
 ): Promise<PreviewCancellationResult> {
-  if (!isUuid(bookingId)) return { ok: false, error: 'รหัสการจองไม่ถูกต้อง' }
+  const { locale, t } = await getServerT()
+  if (!isUuid(bookingId)) return { ok: false, error: t('actions.common.invalidBookingId') }
 
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('preview_cancel_booking', {
@@ -858,16 +881,16 @@ export async function previewCancellation(
   })
 
   if (error) {
-    return { ok: false, error: translateSupabaseError(error.message) }
+    return { ok: false, error: translateSupabaseError(error.message, locale) }
   }
   if (!data) {
-    return { ok: false, error: 'ไม่พบข้อมูลการจอง' }
+    return { ok: false, error: t('actions.common.bookingDataNotFound') }
   }
 
   // Supabase RPC with single-row return can come back as an object or as
   // a one-element array — normalise.
   const row = Array.isArray(data) ? data[0] : data
-  if (!row) return { ok: false, error: 'ไม่พบข้อมูลการจอง' }
+  if (!row) return { ok: false, error: t('actions.common.bookingDataNotFound') }
 
   return {
     ok: true,
@@ -882,13 +905,14 @@ export async function previewCancellation(
 }
 
 export async function cancelBooking(bookingId: string): Promise<CancelBookingResult> {
-  if (!isUuid(bookingId)) return { error: 'รหัสการจองไม่ถูกต้อง' }
+  const { locale, t } = await getServerT()
+  if (!isUuid(bookingId)) return { error: t('actions.common.invalidBookingId') }
 
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+  if (!user) return { error: t('actions.common.notLoggedIn') }
 
   const { data, error } = await supabase.rpc('cancel_booking', {
     p_booking_id: bookingId,
@@ -902,12 +926,12 @@ export async function cancelBooking(bookingId: string): Promise<CancelBookingRes
     // 42501 = authorization (other user's booking)
     const code = (error as { code?: string }).code
     if (code === 'P0001') {
-      return { error: 'ไม่สามารถยกเลิกการจองนี้ได้: ' + translateSupabaseError(error.message) }
+      return { error: t('actions.booking.cancelNotAllowed', { detail: translateSupabaseError(error.message, locale) }) }
     }
     if (code === 'P0002') {
-      return { error: 'ไม่พบการจองนี้' }
+      return { error: t('actions.common.bookingNotFound') }
     }
-    return { error: 'ไม่สามารถยกเลิกการจอง: ' + translateSupabaseError(error.message) }
+    return { error: t('actions.booking.cancelFailed', { detail: translateSupabaseError(error.message, locale) }) }
   }
 
   const row = Array.isArray(data) ? data[0] : data
@@ -960,7 +984,8 @@ export async function cancelBookingByStaff(
   bookingId: string,
   refundPctOverride: number | null = null,
 ): Promise<CancelBookingResult> {
-  if (!isUuid(bookingId)) return { error: 'รหัสการจองไม่ถูกต้อง' }
+  const { locale, t } = await getServerT()
+  if (!isUuid(bookingId)) return { error: t('actions.common.invalidBookingId') }
 
   // requireRole redirects on auth failure — only manager/admin reach the
   // override block below. Reception can still cancel without override.
@@ -971,10 +996,10 @@ export async function cancelBookingByStaff(
 
   if (refundPctOverride !== null) {
     if (session.role !== 'manager' && session.role !== 'admin') {
-      return { error: 'เฉพาะผู้จัดการหรือผู้ดูแลระบบเท่านั้นที่สามารถปรับเปอร์เซ็นต์คืนเงินได้' }
+      return { error: t('actions.booking.refundOverrideManagerOnly') }
     }
     if (refundPctOverride < 0 || refundPctOverride > 100) {
-      return { error: 'เปอร์เซ็นต์คืนเงินต้องอยู่ระหว่าง 0 ถึง 100' }
+      return { error: t('actions.booking.refundPctRange') }
     }
   }
 
@@ -988,12 +1013,12 @@ export async function cancelBookingByStaff(
   if (error) {
     const code = (error as { code?: string }).code
     if (code === 'P0001') {
-      return { error: 'ไม่สามารถยกเลิกการจองนี้ได้: ' + translateSupabaseError(error.message) }
+      return { error: t('actions.booking.cancelNotAllowed', { detail: translateSupabaseError(error.message, locale) }) }
     }
     if (code === 'P0002') {
-      return { error: 'ไม่พบการจองนี้' }
+      return { error: t('actions.common.bookingNotFound') }
     }
-    return { error: 'ไม่สามารถยกเลิกการจอง: ' + translateSupabaseError(error.message) }
+    return { error: t('actions.booking.cancelFailed', { detail: translateSupabaseError(error.message, locale) }) }
   }
 
   const row = Array.isArray(data) ? data[0] : data
@@ -1048,7 +1073,7 @@ export async function fireCancellationNotice(args: {
   const supabase = await createClient()
   const { data: booking } = await supabase
     .from('bookings')
-    .select('id, booking_code, booker_email, booker_full_name, total, currency')
+    .select('id, user_id, booking_code, booker_email, booker_full_name, total, currency')
     .eq('id', args.bookingId)
     .single()
   if (!booking || !booking.booker_email) return
@@ -1056,15 +1081,21 @@ export async function fireCancellationNotice(args: {
   const penaltyAmount = args.penaltyAmount ?? Number(booking.total)
   const policyName = args.policyName ?? '—'
   const refundRequestId = args.refundRequestId ?? null
-  const { CancellationNoticeEmail } = await import(
+  const emailLocale = await getRecipientLocale({ userId: booking.user_id })
+  const { CancellationNoticeEmail, cancellationNoticeSubject } = await import(
     '@/lib/email/templates/cancellation-notice'
   )
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   await sendEmail({
     to: booking.booker_email,
     template: 'cancellation_notice',
-    subject: `[Zenzero] ยกเลิกการจอง ${booking.booking_code} — นโยบาย ${policyName}`,
+    subject: cancellationNoticeSubject({
+      bookingCode: booking.booking_code,
+      policyName,
+      locale: emailLocale,
+    }),
     react: CancellationNoticeEmail({
+      locale: emailLocale,
       bookingCode: booking.booking_code,
       guestName: booking.booker_full_name ?? '',
       policyName,

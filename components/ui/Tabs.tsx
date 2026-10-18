@@ -21,8 +21,11 @@ interface TabsProps<T extends string> {
 }
 
 export function Tabs<T extends string>({ active, tabs }: TabsProps<T>) {
-return (
-      <div className="flex items-center gap-1 border-b border-outline-variant mb-6 overflow-x-auto">
+  // overflow-y-hidden: with overflow-x-auto the browser computes overflow-y as
+  // auto too, and the tabs' -mb-px border overlap then makes the bar scroll
+  // vertically by 1px.
+  return (
+      <div className="flex items-center gap-1 border-b border-outline-variant mb-6 overflow-x-auto overflow-y-hidden">
         {tabs.map((t) => {
           const isActive = active === t.key
           const showBadge = t.badge != null && t.badge > 0

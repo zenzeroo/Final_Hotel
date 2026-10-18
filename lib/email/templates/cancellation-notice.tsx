@@ -8,6 +8,9 @@ import {
   Section,
   Text,
 } from '@react-email/components'
+import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
+import { getT } from '@/lib/i18n/t'
+import { formatEmailMoney } from '../format'
 
 export interface CancellationNoticeData {
   bookingCode: string
@@ -22,9 +25,6 @@ export interface CancellationNoticeData {
   viewUrl: string
 }
 
-const formatTHB = (amount: number, currency: string): string =>
-  new Intl.NumberFormat('th-TH', { style: 'currency', currency, minimumFractionDigits: 0 }).format(amount)
-
 export function CancellationNoticeEmail({
   bookingCode,
   guestName,
@@ -34,44 +34,43 @@ export function CancellationNoticeEmail({
   noRefund,
   refundAmount,
   viewUrl,
-}: CancellationNoticeData) {
+  locale = 'th',
+}: CancellationNoticeData & { locale?: Locale }) {
+  const t = getT(locale)
   return (
-    <Html lang="th">
+    <Html lang={LOCALE_BCP47[locale]}>
       <Head />
-      <Preview>{`ยกเลิกการจอง ${bookingCode} เรียบร้อย`}</Preview>
+      <Preview>{t('email.cancellationNotice.preview', { code: bookingCode })}</Preview>
       <Body style={{ fontFamily: 'system-ui, sans-serif', backgroundColor: '#f5f5f0' }}>
         <Container style={{ maxWidth: 560, margin: '0 auto', padding: '32px 24px', backgroundColor: '#ffffff' }}>
           <Heading style={{ fontSize: 22, color: '#3d5a40', margin: 0 }}>
-            ยกเลิกการจองเรียบร้อย
+            {t('email.cancellationNotice.heading')}
           </Heading>
-          <Text style={{ color: '#1a1a1a' }}>สวัสดีค่ะ คุณ{guestName}</Text>
-          <Text>
-            การจอง <strong>{bookingCode}</strong> ถูกยกเลิกเรียบร้อยแล้ว
-            ตามเงื่อนไขนโยบาย &ldquo;{policyName}&rdquo;
-          </Text>
+          <Text style={{ color: '#1a1a1a' }}>{t('email.common.greeting', { name: guestName })}</Text>
+          <Text>{t('email.cancellationNotice.body', { code: bookingCode, policy: policyName })}</Text>
           <Section style={{ borderTop: '1px solid #e0e0d0', borderBottom: '1px solid #e0e0d0', padding: '16px 0', margin: '16px 0' }}>
             {noRefund ? (
               <>
+                <Text style={{ margin: '4px 0' }}>{t('email.cancellationNotice.noRefund')}</Text>
                 <Text style={{ margin: '4px 0' }}>
-                  การยกเลิกนี้อยู่นอกช่วงยกเลิกฟรี ไม่สามารถขอคืนเงินได้
-                </Text>
-                <Text style={{ margin: '4px 0' }}>
-                  ค่าธรรมเนียมการยกเลิก: <strong>{formatTHB(penaltyAmount, currency)}</strong>
+                  {t('email.cancellationNotice.penalty')}: <strong>{formatEmailMoney(penaltyAmount, currency, locale)}</strong>
                 </Text>
               </>
             ) : (
               <>
                 <Text style={{ margin: '4px 0' }}>
-                  คำขอคืนเงินจำนวน <strong>{formatTHB(refundAmount ?? 0, currency)}</strong> ถูกส่งให้ผู้จัดการพิจารณาแล้ว
+                  {t('email.cancellationNotice.refundRequested', {
+                    amount: formatEmailMoney(refundAmount ?? 0, currency, locale),
+                  })}
                 </Text>
                 <Text style={{ margin: '4px 0', color: '#666', fontSize: 14 }}>
-                  ระบบจะแจ้งให้ท่านทราบอีกครั้งเมื่อการคืนเงินเสร็จสมบูรณ์
+                  {t('email.cancellationNotice.refundFollowUp')}
                 </Text>
               </>
             )}
           </Section>
           <Text>
-            ดูรายละเอียด: <a href={viewUrl} style={{ color: '#3d5a40' }}>{viewUrl}</a>
+            {t('email.cancellationNotice.viewCta')} <a href={viewUrl} style={{ color: '#3d5a40' }}>{viewUrl}</a>
           </Text>
         </Container>
       </Body>
@@ -79,5 +78,12 @@ export function CancellationNoticeEmail({
   )
 }
 
-export const cancellationNoticeSubject = (data: CancellationNoticeData) =>
-  `[Zenzero] ยกเลิกการจอง ${data.bookingCode} — นโยบาย ${data.policyName}`
+export const cancellationNoticeSubject = (data: {
+  bookingCode: string
+  policyName: string
+  locale?: Locale
+}) =>
+  getT(data.locale ?? 'th')('email.cancellationNotice.subject', {
+    code: data.bookingCode,
+    policy: data.policyName,
+  })

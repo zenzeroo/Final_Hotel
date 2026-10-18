@@ -4,6 +4,8 @@ import { getRoomTypes } from '@/lib/data/rooms'
 import { PromotionForm } from '@/components/admin/PromotionForm'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import Link from 'next/link'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +14,7 @@ export default async function EditPromotionPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const t = getT(await getLocale())
   const { id } = await params
   const [promotion, roomTypes] = await Promise.all([
     getPromotionById(id),
@@ -26,12 +29,12 @@ export default async function EditPromotionPage({
         className="inline-flex items-center gap-2 px-2 py-1 rounded text-body-md text-primary hover:bg-primary-fixed hover:text-primary mb-4"
       >
         <MaterialIcon name="arrow_back" size={18} />
-        กลับไปหน้ารายการโปรโมชั่น
+        {t('admin.promotions.backToList')}
       </Link>
 
       <header className="mb-8">
         <h1 className="font-headline-md text-headline-md text-primary">
-          แก้ไขโปรโมชั่น: {promotion.code}
+          {t('admin.promotions.editHeading', { code: promotion.code })}
         </h1>
         <p className="text-body-lg text-on-surface-variant mt-2">{promotion.name}</p>
       </header>

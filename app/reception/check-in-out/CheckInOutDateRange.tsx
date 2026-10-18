@@ -3,6 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { addDaysLocalIso } from '@/lib/dates'
+import { useT } from '@/lib/i18n/useT'
 
 interface CheckInOutDateRangeProps {
   /** Server-validated check-in ISO (YYYY-MM-DD). */
@@ -38,6 +39,7 @@ export function CheckInOutDateRange({
   defaultCheckout,
   today,
 }: CheckInOutDateRangeProps) {
+  const t = useT()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -74,13 +76,13 @@ export function CheckInOutDateRange({
         <MaterialIcon name="calendar_today" size={16} className="text-on-surface-variant shrink-0" />
         <div className="flex flex-col">
           <span className="text-caption text-on-surface-variant font-semibold uppercase tracking-wider leading-none">
-            จากวันที่
+            {t('reception.common.from')}
           </span>
           <input
             type="date"
             value={defaultCheckin}
             onChange={(e) => handleCheckinChange(e.target.value)}
-            aria-label="วันเริ่มต้น"
+            aria-label={t('reception.common.fromAria')}
             className="bg-transparent text-body-md text-on-surface focus:outline-none w-32"
           />
         </div>
@@ -91,14 +93,14 @@ export function CheckInOutDateRange({
         <MaterialIcon name="event" size={16} className="text-on-surface-variant shrink-0" />
         <div className="flex flex-col">
           <span className="text-caption text-on-surface-variant font-semibold uppercase tracking-wider leading-none">
-            ถึงวันที่
+            {t('reception.common.to')}
           </span>
           <input
             type="date"
             value={defaultCheckout}
             min={defaultCheckin}
             onChange={(e) => handleCheckoutChange(e.target.value)}
-            aria-label="วันสิ้นสุด"
+            aria-label={t('reception.common.toAria')}
             className="bg-transparent text-body-md text-on-surface focus:outline-none w-32"
           />
         </div>
@@ -110,7 +112,7 @@ export function CheckInOutDateRange({
           onClick={() => navigate(today, today)}
           className="ml-1 text-caption text-primary font-semibold uppercase tracking-wider px-2 py-1 rounded hover:bg-primary-fixed transition-colors"
         >
-          กลับวันนี้
+          {t('reception.checkInOutPage.backToToday')}
         </button>
       )}
     </div>

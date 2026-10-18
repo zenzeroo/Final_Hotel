@@ -5,14 +5,19 @@ import { getCustomerById } from '@/lib/data/supabase-account'
 import { getUserBookings } from '@/lib/data/bookings'
 import { formatDate, formatDateTime } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
 import { SuspendCustomerButton } from '@/components/admin/SuspendCustomerButton'
 import { UnsuspendCustomerButton } from '@/components/admin/UnsuspendCustomerButton'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CustomerDetailPage(props: {
   params: Promise<{ id: string }>
 }) {
+  const locale = await getLocale()
+  const t = getT(locale)
   const { id } = await props.params
   const [session, customer] = await Promise.all([
     getSession(),
@@ -31,16 +36,16 @@ export default async function CustomerDetailPage(props: {
         className="inline-flex items-center gap-2 px-2 py-1 rounded text-body-md text-primary hover:bg-primary-fixed hover:text-primary mb-4 transition-colors"
       >
         <MaterialIcon name="arrow_back" size={18} />
-        กลับไปหน้ารายชื่อลูกค้า
+        {t('admin.customersPage.backToList')}
       </Link>
 
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">
-            {customer.full_name ?? '(ไม่มีชื่อ)'}
+            {customer.full_name ?? t('admin.common.noName')}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            รายละเอียดลูกค้า
+            {t('admin.customersPage.detail.title')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -62,15 +67,15 @@ export default async function CustomerDetailPage(props: {
       {/* Profile card */}
       <section className="bg-surface-container-lowest rounded-xl shadow-level-1 border border-surface-container p-6 mb-6">
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          ข้อมูลส่วนตัว
+          {t('admin.customersPage.personalInfo')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DetailRow label="ชื่อ-นามสกุล" value={customer.full_name ?? '—'} />
-          <DetailRow label="อีเมล" value={customer.email ?? '—'} />
-          <DetailRow label="เบอร์โทร" value={customer.phone ?? '—'} />
+          <DetailRow label={t('admin.common.fullName')} value={customer.full_name ?? '—'} />
+          <DetailRow label={t('admin.common.email')} value={customer.email ?? '—'} />
+          <DetailRow label={t('admin.common.phone')} value={customer.phone ?? '—'} />
           <DetailRow
-            label="สมัครเมื่อ"
-            value={formatDate(customer.created_at, 'th-TH')}
+            label={t('admin.customersPage.registeredAt')}
+            value={formatDate(customer.created_at, LOCALE_BCP47[locale])}
           />
         </div>
       </section>
@@ -81,20 +86,20 @@ export default async function CustomerDetailPage(props: {
           <div className="flex items-center gap-2 mb-3">
             <MaterialIcon name="block" size={20} className="text-error" />
             <h2 className="font-headline-sm text-headline-sm text-error">
-              ข้อมูลการระงับ
+              {t('admin.customersPage.detail.suspensionInfo')}
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <DetailRow
-              label="ระงับเมื่อ"
+              label={t('admin.customersPage.detail.suspendedAt')}
               value={
                 customer.suspended_at
-                  ? formatDateTime(customer.suspended_at, 'th-TH')
+                  ? formatDateTime(customer.suspended_at, LOCALE_BCP47[locale])
                   : '—'
               }
             />
             <DetailRow
-              label="เหตุผล"
+              label={t('admin.customersPage.detail.suspendedReason')}
               value={customer.suspended_reason ?? '—'}
             />
           </div>
@@ -104,23 +109,23 @@ export default async function CustomerDetailPage(props: {
       {/* Booking history */}
       <section className="bg-surface-container-lowest rounded-xl shadow-level-1 border border-surface-container p-6">
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          ประวัติการจอง ({bookings.length})
+          {t('admin.customersPage.historyCount', { count: bookings.length })}
         </h2>
         {bookings.length === 0 ? (
           <p className="text-body-md text-on-surface-variant italic">
-            ยังไม่มีการจอง
+            {t('admin.customersPage.detail.noBookings')}
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="text-label-md uppercase tracking-wider text-on-surface-variant border-b border-outline-variant">
                 <tr>
-                  <th className="text-left px-3 py-2 font-medium">รหัส</th>
-                  <th className="text-left px-3 py-2 font-medium">เช็คอิน</th>
-                  <th className="text-left px-3 py-2 font-medium">เช็คเอาท์</th>
-                  <th className="text-right px-3 py-2 font-medium">คืน</th>
-                  <th className="text-right px-3 py-2 font-medium">ยอด</th>
-                  <th className="text-left px-3 py-2 font-medium">สถานะ</th>
+                  <th className="text-left px-3 py-2 font-medium">{t('admin.customersPage.colCode')}</th>
+                  <th className="text-left px-3 py-2 font-medium">{t('admin.customersPage.colCheckIn')}</th>
+                  <th className="text-left px-3 py-2 font-medium">{t('admin.customersPage.colCheckOut')}</th>
+                  <th className="text-right px-3 py-2 font-medium">{t('admin.customersPage.colNights')}</th>
+                  <th className="text-right px-3 py-2 font-medium">{t('admin.customersPage.colTotal')}</th>
+                  <th className="text-left px-3 py-2 font-medium">{t('admin.common.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
@@ -135,10 +140,10 @@ export default async function CustomerDetailPage(props: {
                       {b.nights}
                     </td>
                     <td className="px-3 py-2 text-body-sm text-right">
-                      {b.total.toLocaleString('th-TH')}
+                      {b.total.toLocaleString(LOCALE_BCP47[locale])}
                     </td>
                     <td className="px-3 py-2">
-                      <BookingStatusBadge status={b.status} />
+                      <BookingStatusBadge status={b.status} label={t(BOOKING_STATUS_KEY[b.status])} />
                     </td>
                   </tr>
                 ))}
@@ -160,9 +165,22 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   )
 }
 
+const BOOKING_STATUS_KEY = {
+  pending: 'admin.customersPage.bsPending',
+  confirmed: 'admin.customersPage.bsConfirmed',
+  checked_in: 'admin.customersPage.bsCheckedIn',
+  checked_out: 'admin.customersPage.bsCheckedOut',
+  cancelled: 'admin.customersPage.bsCancelled',
+  temp_pending: 'admin.customersPage.bsTempPending',
+  expired: 'admin.customersPage.bsExpired',
+  payment_expired: 'admin.customersPage.bsPaymentExpired',
+} as const
+
 function BookingStatusBadge({
   status,
+  label,
 }: {
+  label: string
   // Phase 42 — added 'temp_pending' + 'expired' (Phase 42 temp bookings).
   // Phase 52 — added 'payment_expired' (30-min payment deadline lapsed).
   status:
@@ -176,17 +194,17 @@ function BookingStatusBadge({
     | 'payment_expired'
 }) {
   const map = {
-    pending: { label: 'รอดำเนินการ', cls: 'bg-surface-container-high text-on-surface-variant' },
-    confirmed: { label: 'ยืนยัน', cls: 'bg-primary-container text-on-primary-container' },
-    checked_in: { label: 'เช็คอิน', cls: 'bg-primary text-on-primary' },
-    checked_out: { label: 'เช็คเอาท์', cls: 'bg-secondary-container text-on-secondary-container' },
-    cancelled: { label: 'ยกเลิก', cls: 'bg-error-container text-on-error-container' },
-    temp_pending: { label: 'รอกรอกข้อมูล', cls: 'bg-warning-container text-on-warning-container' },
-    expired: { label: 'หมดเวลา', cls: 'bg-error-container text-on-error-container' },
+    pending: { cls: 'bg-surface-container-high text-on-surface-variant' },
+    confirmed: { cls: 'bg-primary-container text-on-primary-container' },
+    checked_in: { cls: 'bg-primary text-on-primary' },
+    checked_out: { cls: 'bg-secondary-container text-on-secondary-container' },
+    cancelled: { cls: 'bg-error-container text-on-error-container' },
+    temp_pending: { cls: 'bg-secondary-container text-on-secondary-container' },
+    expired: { cls: 'bg-error-container text-on-error-container' },
     // Phase 52 — 30-min payment deadline lapsed
-    payment_expired: { label: 'หมดเวลาชำระเงิน', cls: 'bg-error-container text-on-error-container' },
+    payment_expired: { cls: 'bg-error-container text-on-error-container' },
   } as const
-  const { label, cls } = map[status]
+  const { cls } = map[status]
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-semibold ${cls}`}

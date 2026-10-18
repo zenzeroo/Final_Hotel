@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Modal } from '@/components/ui/Modal'
 import { hideReviewAction } from '@/app/actions/reviews'
+import { useT } from '@/lib/i18n/useT'
 
 interface HideReviewButtonProps {
   reviewId: string
@@ -18,6 +19,7 @@ export function HideReviewButton({
   unhidden = false,
   withReason = false,
 }: HideReviewButtonProps) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -51,7 +53,7 @@ export function HideReviewButton({
           className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-outline-variant text-caption font-semibold text-on-surface-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:opacity-50"
         >
           <MaterialIcon name="visibility_off" size={14} />
-          {pending ? '...' : 'ซ่อน'}
+          {pending ? '...' : t('manager.reviewsPage.hide')}
         </button>
       </form>
     )
@@ -65,21 +67,20 @@ export function HideReviewButton({
         className="inline-flex items-center gap-1 px-3 py-2 rounded-md border border-outline-variant text-caption font-semibold text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         <MaterialIcon name="visibility_off" size={14} />
-        ซ่อน
+        {t('manager.reviewsPage.hide')}
       </button>
 
       {withReason ? (
         <Modal
           open={open}
           onClose={() => setOpen(false)}
-          title="ซ่อนรีวิวนี้"
+          title={t('manager.reviewsPage.hideTitle')}
           showCloseButton
           body={
             <form action={handleSubmit}>
               <input type="hidden" name="reviewId" value={reviewId} />
               <p className="text-body-md text-on-surface-variant mb-4">
-                รีวิวจะถูกซ่อนจากหน้าห้องพักแต่ยังคงอยู่ในคิวสำหรับตรวจสอบ
-                สามารถกู้คืนได้ภายหลัง
+                {t('manager.reviewsPage.hideBody')}
               </p>
 
               {error ? (
@@ -95,14 +96,14 @@ export function HideReviewButton({
                   disabled={pending}
                   className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-primary-fixed hover:text-primary disabled:opacity-50"
                 >
-                  ยกเลิก
+                  {t('manager.common.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={pending}
                   className="px-4 py-2 rounded-md bg-error text-on-error text-body-md font-semibold disabled:opacity-50"
                 >
-                  {pending ? 'กำลังซ่อน...' : 'ยืนยันการซ่อน'}
+                  {pending ? t('manager.reviewsPage.hiding') : t('manager.reviewsPage.confirmHide')}
                 </button>
               </div>
             </form>
@@ -112,7 +113,7 @@ export function HideReviewButton({
         <Modal
           open={open}
           onClose={() => setOpen(false)}
-          title="ซ่อนรีวิวนี้?"
+          title={t('manager.reviewsPage.hideTitleQ')}
           showCloseButton
           body={
             <form action={handleSubmit}>
@@ -129,14 +130,14 @@ export function HideReviewButton({
                   disabled={pending}
                   className="px-4 py-2 rounded-md text-body-md text-on-surface-variant hover:bg-primary-fixed hover:text-primary disabled:opacity-50"
                 >
-                  ยกเลิก
+                  {t('manager.common.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={pending}
                   className="px-4 py-2 rounded-md bg-error text-on-error text-body-md font-semibold disabled:opacity-50"
                 >
-                  {pending ? '...' : 'ยืนยัน'}
+                  {pending ? '...' : t('manager.common.confirm')}
                 </button>
               </div>
             </form>

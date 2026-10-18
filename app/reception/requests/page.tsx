@@ -2,14 +2,18 @@ import { createClient } from '@/lib/supabase/server'
 import { formatDateTime } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ResolveNoteButton } from './ResolveNoteButton'
+import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
+// `label` is a dictionary key.
 const NOTE_TYPE_META: Record<string, { label: string; color: string; icon: string }> = {
-  request: { label: 'คำขอ', color: 'bg-primary/10 text-primary', icon: 'help' },
-  complaint: { label: 'ข้อร้องเรียน', color: 'bg-error/10 text-error', icon: 'report' },
-  compliment: { label: 'ชมเชย', color: 'bg-primary/10 text-primary', icon: 'favorite' },
-  general: { label: 'ทั่วไป', color: 'bg-surface-container text-on-surface-variant', icon: 'info' },
+  request: { label: 'reception.requestsPage.typeRequest', color: 'bg-primary/10 text-primary', icon: 'help' },
+  complaint: { label: 'reception.requestsPage.typeComplaint', color: 'bg-error/10 text-error', icon: 'report' },
+  compliment: { label: 'reception.requestsPage.typeCompliment', color: 'bg-primary/10 text-primary', icon: 'favorite' },
+  general: { label: 'reception.requestsPage.typeGeneral', color: 'bg-surface-container text-on-surface-variant', icon: 'info' },
 }
 
 interface GuestNoteRow {
@@ -24,6 +28,8 @@ interface GuestNoteRow {
 }
 
 export default async function GuestRequestsPage(props: PageProps<'/reception/requests'>) {
+  const locale = await getLocale()
+  const t = getT(locale)
   const searchParams = await props.searchParams
   const status = typeof searchParams.status === 'string' ? searchParams.status : 'open'
 
@@ -54,24 +60,24 @@ export default async function GuestRequestsPage(props: PageProps<'/reception/req
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-primary">คำขอ & บันทึกจากแขก</h1>
+        <h1 className="font-display text-3xl text-primary">{t('reception.requestsPage.heading')}</h1>
         <p className="text-body-md text-on-surface-variant mt-1">
-          จัดการคำขอ ข้อร้องเรียน และข้อความจากแขก
+          {t('reception.requestsPage.subtitle')}
         </p>
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-outline-variant mb-6">
-        <TabButton label="ที่ยังไม่ปิด" count={status === 'open' ? notes.length : 0} active={status === 'open'} href="open" />
-        <TabButton label="ปิดแล้ว" count={status === 'resolved' ? notes.length : 0} active={status === 'resolved'} href="resolved" />
-        <TabButton label="ทั้งหมด" active={status === 'all'} href="all" />
+        <TabButton label={t('reception.requestsPage.tabOpen')} count={status === 'open' ? notes.length : 0} active={status === 'open'} href="open" />
+        <TabButton label={t('reception.requestsPage.tabResolved')} count={status === 'resolved' ? notes.length : 0} active={status === 'resolved'} href="resolved" />
+        <TabButton label={t('reception.requestsPage.tabAll')} active={status === 'all'} href="all" />
       </div>
 
       {notes.length === 0 ? (
         <div className="text-center py-16 bg-surface-container-lowest rounded-2xl border border-outline-variant">
           <MaterialIcon name="forum" size={48} className="text-outline-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">
-            {status === 'open' ? 'ไม่มีคำขอที่รอดำเนินการ' : 'ไม่มีรายการ'}
+            {status === 'open' ? t('reception.requestsPage.emptyOpen') : t('reception.requestsPage.emptyAny')}
           </p>
         </div>
       ) : (
@@ -90,10 +96,10 @@ export default async function GuestRequestsPage(props: PageProps<'/reception/req
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption font-semibold ${meta.color}`}>
-                        {meta.label}
+                        {t(meta.label)}
                       </span>
                       <span className="text-caption text-on-surface-variant">
-                        {formatDateTime(n.created_at)}
+                        {formatDateTime(n.created_at, LOCALE_BCP47[locale])}
                       </span>
                     </div>
                     <h3 className="font-display text-lg text-primary">{n.title}</h3>
@@ -118,7 +124,7 @@ export default async function GuestRequestsPage(props: PageProps<'/reception/req
                   {n.is_resolved && (
                     <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-caption font-semibold">
                       <MaterialIcon name="check_circle" size={14} />
-                      ปิดแล้ว
+                      {t('reception.requestsPage.resolved')}
                     </span>
                   )}
                 </div>

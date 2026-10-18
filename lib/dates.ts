@@ -6,6 +6,8 @@
  * `'th-TH'` uses by default. Thai month/day names stay intact.
  */
 
+import type { ReportRange } from '@/lib/data/types'
+
 const dateOptions: Intl.DateTimeFormatOptions = {
   day: 'numeric',
   month: 'short',
@@ -230,6 +232,88 @@ export function getTodayBangkok(): string {
     month: '2-digit',
     day: '2-digit',
   }).format(new Date())
+}
+
+/**
+ * Bangkok calendar date (ISO YYYY-MM-DD) of a timestamp. Use this when
+ * comparing a UTC `timestamptz` against `getTodayBangkok()` — slicing the
+ * raw ISO string gives the UTC date and is off-by-one at 00:00-06:59
+ * Bangkok time.
+ */
+export function toBangkokIsoDate(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(iso))
+}
+
+/**
+ * Bangkok-anchored timestamp bounds for a `YYYY-MM` month: inclusive
+ * `from` (1st 00:00 +07:00) and exclusive `toExclusive` (1st of the next
+ * month). Pure integer math — independent of the host timezone.
+ */
+export function bangkokMonthRange(month: string): { from: string; toExclusive: string } {
+  const [y, m] = month.split('-').map(Number)
+  const nextY = m === 12 ? y + 1 : y
+  const nextM = m === 12 ? 1 : m + 1
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return {
+    from: `${y}-${pad(m)}-01T00:00:00+07:00`,
+    toExclusive: `${nextY}-${pad(nextM)}-01T00:00:00+07:00`,
+  }
+}
+
+/**
+ * Add `days` (signed) to a calendar date ISO YYYY-MM-DD. Pure UTC
+ * arithmetic — the result never depends on the host timezone (unlike
+ * `addDaysLocalIso`, which parses through local time).
+ */
+export function addDaysIso(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
+}
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const isValidIsoDate = (v: string | undefined): v is string =>
+  !!v && ISO_DATE_RE.test(v) && addDaysIso(v, 0) === v // rejects 2026-02-30
+
+/** Whole days from `a` to `b` (YYYY-MM-DD), positive when `b` is later. */
+export function diffDaysIso(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000)
+}
+
+/** Default /manager/reports window: the last 7 Bangkok days, today included. */
+export function defaultReportRange(): { from: string; to: string } {
+  const today = getTodayBangkok()
+  return { from: addDaysIso(today, -6), to: today }
+}
+
+/**
+ * Validate the `?from=&to=` params of /manager/reports. A missing or
+ * malformed value falls back to the default (last 7 days), a reversed pair
+ * is swapped, and the window is capped at 366 days. Ranges of ≤ 31 days are
+ * charted per day, longer ones per month.
+ */
+export function parseReportRange(fromParam?: string, toParam?: string): ReportRange {
+  const def = defaultReportRange()
+  let from = isValidIsoDate(fromParam) ? fromParam : def.from
+  let to = isValidIsoDate(toParam) ? toParam : def.to
+  if (from > to) [from, to] = [to, from]
+  if (diffDaysIso(from, to) > 365) from = addDaysIso(to, -365)
+  const days = diffDaysIso(from, to) + 1
+  return { from, to, days, granularity: days <= 31 ? 'day' : 'month' }
+}
+
+/**
+ * Monday of the week containing `iso` (YYYY-MM-DD). Pure UTC arithmetic,
+ * like `addDaysIso`. Sunday belongs to the week that started 6 days before.
+ */
+export function startOfWeekMondayIso(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay() // 0 = Sun … 6 = Sat
+  return addDaysIso(iso, -((dow + 6) % 7))
 }
 
 /**

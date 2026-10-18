@@ -35,7 +35,8 @@ export default async function HousekeeperDashboard(props: {
     ? ((searchParams.tab as TasksTab) ?? 'urgent')
     : 'urgent'
 
-  const t = getT(await getLocale())
+  const locale = await getLocale()
+  const t = getT(locale)
   const session = await getSession()
   const stats = await getMyDashboardStatsForUser(session!.id)
   const roomUnits = await getAllRoomUnits()
@@ -95,6 +96,7 @@ export default async function HousekeeperDashboard(props: {
                   key={task.id}
                   task={task}
                   variant="my"
+                  localeBcp={locale === 'en' ? 'en-GB' : 'th-TH'}
                   labels={{ started: t('housekeeper.tasks.started'), finished: t('housekeeper.tasks.finished') }}
                 />
               ))}
@@ -114,6 +116,7 @@ export default async function HousekeeperDashboard(props: {
                   key={task.id}
                   task={task}
                   variant="my"
+                  localeBcp={locale === 'en' ? 'en-GB' : 'th-TH'}
                   labels={{ started: t('housekeeper.tasks.started'), finished: t('housekeeper.tasks.finished') }}
                 />
               ))}

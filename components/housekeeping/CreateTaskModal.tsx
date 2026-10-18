@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { AlertModal } from '@/components/ui/AlertModal'
 import { Modal } from '@/components/ui/Modal'
 import { createTask } from '@/app/actions/housekeeping'
 import { useT } from '@/lib/i18n/useT'
@@ -149,7 +148,7 @@ export function CreateTaskModal({ roomUnits, housekeepers }: CreateTaskModalProp
                 onClick={() => setIsOpen(false)}
                 className="flex-1 px-4 py-2 border border-outline-variant rounded-md text-body-md text-primary hover:bg-primary-fixed hover:border-primary-fixed transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
               >
-                {t('common.cancel') ?? 'ยกเลิก'}
+                {t('manager.housekeepingPage.cancel')}
               </button>
               <button
                 type="submit"
@@ -163,9 +162,6 @@ export function CreateTaskModal({ roomUnits, housekeepers }: CreateTaskModalProp
         }
       />
 
-      {error && !isOpen && (
-        <AlertModal open onClose={() => setError(null)} body={error} />
-      )}
     </>
   )
 }
