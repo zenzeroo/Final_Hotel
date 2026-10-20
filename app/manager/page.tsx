@@ -8,6 +8,7 @@ import { formatTHB } from '@/lib/pricing'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
+import { getTodayBangkok } from '@/lib/dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,14 +16,9 @@ export const dynamic = 'force-dynamic'
 // server's clock/timezone (UTC on Vercel), so the greeting and date were
 // wrong for the first 7 hours of the Thai day.
 function today(localeBcp: string) {
-  return new Date().toLocaleDateString(localeBcp, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    calendar: 'gregory',
-    timeZone: 'Asia/Bangkok',
-  })
+  const weekday = new Intl.DateTimeFormat(localeBcp, { weekday: 'long', timeZone: 'Asia/Bangkok' }).format(new Date())
+  const [y, m, d] = getTodayBangkok().split('-')
+  return `${weekday} ${d}/${m}/${y}`
 }
 
 function greeting(t: ReturnType<typeof getT>): string {

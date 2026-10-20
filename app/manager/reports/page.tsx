@@ -6,7 +6,6 @@ import { RankedBarChart } from '@/components/manager/RankedBarChart'
 import { ReportsDateRange } from '@/components/manager/ReportsDateRange'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
-import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,16 +15,12 @@ const METRICS: readonly ReportMetric[] = ['revenue', 'bookings', 'adr', 'occupan
 const parseMetric = (v: string | undefined): ReportMetric =>
   METRICS.includes(v as ReportMetric) ? (v as ReportMetric) : 'revenue'
 
-// Range bounds are calendar dates — format at UTC so the server timezone
-// can never shift them by a day.
-const formatDay = (iso: string, locale: Locale) =>
-  new Intl.DateTimeFormat(LOCALE_BCP47[locale], {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-    calendar: 'gregory',
-  }).format(new Date(`${iso}T00:00:00Z`))
+// Range bounds are calendar dates (YYYY-MM-DD) — read the parts directly so
+// the server timezone can never shift the day, and render numeric DD/MM/YYYY.
+const formatDay = (iso: string) => {
+  const [y, m, d] = iso.split('-')
+  return `${d}/${m}/${y}`
+}
 
 export default async function ManagerReportsPage(props: PageProps<'/manager/reports'>) {
   const locale = await getLocale()
@@ -44,7 +39,7 @@ export default async function ManagerReportsPage(props: PageProps<'/manager/repo
             {t('manager.reportsPage.heading')}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            {formatDay(range.from, locale)} – {formatDay(range.to, locale)} ·{' '}
+            {formatDay(range.from)} – {formatDay(range.to)} ·{' '}
             {t('manager.reportsPage.rangeDays', { count: range.days })}
           </p>
         </div>

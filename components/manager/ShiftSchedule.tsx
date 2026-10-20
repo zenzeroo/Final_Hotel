@@ -23,9 +23,10 @@ function formatDayHeader(dateStr: string, locale: Locale): { weekday: string; da
   // weekday/day regardless of the server timezone.
   const d = new Date(`${dateStr}T00:00:00Z`)
   const bcp = locale === 'en' ? 'en-GB' : 'th-TH'
+  const [, m, dd] = dateStr.split('-')
   return {
     weekday: new Intl.DateTimeFormat(bcp, { weekday: 'short', timeZone: 'UTC' }).format(d),
-    day: new Intl.DateTimeFormat(bcp, { day: 'numeric', month: 'short', timeZone: 'UTC', calendar: 'gregory' }).format(d),
+    day: `${dd}/${m}`,
   }
 }
 

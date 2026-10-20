@@ -11,34 +11,26 @@ import { LOCALE_BCP47 } from '@/lib/i18n/config'
 
 export const dynamic = 'force-dynamic'
 
+const dmy = (d: Date) =>
+  `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+
 function today(localeBcp: string) {
-  return new Date().toLocaleDateString(localeBcp, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    calendar: 'gregory',
-  })
+  const d = new Date()
+  const weekday = new Intl.DateTimeFormat(localeBcp, { weekday: 'long' }).format(d)
+  return `${weekday} ${dmy(d)}`
 }
 
 /**
- * Format an ISO timestamp using the same calendar + verbosity as the
- * page header so dates in the Recent Activity table are visually
- * consistent with the header subtitle. Both use `calendar: 'gregory'`
- * to force the Gregorian year (avoiding the Buddhist-Era default
- * that `th-TH` would otherwise produce — which previously rendered
- * as "8/9/69" for the audit log).
+ * Format an ISO timestamp as numeric `DD/MM/YYYY` (Gregorian, independent
+ * of locale) so dates in the Recent Activity table are visually consistent
+ * with the header subtitle — avoids the Buddhist-Era default that `th-TH`
+ * would otherwise produce (previously rendered as "8/9/69" for the audit log).
  */
 function formatTimestamp(iso: string, localeBcp: string): string {
-  return new Date(iso).toLocaleString(localeBcp, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    calendar: 'gregory',
-  })
+  const d = new Date(iso)
+  const weekday = new Intl.DateTimeFormat(localeBcp, { weekday: 'long' }).format(d)
+  const time = new Intl.DateTimeFormat(localeBcp, { hour: 'numeric', minute: 'numeric' }).format(d)
+  return `${weekday} ${dmy(d)} ${time}`
 }
 
 export default async function AdminDashboard() {

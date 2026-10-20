@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react'
 import { cancelBooking, previewCancellation, type PreviewCancellationResult } from '@/app/actions/booking'
 import { createCheckoutSessionAction } from '@/app/actions/payment'
 import { cancelUnpaidBookingAction } from '@/app/actions/booking-unpaid-cancel'
+import { useLeaveGuard } from '@/components/booking/LeaveGuardProvider'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { AlertModal } from '@/components/ui/AlertModal'
 import { useToast } from '@/components/ui/Toast'
@@ -24,6 +25,7 @@ type PreviewState = PreviewCancellationResult & { open: boolean }
 export function ConfirmationActions({ bookingId, status, paymentStatus }: ConfirmationActionsProps) {
   const router = useRouter()
   const t = useT()
+  const { allowNavigation } = useLeaveGuard()
   const [isPending, startTransition] = useTransition()
   // Phase 17 — inline error state (Phase 14 lesson: silent server-action
   // failures via `void action()` were a UX trap; surface every error).
@@ -45,6 +47,10 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
         setPayError(result.error)
         return
       }
+      // Leaving to Stripe's hosted checkout is the intentional payment
+      // flow, not an accidental navigation away — don't let the leave
+      // guard's native "Leave site?" prompt block it.
+      allowNavigation()
       window.location.assign(result.data!.url)
     })
   }

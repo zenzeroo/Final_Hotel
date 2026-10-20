@@ -34,10 +34,10 @@ export function RevenueBarChart({ data7d, data30d, className = '' }: RevenueBarC
       ? new Intl.DateTimeFormat(bcp, { day: 'numeric', timeZone: 'UTC' }).format(d)
       : new Intl.DateTimeFormat(bcp, { weekday: 'short', timeZone: 'UTC' }).format(d)
   }
-  const fullDate = (date: string) =>
-    new Intl.DateTimeFormat(bcp, { day: 'numeric', month: 'short', timeZone: 'UTC', calendar: 'gregory' }).format(
-      new Date(`${date}T00:00:00Z`),
-    )
+  const fullDate = (date: string) => {
+    const [, m, d] = date.split('-')
+    return `${d}/${m}`
+  }
 
   return (
     <div className={`bg-surface-container-lowest rounded-lg shadow-level-1 p-6 ${className}`}>

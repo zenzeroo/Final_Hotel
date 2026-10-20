@@ -1,32 +1,37 @@
 /**
  * Date formatting utilities.
  *
- * Note: all date+time formatters pass `calendar: 'gregory'` so the Thai
- * locale renders AD year (2026) instead of the Buddhist year (2569) that
- * `'th-TH'` uses by default. Thai month/day names stay intact.
+ * All user-facing date displays are numeric `DD/MM/YYYY` — built directly
+ * from calendar field getters (`dmy()` below) rather than through
+ * `Intl.DateTimeFormat`'s locale-dependent field ordering, so the order
+ * never depends on which BCP-47 locale string ('th-TH' vs 'en-GB' vs
+ * anything else) a caller happens to pass in.
  */
 
 import type { ReportRange } from '@/lib/data/types'
 
-const dateOptions: Intl.DateTimeFormatOptions = {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  calendar: 'gregory',
+const pad2 = (n: number): string => String(n).padStart(2, '0')
+
+/** `DD/MM/YYYY` from a Date's local calendar fields. */
+function dmy(d: Date): string {
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`
 }
 
-const dateTimeOptions: Intl.DateTimeFormatOptions = {
-  ...dateOptions,
-  hour: '2-digit',
-  minute: '2-digit',
+/** `DD/MM/YYYY` from an ISO `YYYY-MM-DD` string (no timezone conversion). */
+function dmyFromIso(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return `${d}/${m}/${y}`
 }
 
-export function formatDate(iso: string, locale = 'th-TH'): string {
-  return new Intl.DateTimeFormat(locale, dateOptions).format(new Date(iso))
+const timeOptions: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
+
+export function formatDate(iso: string, _locale = 'th-TH'): string {
+  return dmy(new Date(iso))
 }
 
 export function formatDateTime(iso: string, locale = 'th-TH'): string {
-  return new Intl.DateTimeFormat(locale, dateTimeOptions).format(new Date(iso))
+  const d = new Date(iso)
+  return `${dmy(d)} ${new Intl.DateTimeFormat(locale, timeOptions).format(d)}`
 }
 
 export function formatTime(iso: string, locale = 'th-TH'): string {
@@ -44,60 +49,47 @@ export function formatTime(iso: string, locale = 'th-TH'): string {
 export function formatDateRange(
   isoFrom: string,
   isoTo: string,
-  locale = 'th-TH',
+  _locale = 'th-TH',
 ): string {
-  const fmt = new Intl.DateTimeFormat(locale, dateOptions)
-  return `${fmt.format(new Date(isoFrom))} – ${fmt.format(new Date(isoTo))}`
+  return `${dmy(new Date(isoFrom))} – ${dmy(new Date(isoTo))}`
 }
 
 /**
- * Compact date range string for narrow UI surfaces (tab pills, badges).
- * Examples (current calendar year):
- *   "2026-10-07","2026-10-07" → "7 ต.ค."
- *   "2026-10-07","2026-10-08" → "7 – 8 ต.ค."
- *   "2025-12-31","2026-01-02" → "31 ธ.ค. 2025 – 2 ม.ค. 2026"
+ * Compact numeric date range string for narrow UI surfaces (tab pills,
+ * badges). Examples (current calendar year):
+ *   "2026-10-07","2026-10-07" → "07/10"
+ *   "2026-10-07","2026-10-08" → "07/10 – 08/10"
+ *   "2025-12-31","2026-01-02" → "31/12/2025 – 02/01/2026"
  *
  * Drops the year when both endpoints fall in the same calendar year —
  * keeps pills compact. Year-crossing falls back to the full
- * `formatDateRange` so neither end is ambiguous. Forces Gregorian
- * calendar explicitly via `calendar: 'gregory'` to avoid the Buddhist
- * Era default that `th-TH` would otherwise render.
+ * `formatDateRange` so neither end is ambiguous.
  */
 export function formatDateRangeCompact(
   isoFrom: string,
   isoTo: string,
-  locale = 'th-TH',
+  _locale = 'th-TH',
 ): string {
   const dFrom = new Date(isoFrom)
   const dTo = new Date(isoTo)
   if (Number.isNaN(dFrom.getTime()) || Number.isNaN(dTo.getTime())) return ''
 
-  const monthFmt = new Intl.DateTimeFormat(locale, {
-    month: 'short',
-    calendar: 'gregory',
-  })
-  const dayFmt = new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-  })
+  const dm = (d: Date) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`
 
-  // Same day → just "D MMM" (drops year for compactness — caller is
+  // Same day → just "DD/MM" (drops year for compactness — caller is
   // typically the today-tab pill on /reception/check-in-out where the
   // year is implied by the surrounding UI).
   if (isoFrom === isoTo) {
-    return `${dayFmt.format(dFrom)} ${monthFmt.format(dFrom)}`
+    return dm(dFrom)
   }
 
   const sameYear = dFrom.getFullYear() === dTo.getFullYear()
   if (sameYear) {
-    // "D – D MMM" — day-only span with month on the closing date.
-    const dayFrom = dayFmt.format(dFrom)
-    const dayTo = dayFmt.format(dTo)
-    const monthTo = monthFmt.format(dTo)
-    return `${dayFrom} – ${dayTo} ${monthTo}`
+    return `${dm(dFrom)} – ${dm(dTo)}`
   }
 
-  // Year-crossing — fall back to full format on both ends.
-  return formatDateRange(isoFrom, isoTo, locale)
+  // Year-crossing — fall back to the full format on both ends.
+  return formatDateRange(isoFrom, isoTo)
 }
 
 /**
@@ -110,38 +102,27 @@ export function formatDateRangeCompact(
  * `formatDateTime` in this file) — the `th-TH` locale otherwise
  * defaults to Buddhist Era and would render "23/09/2569".
  */
-export function formatDateNumeric(iso: string, locale = 'th-TH'): string {
+export function formatDateNumeric(iso: string, _locale = 'th-TH'): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return new Intl.DateTimeFormat(locale, {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    calendar: 'gregory',
-  }).format(d)
+  return dmy(d)
 }
 
 /**
- * Phase 53 — Asia/Bangkok + Gregorian short date for the housekeeper
- * history page. Pinned `timeZone` + `calendar` so server (Node/UTC
- * default) and client (any browser locale) render identical strings.
- * Returns "14 ต.ค. 2026" (th) or "14 Oct 2026" (en).
+ * Phase 53 — Asia/Bangkok numeric date for the housekeeper history page.
+ * Pinned `timeZone` so server (Node/UTC default) and client (any browser
+ * locale) render identical strings regardless of host timezone. Returns
+ * "14/10/2026".
  */
 export function formatBangkokDate(
   iso: string,
-  locale: 'th-TH' | 'en-GB' = 'th-TH',
+  _locale: 'th-TH' | 'en-GB' = 'th-TH',
 ): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Asia/Bangkok',
-    calendar: 'gregory',
-  }).format(d)
+  return dmyFromIso(toBangkokIsoDate(iso))
 }
 
 /**

@@ -1226,15 +1226,22 @@ export async function getReportsData(range: ReportRange = parseReportRange()): P
         : 0
       : Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100)
 
-  // Labels are formatted at UTC so they never shift with the server timezone.
-  const dayFmt = new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', timeZone: 'UTC', calendar: 'gregory' })
-  const monthFmt = new Intl.DateTimeFormat('th-TH', { month: 'short', year: '2-digit', timeZone: 'UTC', calendar: 'gregory' })
+  // Labels are read directly off the UTC-anchored `b.start` ISO string
+  // (YYYY-MM-DD) so they never shift with the server timezone.
+  const dayLabel = (startIso: string) => {
+    const [, m, d] = startIso.split('-')
+    return `${d}/${m}`
+  }
+  const monthLabel = (startIso: string) => {
+    const [y, m] = startIso.split('-')
+    return `${m}/${y.slice(2)}`
+  }
   const bucketLabel = (b: Bucket) =>
     granularity === 'day'
       ? b.start === today
         ? 'วันนี้'
-        : dayFmt.format(new Date(`${b.start}T00:00:00Z`))
-      : monthFmt.format(new Date(`${b.start}T00:00:00Z`))
+        : dayLabel(b.start)
+      : monthLabel(b.start)
   const revenue: RevenueBarPoint[] = buckets.map((b) => ({
     date: b.start,
     revenue: revenueByBucket.get(b.key) ?? 0,

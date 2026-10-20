@@ -45,7 +45,20 @@ export interface LeaveGuardContextValue {
    * browser Back button / programmatic back control.
    */
   requestLeave: (href: string | null) => void
+  /**
+   * Call right before an intentional `window.location.assign(...)` /
+   * full navigation that the guard should NOT block — e.g. redirecting
+   * to Stripe's hosted checkout to complete payment. Suppresses the
+   * native "Leave site?" `beforeunload` prompt for the navigation that
+   * follows. Resets itself after a few seconds as a safety net in case
+   * the navigation never actually happens (failed redirect, popup
+   * blocked, etc.) so the guard doesn't stay silently disarmed.
+   */
+  allowNavigation: () => void
 }
+
+/** Window in which an `allowNavigation()` call suppresses `beforeunload`. */
+const ALLOW_NAVIGATION_MS = 5_000
 
 const LeaveGuardContext = createContext<LeaveGuardContextValue | null>(null)
 
@@ -101,6 +114,13 @@ export function LeaveGuardProvider({
     dialogRef.current = dialog
   }, [dialog])
 
+  // Set just before an intentional full-page navigation the guard
+  // should let through (the Stripe checkout redirect). Read once by
+  // `onBeforeUnload`, then auto-resets after ALLOW_NAVIGATION_MS in
+  // case the navigation never happens.
+  const allowNextUnloadRef = useRef(false)
+  const allowNavigationTimeoutRef = useRef<number | null>(null)
+
   // ──────────────────────────────────────────────────────────────────
   // The hook API
   // ──────────────────────────────────────────────────────────────────
@@ -118,6 +138,16 @@ export function LeaveGuardProvider({
     },
     [enabled],
   )
+
+  const allowNavigation = useCallback(() => {
+    allowNextUnloadRef.current = true
+    if (allowNavigationTimeoutRef.current !== null) {
+      window.clearTimeout(allowNavigationTimeoutRef.current)
+    }
+    allowNavigationTimeoutRef.current = window.setTimeout(() => {
+      allowNextUnloadRef.current = false
+    }, ALLOW_NAVIGATION_MS)
+  }, [])
 
   // ──────────────────────────────────────────────────────────────────
   // Effect 1 — popstate + click-capture + beforeunload (4 effects in
@@ -161,6 +191,7 @@ export function LeaveGuardProvider({
     }
 
     function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (allowNextUnloadRef.current) return
       e.preventDefault()
       e.returnValue = ''
     }
@@ -173,6 +204,9 @@ export function LeaveGuardProvider({
       window.removeEventListener('popstate', onPopState)
       document.removeEventListener('click', onClickCapture, true)
       window.removeEventListener('beforeunload', onBeforeUnload)
+      if (allowNavigationTimeoutRef.current !== null) {
+        window.clearTimeout(allowNavigationTimeoutRef.current)
+      }
     }
   }, [enabled])
 
@@ -202,11 +236,15 @@ export function LeaveGuardProvider({
       console.error('[LeaveGuardProvider] cancelUnpaidBookingAction failed:', e)
     }
     if (target) {
+      // The user just confirmed "leave" in this very dialog — don't let
+      // the native beforeunload prompt stack a second confirmation on
+      // top of the one they already answered.
+      allowNavigation()
       window.location.assign(target)
     } else {
       router.push(backHref)
     }
-  }, [bookingId, backHref, router])
+  }, [bookingId, backHref, router, allowNavigation])
 
   // Stable no-op for the leave-modal `onClose` while a cancel is in
   // flight. The Modal API requires a non-null function reference; we
@@ -215,7 +253,7 @@ export function LeaveGuardProvider({
   const noOp = useCallback(() => {}, [])
 
   return (
-    <LeaveGuardContext.Provider value={{ requestLeave }}>
+    <LeaveGuardContext.Provider value={{ requestLeave, allowNavigation }}>
       {children}
       {dialog.kind === 'leave' && (
         <Modal

@@ -22,6 +22,7 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useT } from '@/lib/i18n/useT'
 import { createCheckoutSessionAction } from '@/app/actions/payment'
 import { cancelUnpaidBookingAction } from '@/app/actions/booking-unpaid-cancel'
+import { useLeaveGuard } from '@/components/booking/LeaveGuardProvider'
 
 interface CancelledFromStripeBannerProps {
   bookingId: string
@@ -30,6 +31,7 @@ interface CancelledFromStripeBannerProps {
 export function CancelledFromStripeBanner({ bookingId }: CancelledFromStripeBannerProps) {
   const t = useT()
   const router = useRouter()
+  const { allowNavigation } = useLeaveGuard()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -45,6 +47,9 @@ export function CancelledFromStripeBanner({ bookingId }: CancelledFromStripeBann
         setError('ไม่สามารถเปิดหน้าชำระเงินได้')
         return
       }
+      // See ConfirmationActions.handlePay — the Stripe redirect is the
+      // intentional payment flow, not an accidental page leave.
+      allowNavigation()
       window.location.assign(result.data.url)
     })
   }
