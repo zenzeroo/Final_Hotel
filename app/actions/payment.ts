@@ -392,12 +392,18 @@ async function precheckPayableBooking(
   userId: string,
 ): Promise<string | null> {
   const supabase = await createClient()
-  const { data: booking } = await supabase
+  const { data: booking, error } = await supabase
     .from('bookings')
     .select('id, user_id, status, payment_status, lapsed_reason, payment_due_at')
     .eq('id', bookingId)
     .eq('user_id', userId)
     .maybeSingle()
+  // A query error (e.g. a missing column when a migration wasn't applied)
+  // is not "not found" — surface it instead of hiding it.
+  if (error) {
+    console.error('[precheckPayableBooking] failed to load booking:', error)
+    return `ไม่สามารถโหลดข้อมูลการจอง: ${error.message}`
+  }
   if (!booking) return 'ไม่พบการจองนี้'
   if (booking.status === 'cancelled') {
     return 'การจองนี้ถูกยกเลิกแล้ว'

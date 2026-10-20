@@ -4,6 +4,7 @@ import "./globals.css";
 import { getLocale } from "@/lib/i18n/getLocale";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { ToastProvider } from "@/components/ui/Toast";
+import { NavigationLoader } from "@/components/ui/NavigationLoader";
 
 const playfair = Playfair_Display({
   variable: "--font-display",
@@ -42,6 +43,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-background text-on-surface">
         <I18nProvider locale={locale}>
           <ToastProvider>{children}</ToastProvider>
+          <NavigationLoader />
         </I18nProvider>
       </body>
     </html>

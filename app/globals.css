@@ -91,6 +91,13 @@
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
+  /* Page-transition loader — 200ms delay so fast navigations never flash it */
+  --animate-loader-in: loader-in 200ms ease-out 200ms both;
+  @keyframes loader-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 }
 
 /* Material Symbols Outlined */

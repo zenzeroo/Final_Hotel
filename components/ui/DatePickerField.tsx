@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { MaterialIcon } from './MaterialIcon'
 import { formatDateNumeric } from '@/lib/dates'
 
@@ -80,6 +81,9 @@ export function DatePickerField({
 }: DatePickerFieldProps) {
   const computedAriaLabel = ariaLabel ?? label
   const isControlled = value !== undefined
+  // Uncontrolled mode still needs to re-render the DD/MM/YYYY display.
+  const [innerValue, setInnerValue] = useState(defaultValue ?? '')
+  const shown = isControlled ? value ?? '' : innerValue
 
   return (
     <div
@@ -106,7 +110,7 @@ export function DatePickerField({
             </span>
           )}
           <span className="text-body-md font-medium text-on-surface">
-            {formatDateNumeric(isControlled ? value ?? '' : defaultValue ?? '')}
+            {formatDateNumeric(shown)}
           </span>
         </div>
         {disabled && (
@@ -128,11 +132,19 @@ export function DatePickerField({
           name={name}
           disabled={disabled}
           required={required}
-          onChange={
-            isControlled && onChange
-              ? (e) => onChange(e.target.value)
-              : undefined
-          }
+          onChange={(e) => {
+            if (isControlled) onChange?.(e.target.value)
+            else setInnerValue(e.target.value)
+          }}
+          // Chrome only opens the calendar from the (invisible) trailing
+          // icon — open it from anywhere on the field.
+          onClick={(e) => {
+            try {
+              e.currentTarget.showPicker()
+            } catch {
+              // unsupported / not user-activated — native behaviour stays
+            }
+          }}
           aria-label={computedAriaLabel}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
         />

@@ -6,7 +6,7 @@ import { signUp, signInWithGoogle, type AuthState } from '@/app/actions/auth'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { GoogleLogo } from '@/components/ui/GoogleLogo'
-import { DatePickerField } from '@/components/ui/DatePickerField'
+import { BirthdateSelect } from '@/components/ui/BirthdateSelect'
 import { CheckEmailModal } from '@/components/auth/register/CheckEmailModal'
 import { useT } from '@/lib/i18n/useT'
 import { maxBirthdateIso } from '@/lib/dates'
@@ -151,22 +151,16 @@ export function RegisterForm({ next, errorMessage, showCheckEmailModal }: Regist
           </p>
         </label>
 
-        {/* Birthdate */}
-        <label className="flex flex-col gap-1.5">
+        {/* Birthdate — a <div>, not a <label>: each select has its own aria-label. */}
+        <div className="flex flex-col gap-1.5">
           <span className="text-label-md text-on-surface">
             {t('auth.birthdate')} <span className="text-error">*</span>
           </span>
-          <DatePickerField
-            name="birthdate"
-            iconName="cake"
-            max={maxBirthdateIso()}
-            required
-            aria-label={t('auth.birthdate')}
-          />
+          <BirthdateSelect name="birthdate" max={maxBirthdateIso()} required />
           <p className="font-caption text-caption text-on-surface-variant">
             {t('auth.birthdateMinAge')}
           </p>
-        </label>
+        </div>
 
         {/* Password */}
         <label className="flex flex-col gap-1.5">

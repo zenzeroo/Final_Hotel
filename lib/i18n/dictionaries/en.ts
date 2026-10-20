@@ -153,6 +153,9 @@ export const en: Dictionary = {
     passwordMismatch: 'Passwords do not match',
     birthdate: 'Date of birth',
     birthdateMinAge: 'Must be at least 18 years old',
+    birthDay: 'Day',
+    birthMonth: 'Month',
+    birthYear: 'Year',
     forgotPassword: 'Forgot password?',
     termsAgree: 'I agree to the Terms of Service',
     checkEmailModalTitle: 'Verification email sent',
@@ -2145,6 +2148,9 @@ export const en: Dictionary = {
     },
     toast: {
       close: 'Dismiss notification',
+    },
+    loading: {
+      label: 'Loading...',
     },
   },
 }
