@@ -157,10 +157,10 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
     <aside className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient-lg) border border-outline-variant p-6 lg:sticky lg:top-24">
       <div className="flex items-baseline justify-between mb-4">
         <div>
-          <span className="text-caption text-on-surface-variant uppercase tracking-wider">ราคา</span>
+          <span className="text-caption text-on-surface-variant uppercase tracking-wider">{t('customer.widget.price')}</span>
           <div className="flex items-baseline gap-1">
             <span className="font-display text-4xl font-bold text-primary">{formatTHB(room.base_price)}</span>
-            <span className="text-body-md text-on-surface-variant">/ คืน</span>
+            <span className="text-body-md text-on-surface-variant">{t('customer.roomCard.perNight')}</span>
           </div>
         </div>
         <RatingStars value={room.rating_avg} count={room.rating_count} size={16} showValue={false} />
@@ -171,7 +171,7 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
         <div className="grid grid-cols-2 divide-x divide-outline-variant">
           <div className="hover:bg-primary-fixed transition-colors">
             <DatePickerField
-              label="เช็คอิน"
+              label={t('customer.common.checkIn')}
               iconName=""
               value={checkIn}
               min={getMinCheckInLocalIso()}
@@ -187,7 +187,7 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
           </div>
           <div className="hover:bg-primary-fixed transition-colors">
             <DatePickerField
-              label="เช็คเอาท์"
+              label={t('customer.common.checkOut')}
               iconName=""
               value={checkOut}
               min={addDaysLocalIso(checkIn, 1)}
@@ -199,10 +199,10 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
           <div className="flex items-center gap-2">
             <MaterialIcon name="group" size={18} className="text-on-surface-variant" />
             <span className="text-caption text-on-surface-variant uppercase tracking-wider">
-              ผู้เข้าพัก
+              {t('customer.common.guestsLabel')}
             </span>
             <span className="text-body-md font-medium text-on-surface ml-auto">
-              เข้าพักได้สูงสุด <strong>{room.max_guests}</strong> ท่าน
+              {t('customer.widget.maxGuests', { count: room.max_guests })}
             </span>
           </div>
         </div>
@@ -214,14 +214,14 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
           {hasSeasonalRates && (
             <div className="px-3 py-2 bg-secondary/10 rounded-lg">
               <div className="text-caption uppercase tracking-wider text-on-surface-variant mb-1">
-                มีเรทฤดูกาลสำหรับช่วงที่เลือก
+                {t('customer.widget.seasonalTitle')}
               </div>
               <ul className="flex flex-col gap-1">
                 {appliedRates.map((r) => (
                   <li key={r.id} className="text-caption text-on-surface">
-                    • {r.label} · {r.nights} คืน
+                    {t('customer.common.seasonalLine', { label: r.label, nights: r.nights })}
                     {r.minNightsOverride != null && (
-                      <span className="text-warning ml-1">(ขั้นต่ำ {r.minNightsOverride} คืน)</span>
+                      <span className="text-warning ml-1">({t('customer.common.minNights', { count: r.minNightsOverride })})</span>
                     )}
                   </li>
                 ))}
@@ -229,23 +229,23 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
             </div>
           )}
           <PriceRow
-            label={`${formatTHB(room.base_price)} × ${nights} คืน`}
+            label={t('customer.common.priceTimesNights', { price: formatTHB(room.base_price), nights })}
             value={formatTHB(price.baseSubtotal)}
           />
-          <PriceRow label="ภาษี" value={formatTHB(price.taxTotal)} />
-          <PriceRow label="ค่าบริการรีสอร์ท" value={formatTHB(price.feeTotal)} />
+          <PriceRow label={t('customer.common.tax')} value={formatTHB(price.taxTotal)} />
+          <PriceRow label={t('customer.common.resortFee')} value={formatTHB(price.feeTotal)} />
         </div>
       ) : (
-        <p className="text-body-md text-error mb-4">กรุณาเลือกวันที่ให้ถูกต้อง</p>
+        <p className="text-body-md text-error mb-4">{t('customer.widget.invalidDates')}</p>
       )}
 
       {minNightsBlocked && (
         <p className="text-body-md text-warning mb-4">
-          เรทฤดูกาลกำหนดจำนวนคืนขั้นต่ำมากกว่าที่เลือก — กรุณาเพิ่มจำนวนคืน
+          {t('customer.widget.minNightsError')}
         </p>
       )}
 
-      <PriceRow label="รวมทั้งสิ้น" value={formatTHB(price.total)} emphasis />
+      <PriceRow label={t('customer.common.total')} value={formatTHB(price.total)} emphasis />
 
       {reserveError && (
         <div
@@ -270,19 +270,19 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
         ) : (
           <>
             <MaterialIcon name="bookmark" size={18} />
-            ยืนยันการจอง
+            {t('customer.widget.confirm')}
           </>
         )}
       </button>
 
       <p className="mt-4 text-caption text-on-surface-variant text-center">
-        คุณจะไม่ถูกเรียกเก็บเงินจนกว่าจะยืนยัน
+        {t('customer.widget.noCharge')}
       </p>
 
       <div className="mt-4 pt-4 border-t border-outline-variant">
         <div className="flex items-center gap-2 text-caption text-on-surface-variant">
           <MaterialIcon name="verified" size={16} className="text-primary" />
-          <span>ยกเลิกฟรีภายใน 24 ชั่วโมง</span>
+          <span>{t('customer.widget.freeCancel')}</span>
         </div>
       </div>
 

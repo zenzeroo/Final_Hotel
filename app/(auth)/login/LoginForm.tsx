@@ -7,6 +7,7 @@ import { signIn, signInWithGoogle, type AuthState } from '@/app/actions/auth'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { GoogleLogo } from '@/components/ui/GoogleLogo'
+import { useT } from '@/lib/i18n/useT'
 
 interface LoginFormProps {
   next: string
@@ -20,6 +21,7 @@ interface LoginFormProps {
 
 function SubmitButton() {
   const { pending } = useFormStatus()
+  const t = useT()
   return (
     <button
       type="submit"
@@ -29,16 +31,17 @@ function SubmitButton() {
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-          กำลังเข้าสู่ระบบ…
+          {t('customer.login.signingIn')}
         </>
       ) : (
-        'เข้าสู่ระบบ'
+        t('auth.signIn')
       )}
     </button>
   )
 }
 
 export function LoginForm({ next, errorMessage }: LoginFormProps) {
+  const t = useT()
   const [state, formAction] = useActionState<AuthState | null, FormData>(signIn, null)
   const [googleError, setGoogleError] = useState<string | undefined>()
   const [googlePending, startGoogleTransition] = useTransition()
@@ -67,7 +70,7 @@ export function LoginForm({ next, errorMessage }: LoginFormProps) {
 
       {/* Email */}
       <label className="flex flex-col gap-1.5">
-        <span className="text-label-md text-on-surface">อีเมล</span>
+        <span className="text-label-md text-on-surface">{t('auth.email')}</span>
         <div className="relative">
           <MaterialIcon
             name="mail"
@@ -77,7 +80,7 @@ export function LoginForm({ next, errorMessage }: LoginFormProps) {
           <input
             type="email"
             name="email"
-            placeholder="เช่น yourname@email.com"
+            placeholder={t('customer.login.emailPlaceholder')}
             required
             autoComplete="email"
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 pl-10 pr-4 text-body-md text-on-surface placeholder:text-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
@@ -88,12 +91,12 @@ export function LoginForm({ next, errorMessage }: LoginFormProps) {
       {/* Password */}
       <label className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-label-md text-on-surface">รหัสผ่าน</span>
+          <span className="text-label-md text-on-surface">{t('auth.password')}</span>
           <Link
             href="/forgot-password"
             className="text-caption text-primary px-1 py-0.5 rounded hover:bg-primary-fixed hover:text-primary transition-colors"
           >
-            ลืมรหัสผ่าน?
+            {t('auth.forgotPassword')}
           </Link>
         </div>
         <PasswordInput
@@ -110,7 +113,7 @@ export function LoginForm({ next, errorMessage }: LoginFormProps) {
       {/* Divider */}
       <div className="flex items-center gap-3 my-2">
         <div className="flex-1 h-px bg-outline-variant" />
-        <span className="text-caption text-on-surface-variant uppercase tracking-wider">หรือ</span>
+        <span className="text-caption text-on-surface-variant uppercase tracking-wider">{t('customer.login.or')}</span>
         <div className="flex-1 h-px bg-outline-variant" />
       </div>
 
@@ -124,12 +127,12 @@ export function LoginForm({ next, errorMessage }: LoginFormProps) {
         {googlePending ? (
           <>
             <span className="inline-block w-4 h-4 border-2 border-on-surface border-t-transparent rounded-full animate-spin" />
-            กำลังเชื่อมต่อกับ Google…
+            {t('customer.login.googleConnecting')}
           </>
         ) : (
           <>
             <GoogleLogo />
-            เข้าสู่ระบบด้วย Google
+            {t('auth.signInWithGoogle')}
           </>
         )}
       </button>

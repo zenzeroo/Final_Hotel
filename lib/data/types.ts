@@ -107,6 +107,23 @@ export interface RefundStatusForBooking {
   decidedBy: string | null
 }
 
+/** Phase 55 — one row in the guest's "ประวัติการขอคืนเงิน" tab on /bookings. */
+export interface RefundRequestHistoryItem {
+  id: string
+  bookingId: string
+  bookingCode: string
+  status: RefundRequestStatus
+  amount: number
+  createdAt: string
+  decidedAt: string | null
+  decisionNote: string | null
+  checkIn: string
+  checkOut: string
+  bookingStatus: string
+  roomName: string
+  roomNameTh: string | null
+}
+
 /**
  * Phase 30.1 — widened to match DB CHECK constraint added in
  * `supabase/migrations/20260920_housekeeping_allocation.sql:68-76`.
@@ -439,6 +456,10 @@ export interface RefundRequest {
   guestName: string
   reason: string
   amount: number // THB
+  /** Phase 55 — linked booking context so the manager can judge the request. */
+  checkIn?: string
+  checkOut?: string
+  bookingStatus?: string
 }
 
 export interface AuditLogEntry {

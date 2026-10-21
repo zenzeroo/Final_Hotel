@@ -4,6 +4,7 @@
  * dashboard, bookings, housekeeping, reviews, and reports pages.
  */
 
+import { cache } from 'react'
 import type {
   ManagerDashboardStats,
   HousekeepingOverviewData,
@@ -921,7 +922,7 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
   ] = await Promise.all([
     supabase
       .from('refund_requests')
-      .select('id, booking_code, guest_name, reason, amount, created_at')
+      .select('id, booking_code, guest_name, reason, amount, created_at, booking:bookings(check_in, check_out, status)')
       .eq('status', 'pending')
       .order('created_at', { ascending: false }),
     supabase
@@ -971,6 +972,10 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
     guestName: r.guest_name,
     reason: r.reason,
     amount: r.amount,
+    ...(() => {
+      const b = r.booking as unknown as { check_in: string; check_out: string; status: string } | null
+      return b ? { checkIn: b.check_in, checkOut: b.check_out, bookingStatus: b.status } : {}
+    })(),
   }))
 
   const bookings: BookingOversightRow[] = (bookingRows ?? []).map((row) => {
@@ -1455,7 +1460,9 @@ export async function rejectRefund(args: { refundId: string; reason: string }): 
 // Phase 6 stubs
 // =========================================================
 
-export async function getHotelSettings(): Promise<HotelSettings> {
+// Cached per render: getLocale(), getPricingConstants() and several pages
+// all read this singleton row in the same request.
+export const getHotelSettings = cache(async (): Promise<HotelSettings> => {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -1486,7 +1493,7 @@ export async function getHotelSettings(): Promise<HotelSettings> {
     }
   }
   return data as HotelSettings
-}
+})
 
 export async function listPromotions(): Promise<Promotion[]> {
   const { createClient } = await import('@/lib/supabase/server')

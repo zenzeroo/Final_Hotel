@@ -61,7 +61,7 @@ export function ForgotPasswordForm() {
           <div className="text-on-surface-variant">
             {state && 'message' in state && state.message
               ? state.message
-              : 'หากอีเมลนี้มีอยู่ในระบบ เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปให้แล้ว กรุณาตรวจสอบกล่องข้อความและคลิกลิงก์เพื่อดำเนินการต่อ'}
+              : t('auth.forgotPasswordPage.successBody')}
           </div>
         </div>
         <p className="text-caption text-on-surface-variant italic text-center">

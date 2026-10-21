@@ -71,14 +71,14 @@ export default async function LoginPage(props: PageProps<'/login'>) {
  */
 function mapOAuthError(
   error: string | string[] | undefined,
-  _t: ReturnType<typeof getT>,
+  t: ReturnType<typeof getT>,
 ): string | undefined {
   const value = Array.isArray(error) ? error[0] : error
   switch (value) {
     case 'oauth_cancelled':
-      return 'ยกเลิกการเข้าสู่ระบบด้วย Google แล้ว'
+      return t('customer.login.googleCancelled')
     case 'oauth_failed':
-      return 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+      return t('customer.login.googleFailed')
     default:
       return undefined
   }

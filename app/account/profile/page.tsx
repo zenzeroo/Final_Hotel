@@ -29,7 +29,7 @@ export default async function AccountProfilePage(props: {
               {t('profile.title')}
             </h1>
             <p className="text-on-surface-variant text-body-lg">
-              ไม่พบข้อมูลโปรไฟล์ของคุณ กรุณาติดต่อผู้ดูแลระบบ
+              {t('customer.profile.notFound')}
             </p>
           </div>
         </main>
@@ -55,7 +55,7 @@ export default async function AccountProfilePage(props: {
           <AccountProfileContent
             profile={profile}
             quickLinks={[
-              { href: '/bookings', icon: 'history', label: 'ประวัติการจอง' },
+              { href: '/bookings', icon: 'history', label: t('nav.bookings') },
             ]}
             searchParams={Promise.resolve(searchParams)}
           />

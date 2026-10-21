@@ -1,4 +1,7 @@
+'use client'
+
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 interface RatingStarsProps {
   value: number // 0.0 - 5.0
@@ -15,6 +18,7 @@ export function RatingStars({
   showValue = true,
   className = '',
 }: RatingStarsProps) {
+  const t = useT()
   if (count !== undefined && count === 0) return null
 
   const rounded = Math.round(value * 2) / 2 // round to nearest 0.5
@@ -64,7 +68,7 @@ export function RatingStars({
       )}
       {count !== undefined && (
         <span className="text-caption text-on-surface-variant">
-          ({count} รีวิว)
+          {t('customer.rating.reviewsCount', { count })}
         </span>
       )}
     </div>

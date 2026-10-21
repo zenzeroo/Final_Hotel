@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
-import type { RefundRequestStatus, RefundStatusForBooking, RoomTypeName } from './types'
+import type {
+  RefundRequestHistoryItem,
+  RefundRequestStatus,
+  RefundStatusForBooking,
+  RoomTypeName,
+} from './types'
 
 export interface Booking {
   id: string
@@ -33,10 +38,10 @@ export interface Booking {
   // Phase 42 — set when status='temp_pending'; null when status='confirmed'/'cancelled'/etc.
   // Filters out from availability queries once hold_expires_at < now() (no cron required).
   hold_expires_at: string | null
-  // Phase 52 — 30-min payment deadline set when status flips to 'confirmed'.
-  // Past-deadline rows are flipped to 'payment_expired' by the lazy-expiry
-  // RPCs (expire_user_unpaid_bookings / expire_specific_unpaid_booking) and
-  // the daily cron (cleanup_abandoned_unpaid_bookings).
+  // Payment deadline for web bookings (5 min after confirm, reset to 5 min
+  // when Pay is clicked). Past-deadline rows are flipped to 'expired' by the
+  // lazy-expiry RPCs and the per-minute pg_cron job
+  // (cleanup_abandoned_unpaid_bookings). NULL for walk-in/phone/OTA.
   payment_due_at: string | null
   // Phase 52 follow-up — disambiguates the shared `status='expired'`
   // value. NULL = never lapsed (or paid/cancelled).
@@ -325,4 +330,56 @@ export async function getRefundStatusForBooking(
     decidedAt: data.decided_at ?? null,
     decidedBy: data.decided_by ?? null,
   }
+}
+
+/**
+ * Phase 55 — every refund request the guest has made, newest first, with
+ * the booking + room needed to render a row. ONE query (no per-booking
+ * N+1): the `refund_requests owner read` RLS policy already limits rows to
+ * the caller's own bookings; `.eq('booking.user_id')` is defence in depth.
+ */
+export async function getUserRefundRequests(userId: string): Promise<RefundRequestHistoryItem[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('refund_requests')
+    .select(
+      `id, booking_id, booking_code, status, amount, created_at, decided_at, decision_note,
+       booking:bookings!inner(user_id, check_in, check_out, status,
+         room_type:room_types(name, name_th))`,
+    )
+    .eq('booking.user_id', userId)
+    .order('created_at', { ascending: false })
+  if (error) wrapSupabaseError('getUserRefundRequests', error)
+
+  type Row = {
+    id: string
+    booking_id: string
+    booking_code: string
+    status: RefundRequestStatus
+    amount: number | string
+    created_at: string
+    decided_at: string | null
+    decision_note: string | null
+    booking: {
+      check_in: string
+      check_out: string
+      status: string
+      room_type: { name: string; name_th: string | null } | null
+    }
+  }
+  return ((data ?? []) as unknown as Row[]).map((r) => ({
+    id: r.id,
+    bookingId: r.booking_id,
+    bookingCode: r.booking_code,
+    status: r.status,
+    amount: Number(r.amount),
+    createdAt: r.created_at,
+    decidedAt: r.decided_at,
+    decisionNote: r.decision_note,
+    checkIn: r.booking.check_in,
+    checkOut: r.booking.check_out,
+    bookingStatus: r.booking.status,
+    roomName: r.booking.room_type?.name ?? '',
+    roomNameTh: r.booking.room_type?.name_th ?? null,
+  }))
 }

@@ -80,14 +80,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         if (bookingId) {
           const { data: booking } = await admin
             .from('bookings')
-            .select('id, status, payment_status, booker_email, booker_full_name, booking_code, total, currency')
+            .select('id, status, payment_status, payment_due_at, booker_email, booker_full_name, booking_code, total, currency')
             .eq('id', bookingId)
             .single()
+          // Phase 56 — past its deadline but not yet flipped by the
+          // per-minute job: capacity checks already ignore it, so the room
+          // may be re-sold. Treat it like an expired booking.
+          const overdueUnpaid =
+            booking?.status === 'confirmed' &&
+            booking.payment_status === 'unpaid' &&
+            booking.payment_due_at !== null &&
+            new Date(booking.payment_due_at).getTime() <= Date.now()
           if (
             booking &&
             (booking.status === 'cancelled' ||
               booking.status === 'expired' ||
-              booking.status === 'payment_expired')
+              booking.status === 'payment_expired' ||
+              overdueUnpaid)
           ) {
             // Capacity check (the booking was terminal because the
             // customer cancelled or the deadline lapsed; we want to
@@ -116,7 +125,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               // booking either way.
               await admin
                 .from('bookings')
-                .update({ status: 'confirmed' })
+                .update({ status: 'confirmed', lapsed_reason: null, payment_due_at: null })
                 .eq('id', bookingId)
               await admin.from('booking_events').insert({
                 booking_id: bookingId,

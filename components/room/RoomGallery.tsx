@@ -1,4 +1,7 @@
+'use client'
+
 import type { RoomType } from '@/lib/data/types'
+import { useT } from '@/lib/i18n/useT'
 import { RoomImage } from './RoomImage'
 
 interface RoomGalleryProps {
@@ -6,6 +9,7 @@ interface RoomGalleryProps {
 }
 
 export function RoomGallery({ room }: RoomGalleryProps) {
+  const t = useT()
   const images = [...new Set([room.hero_image_key, ...room.gallery_keys])]
 
   return (
@@ -22,7 +26,7 @@ export function RoomGallery({ room }: RoomGalleryProps) {
           fallbackIcon="hotel"
         />
         <span className="absolute top-4 left-4 px-4 py-2 bg-secondary text-on-secondary rounded-full text-label-md font-semibold uppercase tracking-wider">
-          คอลเลกชั่นพิเศษ
+          {t('customer.gallery.collection')}
         </span>
       </div>
 
@@ -69,7 +73,7 @@ export function RoomGallery({ room }: RoomGalleryProps) {
       ) : (
         <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary to-primary-container min-h-[200px] flex items-center justify-center">
           <span className="text-secondary text-label-md font-semibold uppercase tracking-wider">
-            + ดูเพิ่มเติม
+            {t('customer.gallery.seeMore')}
           </span>
         </div>
       )}

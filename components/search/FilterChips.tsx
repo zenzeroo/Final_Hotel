@@ -2,28 +2,30 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 export function FilterChips() {
   const router = useRouter()
   const params = useSearchParams()
+  const t = useT()
 
   const activeChips: Array<{ key: string; label: string }> = []
 
   const type = params.get('type')
-  if (type) activeChips.push({ key: 'type', label: `ประเภท: ${type}` })
+  if (type) activeChips.push({ key: 'type', label: t('customer.filters.type', { value: type }) })
 
   const floor = params.get('floor')
-  if (floor) activeChips.push({ key: 'floor', label: `ชั้น ${floor}` })
+  if (floor) activeChips.push({ key: 'floor', label: t('customer.filters.floor', { value: floor }) })
 
   const priceRange = params.get('priceRange')
   if (priceRange) {
     const label =
       priceRange === 'under3000'
-        ? 'ต่ำกว่า ฿3,000'
+        ? t('roomsList.under3000')
         : priceRange === '3000-6000'
-        ? '฿3,000 - ฿6,000'
-        : 'มากกว่า ฿6,000'
-    activeChips.push({ key: 'priceRange', label: `ราคา: ${label}` })
+        ? t('roomsList.price3000to6000')
+        : t('roomsList.over6000')
+    activeChips.push({ key: 'priceRange', label: t('customer.filters.price', { value: label }) })
   }
 
   if (activeChips.length === 0) return null

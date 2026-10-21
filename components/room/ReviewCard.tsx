@@ -1,4 +1,7 @@
+'use client'
+
 import type { PublicReview } from '@/lib/data/types'
+import { useT } from '@/lib/i18n/useT'
 import { RatingStars } from './RatingStars'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatDate } from '@/lib/dates'
@@ -8,6 +11,7 @@ interface ReviewCardProps {
 }
 
 export function ReviewCard({ review }: ReviewCardProps) {
+  const t = useT()
   return (
     <article className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant border-l-4 border-l-secondary p-5">
       <header className="flex items-start gap-3 mb-3">
@@ -41,7 +45,7 @@ export function ReviewCard({ review }: ReviewCardProps) {
       ) : (
         <p className="text-body-md text-on-surface-variant italic inline-flex items-center gap-1">
           <MaterialIcon name="edit_note" size={18} />
-          ผู้เข้าพักให้คะแนนโดยไม่เขียนรีวิว
+          {t('customer.review.ratedNoText')}
         </p>
       )}
     </article>

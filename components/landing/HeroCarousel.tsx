@@ -29,6 +29,7 @@ import Image from 'next/image'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { SearchBar } from '@/components/search/SearchBar'
 import { r2Url } from '@/lib/r2/publicUrl'
+import { useT } from '@/lib/i18n/useT'
 import type { ResolvedHeroSlide } from '@/lib/data/types'
 
 interface HeroCarouselProps {
@@ -48,6 +49,7 @@ export function HeroCarousel({
   defaultHeading,
   defaultSubheading,
 }: HeroCarouselProps) {
+  const t = useT()
   const [activeIdxRaw, setActiveIdx] = useState(0)
   const total = slides.length
 
@@ -83,7 +85,7 @@ export function HeroCarousel({
     <section
       role="region"
       aria-roledescription="carousel"
-      aria-label="ภาพหน้าแรก"
+      aria-label={t('customer.carousel.region')}
       tabIndex={0}
       className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden focus:outline-none focus-visible:outline-2 focus-visible:outline-secondary"
     >
@@ -97,7 +99,7 @@ export function HeroCarousel({
               key={slide.id}
               role="group"
               aria-roledescription="slide"
-              aria-label={`สไลด์ที่ ${idx + 1} จาก ${total}: ${heading}`}
+              aria-label={t('customer.carousel.slide', { n: idx + 1, total, heading })}
               aria-hidden={!isActive}
               className={`absolute inset-0 motion-safe:transition-opacity motion-safe:duration-500 motion-safe:ease-in-out ${
                 isActive ? 'opacity-100' : 'opacity-0'
@@ -143,7 +145,7 @@ export function HeroCarousel({
           <button
             type="button"
             onClick={goPrev}
-            aria-label="สไลด์ก่อนหน้า"
+            aria-label={t('customer.carousel.prev')}
             className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20 inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/30 hover:bg-primary/50 backdrop-blur-sm text-on-primary transition-colors"
           >
             <MaterialIcon name="chevron_left" size={28} />
@@ -151,7 +153,7 @@ export function HeroCarousel({
           <button
             type="button"
             onClick={goNext}
-            aria-label="สไลด์ถัดไป"
+            aria-label={t('customer.carousel.next')}
             className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20 inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/30 hover:bg-primary/50 backdrop-blur-sm text-on-primary transition-colors"
           >
             <MaterialIcon name="chevron_right" size={28} />
@@ -177,7 +179,7 @@ export function HeroCarousel({
                 key={slide.id}
                 type="button"
                 onClick={() => goTo(idx)}
-                aria-label={`ไปยังสไลด์ที่ ${idx + 1}`}
+                aria-label={t('customer.carousel.goTo', { n: idx + 1 })}
                 aria-current={isActive ? 'true' : undefined}
                 className={`h-2 rounded-full motion-safe:transition-all motion-safe:duration-300 ${
                   isActive

@@ -7,9 +7,9 @@
  *   3. `hotel_settings.locale_default` — hotel-level admin default
  *   4. `DEFAULT_LOCALE` ('th')       — final fallback
  */
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { getSession } from '@/lib/supabase/getSession'
-import { getOwnProfile } from '@/lib/data/account'
 import { getHotelSettings } from '@/lib/data/manager'
 import {
   DEFAULT_LOCALE,
@@ -20,21 +20,19 @@ import {
 
 /**
  * Server-only. Returns the locale that should drive rendering for the
- * current request. Safe to call multiple times per render — it's a
- * pure read against cookies + cached Supabase clients.
+ * current request. Cached per render — layouts, pages and TopNavBar all
+ * call it, and without the cookie each call used to re-run the session
+ * + profile + hotel_settings lookups.
  */
-export async function getLocale(): Promise<Locale> {
+export const getLocale = cache(async (): Promise<Locale> => {
   // 1. Explicit cookie choice (set by setLocaleAction).
   const cookieStore = await cookies()
   const fromCookie = cookieStore.get(LOCALE_COOKIE)?.value
   if (fromCookie) return toLocale(fromCookie)
 
-  // 2. Authed user's saved preference.
+  // 2. Authed user's saved preference (read with the session's profile row).
   const session = await getSession()
-  if (session) {
-    const profile = await getOwnProfile()
-    if (profile?.locale) return toLocale(profile.locale)
-  }
+  if (session?.locale) return toLocale(session.locale)
 
   // 3. Hotel-level default configured in hotel_settings.
   try {
@@ -46,4 +44,4 @@ export async function getLocale(): Promise<Locale> {
 
   // 4. Final fallback.
   return DEFAULT_LOCALE
-}
+})

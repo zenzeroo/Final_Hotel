@@ -10,6 +10,9 @@ import {
   type CreateBookingResult,
 } from '@/app/actions/booking'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
+import { useLocale } from '@/lib/i18n/useT'
+import { localizedName } from '@/lib/format/roomType'
 import { calculatePrice, formatTHB, type PricingSettings } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
 import type { QuoteResult } from '@/lib/pricing/seasons'
@@ -61,6 +64,7 @@ function SubmitButton({
   label: string
 }) {
   const { pending } = useFormStatus()
+  const t = useT()
   return (
     <button
       type="submit"
@@ -70,7 +74,7 @@ function SubmitButton({
       {pending ? (
         <>
           <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-          กำลังดำเนินการ…
+          {t('customer.common.processing')}
         </>
       ) : (
         <>
@@ -110,6 +114,8 @@ export function BookingForm(props: BookingFormProps) {
   const initialPhone = existing?.booker_phone ?? props.profile?.phone ?? ''
 
   const router = useRouter()
+  const t = useT()
+  const locale = useLocale()
   const [state, setState] = useState<CreateBookingResult | null>(null)
   const [isPending, startTransition] = useTransition()
   const [fullName, setFullName] = useState(initialFullName)
@@ -200,15 +206,15 @@ export function BookingForm(props: BookingFormProps) {
 
         {minNightsBlocked && (
           <div className="px-4 py-3 bg-warning/10 border border-warning/30 rounded-lg text-body-md text-warning">
-            เรทฤดูกาลที่ใช้อยู่กำหนดจำนวนคืนขั้นต่ำมากกว่าที่เลือก กรุณาเปลี่ยนวันที่หรือเลือกห้องอื่น
+            {t('customer.bookingForm.minNightsBlock')}
           </div>
         )}
 
         {/* Booker info */}
         <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <h2 className="font-display text-xl text-primary mb-4">ข้อมูลผู้จอง</h2>
+          <h2 className="font-display text-xl text-primary mb-4">{t('customer.bookingForm.bookerHeading')}</h2>
           <div className="flex flex-col gap-4">
-            <Field label="ชื่อ-นามสกุล" required>
+            <Field label={t('auth.fullName')} required>
               <input
                 type="text"
                 value={fullName}
@@ -217,7 +223,7 @@ export function BookingForm(props: BookingFormProps) {
                 className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
               />
             </Field>
-            <Field label="อีเมล" required>
+            <Field label={t('auth.email')} required>
               {/* Phase 51 — email is locked to the authenticated account.
                   readOnly + aria-readonly keeps the field focusable + selectable
                   (a `disabled` input would be skipped by some screen readers and
@@ -234,15 +240,15 @@ export function BookingForm(props: BookingFormProps) {
                 />
                 <MaterialIcon
                   name="lock"
-                  aria-label="อีเมลถูกล็อก"
+                  aria-label={t('customer.bookingForm.emailLocked')}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none"
                 />
               </div>
               <p className="font-caption text-caption text-on-surface-variant">
-                อีเมลผูกกับบัญชีของคุณ ใช้เพื่อรับการยืนยันการจอง
+                {t('bookingForm.emailLockedHint')}
               </p>
             </Field>
-            <Field label="เบอร์โทรศัพท์" required>
+            <Field label={t('auth.phone')} required>
               <input
                 type="tel"
                 inputMode="numeric"
@@ -256,15 +262,15 @@ export function BookingForm(props: BookingFormProps) {
                 className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
               />
               <p className="font-caption text-caption text-on-surface-variant">
-                ต้องเป็นตัวเลข 10 หลักเท่านั้น (ไม่มีขีด ไม่มีช่องว่าง)
+                {t('customer.bookingForm.phoneHint')}
               </p>
             </Field>
-            <Field label="คำขอพิเศษ (ไม่บังคับ)">
+            <Field label={t('customer.bookingForm.special')}>
               <textarea
                 value={specialRequest}
                 onChange={(e) => setSpecialRequest(e.target.value)}
                 rows={3}
-                placeholder="เช่น ขอเตียงเสริม, แพ้อาหาร, เช็คอินดึก..."
+                placeholder={t('customer.bookingForm.specialPlaceholder')}
                 className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors resize-none"
               />
             </Field>
@@ -273,7 +279,7 @@ export function BookingForm(props: BookingFormProps) {
 
         {/* Promo code */}
         <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <h2 className="font-display text-xl text-primary mb-4">รหัสโปรโมชั่น (ไม่บังคับ)</h2>
+          <h2 className="font-display text-xl text-primary mb-4">{t('customer.bookingForm.promoHeading')}</h2>
           <div className="flex gap-2">
             <input
               type="text"
@@ -286,7 +292,7 @@ export function BookingForm(props: BookingFormProps) {
               type="button"
               className="px-6 py-3 border border-primary text-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
             >
-              ใช้โค้ด
+              {t('customer.bookingForm.applyCode')}
             </button>
           </div>
         </section>
@@ -307,13 +313,13 @@ export function BookingForm(props: BookingFormProps) {
           </div>
 
           <div className="p-6">
-            <h3 className="font-display text-xl text-primary">{room.name_th}</h3>
+            <h3 className="font-display text-xl text-primary">{localizedName(room, locale)}</h3>
 
             <div className="mt-4 flex flex-col gap-2 text-body-md">
-              <SummaryRow icon="event" label="เช็คอิน" value={formatDate(checkIn)} />
-              <SummaryRow icon="event" label="เช็คเอาท์" value={formatDate(checkOut)} />
-              <SummaryRow icon="schedule" label="จำนวนคืน" value={`${nights} คืน`} />
-              <SummaryRow icon="group" label="ผู้เข้าพัก" value={`${guests} ท่าน`} />
+              <SummaryRow icon="event" label={t('customer.common.checkIn')} value={formatDate(checkIn)} />
+              <SummaryRow icon="event" label={t('customer.common.checkOut')} value={formatDate(checkOut)} />
+              <SummaryRow icon="schedule" label={t('customer.common.nightsLabel')} value={t('customer.common.nights', { count: nights })} />
+              <SummaryRow icon="group" label={t('customer.common.guestsLabel')} value={t('customer.common.guests', { count: guests })} />
             </div>
 
             <div className="my-4 border-t border-outline-variant" />
@@ -321,34 +327,34 @@ export function BookingForm(props: BookingFormProps) {
             <div className="flex flex-col gap-2 text-body-md">
               {quote.appliedRates.length > 0 ? (
                 <>
-                  <PriceRow label={`${formatTHB(room.base_price)} × ${nights} คืน (ราคาฐาน)`} value={formatTHB(nights * room.base_price)} />
+                  <PriceRow label={t('customer.bookingForm.baseLine', { price: formatTHB(room.base_price), nights })} value={formatTHB(nights * room.base_price)} />
                   {quote.appliedRates.map((applied) => (
                     <div key={applied.id} className="ml-4 flex flex-col gap-1 text-caption text-on-surface-variant">
-                      <span className="italic">• {applied.label} · {applied.nights} คืน</span>
+                      <span className="italic">{t('customer.common.seasonalLine', { label: applied.label, nights: applied.nights })}</span>
                       {applied.minNightsOverride != null && (
-                        <span className="text-warning">ขั้นต่ำ {applied.minNightsOverride} คืน</span>
+                        <span className="text-warning">{t('customer.common.minNights', { count: applied.minNightsOverride })}</span>
                       )}
                     </div>
                   ))}
-                  <PriceRow label="รวมค่าห้อง (รวมเรทฤดูกาล)" value={formatTHB(price.baseSubtotal)} emphasis />
+                  <PriceRow label={t('customer.bookingForm.roomSubtotal')} value={formatTHB(price.baseSubtotal)} emphasis />
                 </>
               ) : (
-                <PriceRow label={`${formatTHB(room.base_price)} × ${nights} คืน`} value={formatTHB(price.baseSubtotal)} />
+                <PriceRow label={t('customer.common.priceTimesNights', { price: formatTHB(room.base_price), nights })} value={formatTHB(price.baseSubtotal)} />
               )}
-              <PriceRow label={`ภาษี ${Math.round(settings.taxRate * 100)}%`} value={formatTHB(price.taxTotal)} />
-              <PriceRow label={`ค่าบริการรีสอร์ท (${formatTHB(settings.resortFeePerNight)}/คืน)`} value={formatTHB(price.feeTotal)} />
+              <PriceRow label={t('customer.common.taxPct', { pct: Math.round(settings.taxRate * 100) })} value={formatTHB(price.taxTotal)} />
+              <PriceRow label={t('customer.common.resortFeePerNight', { fee: formatTHB(settings.resortFeePerNight) })} value={formatTHB(price.feeTotal)} />
             </div>
 
             <div className="my-4 border-t border-outline-variant" />
-            <PriceRow label="รวมทั้งสิ้น" value={formatTHB(price.total)} emphasis />
+            <PriceRow label={t('customer.common.total')} value={formatTHB(price.total)} emphasis />
 
             <SubmitButton
               disabled={isPending || nights === 0 || minNightsBlocked}
-              label={isCompletingExisting ? 'ยืนยันการจ่ายเงิน' : 'ยืนยันการจ่ายเงิน'}
+              label={t('customer.bookingForm.confirmPay')}
             />
 
             <p className="mt-4 text-caption text-on-surface-variant text-center">
-              ระบบจะแสดงหน้ายืนยันเมื่อสร้างการจองสำเร็จ
+              {t('customer.bookingForm.afterNote')}
             </p>
           </div>
         </div>

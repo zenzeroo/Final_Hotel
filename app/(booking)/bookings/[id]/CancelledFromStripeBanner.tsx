@@ -40,11 +40,11 @@ export function CancelledFromStripeBanner({ bookingId }: CancelledFromStripeBann
     startTransition(async () => {
       const result = await createCheckoutSessionAction({ bookingId })
       if (!result.ok) {
-        setError(result.error || 'ไม่สามารถเปิดหน้าชำระเงินได้')
+        setError(result.error || t('customer.bookingDetail.openPayFailed'))
         return
       }
       if (!result.data?.url) {
-        setError('ไม่สามารถเปิดหน้าชำระเงินได้')
+        setError(t('customer.bookingDetail.openPayFailed'))
         return
       }
       // See ConfirmationActions.handlePay — the Stripe redirect is the
@@ -59,7 +59,7 @@ export function CancelledFromStripeBanner({ bookingId }: CancelledFromStripeBann
     startTransition(async () => {
       const result = await cancelUnpaidBookingAction({ bookingId })
       if (!result.ok) {
-        setError(result.error || 'ไม่สามารถยกเลิกรายการได้')
+        setError(result.error || t('customer.bookingDetail.cancelItemFailed'))
         return
       }
       // Phase 52 follow-up — if the server reconciled the booking as

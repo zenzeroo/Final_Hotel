@@ -3,6 +3,7 @@
 import { getServerT } from '@/lib/i18n/server'
 import { getT } from '@/lib/i18n/t'
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -337,16 +338,6 @@ export async function createTempBookingAction(
   } = await supabase.auth.getUser()
   if (!user) return { error: t('actions.common.notLoggedIn') }
 
-  // Phase 36 — block suspended customers (mirrors createBooking guard).
-  const { data: customerProfile } = await supabase
-    .from('profiles')
-    .select('is_suspended, full_name, phone')
-    .eq('id', user.id)
-    .maybeSingle()
-  if (customerProfile?.is_suspended) {
-    return { error: t('actions.common.suspended') }
-  }
-
   // Validate dates against today's minimum (Bangkok TZ). Phase 49
   // allows same-day check-in — only past dates are rejected.
   const today = getTodayBangkok()
@@ -357,12 +348,17 @@ export async function createTempBookingAction(
     return { error: t('actions.common.checkoutAfterCheckin') }
   }
 
-  // Look up room for capacity + max_guests validation + price computation.
-  const { data: room, error: roomErr } = await supabase
-    .from('room_types')
-    .select('base_price, max_guests, is_active')
-    .eq('id', data.roomTypeId)
-    .maybeSingle()
+  // Profile (suspension guard + booker pre-fill) and room (capacity +
+  // price) are independent — fetch them in parallel.
+  const [{ data: customerProfile }, { data: room, error: roomErr }] = await Promise.all([
+    supabase.from('profiles').select('is_suspended, full_name, phone').eq('id', user.id).maybeSingle(),
+    supabase.from('room_types').select('base_price, max_guests, is_active').eq('id', data.roomTypeId).maybeSingle(),
+  ])
+
+  // Phase 36 — block suspended customers (mirrors createBooking guard).
+  if (customerProfile?.is_suspended) {
+    return { error: t('actions.common.suspended') }
+  }
   if (roomErr || !room) return { error: t('actions.common.roomNotFound') }
   if (!room.is_active) return { error: t('actions.common.roomInactive') }
   if (data.guests > room.max_guests) {
@@ -501,23 +497,21 @@ export async function completeTempBookingAction(
     }
   }
 
-  // Phase 36 — block suspended customers.
-  const { data: customerProfile } = await supabase
-    .from('profiles')
-    .select('is_suspended')
-    .eq('id', user.id)
-    .maybeSingle()
+  // Phase 36 suspension guard + the lazy-expiry sweep only need the user
+  // id — run them together. The sweep must finish before the read below
+  // so a stale row is flipped to 'expired' instead of being completed.
+  const [{ data: customerProfile }] = await Promise.all([
+    supabase.from('profiles').select('is_suspended').eq('id', user.id).maybeSingle(),
+    supabase.rpc('expire_specific_temp_booking', {
+      p_booking_id: data.bookingId,
+      p_user_id: user.id,
+    }),
+  ])
   if (customerProfile?.is_suspended) {
     return { error: t('actions.common.suspended') }
   }
 
   // Load the existing temp booking. Confirms ownership + active state.
-  // The lazy-expiry helper ensures a stale row is flipped to 'expired'
-  // before this read (so we error out instead of completing an expired one).
-  await supabase.rpc('expire_specific_temp_booking', {
-    p_booking_id: data.bookingId,
-    p_user_id: user.id,
-  })
   const { data: existing, error: existingErr } = await supabase
     .from('bookings')
     .select('id, user_id, status, room_type_id, check_in, check_out, guests, currency')
@@ -543,30 +537,23 @@ export async function completeTempBookingAction(
     return { error: t('actions.booking.statusNotEditable', { status: existing.status }) }
   }
 
-  // Compute price with optional promotion + tax/fee.
-  const { data: room } = await supabase
-    .from('room_types')
-    .select('base_price, max_guests')
-    .eq('id', existing.room_type_id)
-    .maybeSingle()
+  // Price inputs — all independent of each other, so fetch in parallel.
+  const [{ data: room }, promotion, policy, seasonalRates, pricingSettings] = await Promise.all([
+    supabase.from('room_types').select('base_price, max_guests').eq('id', existing.room_type_id).maybeSingle(),
+    data.promoCode ? getPromotionByCode(data.promoCode) : Promise.resolve(null),
+    getDefaultCancellationPolicy(),
+    getActiveSeasonalRatesForRange({
+      roomTypeId: existing.room_type_id,
+      checkIn: existing.check_in,
+      checkOut: existing.check_out,
+    }),
+    getPricingConstants(),
+  ])
   if (!room) return { error: t('actions.common.roomNotFound') }
   if (existing.guests > room.max_guests) {
     return { error: t('actions.common.maxGuests', { max: room.max_guests }) }
   }
-
-  let promotion = null
-  if (data.promoCode) {
-    promotion = await getPromotionByCode(data.promoCode)
-    if (!promotion) return { error: t('actions.common.promoInvalid') }
-  }
-
-  const policy = await getDefaultCancellationPolicy()
-
-  const seasonalRates = await getActiveSeasonalRatesForRange({
-    roomTypeId: existing.room_type_id,
-    checkIn: existing.check_in,
-    checkOut: existing.check_out,
-  })
+  if (data.promoCode && !promotion) return { error: t('actions.common.promoInvalid') }
 
   let quote
   try {
@@ -584,7 +571,6 @@ export async function completeTempBookingAction(
     return { error: t('actions.common.minNights') }
   }
 
-  const pricingSettings = await getPricingConstants()
   const price = calculatePrice(
     {
       basePrice: room.base_price,
@@ -637,53 +623,57 @@ export async function completeTempBookingAction(
   revalidatePath('/bookings')
   revalidatePath(`/bookings/${data.bookingId}`)
 
-  // Fire booking_confirmation email — same pattern as createBooking.
-  try {
-    const { data: booking } = await supabase
-      .from('bookings')
-      .select(
-        'id, booking_code, check_in, check_out, nights, total, currency, booker_email, booker_full_name, room_type:room_types(name)',
-      )
-      .eq('id', data.bookingId)
-      .single()
-    if (booking && sessionEmail) {
-      const emailLocale = await getRecipientLocale({ userId: user.id })
-      const roomTypeName =
-        (booking.room_type as { name?: string } | null)?.name ??
-        getT(emailLocale)('email.common.roomFallback')
-      const { BookingConfirmationEmail, bookingConfirmationSubject } = await import(
-        '@/lib/email/templates/booking-confirmation'
-      )
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-      await sendEmail({
-        to: sessionEmail,
-        template: 'booking_confirmation',
-        subject: bookingConfirmationSubject({
-          bookingCode: booking.booking_code,
-          checkIn: booking.check_in,
-          locale: emailLocale,
-        }),
-        react: BookingConfirmationEmail({
-          locale: emailLocale,
-          bookingCode: booking.booking_code,
-          guestName: booking.booker_full_name ?? '',
-          roomTypeName,
-          checkIn: booking.check_in,
-          checkOut: booking.check_out,
-          nights: booking.nights ?? 0,
-          total: Number(booking.total),
-          currency: booking.currency,
-          viewUrl: `${appUrl}/bookings/${booking.id}`,
-        }),
-        eventKey: `booking_confirmation:booking:${booking.id}`,
-        bookingId: booking.id,
-        metadata: { channel: 'web', nights: booking.nights },
-      })
+  // Fire booking_confirmation email after the response is sent, so the
+  // guest isn't kept waiting on Resend + the email_log writes before
+  // landing on /bookings/[id]. `event_key` keeps it idempotent.
+  after(async () => {
+    try {
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select(
+          'id, booking_code, check_in, check_out, nights, total, currency, booker_email, booker_full_name, room_type:room_types(name)',
+        )
+        .eq('id', data.bookingId)
+        .single()
+      if (booking && sessionEmail) {
+        const emailLocale = await getRecipientLocale({ userId: user.id })
+        const roomTypeName =
+          (booking.room_type as { name?: string } | null)?.name ??
+          getT(emailLocale)('email.common.roomFallback')
+        const { BookingConfirmationEmail, bookingConfirmationSubject } = await import(
+          '@/lib/email/templates/booking-confirmation'
+        )
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+        await sendEmail({
+          to: sessionEmail,
+          template: 'booking_confirmation',
+          subject: bookingConfirmationSubject({
+            bookingCode: booking.booking_code,
+            checkIn: booking.check_in,
+            locale: emailLocale,
+          }),
+          react: BookingConfirmationEmail({
+            locale: emailLocale,
+            bookingCode: booking.booking_code,
+            guestName: booking.booker_full_name ?? '',
+            roomTypeName,
+            checkIn: booking.check_in,
+            checkOut: booking.check_out,
+            nights: booking.nights ?? 0,
+            total: Number(booking.total),
+            currency: booking.currency,
+            viewUrl: `${appUrl}/bookings/${booking.id}`,
+          }),
+          eventKey: `booking_confirmation:booking:${booking.id}`,
+          bookingId: booking.id,
+          metadata: { channel: 'web', nights: booking.nights },
+        })
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[booking_confirmation] email dispatch failed:', e)
     }
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error('[booking_confirmation] email dispatch failed:', e)
-  }
+  })
 
   return { ok: true, bookingId: data.bookingId }
 }
@@ -962,6 +952,63 @@ export async function cancelBooking(bookingId: string): Promise<CancelBookingRes
     penaltyAmount,
     policyName,
     refundRequestId,
+  }
+}
+
+export interface RequestRefundResult {
+  success?: boolean
+  error?: string
+  refundAmount?: number
+  penaltyAmount?: number
+  policyName?: string
+}
+
+/**
+ * Phase 55 — guest asks for a refund on a confirmed + paid booking.
+ *
+ * Unlike `cancelBooking`, this does NOT cancel the booking: it records a
+ * pending `refund_requests` row (amount snapshot from the cancellation
+ * policy) and the stay stays valid until a manager decides. Approve →
+ * `approve_refund` cancels the booking; reject → the guest keeps the stay.
+ * One request per booking.
+ */
+export async function requestRefundAction(bookingId: string): Promise<RequestRefundResult> {
+  const { locale, t } = await getServerT()
+  if (!isUuid(bookingId)) return { error: t('actions.common.invalidBookingId') }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: t('actions.common.notLoggedIn') }
+
+  const { data, error } = await supabase.rpc('request_refund', { p_booking_id: bookingId })
+
+  if (error) {
+    const code = (error as { code?: string }).code
+    if (code === 'P0002') return { error: t('actions.common.bookingNotFound') }
+    if (code === '42501') return { error: t('actions.common.notYourBooking') }
+    if (error.message.includes('REFUND_ALREADY_REQUESTED')) {
+      return { error: t('actions.booking.refundAlreadyRequested') }
+    }
+    if (error.message.includes('REFUND_ZERO')) return { error: t('actions.booking.refundZero') }
+    if (error.message.includes('REFUND_NOT_ELIGIBLE')) {
+      return { error: t('actions.booking.refundNotEligible') }
+    }
+    return { error: t('actions.booking.refundRequestFailed', { detail: translateSupabaseError(error.message, locale) }) }
+  }
+
+  const row = Array.isArray(data) ? data[0] : data
+
+  revalidatePath('/bookings')
+  revalidatePath(`/bookings/${bookingId}`)
+  revalidatePath('/manager/bookings')
+
+  return {
+    success: true,
+    refundAmount: row ? Number(row.refund_amount) : 0,
+    penaltyAmount: row ? Number(row.penalty_amount) : 0,
+    policyName: row?.policy_name ?? '',
   }
 }
 

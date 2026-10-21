@@ -1,11 +1,16 @@
+'use client'
+
 import { MaterialIcon } from '../ui/MaterialIcon'
 import type { Amenity } from '@/lib/data/types'
+import { useLocale } from '@/lib/i18n/useT'
+import { localizedName } from '@/lib/format/roomType'
 
 interface AmenityCardProps {
   amenity: Amenity
 }
 
 export function AmenityCard({ amenity }: AmenityCardProps) {
+  const locale = useLocale()
   return (
     <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl">
       <span
@@ -14,7 +19,7 @@ export function AmenityCard({ amenity }: AmenityCardProps) {
       >
         <MaterialIcon name={amenity.icon} size={24} />
       </span>
-      <span className="text-body-md text-on-surface font-medium">{amenity.name_th}</span>
+      <span className="text-body-md text-on-surface font-medium">{localizedName(amenity, locale)}</span>
     </div>
   )
 }

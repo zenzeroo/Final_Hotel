@@ -32,6 +32,10 @@
   --color-error-container: #ffdad6;
   --color-on-error: #ffffff;
   --color-on-error-container: #410002;
+  /* Amber — payment deadlines, pending states (was used but undefined). */
+  --color-warning: #b26a00;
+  --color-warning-container: #ffddb3;
+  --color-on-warning-container: #2a1800;
 
   /* Surface Scale */
   --color-background: #faf9f6;           /* Soft Cream */

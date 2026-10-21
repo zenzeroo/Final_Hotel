@@ -23,6 +23,7 @@
 
 import { useState } from 'react'
 import { MaterialIcon } from './MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 // Type alias (not empty interface) — passes the
 // @typescript-eslint/no-empty-object-type rule. Accepts every native <input>
@@ -31,6 +32,7 @@ export type PasswordInputProps = React.InputHTMLAttributes<HTMLInputElement>
 
 export function PasswordInput({ className, ...rest }: PasswordInputProps) {
   const [visible, setVisible] = useState(false)
+  const t = useT()
 
   // Base class string mirrors the other inputs in LoginForm/RegisterForm
   // (booking forms, admin forms all use the same surface/border/rounded/focus
@@ -53,7 +55,7 @@ export function PasswordInput({ className, ...rest }: PasswordInputProps) {
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+        aria-label={visible ? t('customer.password.hide') : t('customer.password.show')}
         aria-pressed={visible}
         className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-8 h-8 rounded-md text-on-surface-variant hover:text-primary hover:bg-primary-fixed transition-colors focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-1"
       >

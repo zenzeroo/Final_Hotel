@@ -112,6 +112,28 @@ const { data: flexPolicy } = await svc
   .eq('name', 'Flexible')
   .single()
 
+// Approvals run as a real signed-in manager: since 20260919 the refund
+// decision trigger stamps decided_by from auth.uid() and refuses
+// service_role (no uid). Temp user is deleted at the end.
+const MGR_EMAIL = `p19-manager-${Date.now()}@zenzero.test`
+const MGR_PASSWORD = 'P19-Manager-Pass1!'
+const { data: mgrCreated, error: mgrErr } = await svc.auth.admin.createUser({
+  email: MGR_EMAIL, password: MGR_PASSWORD, email_confirm: true,
+})
+if (mgrErr || !mgrCreated.user) {
+  console.error('could not create temp manager:', mgrErr?.message)
+  process.exit(1)
+}
+const mgrId = mgrCreated.user.id
+await svc.from('profiles').update({ role: 'manager' }).eq('id', mgrId)
+const mgr = createServiceClient(BASE, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+  auth: { autoRefreshToken: false, persistSession: false },
+})
+{
+  const { error } = await mgr.auth.signInWithPassword({ email: MGR_EMAIL, password: MGR_PASSWORD })
+  if (error) { console.error('manager sign-in failed:', error.message); process.exit(1) }
+}
+
 // Helper: create a booking via the atomic create_booking RPC.
 async function createBooking(checkIn: string, checkOut: string): Promise<string> {
   const code = `${PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -231,7 +253,7 @@ await step('Case 1: single refund = full payment → refunded', async () => {
   const refundId = await createRefundRequest(bookingId, 5000)
 
   // approve_refund is SECURITY DEFINER — call via RPC (no auth context here).
-  const { error } = await svc.rpc('approve_refund', { p_refund_id: refundId })
+  const { error } = await mgr.rpc('approve_refund', { p_refund_id: refundId })
   assert(!error, `approve_refund failed: ${error?.message}`)
 
   const status = await getPaymentStatus(bookingId)
@@ -245,7 +267,7 @@ await step('Case 2: single partial refund → partial_refund', async () => {
   await createPayment(bookingId, 5000)
   const refundId = await createRefundRequest(bookingId, 2500)
 
-  const { error } = await svc.rpc('approve_refund', { p_refund_id: refundId })
+  const { error } = await mgr.rpc('approve_refund', { p_refund_id: refundId })
   assert(!error, `approve_refund failed: ${error?.message}`)
 
   const status = await getPaymentStatus(bookingId)
@@ -258,15 +280,15 @@ await step('Case 3: two refunds summing to full → refunded', async () => {
   const bookingId = await createBooking(ci, co)
   await createPayment(bookingId, 5000)
   const r1 = await createRefundRequest(bookingId, 3000)
-  const r2 = await createRefundRequest(bookingId, 2000)
 
   // Approve first → partial_refund
-  await svc.rpc('approve_refund', { p_refund_id: r1 })
+  await mgr.rpc('approve_refund', { p_refund_id: r1 })
   const statusAfterFirst = await getPaymentStatus(bookingId)
   assert(statusAfterFirst === 'partial_refund', `after r1 expected 'partial_refund', got '${statusAfterFirst}'`)
 
   // Approve second → refunded (3000 + 2000 = 5000)
-  await svc.rpc('approve_refund', { p_refund_id: r2 })
+  const r2 = await createRefundRequest(bookingId, 2000)
+  await mgr.rpc('approve_refund', { p_refund_id: r2 })
   const statusAfterSecond = await getPaymentStatus(bookingId)
   assert(statusAfterSecond === 'refunded', `after r2 expected 'refunded', got '${statusAfterSecond}'`)
 })
@@ -277,13 +299,13 @@ await step('Case 4: two refunds summing to partial → partial_refund', async ()
   const bookingId = await createBooking(ci, co)
   await createPayment(bookingId, 5000)
   const r1 = await createRefundRequest(bookingId, 1500)
-  const r2 = await createRefundRequest(bookingId, 1500)
 
-  await svc.rpc('approve_refund', { p_refund_id: r1 })
+  await mgr.rpc('approve_refund', { p_refund_id: r1 })
   const s1 = await getPaymentStatus(bookingId)
   assert(s1 === 'partial_refund', `after r1 expected 'partial_refund', got '${s1}'`)
 
-  await svc.rpc('approve_refund', { p_refund_id: r2 })
+  const r2 = await createRefundRequest(bookingId, 1500)
+  await mgr.rpc('approve_refund', { p_refund_id: r2 })
   const s2 = await getPaymentStatus(bookingId)
   assert(s2 === 'partial_refund', `after r2 (still 3000 < 5000) expected 'partial_refund', got '${s2}'`)
 })
@@ -295,15 +317,14 @@ await step('Case 5: third refund (2000) tips aggregate to full → refunded', as
   const bookingId = await createBooking(ci, co)
   await createPayment(bookingId, 5000)
   const r1 = await createRefundRequest(bookingId, 1500)
+  await mgr.rpc('approve_refund', { p_refund_id: r1 })
   const r2 = await createRefundRequest(bookingId, 1500)
-  const r3 = await createRefundRequest(bookingId, 2000)
-
-  await svc.rpc('approve_refund', { p_refund_id: r1 })
-  await svc.rpc('approve_refund', { p_refund_id: r2 })
+  await mgr.rpc('approve_refund', { p_refund_id: r2 })
   const s2 = await getPaymentStatus(bookingId)
   assert(s2 === 'partial_refund', `after 2 refunds expected 'partial_refund', got '${s2}'`)
 
-  await svc.rpc('approve_refund', { p_refund_id: r3 })
+  const r3 = await createRefundRequest(bookingId, 2000)
+  await mgr.rpc('approve_refund', { p_refund_id: r3 })
   const s3 = await getPaymentStatus(bookingId)
   assert(s3 === 'refunded', `after 3rd refund (total 5000) expected 'refunded', got '${s3}'`)
 })
@@ -316,11 +337,11 @@ await step('Case 6: re-approving an already-decided refund throws', async () => 
   const refundId = await createRefundRequest(bookingId, 5000)
 
   // First approval succeeds
-  const { error: e1 } = await svc.rpc('approve_refund', { p_refund_id: refundId })
+  const { error: e1 } = await mgr.rpc('approve_refund', { p_refund_id: refundId })
   assert(!e1, `first approve_refund failed: ${e1?.message}`)
 
   // Second approval throws (Phase 10 double-decision guard)
-  const { error: e2, data: d2 } = await svc.rpc('approve_refund', { p_refund_id: refundId })
+  const { error: e2, data: d2 } = await mgr.rpc('approve_refund', { p_refund_id: refundId })
   assert(e2, 'expected error on second approve_refund call')
   assert(
     e2.message.includes('already decided'),
@@ -342,7 +363,7 @@ await step('Case 7: confirm_refund_session webhook aggregates with existing refu
   // of the same payment. The aggregation should sum to 3000 + 5000 = 8000 vs
   // payment 5000 → 'refunded'.
   const preRefund = await createRefundRequest(bookingId, 3000)
-  await svc.rpc('approve_refund', { p_refund_id: preRefund })
+  await mgr.rpc('approve_refund', { p_refund_id: preRefund })
   const sPre = await getPaymentStatus(bookingId)
   assert(sPre === 'partial_refund', `pre-webhook expected 'partial_refund', got '${sPre}'`)
 
@@ -363,6 +384,7 @@ await step('Case 7: confirm_refund_session webhook aggregates with existing refu
 
 // ── Cleanup before exit ────────────────────────────────────────────────
 await cleanup()
+await svc.auth.admin.deleteUser(mgrId)
 
 console.log(`\n${passed} passed, ${failed} failed`)
 process.exit(failed > 0 ? 1 : 0)

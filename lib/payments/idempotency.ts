@@ -7,8 +7,17 @@
  * the original resource instead of creating a duplicate.
  */
 
-export function buildCheckoutIdempotencyKey(bookingId: string): string {
-  return `booking:${bookingId}:create-session`
+export function buildCheckoutIdempotencyKey(
+  bookingId: string,
+  paymentId: string,
+  replacesSessionId: string | null,
+  minuteBucket: number,
+): string {
+  // Must cover every request param that can differ between attempts —
+  // `expires_at` is derived from `minuteBucket` (see lib/payments/checkout.ts).
+  // `replacesSessionId` keeps a replacement for an expired session from
+  // replaying the cached (expired) original within the same minute.
+  return `booking:${bookingId}:payment:${paymentId}:after:${replacesSessionId ?? 'none'}:session:${minuteBucket}`
 }
 
 /**

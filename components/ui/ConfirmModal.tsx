@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { Modal } from './Modal'
+import { useT } from '@/lib/i18n/useT'
 
 /**
  * Phase 27.A — Replaces browser-native `confirm()`. Centered modal
@@ -55,10 +56,13 @@ export function ConfirmModal({
   onCancel,
   title,
   body,
-  okLabel = 'ยืนยัน',
-  cancelLabel = 'ยกเลิก',
+  okLabel,
+  cancelLabel,
   variant = 'default',
 }: ConfirmModalProps) {
+  const t = useT()
+  okLabel ??= t('customer.common.confirm')
+  cancelLabel ??= t('customer.common.cancel')
   return (
     <Modal
       open={open}

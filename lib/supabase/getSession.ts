@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from './server'
 import { roleHomePath, type UserRole } from './roles'
@@ -15,6 +16,8 @@ export interface SessionUser {
   role: UserRole
   /** R2 object key for the user's avatar image, or null if not set. */
   avatarKey: string | null
+  /** Saved UI language (`profiles.locale`), or null if never set. */
+  locale: string | null
 }
 
 /**
@@ -24,8 +27,12 @@ export interface SessionUser {
  * if `profiles.is_suspended=true`, the user is signed out and redirected
  * to /login?error=suspended. Supabase auth itself doesn't read profiles,
  * so this JS-side check is the canonical guard.
+ *
+ * Wrapped in React `cache` so the root layout, route layouts, the page,
+ * TopNavBar and `getLocale()` share ONE auth + profile lookup per render
+ * instead of each paying the round trips again.
  */
-export async function getSession(): Promise<SessionUser | null> {
+export const getSession = cache(async (): Promise<SessionUser | null> => {
   const supabase = await createClient()
 
   const {
@@ -37,7 +44,7 @@ export async function getSession(): Promise<SessionUser | null> {
   // Fetch profile (incl. suspension flag for the app-layer guard below).
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, phone, role, avatar_key, is_suspended')
+    .select('full_name, phone, role, avatar_key, is_suspended, locale')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -56,6 +63,7 @@ export async function getSession(): Promise<SessionUser | null> {
     phone: profile?.phone ?? null,
     role: (profile?.role as UserRole) ?? 'user',
     avatarKey: profile?.avatar_key ?? null,
+    locale: profile?.locale ?? null,
   }
-}
+})
 

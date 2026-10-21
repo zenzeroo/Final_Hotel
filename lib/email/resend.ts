@@ -25,6 +25,7 @@ export type EmailTemplate =
   | 'payment_receipt'
   | 'cancellation_notice'
   | 'refund_notice'
+  | 'refund_rejected'
   | 'checkout_thank_you'
 
 export interface SendEmailOptions {

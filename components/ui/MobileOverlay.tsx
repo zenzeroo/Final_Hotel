@@ -2,6 +2,7 @@
 
 import { useEffect, useId } from 'react'
 import { MaterialIcon } from './MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 
 /**
  * Full-screen mobile overlay primitive.
@@ -42,6 +43,7 @@ export function MobileOverlay({
   panelClassName = '',
   ariaLabel,
 }: MobileOverlayProps) {
+  const t = useT()
   const reactId = useId()
   const titleId = `mobile-overlay-title-${reactId}`
   const showTitle = !!title
@@ -98,7 +100,7 @@ export function MobileOverlay({
             <button
               type="button"
               onClick={onClose}
-              aria-label="ปิดเมนู"
+              aria-label={t('customer.nav.closeMenu')}
               className="inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-primary-fixed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
             >
               <MaterialIcon name="close" size={24} />

@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useT } from '@/lib/i18n/useT'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface PaginationProps {
@@ -22,6 +25,7 @@ export function Pagination({
   basePath,
   extraParams,
 }: PaginationProps) {
+  const t = useT()
   if (totalPages <= 1) return null
 
   const buildHref = (page: number): string => {
@@ -55,15 +59,15 @@ export function Pagination({
           href={buildHref(currentPage - 1)}
           rel="prev"
           className={linkClass}
-          aria-label="ก่อนหน้า"
+          aria-label={t('customer.pagination.prev')}
         >
           <MaterialIcon name="chevron_left" size={18} />
-          <span className="ml-1">ก่อนหน้า</span>
+          <span className="ml-1">{t('customer.pagination.prev')}</span>
         </Link>
       ) : (
         <span className={disabledClass} aria-disabled="true">
           <MaterialIcon name="chevron_left" size={18} />
-          <span className="ml-1">ก่อนหน้า</span>
+          <span className="ml-1">{t('customer.pagination.prev')}</span>
         </span>
       )}
 
@@ -92,14 +96,14 @@ export function Pagination({
           href={buildHref(currentPage + 1)}
           rel="next"
           className={linkClass}
-          aria-label="ถัดไป"
+          aria-label={t('customer.pagination.next')}
         >
-          <span className="mr-1">ถัดไป</span>
+          <span className="mr-1">{t('customer.pagination.next')}</span>
           <MaterialIcon name="chevron_right" size={18} />
         </Link>
       ) : (
         <span className={disabledClass} aria-disabled="true">
-          <span className="mr-1">ถัดไป</span>
+          <span className="mr-1">{t('customer.pagination.next')}</span>
           <MaterialIcon name="chevron_right" size={18} />
         </span>
       )}

@@ -4,9 +4,13 @@ import { formatTHB } from '@/lib/pricing'
 import { RoomImage } from './RoomImage'
 import { RatingStars } from './RatingStars'
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { getT } from '@/lib/i18n/t'
+import type { Locale } from '@/lib/i18n/config'
+import { localizedName } from '@/lib/format/roomType'
 
 interface RoomCardProps {
   room: RoomType
+  locale: Locale
   variant?: 'default' | 'featured'
   /** Pre-localised room-type label (e.g. 'ดีลักซ์' / 'Deluxe'). Passed from parent to keep this a Server Component. */
   typeLabel: string
@@ -20,7 +24,8 @@ interface RoomCardProps {
   searchParams?: Record<string, string | string[] | undefined>
 }
 
-export function RoomCard({ room, variant = 'default', typeLabel, maxGuestsLabel, searchParams }: RoomCardProps) {
+export function RoomCard({ room, locale, variant = 'default', typeLabel, maxGuestsLabel, searchParams }: RoomCardProps) {
+  const t = getT(locale)
   const isFeatured = variant === 'featured'
   const href = buildRoomHref(room.slug, searchParams)
 
@@ -41,7 +46,7 @@ export function RoomCard({ room, variant = 'default', typeLabel, maxGuestsLabel,
         {isFeatured && room.rating_avg >= 4.8 && (
           <span className="absolute top-4 left-4 inline-flex items-center gap-1 px-3 py-1.5 bg-secondary text-on-secondary rounded-full text-caption font-semibold uppercase tracking-wider">
             <MaterialIcon name="local_fire_department" size={14} filled />
-            แนะนำ
+            {t('customer.roomCard.featured')}
           </span>
         )}
       </div>
@@ -49,7 +54,7 @@ export function RoomCard({ room, variant = 'default', typeLabel, maxGuestsLabel,
       {/* Content */}
       <div className="p-6 flex flex-col gap-3 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-display text-xl text-primary font-semibold">{room.name_th}</h3>
+          <h3 className="font-display text-xl text-primary font-semibold">{localizedName(room, locale)}</h3>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-on-surface-variant">
@@ -71,13 +76,13 @@ export function RoomCard({ room, variant = 'default', typeLabel, maxGuestsLabel,
 
         <div className="flex items-center justify-between mt-2 pt-4 border-t border-outline-variant gap-3">
           <div className="min-w-0">
-            <span className="text-caption text-on-surface-variant block">เริ่มต้น</span>
+            <span className="text-caption text-on-surface-variant block">{t('customer.roomCard.from')}</span>
             <span className="text-2xl font-display font-bold text-primary whitespace-nowrap">{formatTHB(room.base_price)}</span>
-            <span className="text-body-md text-on-surface-variant whitespace-nowrap"> / คืน</span>
+            <span className="text-body-md text-on-surface-variant whitespace-nowrap"> {t('customer.roomCard.perNight')}</span>
           </div>
           <span
             className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary transition-transform duration-300 group-hover:translate-x-1"
-            aria-label="ดูรายละเอียด"
+            aria-label={t('customer.roomCard.viewDetails')}
           >
             <MaterialIcon name="arrow_forward" size={20} />
           </span>

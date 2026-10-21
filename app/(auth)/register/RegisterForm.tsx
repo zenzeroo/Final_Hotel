@@ -147,7 +147,7 @@ export function RegisterForm({ next, errorMessage, showCheckEmailModal }: Regist
             />
           </div>
           <p className="font-caption text-caption text-on-surface-variant">
-            ต้องเป็นตัวเลข 10 หลักเท่านั้น (ไม่มีขีด ไม่มีช่องว่าง)
+            {t('customer.bookingForm.phoneHint')}
           </p>
         </label>
 

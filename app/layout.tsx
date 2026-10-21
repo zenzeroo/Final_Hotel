@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 import { getLocale } from "@/lib/i18n/getLocale";
+import { getT } from "@/lib/i18n/t";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationLoader } from "@/components/ui/NavigationLoader";
@@ -20,11 +21,13 @@ const inter = Inter({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Zenzero Hotel | ความหรูหราจากธรรมชาติ",
-  description:
-    "ค้นหาห้องพักในฝันของคุณ — ประสบการณ์พักผ่อนที่เป็นธรรมชาติและหรูหรา",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = getT(await getLocale())
+  return {
+    title: t('customer.meta.title'),
+    description: t('customer.meta.description'),
+  }
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = await getLocale()

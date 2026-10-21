@@ -57,8 +57,8 @@ export async function TopNavBar() {
                   logout: t('nav.logout'),
                   greeting: t('nav.greeting'),
                   notification: t('nav.notification'),
-                  menu: 'เมนู',
-                  menuAriaLabel: 'เปิดเมนู',
+                  menu: t('customer.nav.menu'),
+                  menuAriaLabel: t('customer.nav.openMenu'),
                 }}
               />
 
@@ -122,7 +122,7 @@ function UserMenu({
   return (
     <div className="flex items-center gap-3">
       <span className="hidden md:inline-block text-body-md text-on-surface-variant">
-        {session.fullName ?? 'ผู้ใช้'}
+        {session.fullName ?? t('customer.common.user')}
       </span>
       <Link
         href="/account/profile"

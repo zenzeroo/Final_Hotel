@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { signOut } from '@/app/actions/auth'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { useT } from '@/lib/i18n/useT'
 import { r2Url } from '@/lib/r2/publicUrl'
 import type { SessionUser } from '@/lib/supabase/getSession'
 
@@ -28,6 +29,7 @@ interface UserDropdownMenuProps {
  */
 export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
   const [open, setOpen] = useState(false)
+  const t = useT()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const initials = (session.fullName ?? session.email)
@@ -67,7 +69,7 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-label="เมนูผู้ใช้"
+        aria-label={t('customer.nav.userMenu')}
         aria-haspopup="menu"
         aria-expanded={open}
         className="flex items-center gap-2 px-1 py-1 rounded-full hover:bg-primary-fixed transition-colors"
@@ -88,7 +90,7 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
           </span>
         )}
         <span className="hidden md:inline text-body-md text-on-surface truncate max-w-[120px]">
-          {session.fullName ?? 'ผู้ใช้'}
+          {session.fullName ?? t('customer.common.user')}
         </span>
         <MaterialIcon
           name={open ? 'expand_less' : 'expand_more'}
@@ -101,12 +103,12 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
       {open && (
         <div
           role="menu"
-          aria-label="เมนูผู้ใช้"
+          aria-label={t('customer.nav.userMenu')}
           className="absolute right-0 top-full mt-2 w-56 bg-surface-container-lowest rounded-xl shadow-level-1 border border-outline-variant py-1 z-50"
         >
           <div className="px-4 py-2 border-b border-outline-variant">
             <p className="font-label-md text-label-md text-on-surface truncate">
-              {session.fullName ?? 'ผู้ใช้'}
+              {session.fullName ?? t('customer.common.user')}
             </p>
             <p className="font-caption text-caption text-on-surface-variant truncate">
               {session.email}
@@ -122,22 +124,22 @@ export function UserDropdownMenu({ session }: UserDropdownMenuProps) {
           <Link
             href="/account/profile"
             role="menuitem"
-            title="ดูโปรไฟล์ของฉัน"
+            title={t('customer.nav.viewProfile')}
             className="flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors min-w-0"
           >
             <MaterialIcon name="person" size={20} className="text-on-surface-variant flex-shrink-0" />
-            <span className="min-w-0 truncate flex-1">ดูโปรไฟล์ของฉัน</span>
+            <span className="min-w-0 truncate flex-1">{t('customer.nav.viewProfile')}</span>
           </Link>
 
           <form action={signOut}>
             <button
               type="submit"
               role="menuitem"
-              title="ออกจากระบบ"
+              title={t('nav.logout')}
               className="w-full flex items-center gap-3 px-4 py-3 font-body-md text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors text-left min-w-0"
             >
               <MaterialIcon name="logout" size={20} className="text-on-surface-variant flex-shrink-0" />
-              <span className="min-w-0 truncate flex-1">ออกจากระบบ</span>
+              <span className="min-w-0 truncate flex-1">{t('nav.logout')}</span>
             </button>
           </form>
         </div>

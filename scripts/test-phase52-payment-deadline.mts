@@ -417,7 +417,8 @@ async function main() {
       .select('status')
       .eq('id', booking7Id)
       .single()
-    assertEq(row?.status, 'payment_expired', 'status after lazy expiry')
+    // 20261011: lazy expiry writes status='expired' + lapsed_reason='payment_deadline'.
+    assertEq(row?.status, 'expired', 'status after lazy expiry')
   })
 
   // ============================================================
@@ -502,7 +503,7 @@ async function main() {
       .select('status')
       .eq('id', booking9Id)
       .single()
-    assertEq(row?.status, 'payment_expired', 'status after read')
+    assertEq(row?.status, 'expired', 'status after read')
   })
 
   // ============================================================
@@ -718,8 +719,9 @@ async function main() {
     const u = await createTestUser('case19')
     usersToCleanup.push(u.userId)
     // Insert a temp_pending row first
+    // Case 18 leaves a live unpaid booking on day +200 — use a free day.
     const checkIn = new Date()
-    checkIn.setDate(checkIn.getDate() + 200)
+    checkIn.setDate(checkIn.getDate() + 205)
     const checkOut = new Date(checkIn)
     checkOut.setDate(checkOut.getDate() + 1)
     const code = 'ZZR-' + Math.random().toString(36).slice(2, 7).toUpperCase()
@@ -875,13 +877,21 @@ async function main() {
     // Fill the pool with bookings for a fresh user (different dates)
     const u = await createTestUser('case23')
     usersToCleanup.push(u.userId)
-    // Create (poolSize) confirmed+unpaid bookings for the same dates
-    const uuids: string[] = []
+    // The booking under test goes past its deadline (Phase 56: it then no
+    // longer holds a slot), so poolSize fresh bookings on the SAME dates can
+    // fill the pool around it — exactly the "re-sold while unpaid" case.
+    const self = await insertConfirmedUnpaidBooking(u.userId, roomTypeId, 240, 1)
+    bookingsToCleanup.push(self)
+    await svc
+      .from('bookings')
+      .update({ payment_due_at: new Date(Date.now() - 60_000).toISOString() })
+      .eq('id', self)
+    const uuids: string[] = [self]
     for (let i = 0; i < poolSize; i++) {
       const b = await insertConfirmedUnpaidBooking(
         u.userId,
         roomTypeId,
-        240 + i,
+        240,
         1,
       )
       bookingsToCleanup.push(b)
@@ -1029,15 +1039,17 @@ async function main() {
     )
   })
 
-  // Case 29 — Source: page server-renders the deadline via formatTimeBangkok (hydration-safe)
-  await step('Case 29: source — /bookings/[id] page server-renders the deadline (no client-side formatTime)', () => {
-    assert(
-      /formatTimeBangkok/.test(pageSource),
-      'page.tsx should define/use formatTimeBangkok',
+  // Case 29 — Phase 56: the deadline renders through PaymentCountdown,
+  // which pins Asia/Bangkok (hydration-safe; the ticking part is client-only).
+  await step('Case 29: source — /bookings/[id] page renders the deadline via PaymentCountdown', () => {
+    assert(/<PaymentCountdown/.test(pageSource), 'page.tsx should render <PaymentCountdown>')
+    const countdownSource = readFileSync(
+      resolve(__dirname, '..', 'components/booking/PaymentCountdown.tsx'),
+      'utf8',
     )
     assert(
-      /timeZone:\s*['"]Asia\/Bangkok['"]/.test(pageSource),
-      'formatTimeBangkok should pin timeZone to Asia/Bangkok',
+      /timeZone:\s*['"]Asia\/Bangkok['"]/.test(countdownSource),
+      'PaymentCountdown should pin timeZone to Asia/Bangkok',
     )
     // The LeaveGuardProvider should no longer import formatTime.
     assert(

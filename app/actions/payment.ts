@@ -24,7 +24,7 @@ import { requireRole } from '@/lib/auth/require'
 import { actionFail } from '@/lib/errors/supabase'
 import { env, hasPaymentGateway } from '@/lib/env'
 import { stripe } from '@/lib/payments/stripe'
-import { buildCheckoutIdempotencyKey } from '@/lib/payments/idempotency'
+import { openCheckoutSession } from '@/lib/payments/checkout'
 import {
   createPaymentSession,
   updatePaymentSessionId,
@@ -64,11 +64,14 @@ const createCheckoutSessionSchema = z.object({
  *     this Pay click)
  *
  * Stage 2 trigger: after the Stripe session is created, extend
- * `bookings.payment_due_at` to match the session's `expires_at`
- * (now + 30 min). Without this, the 5-min Stage 1 window would lap
- * while the customer is on the Stripe hosted page (PromptPay needs
- * a bank-app switch).
+ * `bookings.payment_due_at` to now + 5 min. The Stripe session itself
+ * must live ≥ 30 min (Stripe's floor), so the per-minute pg_cron job
+ * closes it once the booking expires (see
+ * lib/payments/close-expired-sessions.ts).
  */
+/** Time the guest gets on the Stripe page after clicking Pay. */
+const STAGE_2_MS = 5 * 60 * 1000
+
 export async function createCheckoutSessionAction(
   input: { bookingId: string },
 ): Promise<ActionResult<{ url: string }>> {
@@ -112,49 +115,52 @@ export async function createCheckoutSessionAction(
   const successUrl = `${appUrl}/bookings/${parsed.data.bookingId}?session_id={CHECKOUT_SESSION_ID}`
   const cancelUrl = `${appUrl}/bookings/${parsed.data.bookingId}?cancelled=1`
 
-  // Phase 52 follow-up — Stage 2: 30-min Stripe session. Stripe's API
-  // hard floor is 30 minutes — cannot set it sooner. The DB
-  // `payment_due_at` (currently 5 min from Stage 1) is extended to
-  // match this below.
-  const sessionExpiresAtMs = Date.now() + 30 * 60 * 1000
-  const expiresAtUnix = Math.floor(sessionExpiresAtMs / 1000)
-
-  let session
+  // Phase 52 follow-up — Stage 2: 30-min Stripe session (Stripe's hard
+  // floor). Coming back from Stripe and clicking Pay again reuses the
+  // still-open session instead of opening a second one; see
+  // lib/payments/checkout.ts for the reuse + idempotency-key rules.
+  let opened
   try {
-    session = await stripe.checkout.sessions.create(
-      {
-        mode: 'payment',
-        payment_method_types: ['card', 'promptpay'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'thb',
-              product_data: {
-                name: `Zenzero Hotel — Booking ${parsed.data.bookingId.slice(0, 8)}`,
-              },
-              unit_amount: Math.round(Number(payment.amount) * 100), // THB → satang
+    opened = await openCheckoutSession(stripe, payment, {
+      bookingId: parsed.data.bookingId,
+      mode: 'payment',
+      payment_method_types: ['card', 'promptpay'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'thb',
+            product_data: {
+              name: `Zenzero Hotel — Booking ${parsed.data.bookingId.slice(0, 8)}`,
             },
-            quantity: 1,
+            unit_amount: Math.round(Number(payment.amount) * 100), // THB → satang
           },
-        ],
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-        expires_at: expiresAtUnix,
-        metadata: {
-          booking_id: parsed.data.bookingId,
-          payment_id: payment.id,
+          quantity: 1,
         },
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        booking_id: parsed.data.bookingId,
+        payment_id: payment.id,
       },
-      {
-        idempotencyKey: buildCheckoutIdempotencyKey(parsed.data.bookingId),
-      },
-    )
+    })
   } catch (e) {
     return actionFail(e, 'Stripe error: ไม่สามารถเปิดหน้าชำระเงินได้')
   }
 
+  if (opened.kind === 'already_paid') {
+    return {
+      ok: false,
+      error: 'การชำระเงินนี้สำเร็จแล้ว ระบบกำลังอัปเดตสถานะ กรุณารีเฟรชหน้าอีกครั้งในอีกสักครู่',
+    }
+  }
+  const session = opened.session
   if (!session.url) {
     return { ok: false, error: 'Stripe returned no checkout URL' }
+  }
+  // A reused session already has its id stored and the DB deadline extended.
+  if (opened.kind === 'reused') {
+    return { ok: true, data: { url: session.url } }
   }
 
   // 3. Persist the Stripe session id + URLs back to the pending payments row.
@@ -172,10 +178,9 @@ export async function createCheckoutSessionAction(
     console.warn('[createCheckoutSessionAction] failed to persist session_id:', e)
   }
 
-  // 4. Stage 2 — extend the DB `payment_due_at` to match the Stripe
-  //    session's `expires_at`. Without this, the 5-min Stage 1 window
-  //    would lap while the customer is on the Stripe hosted page
-  //    (PromptPay needs a bank-app switch). Best-effort: if the RPC
+  // 4. Stage 2 — give the guest 5 min on the Stripe page. The session
+  //    stays open longer (Stripe's 30-min floor) but is closed by the
+  //    per-minute job once the booking expires. Best-effort: if the RPC
   //    fails, the booking is still payable; the worst case is the
   //    customer coming back to a freshly-expired row, which the
   //    `resetPaymentWindowAction` (called on `?cancelled=1`) would
@@ -183,7 +188,7 @@ export async function createCheckoutSessionAction(
   try {
     const extendRes = await extendPaymentDeadlineAction({
       bookingId: parsed.data.bookingId,
-      newPaymentDueAtIso: new Date(sessionExpiresAtMs).toISOString(),
+      newPaymentDueAtIso: new Date(Date.now() + STAGE_2_MS).toISOString(),
     })
     if (!extendRes.ok) {
       console.warn(

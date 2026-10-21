@@ -28,9 +28,9 @@ export function FloorGroupSection({ rooms, locale, searchParams }: FloorGroupSec
   if (rooms.length === 0) {
     return (
       <div className="py-24 text-center">
-        <h3 className="font-display text-2xl text-primary mb-2">ไม่พบห้องพัก</h3>
+        <h3 className="font-display text-2xl text-primary mb-2">{t('customer.floors.emptyTitle')}</h3>
         <p className="text-body-md text-on-surface-variant">
-          ลองปรับตัวกรองหรือเลือกชั้นอื่นเพื่อดูตัวเลือกเพิ่มเติม
+          {t('customer.floors.emptyBody')}
         </p>
       </div>
     )
@@ -42,20 +42,20 @@ export function FloorGroupSection({ rooms, locale, searchParams }: FloorGroupSec
         <section key={floor}>
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-display text-2xl text-primary">
-              ชั้น {floor}
+              {t('customer.floors.floor', { floor })}
               {floor === 4 && (
                 <span className="ml-3 text-label-md text-secondary font-semibold uppercase tracking-wider">
-                  · ชั้นผู้บริหาร
+                  {t('customer.floors.executive')}
                 </span>
               )}
               {floor === 3 && (
                 <span className="ml-3 text-label-md text-secondary font-semibold uppercase tracking-wider">
-                  · วิวทะเล
+                  {t('customer.floors.seaView')}
                 </span>
               )}
             </h2>
             <span className="text-caption text-on-surface-variant">
-              {grouped[floor].length} ห้อง
+              {t('customer.floors.roomCount', { count: grouped[floor].length })}
             </span>
           </div>
 
@@ -64,6 +64,7 @@ export function FloorGroupSection({ rooms, locale, searchParams }: FloorGroupSec
               <RoomCard
                 key={room.id}
                 room={room}
+                locale={locale}
                 typeLabel={roomTypeLabel(room.type, locale)}
                 maxGuestsLabel={t('roomCard.maxGuests', { count: room.max_guests })}
                 searchParams={searchParams}

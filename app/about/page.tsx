@@ -2,15 +2,35 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'เกี่ยวกับโรงแรม — Zenzero Hotel',
-  description: '�ระวัติ วิสัยทัศน์ และค่านิยมของ Zenzero Hotel',
+export async function generateMetadata(): Promise<Metadata> {
+  const t = getT(await getLocale())
+  return {
+    title: t('customer.meta.aboutTitle'),
+    description: t('customer.meta.aboutDescription'),
+  }
 }
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const t = getT(await getLocale())
+  const values = [
+    ['customer.about.sincerity', 'customer.about.sincerityBody'],
+    ['customer.about.cleanliness', 'customer.about.cleanlinessBody'],
+    ['customer.about.care', 'customer.about.careBody'],
+    ['customer.about.sustainability', 'customer.about.sustainabilityBody'],
+  ] as const
+  const facilities = [
+    'customer.about.wifi',
+    'customer.about.pool',
+    'customer.about.dining',
+    'customer.about.parking',
+    'customer.about.frontDesk',
+  ] as const
+
   return (
     <>
       <TopNavBar />
@@ -18,54 +38,42 @@ export default function AboutPage() {
         <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-16 md:py-24">
           <div className="max-w-3xl">
             <span className="text-label-md text-primary font-semibold uppercase tracking-wider">
-              เกี่ยวกับเรา
+              {t('customer.about.label')}
             </span>
             <h1 className="font-display text-3xl md:text-4xl text-on-surface mt-2 mb-8">
-              เกี่ยวกับ Zenzero Hotel
+              {t('customer.about.title')}
             </h1>
 
             <div className="space-y-6 text-body-md text-on-surface-variant">
-              <p className="text-body-lg text-on-surface">
-                Zenzero Hotel คือโรงแรมบูติกที่ตั้งอยู่ในทำเลที่สะดวกสบาย
-                พร้อมห้องพักหลากหลายประเภทที่ออกแบบมาเพื่อตอบโจทย์ทุกการเดินทาง
-                ตั้งแต่ Deluxe ไปจนถึง Suite และ Villa ส่วนตัว
-              </p>
+              <p className="text-body-lg text-on-surface">{t('customer.about.intro')}</p>
 
-              <Section title="วิสัยทัศน์">
-                <p>
-                  เราเชื่อว่าการเดินทางที่ดีเริ่มต้นจากที่พักที่ดี
-                  เรามุ่งมั่นสร้างประสบการณ์การเข้าพักที่อบอุ่น สะดวกสบาย
-                  และคุ้มค่าสำหรับผู้เข้าพักทุกท่าน
-                </p>
+              <Section title={t('customer.about.visionTitle')}>
+                <p>{t('customer.about.vision')}</p>
               </Section>
 
-              <Section title="ค่านิยมของเรา">
+              <Section title={t('customer.about.valuesTitle')}>
                 <ul className="list-disc list-inside space-y-2">
-                  <li><strong>ความจริงใจ</strong> — บริการด้วยใจ ไม่มีค่าใช้จ่ายแอบแฝง</li>
-                  <li><strong>ความสะอาด</strong> — ห้องพักสะอาด ผ่านมาตรฐานสากล</li>
-                  <li><strong>ความใส่ใจ</strong> — ทีมงานพร้อมดูแลทุกความต้องการ</li>
-                  <li><strong>ความยั่งยืน</strong> — ลดการใช้พลาสติก ใช้วัสดุที่เป็นมิตรกับสิ่งแวดล้อม</li>
+                  {values.map(([name, body]) => (
+                    <li key={name}>
+                      <strong>{t(name)}</strong> — {t(body)}
+                    </li>
+                  ))}
                 </ul>
               </Section>
 
-              <Section title="สิ่งอำนวยความสะดวก">
+              <Section title={t('customer.about.facilitiesTitle')}>
                 <ul className="list-disc list-inside space-y-2">
-                  <li>Wi-Fi ความเร็วสูงฟรีทุกห้อง</li>
-                  <li>สระว่ายน้ำและฟิตเนส</li>
-                  <li>ร้านอาหารและรูมเซอร์วิส</li>
-                  <li>ที่จอดรถฟรี</li>
-                  <li>แผนกต้อนรับ 24 ชั่วโมง</li>
+                  {facilities.map((key) => (
+                    <li key={key}>{t(key)}</li>
+                  ))}
                 </ul>
               </Section>
 
-              <Section title="การจอง">
-                <p>
-                  จองห้องพักได้ง่ายๆ ผ่านเว็บไซต์ รองรับการชำระเงินหลายช่องทาง
-                  และยกเลิกได้ตามนโยบายที่เลือก
-                </p>
+              <Section title={t('customer.about.bookingTitle')}>
+                <p>{t('customer.about.booking')}</p>
                 <p>
                   <Link href="/rooms" className="text-primary px-2 py-1 rounded hover:bg-primary-fixed hover:text-primary font-semibold">
-                    ดูห้องพักทั้งหมด →
+                    {t('customer.about.seeRooms')}
                   </Link>
                 </p>
               </Section>

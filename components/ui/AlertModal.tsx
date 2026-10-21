@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { Modal } from './Modal'
+import { useT } from '@/lib/i18n/useT'
 
 /**
  * Phase 27.A — Replaces browser-native `alert()`. Centered modal
@@ -35,8 +36,10 @@ export function AlertModal({
   onClose,
   title,
   body,
-  okLabel = 'ตกลง',
+  okLabel,
 }: AlertModalProps) {
+  const t = useT()
+  okLabel ??= t('customer.common.ok')
   return (
     <Modal
       open={open}

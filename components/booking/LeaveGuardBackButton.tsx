@@ -20,14 +20,16 @@
 
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useLeaveGuard } from './LeaveGuardProvider'
+import { useT } from '@/lib/i18n/useT'
 
 export function LeaveGuardBackButton() {
   const { requestLeave } = useLeaveGuard()
+  const t = useT()
   return (
     <button
       type="button"
       onClick={() => requestLeave(null)}
-      aria-label="ย้อนกลับ"
+      aria-label={t('customer.common.back')}
       // Fixed-position overlay covering the header's back-button area.
       // The header's <Link> below has z-40; this has z-50 so it
       // intercepts the click. When this component is not mounted
@@ -36,7 +38,7 @@ export function LeaveGuardBackButton() {
       className="fixed top-0 left-0 z-50 inline-flex items-center gap-2 px-2 py-1 mt-4 ml-(--spacing-margin-mobile) md:ml-(--spacing-margin-desktop) rounded text-body-md text-on-surface bg-surface/80 backdrop-blur-sm hover:bg-primary-fixed hover:text-primary transition-colors"
     >
       <MaterialIcon name="arrow_back" size={20} />
-      <span>ย้อนกลับ</span>
+      <span>{t('customer.common.back')}</span>
     </button>
   )
 }

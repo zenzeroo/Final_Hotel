@@ -10,11 +10,14 @@ import { Footer } from '@/components/layout/Footer'
 import { BookingForm } from './BookingForm'
 import { BookingHoldGuard } from './BookingHoldGuard'
 import { calculateNights } from '@/lib/pricing'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
 export default async function NewBookingPage(props: PageProps<'/bookings/new'>) {
   const searchParams = await props.searchParams
+  const t = getT(await getLocale())
   const bookingIdParam =
     typeof searchParams.bookingId === 'string' ? searchParams.bookingId : null
 
@@ -77,7 +80,7 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
         <main className="flex-1 bg-background">
           <TransactionalHeader backHref={`/rooms/${room.slug}`} />
           <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">
-            <h1 className="font-display text-3xl text-primary mb-8">ยืนยันข้อมูลการจอง</h1>
+            <h1 className="font-display text-3xl text-primary mb-8">{t('customer.bookingForm.pageTitle')}</h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-8">
               <BookingForm
@@ -156,7 +159,7 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
       <main className="flex-1 bg-background">
         <TransactionalHeader backHref={`/rooms/${room.slug}`} />
         <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">
-          <h1 className="font-display text-3xl text-primary mb-8">ยืนยันข้อมูลการจอง</h1>
+          <h1 className="font-display text-3xl text-primary mb-8">{t('customer.bookingForm.pageTitle')}</h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-8">
             <BookingForm

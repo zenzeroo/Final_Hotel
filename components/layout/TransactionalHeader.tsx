@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 interface TransactionalHeaderProps {
   backHref: string
@@ -19,7 +21,8 @@ interface TransactionalHeaderProps {
  * position button overlay (LeaveGuardBackButton) that sits on top of
  * this Link and intercepts the click.
  */
-export function TransactionalHeader({ backHref, title }: TransactionalHeaderProps) {
+export async function TransactionalHeader({ backHref, title }: TransactionalHeaderProps) {
+  const t = getT(await getLocale())
   return (
     <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-outline-variant">
       <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop)">
@@ -29,7 +32,7 @@ export function TransactionalHeader({ backHref, title }: TransactionalHeaderProp
             className="inline-flex items-center gap-2 px-2 py-1 rounded text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
           >
             <MaterialIcon name="arrow_back" size={20} />
-            <span>ย้อนกลับ</span>
+            <span>{t('customer.common.back')}</span>
           </Link>
           <Link
             href="/"

@@ -84,6 +84,7 @@ export default async function HomePage() {
                 <RoomCard
                   key={room.id}
                   room={room}
+                  locale={locale}
                   variant="featured"
                   typeLabel={roomTypeLabel(room.type, locale)}
                   maxGuestsLabel={t('roomCard.maxGuests', { count: room.max_guests })}

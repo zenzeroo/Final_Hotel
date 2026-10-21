@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getSession } from '@/lib/supabase/getSession'
-import { getUserBookings } from '@/lib/data/bookings'
+import { getUserBookings, getUserRefundRequests } from '@/lib/data/bookings'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { BookingHistory } from './BookingHistory'
@@ -71,7 +71,10 @@ export default async function BookingsHistoryPage() {
     )
   }
 
-  const bookings = await getUserBookings(session.id)
+  const [bookings, refundRequests] = await Promise.all([
+    getUserBookings(session.id),
+    getUserRefundRequests(session.id),
+  ])
 
   return (
     <>
@@ -94,7 +97,7 @@ export default async function BookingsHistoryPage() {
               ctaHref="/rooms"
             />
           ) : (
-            <BookingHistory bookings={bookings} />
+            <BookingHistory bookings={bookings} refundRequests={refundRequests} />
           )}
         </div>
       </main>

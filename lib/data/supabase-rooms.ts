@@ -119,14 +119,11 @@ async function filterByAvailability(
   const admin = await createAdminClient()
 
   // Phase 42 — count live temp_pending bookings (hold_expires_at > now()).
-  // Phase 52 — also count LIVE confirmed+unpaid bookings (payment_due_at > now()).
-  // Past-deadline rows are excluded here AND will be lazily flipped to
-  // 'payment_expired' by getUserBookings/getBookingById/getTempBookingById.
-  // The `gt('payment_due_at', now)` clause is the read-side defense in
-  // depth — even if the lazy-expiry RPC hasn't run yet, the row is
-  // treated as free here. Matches the RPC's authoritative capacity check.
+  // Phase 56 — a confirmed+unpaid booking past its payment_due_at no longer
+  // holds the room (the per-minute pg_cron job flips it to 'expired').
+  // Same predicate as the create_booking RPC.
   const nowIso = new Date().toISOString()
-  const [unitsRes, bookingsRes, tempRes, unpaidRes] = await Promise.all([
+  const [unitsRes, bookingsRes, tempRes] = await Promise.all([
     admin
       .from('room_units')
       .select('room_type_id')
@@ -135,6 +132,7 @@ async function filterByAvailability(
       .from('bookings')
       .select('room_type_id')
       .in('status', ['confirmed', 'checked_in'])
+      .or(`status.eq.checked_in,payment_status.neq.unpaid,payment_due_at.is.null,payment_due_at.gt."${nowIso}"`)
       .lte('check_in', checkout)
       .gte('check_out', checkin),
     admin
@@ -142,14 +140,6 @@ async function filterByAvailability(
       .select('room_type_id')
       .eq('status', 'temp_pending')
       .gt('hold_expires_at', nowIso)
-      .lte('check_in', checkout)
-      .gte('check_out', checkin),
-    admin
-      .from('bookings')
-      .select('room_type_id')
-      .eq('status', 'confirmed')
-      .eq('payment_status', 'unpaid')
-      .gt('payment_due_at', nowIso)
       .lte('check_in', checkout)
       .gte('check_out', checkin),
   ])
@@ -169,19 +159,11 @@ async function filterByAvailability(
     bookedByType.set(b.room_type_id, (bookedByType.get(b.room_type_id) ?? 0) + 1)
   })
 
-  // Phase 52 — fold LIVE confirmed+unpaid (before payment_due_at) into the
-  // booked count. Past-deadline rows are excluded at the SQL level so the
-  // user sees the room as available while we wait for the lazy-expiry
-  // helper to flip the status.
-  unpaidRes.data?.forEach((b) => {
-    bookedByType.set(b.room_type_id, (bookedByType.get(b.room_type_id) ?? 0) + 1)
-  })
-
   return rooms.filter((r) => {
     const pool = poolByType.get(r.id) ?? 0
     const booked = bookedByType.get(r.id) ?? 0
-    // Hide the entire room type once ANY active booking OR live temp_pending
-    // OR live confirmed+unpaid overlaps the requested date range — matches
+    // Hide the entire room type once ANY active booking (incl. unpaid within
+    // its deadline) OR live temp_pending overlaps the requested date range — matches
     // the user expectation "I booked it, it's gone" and matches the RPC's
     // authoritative capacity check semantics.
     // The `pool > 0` guard still hides types with no physical units.

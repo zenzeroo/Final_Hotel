@@ -25,3 +25,17 @@ export function roomTypeLabel(type: RoomTypeName, locale: 'th' | 'en' = 'th'): s
   const map = locale === 'en' ? EN_LABELS : TH_LABELS
   return map[type] ?? type
 }
+
+/**
+ * Display name for a row that carries both `name` (English) and `name_th`
+ * (room types, amenities). Thai view prefers `name_th`; English view always
+ * uses `name` — showing `name_th` regardless leaked Thai into the EN UI.
+ */
+export function localizedName(
+  row: { name?: string | null; name_th?: string | null } | null | undefined,
+  locale: 'th' | 'en',
+): string {
+  if (!row) return ''
+  if (locale === 'th') return row.name_th || row.name || ''
+  return row.name || row.name_th || ''
+}

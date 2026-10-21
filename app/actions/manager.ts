@@ -195,24 +195,82 @@ export async function approveRefundAction(formData: FormData): Promise<ActionRes
 
   revalidatePath('/manager')
   revalidatePath('/manager/bookings')
+  // Phase 55 — approval now cancels the booking, so the guest's list changes too.
+  revalidatePath('/bookings')
   return { ok: true }
 }
 
 export async function rejectRefundAction(formData: FormData): Promise<ActionResult> {
-  await requireRole(['manager', 'admin'], '/manager')
+  const session = await requireRole(['manager', 'admin'], '/manager')
 
   const refundId = String(formData.get('refundId') ?? '').trim()
   const reason = String(formData.get('reason') ?? '').trim().slice(0, 500)
   if (!refundId) return { ok: false, error: 'Missing refund id' }
   if (!reason) return { ok: false, error: 'Please provide a rejection reason' }
 
+  let bookingId: string | null = null
   try {
+    const supabase = await createClient()
+    const { data: rr } = await supabase
+      .from('refund_requests')
+      .select('booking_id')
+      .eq('id', refundId)
+      .maybeSingle()
+    bookingId = rr?.booking_id ?? null
+
     await rejectRefund({ refundId, reason })
   } catch (e) {
     return actionFail(e, 'Could not reject refund')
   }
 
+  // Phase 55 — a reject leaves the booking valid (guest keeps the stay).
+  // Record it + tell the guest; neither may undo the decision if it fails.
+  if (bookingId) {
+    try {
+      const admin = await createAdminClient()
+      await admin.from('booking_events').insert({
+        booking_id: bookingId,
+        actor_id: session.id,
+        actor_role: session.role,
+        event_type: 'refund_rejected',
+        description: 'Refund request rejected — booking remains valid',
+        metadata: { refund_id: refundId, reason },
+      })
+
+      const { data: booking } = await admin
+        .from('bookings')
+        .select('id, user_id, booking_code, booker_email, booker_full_name')
+        .eq('id', bookingId)
+        .single()
+      if (booking?.booker_email) {
+        const { sendEmail } = await import('@/lib/email/resend')
+        const { RefundRejectedEmail, refundRejectedSubject } = await import('@/lib/email/templates/refund-rejected')
+        const { getRecipientLocale } = await import('@/lib/email/recipient-locale')
+        const emailLocale = await getRecipientLocale({ userId: booking.user_id })
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+        await sendEmail({
+          to: booking.booker_email,
+          template: 'refund_rejected',
+          subject: refundRejectedSubject({ bookingCode: booking.booking_code, locale: emailLocale }),
+          react: RefundRejectedEmail({
+            locale: emailLocale,
+            bookingCode: booking.booking_code,
+            guestName: booking.booker_full_name ?? '',
+            reason,
+            viewUrl: `${appUrl}/bookings/${booking.id}`,
+          }),
+          eventKey: `refund_rejected:refund_request:${refundId}`,
+          bookingId: booking.id,
+          refundRequestId: refundId,
+        })
+      }
+    } catch (e) {
+      console.error('[refund_rejected] audit/email failed:', e)
+    }
+  }
+
   revalidatePath('/manager')
   revalidatePath('/manager/bookings')
+  revalidatePath('/bookings')
   return { ok: true }
 }

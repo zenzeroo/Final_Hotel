@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
-import { cancelBooking, previewCancellation, type PreviewCancellationResult } from '@/app/actions/booking'
+import { previewCancellation, requestRefundAction, type PreviewCancellationResult } from '@/app/actions/booking'
 import { createCheckoutSessionAction } from '@/app/actions/payment'
 import { cancelUnpaidBookingAction } from '@/app/actions/booking-unpaid-cancel'
 import { useLeaveGuard } from '@/components/booking/LeaveGuardProvider'
@@ -18,11 +18,18 @@ interface ConfirmationActionsProps {
   bookingId: string
   status: string
   paymentStatus: string
+  /** Phase 55 — a refund request already exists (one per booking, reject is final). */
+  refundRequested?: boolean
 }
 
 type PreviewState = PreviewCancellationResult & { open: boolean }
 
-export function ConfirmationActions({ bookingId, status, paymentStatus }: ConfirmationActionsProps) {
+export function ConfirmationActions({
+  bookingId,
+  status,
+  paymentStatus,
+  refundRequested = false,
+}: ConfirmationActionsProps) {
   const router = useRouter()
   const t = useT()
   const { allowNavigation } = useLeaveGuard()
@@ -68,7 +75,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
     startTransition(async () => {
       const p = await previewCancellation(bookingId)
       if (!p.ok) {
-        toast.error(p.error ?? 'ไม่สามารถดูตัวอย่างการยกเลิกได้')
+        toast.error(p.error ?? t('customer.bookingDetail.previewFailed'))
         return
       }
       setPreview({ ...p, open: true })
@@ -83,25 +90,20 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
     const snapshot = preview
     setPreview(null)
     startTransition(async () => {
-      const result = await cancelBooking(bookingId)
-      if (result?.error) {
+      // Phase 55 — this only SENDS a request; the booking stays valid until
+      // a manager approves it (approve cancels, reject keeps the stay).
+      const result = await requestRefundAction(bookingId)
+      if (result.error) {
         toast.error(result.error)
         return
       }
       const refund = Number(result.refundAmount ?? 0)
       const penalty = Number(result.penaltyAmount ?? 0)
       const policy = result.policyName ?? t('bookingDetail.cancellationPolicy')
-      // Build a structured body so the user gets all 4 details they
-      // asked for (booking date, policy rules, refund, amount) after
-      // confirming — the bare string summary only had refund + penalty.
-      // Hardcoded 'th-TH' matches the original handleCancelUnpaidConfirm
-      // path; we don't pull in a locale hook just for this.
       const summary =
         snapshot && snapshot.ok
-          ? `${t('bookingDetail.cancelSuccess')} (${policy})\n${t('bookingDetail.bookingCreatedOn')}: ${formatIsoDate(snapshot.bookingCreatedAt ?? '')}\n${t('bookingDetail.cancellationPolicy')}: ${snapshot.policyName ?? '—'}\n${t('bookingDetail.hoursUntilCheckin', { hours: Math.round(snapshot.hoursUntilCheckin ?? 0) })}\n${t('bookingDetail.expectedRefund')}: ${refund.toLocaleString('th-TH')} บาท\n${t('bookingDetail.penalty')}: ${penalty.toLocaleString('th-TH')} บาท`
-          : refund > 0
-            ? `${t('bookingDetail.cancelSuccess')} (${policy}) — ${t('bookingDetail.refundAmount')}: ${refund.toLocaleString('th-TH')} ${t('bookingDetail.penalty')}: ${penalty.toLocaleString('th-TH')}`
-            : `${t('bookingDetail.cancelSuccess')} — ${t('bookingDetail.refundAmount')}: 0`
+          ? `${t('bookings.refundRequestedSuccess')}\n${t('bookingDetail.bookingCreatedOn')}: ${formatIsoDate(snapshot.bookingCreatedAt ?? '')}\n${t('bookingDetail.cancellationPolicy')}: ${snapshot.policyName ?? '—'}\n${t('bookingDetail.hoursUntilCheckin', { hours: Math.round(snapshot.hoursUntilCheckin ?? 0) })}\n${t('bookingDetail.expectedRefund')}: ${formatTHB(refund)}\n${t('bookingDetail.penalty')}: ${formatTHB(penalty)}`
+          : `${t('bookings.refundRequestedSuccess')} (${policy}) — ${t('bookingDetail.expectedRefund')}: ${formatTHB(refund)}`
       setAlertMessage(summary)
       router.refresh()
     })
@@ -143,7 +145,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
     return (
       <>
         <div className="mt-6 px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-center">
-          <p className="text-body-md text-error font-medium">การจองนี้ถูกยกเลิกแล้ว</p>
+          <p className="text-body-md text-error font-medium">{t('customer.bookingDetail.cancelled')}</p>
         </div>
         {alertMessage && (
           <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
@@ -161,7 +163,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
             className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
           >
             <MaterialIcon name="rate_review" size={18} />
-            เขียนรีวิว
+            {t('bookingDetail.writeReview')}
           </a>
         </div>
         {alertMessage && (
@@ -199,6 +201,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
             )}
           </button>
         )}
+        {isPaid && refundRequested ? null : (
         <button
           type="button"
           onClick={isPaid ? handleRefundRequest : () => setConfirmCancelOpen(true)}
@@ -212,6 +215,7 @@ export function ConfirmationActions({ bookingId, status, paymentStatus }: Confir
           <MaterialIcon name={isPaid ? 'undo' : 'cancel'} size={18} />
           {isPaid ? t('bookingDetail.requestRefund') : t('bookingDetail.cancelBooking')}
         </button>
+        )}
       </div>
 
       {/* Phase 27 — refund preview modal (paid bookings only) */}

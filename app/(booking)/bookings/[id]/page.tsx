@@ -10,10 +10,11 @@ import { PaymentSuccessModal } from '@/components/payment/PaymentSuccessModal'
 import { RefundStatusBadge } from '@/components/booking/RefundStatusBadge'
 import { LeaveGuardProvider } from '@/components/booking/LeaveGuardProvider'
 import { LeaveGuardBackButton } from '@/components/booking/LeaveGuardBackButton'
+import { PaymentCountdown } from '@/components/booking/PaymentCountdown'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
-import { roomTypeLabel } from '@/lib/format/roomType'
+import { localizedName, roomTypeLabel } from '@/lib/format/roomType'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
@@ -24,32 +25,15 @@ import { resetPaymentWindowAction } from '@/app/actions/payment'
 
 export const dynamic = 'force-dynamic'
 
-/**
- * Phase 52 follow-up — server-side Asia/Bangkok time formatter.
- *
- * Renders the same string on server (Node) and client (browser) by
- * pinning the timezone explicitly. Node's default Intl timezone is
- * UTC, which produces a different HH:mm than the user's local clock
- * for any time east/west of UTC — that's the hydration error the
- * Phase 52 form step hit earlier. The explicit `timeZone: 'Asia/Bangkok'`
- * plus the locale ensures both ends produce identical output.
- */
-function formatTimeBangkok(iso: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Bangkok',
-    calendar: 'gregory',
-  }).format(new Date(iso))
-}
-
 function StatusBadge({
   status,
   paymentStatus,
+  lapsedReason,
   t,
 }: {
   status: string
   paymentStatus: string
+  lapsedReason: string | null
   t: ReturnType<typeof getT>
 }) {
   const isPaid = paymentStatus === 'paid'
@@ -66,11 +50,18 @@ function StatusBadge({
       </span>
     )
   }
-  if (isPaymentExpired) {
+  // Since 20261011 an expired booking is status='expired'; lapsed_reason
+  // tells a missed payment apart from a lapsed temp hold (same labels as
+  // BookingHistory.statusLabel).
+  if (isPaymentExpired || status === 'expired') {
     return (
       <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold uppercase tracking-wider">
         <MaterialIcon name="timer_off" size={16} />
-        {t('bookings.statusPaymentExpired')}
+        {isPaymentExpired
+          ? t('bookings.statusPaymentExpired')
+          : lapsedReason === 'payment_deadline'
+            ? t('bookings.statusExpiredPayment')
+            : t('bookings.statusExpired')}
       </span>
     )
   }
@@ -215,7 +206,7 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
           <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">
           <div className="flex items-center gap-3 mb-2 flex-wrap">
             <h1 className="font-display text-3xl text-primary">{t('bookingDetail.title')}</h1>
-            <StatusBadge status={booking.status} paymentStatus={booking.payment_status} t={t} />
+            <StatusBadge status={booking.status} paymentStatus={booking.payment_status} lapsedReason={booking.lapsed_reason} t={t} />
             {refundStatus && (
               <RefundStatusBadge
                 status={refundStatus.status}
@@ -253,7 +244,7 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                 </div>
                 <div className="flex-1">
                   <h2 className="font-display text-xl text-primary">
-                    {booking.room_type?.name_th ?? t('bookings.roomName')}
+                    {localizedName(booking.room_type, locale) || t('bookings.roomName')}
                   </h2>
                   {booking.room_type?.type && (
                     <p className="text-caption text-secondary font-semibold uppercase tracking-wider mt-1">
@@ -328,7 +319,7 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                 <WriteReviewPrompt
                   bookingId={booking.id}
                   roomTypeId={booking.room_type.id}
-                  roomTypeName={booking.room_type.name_th ?? booking.room_type.name}
+                  roomTypeName={localizedName(booking.room_type, locale)}
                 />
               ) : null}
             </div>
@@ -358,6 +349,7 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                   bookingId={booking.id}
                   status={booking.status}
                   paymentStatus={booking.payment_status}
+                  refundRequested={refundStatus !== null}
                 />
               </div>
             </div>
@@ -365,18 +357,13 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
         </div>
       </main>
       <Footer />
-      {/* Phase 52 follow-up — server-rendered deadline strip (no live
-          countdown). Pinned to Asia/Bangkok so the server (Node/UTC
-          default) and client (browser local) render identical text
-          — see the formatTimeBangkok helper above. Sits outside
-          <main> so it stays visible as the user scrolls. */}
+      {/* Phase 56 — deadline + live countdown (PaymentCountdown). Sits
+          outside <main> so it stays visible as the user scrolls. */}
       {isUnpaidActive && booking.payment_due_at && (
         <div className="bg-warning/10 border-t border-warning/30">
           <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
             <p className="font-caption text-caption text-on-surface font-semibold">
-              {t('bookingDetail.payBeforeHelp', {
-                time: formatTimeBangkok(booking.payment_due_at, localeBcp),
-              })}
+              <PaymentCountdown deadlineIso={booking.payment_due_at} />
             </p>
             <p className="font-caption text-caption text-on-surface-variant">
               {t('bookings.unpaidDeadlineSubtext')}

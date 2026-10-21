@@ -66,6 +66,18 @@ export async function checkInBookingAction(
       return { ok: false, error: 'สถานะการจองไม่อยู่ในสถานะที่พร้อมเช็คอิน' }
     }
 
+    // Phase 55 — a pending refund request means the manager may still cancel
+    // this booking; don't check the guest in until it is decided.
+    const { count: pendingRefunds, error: refundErr } = await supabase
+      .from('refund_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('booking_id', parsed.data.bookingId)
+      .eq('status', 'pending')
+    if (refundErr) throw refundErr
+    if ((pendingRefunds ?? 0) > 0) {
+      return { ok: false, error: 'การจองนี้มีคำขอคืนเงินที่รอ Manager พิจารณา — ยังเช็คอินไม่ได้จนกว่าจะมีคำตัดสิน' }
+    }
+
     const { error: updateErr } = await supabase
       .from('bookings')
       .update({ status: 'checked_in', room_unit_id: parsed.data.roomUnitId })
