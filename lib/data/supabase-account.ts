@@ -28,7 +28,9 @@ export async function getOwnProfile(): Promise<AccountProfile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, phone, birthdate, avatar_key, email, created_at, role, is_active, locale')
+    .select(
+      'id, full_name, phone, birthdate, avatar_key, email, created_at, role, is_active, locale, terms_version, terms_accepted_at, marketing_opt_in, marketing_opt_in_at',
+    )
     .eq('id', user.id)
     .maybeSingle()
   if (error) wrapSupabaseError('getOwnProfile', error)
@@ -445,4 +447,46 @@ export async function unsuspendCustomer(args: {
     .single()
   if (error) wrapSupabaseError('unsuspendCustomer', error)
   return data as Customer
+}
+/**
+ * Phase 61 — record PDPA consent for `userId`.
+ *
+ * Updates the current state on `profiles` and appends one `consent_events`
+ * row per kind given (terms and/or marketing). Uses the admin client because
+ * consent_events has no INSERT policy, and because sign-up records consent
+ * before the user has a session (email confirmation pending).
+ * Callers pass the id of the authenticated user (or the user just created
+ * by signUp) — never an id taken from the request body.
+ */
+export async function recordConsent(
+  userId: string,
+  args: {
+    termsVersion?: string
+    marketing?: boolean
+    source: 'register' | 'consent_page' | 'profile'
+    /** Version the marketing choice was made under (defaults to termsVersion). */
+    version: string
+  },
+): Promise<void> {
+  const admin = await createAdminClient()
+  const now = new Date().toISOString()
+
+  const update: Record<string, unknown> = {}
+  const events: Array<{ user_id: string; kind: string; version: string; granted: boolean; source: string }> = []
+  if (args.termsVersion) {
+    update.terms_version = args.termsVersion
+    update.terms_accepted_at = now
+    events.push({ user_id: userId, kind: 'terms', version: args.termsVersion, granted: true, source: args.source })
+  }
+  if (args.marketing !== undefined) {
+    update.marketing_opt_in = args.marketing
+    update.marketing_opt_in_at = now
+    events.push({ user_id: userId, kind: 'marketing', version: args.version, granted: args.marketing, source: args.source })
+  }
+  if (events.length === 0) return
+
+  const { error: updErr } = await admin.from('profiles').update(update).eq('id', userId)
+  if (updErr) wrapSupabaseError('recordConsent(profiles)', updErr)
+  const { error: insErr } = await admin.from('consent_events').insert(events)
+  if (insErr) wrapSupabaseError('recordConsent(consent_events)', insErr)
 }

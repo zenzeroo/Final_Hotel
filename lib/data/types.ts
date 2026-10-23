@@ -75,6 +75,11 @@ export interface AccountProfile {
   is_active: boolean
   locale: string | null
   deleted_at: string | null
+  /** Phase 61 — PDPA consent state (history lives in consent_events). */
+  terms_version: string | null
+  terms_accepted_at: string | null
+  marketing_opt_in: boolean
+  marketing_opt_in_at: string | null
 }
 
 export interface SearchFilters {

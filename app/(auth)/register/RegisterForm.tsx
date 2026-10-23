@@ -8,6 +8,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { GoogleLogo } from '@/components/ui/GoogleLogo'
 import { BirthdateSelect } from '@/components/ui/BirthdateSelect'
 import { CheckEmailModal } from '@/components/auth/register/CheckEmailModal'
+import { ConsentCheckboxes } from '@/components/consent/ConsentCheckboxes'
 import { useT } from '@/lib/i18n/useT'
 import { maxBirthdateIso } from '@/lib/dates'
 
@@ -185,6 +186,9 @@ export function RegisterForm({ next, errorMessage, showCheckEmailModal }: Regist
             autoComplete="new-password"
           />
         </label>
+
+        {/* Phase 61 — PDPA consent (terms required, marketing optional). */}
+        <ConsentCheckboxes />
 
         <SubmitButton />
 

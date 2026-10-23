@@ -4,6 +4,8 @@ import { getServerT } from '@/lib/i18n/server'
 import { getT } from '@/lib/i18n/t'
 import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
+import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -18,6 +20,9 @@ import { translateSupabaseError, translateZodIssues } from '@/lib/errors/transla
 import { isUuid } from '@/lib/ids'
 import type { RoomTypeName } from '@/lib/data/types'
 import { requireRole } from '@/lib/auth/require'
+import { sanitizeNext } from '@/lib/auth/sanitize'
+import { needsConsent } from '@/lib/consent'
+import type { UserRole } from '@/lib/supabase/roles'
 import { sendEmail } from '@/lib/email/resend'
 import { getRecipientLocale } from '@/lib/email/recipient-locale'
 import { notifyRoles, notifyUser } from '@/lib/notifications/notify'
@@ -49,6 +54,31 @@ export interface CreateBookingResult {
   success?: boolean
   error?: string
   bookingId?: string
+}
+
+/**
+ * Phase 61 — a customer who has not accepted the current terms + privacy
+ * notice cannot book. Send them to /consent and back to the page they
+ * booked from (the Referer). The proxy does the same for page loads; this
+ * covers actions fired from ungated pages such as /rooms/[id].
+ */
+async function redirectIfConsentMissing(
+  profile: { role?: string | null; terms_version?: string | null } | null,
+): Promise<void> {
+  if (!profile) return
+  const role = (profile.role ?? 'user') as UserRole
+  if (!needsConsent({ role, termsVersion: profile.terms_version ?? null })) return
+  let next = '/'
+  const referer = (await headers()).get('referer')
+  if (referer) {
+    try {
+      const url = new URL(referer)
+      next = url.pathname + url.search
+    } catch {
+      // keep '/'
+    }
+  }
+  redirect(`/consent?next=${encodeURIComponent(sanitizeNext(next))}`)
 }
 
 /**
@@ -88,12 +118,13 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   // doesn't read profiles and inline EXISTS-on-profiles triggers 42P17.
   const { data: customerProfile } = await supabase
     .from('profiles')
-    .select('is_suspended')
+    .select('is_suspended, role, terms_version')
     .eq('id', user.id)
     .maybeSingle()
   if (customerProfile?.is_suspended) {
     return { error: t('actions.common.suspended') }
   }
+  await redirectIfConsentMissing(customerProfile)
 
   // Get room
   const { data: room, error: roomErr } = await supabase
@@ -390,7 +421,11 @@ export async function createTempBookingAction(
   // Profile (suspension guard + booker pre-fill) and room (capacity +
   // price) are independent — fetch them in parallel.
   const [{ data: customerProfile }, { data: room, error: roomErr }] = await Promise.all([
-    supabase.from('profiles').select('is_suspended, full_name, phone').eq('id', user.id).maybeSingle(),
+    supabase
+      .from('profiles')
+      .select('is_suspended, full_name, phone, role, terms_version')
+      .eq('id', user.id)
+      .maybeSingle(),
     supabase.from('room_types').select('base_price, max_guests, is_active').eq('id', data.roomTypeId).maybeSingle(),
   ])
 
@@ -398,6 +433,7 @@ export async function createTempBookingAction(
   if (customerProfile?.is_suspended) {
     return { error: t('actions.common.suspended') }
   }
+  await redirectIfConsentMissing(customerProfile)
   if (roomErr || !room) return { error: t('actions.common.roomNotFound') }
   if (!room.is_active) return { error: t('actions.common.roomInactive') }
   if (data.guests > room.max_guests) {
@@ -542,7 +578,7 @@ export async function completeTempBookingAction(
   // id — run them together. The sweep must finish before the read below
   // so a stale row is flipped to 'expired' instead of being completed.
   const [{ data: customerProfile }] = await Promise.all([
-    supabase.from('profiles').select('is_suspended').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('is_suspended, role, terms_version').eq('id', user.id).maybeSingle(),
     supabase.rpc('expire_specific_temp_booking', {
       p_booking_id: data.bookingId,
       p_user_id: user.id,
@@ -551,6 +587,7 @@ export async function completeTempBookingAction(
   if (customerProfile?.is_suspended) {
     return { error: t('actions.common.suspended') }
   }
+  await redirectIfConsentMissing(customerProfile)
 
   // Load the existing temp booking. Confirms ownership + active state.
   const { data: existing, error: existingErr } = await supabase

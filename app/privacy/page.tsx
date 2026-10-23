@@ -1,15 +1,38 @@
 import type { Metadata } from 'next'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
+import { PRIVACY_POLICY_VERSION } from '@/lib/consent'
+import { formatBangkokDate } from '@/lib/dates'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'นโยบายความเป็นส่วนตัว — Zenzero Hotel',
-  description: 'นโยบายความเป็นส่วนตัวและการคุ้มครองข้อมูลส่วนบุคคลของ Zenzero Hotel',
+const PRIVACY_EMAIL = 'privacy@zenzerohotel.xyz'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = getT(await getLocale())
+  return { title: t('privacyPage.metaTitle'), description: t('privacyPage.metaDescription') }
 }
 
-export default function PrivacyPage() {
+/**
+ * Phase 61 — rewritten for PDPA: every field the app collects, legal basis,
+ * retention, sharing (incl. storage abroad), rights, and the real policy
+ * version (PRIVACY_POLICY_VERSION — the same value /consent checks).
+ * Changing this text means bumping PRIVACY_POLICY_VERSION in lib/consent.ts.
+ */
+export default async function PrivacyPage() {
+  const t = getT(await getLocale())
+
+  const contactLink = (
+    <a
+      href={`mailto:${PRIVACY_EMAIL}`}
+      className="text-primary px-1 py-0.5 rounded hover:bg-primary-fixed hover:text-primary transition-colors duration-200"
+    >
+      {PRIVACY_EMAIL}
+    </a>
+  )
+
   return (
     <>
       <TopNavBar />
@@ -17,71 +40,95 @@ export default function PrivacyPage() {
         <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-16 md:py-24">
           <div className="max-w-3xl">
             <span className="text-label-md text-primary font-semibold uppercase tracking-wider">
-              นโยบาย
+              {t('privacyPage.eyebrow')}
             </span>
             <h1 className="font-display text-3xl md:text-4xl text-on-surface mt-2 mb-8">
-              นโยบายความเป็นส่วนตัว
+              {t('privacyPage.title')}
             </h1>
 
             <div className="prose-like space-y-6 text-body-md text-on-surface-variant">
-              <p className="text-body-lg text-on-surface">
-                Zenzero Hotel เคารพสิทธิ์ความเป็นส่วนตัวของผู้เข้าพักและผู้ใช้บริการทุกท่าน
-                เราจัดเก็บและใช้ข้อมูลส่วนบุคคลของท่านตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล
-                พ.ศ. 2562 (PDPA) และกฎหมายที่เกี่ยวข้อง
-              </p>
+              <p className="text-body-lg text-on-surface">{t('privacyPage.intro')}</p>
 
-              <Section title="ข้อมูลที่เราจัดเก็บ">
-                <ul className="list-disc list-inside space-y-2">
-                  <li>ข้อมูลบัญชีผู้ใช้: ชื่อ-นามสกุล, อีเมล, หมายเลขโทรศัพท์</li>
-                  <li>ข้อมูลการจอง: วันที่เข้าพัก-ออก, ประเภทห้อง, จำนวนผู้เข้าพัก, คำขอพิเศษ</li>
-                  <li>ข้อมูลการชำระเงิน: จัดเก็บผ่าน Stripe (PCI-DSS compliant) — เราไม่เก็บเลขบัตรเครดิต</li>
-                  <li>ข้อมูลการใช้งานเว็บไซต์: cookies, IP address, ประเภทเบราว์เซอร์</li>
-                </ul>
-              </Section>
-
-              <Section title="วัตถุประสงค์ในการใช้ข้อมูล">
-                <ul className="list-disc list-inside space-y-2">
-                  <li>ประมวลผลและยืนยันการจองห้องพัก</li>
-                  <li>ส่งการแจ้งเตือนเกี่ยวกับการจอง การชำระเงิน และการยกเลิก</li>
-                  <li>ออกใบเสร็จรับเงินและใบกำกับภาษี</li>
-                  <li>ปรับปรุงบริการและแก้ไขปัญหาทางเทคนิค</li>
-                  <li>ปฏิบัติตามกฎหมายที่เกี่ยวข้อง (เช่น รายงานตาม พ.ร.บ. โรงแรม)</li>
-                </ul>
-              </Section>
-
-              <Section title="การเปิดเผยข้อมูล">
+              <Section title={t('privacyPage.controllerTitle')}>
                 <p>
-                  เราจะไม่เปิดเผยข้อมูลส่วนบุคคลของท่านต่อบุคคลที่สาม ยกเว้น:
-                </p>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>Stripe — ผู้ให้บริการประมวลผลการชำระเงิน (เฉพาะข้อมูลที่จำเป็น)</li>
-                  <li>ผู้ให้บริการอีเมล (Resend) — สำหรับส่งใบยืนยันการจองและใบเสร็จ</li>
-                  <li>หน่วยงานราชการ — เมื่อมีคำสั่งตามกฎหมาย</li>
-                </ul>
-              </Section>
-
-              <Section title="สิทธิ์ของท่าน">
-                <p>ท่านมีสิทธิ์:</p>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>ขอเข้าถึงข้อมูลส่วนบุคคลของท่าน</li>
-                  <li>ขอแก้ไขหรือลบข้อมูล</li>
-                  <li>คัดค้านการประมวลผลข้อมูล</li>
-                  <li>ขอให้โอนย้ายข้อมูล (Data Portability)</li>
-                </ul>
-                <p>
-                  ติดต่อเราได้ที่ <a href="mailto:privacy@zenzero.com" className="text-primary px-1 py-0.5 rounded hover:bg-primary-fixed hover:text-primary transition-colors duration-200">privacy@zenzero.com</a>
+                  {t('privacyPage.controllerBody')} {contactLink}
                 </p>
               </Section>
 
-              <Section title="นโยบาย cookies">
+              <Section title={t('privacyPage.collectTitle')}>
+                <List
+                  items={[
+                    t('privacyPage.collect1'),
+                    t('privacyPage.collect2'),
+                    t('privacyPage.collect3'),
+                    t('privacyPage.collect4'),
+                    t('privacyPage.collect5'),
+                    t('privacyPage.collect6'),
+                  ]}
+                />
+              </Section>
+
+              <Section title={t('privacyPage.purposeTitle')}>
+                <List
+                  items={[
+                    t('privacyPage.purpose1'),
+                    t('privacyPage.purpose2'),
+                    t('privacyPage.purpose3'),
+                    t('privacyPage.purpose4'),
+                  ]}
+                />
+              </Section>
+
+              <Section title={t('privacyPage.marketingTitle')}>
+                <p>{t('privacyPage.marketingBody')}</p>
+              </Section>
+
+              <Section title={t('privacyPage.shareTitle')}>
+                <p>{t('privacyPage.shareIntro')}</p>
+                <List
+                  items={[
+                    t('privacyPage.share1'),
+                    t('privacyPage.share2'),
+                    t('privacyPage.share3'),
+                    t('privacyPage.share4'),
+                  ]}
+                />
+                <p>{t('privacyPage.shareAbroad')}</p>
+              </Section>
+
+              <Section title={t('privacyPage.retentionTitle')}>
+                <List
+                  items={[
+                    t('privacyPage.retention1'),
+                    t('privacyPage.retention2'),
+                    t('privacyPage.retention3'),
+                  ]}
+                />
+              </Section>
+
+              <Section title={t('privacyPage.rightsTitle')}>
+                <p>{t('privacyPage.rightsIntro')}</p>
+                <List
+                  items={[
+                    t('privacyPage.right1'),
+                    t('privacyPage.right2'),
+                    t('privacyPage.right3'),
+                    t('privacyPage.right4'),
+                    t('privacyPage.right5'),
+                    t('privacyPage.right6'),
+                  ]}
+                />
                 <p>
-                  เราใช้ cookies ที่จำเป็นสำหรับการเข้าสู่ระบบและการทำงานของเว็บไซต์
-                  ท่านสามารถปิด cookies ในเบราว์เซอร์ได้ แต่อาจทำให้บางฟีเจอร์ทำงานไม่สมบูรณ์
+                  {t('privacyPage.contact')} {contactLink}
                 </p>
+              </Section>
+
+              <Section title={t('privacyPage.cookiesTitle')}>
+                <p>{t('privacyPage.cookiesBody')}</p>
               </Section>
 
               <p className="text-caption text-on-surface-variant/70 pt-4">
-                อัปเดตล่าสุด: {new Date().getFullYear()} — Zenzero Hotel
+                {t('privacyPage.version', { date: formatBangkokDate(PRIVACY_POLICY_VERSION) })} — Zenzero Hotel
               </p>
             </div>
           </div>
@@ -98,5 +145,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="font-display text-xl text-on-surface mb-3">{title}</h2>
       <div className="space-y-3">{children}</div>
     </section>
+  )
+}
+
+function List({ items }: { items: string[] }) {
+  return (
+    <ul className="list-disc list-inside space-y-2">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
   )
 }

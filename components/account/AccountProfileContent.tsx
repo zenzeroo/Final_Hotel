@@ -5,6 +5,7 @@ import { AccountQuickLinks, type QuickLink } from './AccountQuickLinks'
 import { PersonalInfoForm } from './PersonalInfoForm'
 import { AccountSecuritySection } from './AccountSecuritySection'
 import { LinkedAccountsCard } from './LinkedAccountsCard'
+import { PrivacyConsentCard } from './PrivacyConsentCard'
 
 export interface AccountProfileContentProps {
   profile: AccountProfile
@@ -63,6 +64,8 @@ export async function AccountProfileContent({
       <div className="lg:col-span-2 flex flex-col gap-gutter">
         <PersonalInfoForm profile={profile} role={role} />
         <AccountSecuritySection />
+        {/* Phase 61 — PDPA consent; customers only (staff are not asked). */}
+        {role === 'user' && <PrivacyConsentCard profile={profile} />}
       </div>
     </div>
   )

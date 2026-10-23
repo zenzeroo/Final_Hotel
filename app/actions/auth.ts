@@ -10,6 +10,8 @@ import { translateSupabaseError, translateZodIssues } from '@/lib/errors/transla
 import { getT } from '@/lib/i18n/t'
 import { getServerT } from '@/lib/i18n/server'
 import { isOver18 } from '@/lib/dates'
+import { PRIVACY_POLICY_VERSION } from '@/lib/consent'
+import { recordConsent } from '@/lib/data/account'
 
 // Sign-up schema — same phone regex used by BookingForm / WalkInForm /
 // PersonalInfoForm (10 ASCII digits, no dashes/spaces). Server-side gate so
@@ -28,6 +30,9 @@ const signUpSchema = z.object({
   password: z.string().min(8, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร').max(72),
   confirmPassword: z.string(),
   next: z.string(),
+  // Phase 61 — PDPA: terms + privacy notice must be accepted; marketing is optional.
+  acceptTerms: z.literal(true, { errorMap: () => ({ message: 'validation.acceptTerms' }) }),
+  marketingOptIn: z.boolean(),
 }).refine((d) => d.password === d.confirmPassword, {
   path: ['confirmPassword'],
   message: 'รหัสผ่านยืนยันไม่ตรงกัน',
@@ -108,11 +113,23 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
   // Read + sanitize the `next` deep-link so a confirmed user resumes
   // their booking instead of always landing on `/`.
   const next = sanitizeNext(String(formData.get('next') ?? '/'))
+  const acceptTerms = formData.get('accept_terms') === 'on'
+  const marketingOptIn = formData.get('marketing_opt_in') === 'on'
 
   // Validation — Zod schema enforces required + regex on phone (server-side
   // mirror of RegisterForm.tsx HTML5 required + pattern). Error message
   // localized via the same pattern signIn uses for Supabase errors.
-  const parsed = signUpSchema.safeParse({ fullName, email, phone, birthdate, password, confirmPassword, next })
+  const parsed = signUpSchema.safeParse({
+    fullName,
+    email,
+    phone,
+    birthdate,
+    password,
+    confirmPassword,
+    next,
+    acceptTerms,
+    marketingOptIn,
+  })
   if (!parsed.success) {
     const { cookies } = await import('next/headers')
     const { LOCALE_COOKIE, toLocale } = await import('@/lib/i18n/config')
@@ -152,6 +169,24 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
     const locale = toLocale(cookieStore.get(LOCALE_COOKIE)?.value)
     return {
       error: translateSupabaseError(error.message, locale) ?? 'สมัครสมาชิกไม่สำเร็จ',
+    }
+  }
+
+  // Phase 61 — record consent for the new account. `data.user` exists even
+  // while email confirmation is pending. A repeat sign-up of an existing
+  // email returns a user with no identities (Supabase anti-enumeration) —
+  // skip it, the real account keeps its own consent. If recording fails the
+  // account still works: terms_version stays NULL and /consent asks again.
+  if (data.user && (data.user.identities?.length ?? 0) > 0) {
+    try {
+      await recordConsent(data.user.id, {
+        termsVersion: PRIVACY_POLICY_VERSION,
+        marketing: formDataParsed.marketingOptIn,
+        source: 'register',
+        version: PRIVACY_POLICY_VERSION,
+      })
+    } catch (e) {
+      console.error('[signUp] recordConsent failed:', e instanceof Error ? e.message : e)
     }
   }
 

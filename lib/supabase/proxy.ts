@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { env, hasSupabase } from '../env'
 import { roleHomePath, type UserRole } from './getSession'
+import { needsConsent } from '../consent'
 
 /**
  * Proxy (Next.js 16 — replaces middleware.ts).
@@ -114,6 +115,32 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone()
       url.pathname = roleHomePath(role)
       url.search = ''
+      return NextResponse.redirect(url)
+    }
+  }
+
+  // Phase 61 — PDPA: a customer who has not accepted the current terms +
+  // privacy notice (Google sign-ups, members from before consent existed,
+  // everyone after a version bump) goes to /consent first, then back to the
+  // exact page. GET only: server-action POSTs to these paths are refused by
+  // the actions themselves (a redirect would break the action call).
+  const consentPaths = ['/bookings', '/account']
+  if (
+    user &&
+    request.method === 'GET' &&
+    consentPaths.some((p) => request.nextUrl.pathname.startsWith(p))
+  ) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, terms_version')
+      .eq('id', user.id)
+      .maybeSingle()
+    const role = (profile?.role as UserRole | undefined) ?? 'user'
+    if (needsConsent({ role, termsVersion: profile?.terms_version ?? null })) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/consent'
+      url.search = ''
+      url.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search)
       return NextResponse.redirect(url)
     }
   }

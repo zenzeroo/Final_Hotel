@@ -18,6 +18,8 @@ export interface SessionUser {
   avatarKey: string | null
   /** Saved UI language (`profiles.locale`), or null if never set. */
   locale: string | null
+  /** Policy version the user accepted (`profiles.terms_version`), or null — see lib/consent.ts. */
+  termsVersion: string | null
 }
 
 /**
@@ -44,7 +46,7 @@ export const getSession = cache(async (): Promise<SessionUser | null> => {
   // Fetch profile (incl. suspension flag for the app-layer guard below).
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, phone, role, avatar_key, is_suspended, locale')
+    .select('full_name, phone, role, avatar_key, is_suspended, locale, terms_version')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -64,6 +66,7 @@ export const getSession = cache(async (): Promise<SessionUser | null> => {
     role: (profile?.role as UserRole) ?? 'user',
     avatarKey: profile?.avatar_key ?? null,
     locale: profile?.locale ?? null,
+    termsVersion: profile?.terms_version ?? null,
   }
 })
 
