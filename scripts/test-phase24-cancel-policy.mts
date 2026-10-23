@@ -98,7 +98,6 @@ if (polErr || !policies || policies.length < 3) {
 }
 const flexPolicy = policies.find((p) => p.name === 'Flexible')!
 const strictPolicy = policies.find((p) => p.name === 'Strict')!
-const defaultPolicy = policies.find((p) => p.is_default) ?? policies[0]
 console.log('Policies loaded:', policies.map((p) => `${p.name}(${p.free_cancel_hours}h/${p.refund_pct}%)`).join(', '))
 
 const PREFIX = 'ZZR-P24C-'
@@ -207,7 +206,8 @@ await step('1. Cancel inside Flexible free window → full refund row', async ()
   const row = Array.isArray(data) ? data[0] : data
   assert(row, 'no row returned')
   assert(Number(row.refund_amount) === 5000, `refund_amount=${row.refund_amount}, expected 5000`)
-  assert(row.policy_name === 'Flexible', `policy=${row.policy_name}`)
+  // Phase 57b — the 2-day rule replaced the policy table.
+  assert(row.policy_name === 'refund_rule', `policy=${row.policy_name}`)
   assert(row.refund_request_id, 'refund_request_id should be set')
 
   // Verify refund_requests row exists.
@@ -243,7 +243,7 @@ await step('2. Cancel outside Flexible free window → no refund row', async () 
 
 // Case 3: NULL cancellation_policy_id → falls back to default policy.
 let booking3Id: string | null = null
-await step('3. NULL policy id → fallback to default policy', async () => {
+await step('3. NULL policy id → same 2-day rule (no policy needed)', async () => {
   booking3Id = await createBooking({
     checkIn: slots[1].ci,
     checkOut: slots[1].co,
@@ -259,7 +259,7 @@ await step('3. NULL policy id → fallback to default policy', async () => {
   assert(!error, `RPC error: ${error?.message}`)
   const row = Array.isArray(data) ? data[0] : data
   assert(row, 'no row returned')
-  assert(row.policy_name === defaultPolicy.name, `policy=${row.policy_name}, expected ${defaultPolicy.name}`)
+  assert(row.policy_name === 'refund_rule', `policy=${row.policy_name}`)
   assert(Number(row.refund_amount) === 8000, `refund_amount=${row.refund_amount}`)
   return `policy=${row.policy_name}, refund=${row.refund_amount}`
 })

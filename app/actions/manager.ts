@@ -160,6 +160,16 @@ export async function approveRefundAction(formData: FormData): Promise<ActionRes
         .select('id, user_id, booking_code, booker_email, booker_full_name, currency')
         .eq('id', rr.booking_id)
         .single()
+      if (booking) {
+        const { notifyUser } = await import('@/lib/notifications/notify')
+        await notifyUser(booking.user_id, {
+          type: 'refund_approved',
+          params: { code: booking.booking_code, amount: Number(rr.amount) },
+          link: `/bookings/${booking.id}`,
+          bookingId: booking.id,
+          eventKey: `refund_approved:${refundId}`,
+        })
+      }
       if (booking && booking.booker_email) {
         const { sendEmail } = await import('@/lib/email/resend')
         const { RefundNoticeEmail, refundNoticeSubject } = await import('@/lib/email/templates/refund-notice')
@@ -242,6 +252,16 @@ export async function rejectRefundAction(formData: FormData): Promise<ActionResu
         .select('id, user_id, booking_code, booker_email, booker_full_name')
         .eq('id', bookingId)
         .single()
+      if (booking) {
+        const { notifyUser } = await import('@/lib/notifications/notify')
+        await notifyUser(booking.user_id, {
+          type: 'refund_rejected',
+          params: { code: booking.booking_code },
+          link: `/bookings/${booking.id}`,
+          bookingId: booking.id,
+          eventKey: `refund_rejected:${refundId}`,
+        })
+      }
       if (booking?.booker_email) {
         const { sendEmail } = await import('@/lib/email/resend')
         const { RefundRejectedEmail, refundRejectedSubject } = await import('@/lib/email/templates/refund-rejected')

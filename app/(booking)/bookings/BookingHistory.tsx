@@ -7,10 +7,12 @@ import { useRouter } from 'next/navigation'
 import {
   cancelBooking,
   cancelTempBookingAction,
-  requestRefundAction,
 } from '@/app/actions/booking'
 import { RefundStatusBadge } from '@/components/booking/RefundStatusBadge'
 import { PaymentCountdown } from '@/components/booking/PaymentCountdown'
+import { RefundRequestDialog } from '@/components/booking/RefundRequestDialog'
+import { ExpiredPaymentButton } from '@/components/booking/ExpiredPaymentButton'
+import { roomsSearchHref } from '@/lib/booking-links'
 import { createCheckoutSessionAction } from '@/app/actions/payment'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { AlertModal } from '@/components/ui/AlertModal'
@@ -87,7 +89,8 @@ export function BookingHistory({ bookings, refundRequests }: BookingHistoryProps
   const locale = useLocale()
   const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
   const [confirmBookingId, setConfirmBookingId] = useState<string | null>(null)
-  const [confirmIsRefund, setConfirmIsRefund] = useState(false)
+  // Phase 57 — paid bookings go through RefundRequestDialog instead.
+  const [refundBookingId, setRefundBookingId] = useState<string | null>(null)
   const [confirmIsTemp, setConfirmIsTemp] = useState(false)
   const [alertMessage, setAlertMessage] = useState<string | null>(null)
   const toast = useToast()
@@ -141,8 +144,11 @@ export function BookingHistory({ bookings, refundRequests }: BookingHistoryProps
   })()
 
   function handleCancel(bookingId: string, isPaid: boolean, isTemp: boolean) {
+    if (isPaid) {
+      setRefundBookingId(bookingId)
+      return
+    }
     setConfirmBookingId(bookingId)
-    setConfirmIsRefund(isPaid)
     setConfirmIsTemp(isTemp)
   }
 
@@ -177,23 +183,6 @@ export function BookingHistory({ bookings, refundRequests }: BookingHistoryProps
       return
     }
 
-    // Phase 55 — paid booking: ask for a refund. The booking stays valid
-    // until a manager decides (approve cancels it, reject keeps the stay).
-    if (confirmIsRefund) {
-      startTransition(async () => {
-        const result = await requestRefundAction(bookingId)
-        if (result.error) {
-          toast.error(result.error)
-          return
-        }
-        toast.success(t('bookings.refundRequestedSuccess'))
-        setTab('refunds')
-        setRefundSub('pending')
-        router.refresh()
-      })
-      return
-    }
-
     // Unpaid confirmed booking — nothing to refund, cancel straight away.
     startTransition(async () => {
       const result = await cancelBooking(bookingId)
@@ -201,14 +190,8 @@ export function BookingHistory({ bookings, refundRequests }: BookingHistoryProps
         toast.error(result.error)
         return
       }
-      const refund = Number(result.refundAmount ?? 0)
-      const penalty = Number(result.penaltyAmount ?? 0)
-      const policy = result.policyName ?? t('bookingDetail.cancellationPolicy')
-      const summary =
-        refund > 0
-          ? `${t('bookingDetail.cancelSuccess')} (${policy}) — ${t('bookingDetail.refundAmount')}: ${refund.toLocaleString(localeBcp)} ${t('bookingDetail.penalty')}: ${penalty.toLocaleString(localeBcp)}`
-          : `${t('bookingDetail.cancelSuccess')} — ${t('bookingDetail.refundAmount')}: 0`
-      setAlertMessage(summary)
+      // Unpaid → nothing was charged, so there is no refund to report.
+      toast.success(t('bookingDetail.cancelSuccess'))
       router.refresh()
     })
   }
@@ -298,22 +281,24 @@ export function BookingHistory({ bookings, refundRequests }: BookingHistoryProps
         <ConfirmModal
           open
           body={
-            confirmIsTemp
-              ? t('bookingDetail.cancelTempConfirm')
-              : confirmIsRefund
-                ? t('bookingDetail.refundConfirm')
-                : t('bookingDetail.cancelConfirm')
+            confirmIsTemp ? t('bookingDetail.cancelTempConfirm') : t('bookingDetail.cancelConfirm')
           }
-          variant={confirmIsTemp || !confirmIsRefund ? 'danger' : 'default'}
-          okLabel={
-            confirmIsTemp
-              ? t('bookings.cancelBooking')
-              : confirmIsRefund
-                ? t('bookingDetail.requestRefund')
-                : t('bookings.cancelBooking')
-          }
+          variant="danger"
+          okLabel={t('bookings.cancelBooking')}
           onCancel={() => setConfirmBookingId(null)}
           onConfirm={handleConfirm}
+        />
+      )}
+      {refundBookingId && (
+        <RefundRequestDialog
+          bookingId={refundBookingId}
+          onClose={() => setRefundBookingId(null)}
+          onRequested={() => {
+            setRefundBookingId(null)
+            setTab('refunds')
+            setRefundSub('pending')
+            router.refresh()
+          }}
         />
       )}
       {alertMessage && (
@@ -508,6 +493,18 @@ function BookingRow({
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Phase 58 — payment window ran out: choose another room / try again */}
+      {(isExpired || isPaymentExpired) && booking.payment_status === 'unpaid' && (
+        <div className="flex items-center gap-2 px-4 md:px-6 pb-4 flex-wrap">
+          <ExpiredPaymentButton
+            bookingId={booking.id}
+            roomsHref={roomsSearchHref(booking)}
+            retryable={isExpired && booking.lapsed_reason === 'payment_deadline'}
+            variant="inline"
+          />
         </div>
       )}
     </article>

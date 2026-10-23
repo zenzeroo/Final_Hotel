@@ -7,17 +7,20 @@ import { after } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { refundDeadlineIso } from '@/lib/refund-rule'
+import { acceptRefundRuleSchema } from '@/lib/validation/refund-rule'
 import { calculatePrice, calculateNights, generateBookingCode } from '@/lib/pricing'
 import { getTodayBangkok } from '@/lib/dates'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/manager'
-import { getDefaultCancellationPolicy, getPromotionByCode } from '@/lib/data/bookings'
+import { getDefaultCancellationPolicy, getPromotionByCode, getRefundMinDays, getRefundNotice } from '@/lib/data/bookings'
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
 import { isUuid } from '@/lib/ids'
 import type { RoomTypeName } from '@/lib/data/types'
 import { requireRole } from '@/lib/auth/require'
 import { sendEmail } from '@/lib/email/resend'
 import { getRecipientLocale } from '@/lib/email/recipient-locale'
+import { notifyRoles, notifyUser } from '@/lib/notifications/notify'
 
 const createBookingSchema = z.object({
   roomTypeId: z.string().uuid(),
@@ -36,6 +39,8 @@ const createBookingSchema = z.object({
     .regex(/^[0-9]{10}$/, 'validation.phone10'),
   specialRequest: z.string().max(500).optional().nullable(),
   promoCode: z.string().max(40).optional().nullable(),
+  // Phase 57c — the guest must tick "I accept the refund policy".
+  acceptRefundRule: acceptRefundRuleSchema,
 })
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>
@@ -241,6 +246,15 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       .select('id, booking_code, check_in, check_out, nights, total, currency, booker_email, booker_full_name, room_type:room_types(name)')
       .eq('id', bookingId)
       .single()
+    if (booking) {
+      await notifyRoles(['reception'], {
+        type: 'booking_new',
+        params: { code: booking.booking_code, checkIn: booking.check_in },
+        link: `/reception/bookings/${booking.id}`,
+        bookingId: booking.id,
+        eventKey: `booking_new:${booking.id}`,
+      })
+    }
     if (booking && sessionEmail) {
       const emailLocale = await getRecipientLocale({ userId: user.id })
       const roomTypeName =
@@ -269,6 +283,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           total: Number(booking.total),
           currency: booking.currency,
           viewUrl: `${appUrl}/bookings/${booking.id}`,
+          refund: await getRefundNotice(booking.check_in),
         }),
         eventKey: `booking_confirmation:booking:${booking.id}`,
         bookingId: booking.id,
@@ -281,7 +296,31 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     console.error('[booking_confirmation] email dispatch failed:', e)
   }
 
+  await recordRefundRuleAccepted(bookingId as string, data.checkIn, user.id)
+
   return { success: true, bookingId }
+}
+
+/**
+ * Phase 57c — audit row proving the guest accepted the refund rule shown on
+ * the booking form (min days + the resulting deadline at that moment).
+ * Best-effort: a failed audit insert must not fail a booking that exists.
+ */
+async function recordRefundRuleAccepted(bookingId: string, checkIn: string, userId: string) {
+  try {
+    const minDays = await getRefundMinDays()
+    const admin = await createAdminClient()
+    await admin.from('booking_events').insert({
+      booking_id: bookingId,
+      actor_id: userId,
+      actor_role: 'user',
+      event_type: 'refund_rule_accepted',
+      description: `Guest accepted the refund rule (full refund until ${refundDeadlineIso(checkIn, minDays)})`,
+      metadata: { min_days: minDays, refund_deadline: refundDeadlineIso(checkIn, minDays) },
+    })
+  } catch (e) {
+    console.error('[refund_rule_accepted] audit insert failed:', e)
+  }
 }
 
 // ============================================================================
@@ -444,6 +483,8 @@ const completeTempBookingSchema = z.object({
     .regex(/^[0-9]{10}$/, 'validation.phone10'),
   specialRequest: z.string().max(500).optional().nullable(),
   promoCode: z.string().max(40).optional().nullable(),
+  // Phase 57c — the guest must tick "I accept the refund policy".
+  acceptRefundRule: acceptRefundRuleSchema,
 })
 
 export type CompleteTempBookingInput = z.infer<typeof completeTempBookingSchema>
@@ -635,6 +676,15 @@ export async function completeTempBookingAction(
         )
         .eq('id', data.bookingId)
         .single()
+      if (booking) {
+        await notifyRoles(['reception'], {
+          type: 'booking_new',
+          params: { code: booking.booking_code, checkIn: booking.check_in },
+          link: `/reception/bookings/${booking.id}`,
+          bookingId: booking.id,
+          eventKey: `booking_new:${booking.id}`,
+        })
+      }
       if (booking && sessionEmail) {
         const emailLocale = await getRecipientLocale({ userId: user.id })
         const roomTypeName =
@@ -663,6 +713,7 @@ export async function completeTempBookingAction(
             total: Number(booking.total),
             currency: booking.currency,
             viewUrl: `${appUrl}/bookings/${booking.id}`,
+            refund: await getRefundNotice(booking.check_in),
           }),
           eventKey: `booking_confirmation:booking:${booking.id}`,
           bookingId: booking.id,
@@ -674,6 +725,8 @@ export async function completeTempBookingAction(
       console.error('[booking_confirmation] email dispatch failed:', e)
     }
   })
+
+  await recordRefundRuleAccepted(data.bookingId, existing.check_in, user.id)
 
   return { ok: true, bookingId: data.bookingId }
 }
@@ -816,82 +869,22 @@ export async function releaseBookingHoldAction(
  * Cancel a booking (sets status to 'cancelled').
  *
  * Phase 20 #24 — atomic via the `cancel_booking` SECURITY DEFINER RPC.
- * The RPC enforces the linked cancellation_policy (`free_cancel_hours`
- * + `refund_pct`), flips booking status, and inserts a `refund_requests`
+ * Phase 57b — the RPC applies the 2-day rule (full refund when cancelled at
+ * least refund_min_days_before_checkin() days before check-in, otherwise
+ * none), flips booking status, and inserts a `refund_requests`
  * row when the caller has paid AND the refund amount > 0 (manager then
  * reviews + approves via the existing /manager/bookings flow).
  *
  * Return shape now includes the computed refund_amount + penalty_amount
  * so the UI can show "คุณจะได้รับเงินคืน X บาท เสียค่าธรรมเนียม Y บาท"
- * per the contractually-applied policy.
+ * per the 2-day rule.
  */
 export interface CancelBookingResult {
   success?: boolean
   error?: string
   refundAmount?: number   // amount that will be refunded (0 if no refund row created)
   penaltyAmount?: number  // total - refundAmount
-  policyName?: string     // applied policy (e.g. "Flexible", "Strict")
   refundRequestId?: string | null  // null when no refund row created (unpaid / penalty=0)
-}
-
-/**
- * Phase 27 — Read-only cancellation preview.
- *
- * Calls the `preview_cancel_booking` SECURITY DEFINER RPC which mirrors
- * the calc block of `cancel_booking` but performs NO writes (no UPDATE
- * bookings, no INSERT refund_requests, no INSERT booking_events, no email
- * side-effect). Lets the UI render a rich preview popup — booking date,
- * policy rules, expected refund — BEFORE the user commits.
- *
- * Same auth contract as `cancelBooking`: owner OR staff. No
- * `refund_pct_override` path — that stays in `cancelBooking` for the
- * manager-staff flow.
- */
-export interface PreviewCancellationResult {
-  ok?: boolean
-  error?: string
-  bookingCreatedAt?: string
-  refundAmount?: number
-  penaltyAmount?: number
-  policyName?: string
-  policyFreeHours?: number
-  policyRefundPct?: number
-  hoursUntilCheckin?: number
-}
-
-export async function previewCancellation(
-  bookingId: string,
-): Promise<PreviewCancellationResult> {
-  const { locale, t } = await getServerT()
-  if (!isUuid(bookingId)) return { ok: false, error: t('actions.common.invalidBookingId') }
-
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('preview_cancel_booking', {
-    p_booking_id: bookingId,
-  })
-
-  if (error) {
-    return { ok: false, error: translateSupabaseError(error.message, locale) }
-  }
-  if (!data) {
-    return { ok: false, error: t('actions.common.bookingDataNotFound') }
-  }
-
-  // Supabase RPC with single-row return can come back as an object or as
-  // a one-element array — normalise.
-  const row = Array.isArray(data) ? data[0] : data
-  if (!row) return { ok: false, error: t('actions.common.bookingDataNotFound') }
-
-  return {
-    ok: true,
-    bookingCreatedAt: String(row.booking_created_at ?? ''),
-    refundAmount: Number(row.refund_amount ?? 0),
-    penaltyAmount: Number(row.penalty_amount ?? 0),
-    policyName: String(row.policy_name ?? ''),
-    policyFreeHours: Number(row.policy_free_hours ?? 0),
-    policyRefundPct: Number(row.policy_refund_pct ?? 0),
-    hoursUntilCheckin: Number(row.hours_until_checkin ?? 0),
-  }
 }
 
 export async function cancelBooking(bookingId: string): Promise<CancelBookingResult> {
@@ -927,7 +920,6 @@ export async function cancelBooking(bookingId: string): Promise<CancelBookingRes
   const row = Array.isArray(data) ? data[0] : data
   const refundAmount = row ? Number(row.refund_amount) : 0
   const penaltyAmount = row ? Number(row.penalty_amount) : 0
-  const policyName = row?.policy_name ?? ''
   const refundRequestId = row?.refund_request_id ?? null
 
   revalidatePath('/bookings')
@@ -940,18 +932,63 @@ export async function cancelBooking(bookingId: string): Promise<CancelBookingRes
   // approval (separate template).
   await fireCancellationNotice({
     bookingId,
-    policyName,
     penaltyAmount,
     refundAmount,
     refundRequestId,
   }).catch((e) => console.error('[cancellation_notice] failed:', e))
+  await notifyBookingEvent(bookingId, { refundRequestId, refundAmount })
 
   return {
     success: true,
     refundAmount,
     penaltyAmount,
-    policyName,
     refundRequestId,
+  }
+}
+
+export type PreviewRefundResult =
+  | {
+      ok: true
+      checkIn: string
+      today: string
+      daysUntil: number
+      minDays: number
+      eligible: boolean
+      refundAmount: number
+      alreadyRequested: boolean
+    }
+  | { ok: false; error: string }
+
+/**
+ * Phase 57 — what the refund dialog shows before the guest submits:
+ * check-in date vs today (Asia/Bangkok) and whether the full-refund rule
+ * (at least N days before check-in, N from the DB) is met. Read-only;
+ * request_refund applies the same rule when the guest confirms.
+ */
+export async function previewRefundAction(bookingId: string): Promise<PreviewRefundResult> {
+  const { locale, t } = await getServerT()
+  if (!isUuid(bookingId)) return { ok: false, error: t('actions.common.invalidBookingId') }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('preview_refund', { p_booking_id: bookingId })
+  if (error) {
+    const code = (error as { code?: string }).code
+    if (code === 'P0002') return { ok: false, error: t('actions.common.bookingNotFound') }
+    if (code === '42501') return { ok: false, error: t('actions.common.notYourBooking') }
+    return { ok: false, error: translateSupabaseError(error.message, locale) }
+  }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) return { ok: false, error: t('actions.common.bookingDataNotFound') }
+
+  return {
+    ok: true,
+    checkIn: String(row.check_in),
+    today: String(row.today),
+    daysUntil: Number(row.days_until),
+    minDays: Number(row.min_days),
+    eligible: Boolean(row.eligible),
+    refundAmount: Number(row.refund_amount),
+    alreadyRequested: Boolean(row.already_requested),
   }
 }
 
@@ -960,7 +997,6 @@ export interface RequestRefundResult {
   error?: string
   refundAmount?: number
   penaltyAmount?: number
-  policyName?: string
 }
 
 /**
@@ -991,7 +1027,10 @@ export async function requestRefundAction(bookingId: string): Promise<RequestRef
     if (error.message.includes('REFUND_ALREADY_REQUESTED')) {
       return { error: t('actions.booking.refundAlreadyRequested') }
     }
-    if (error.message.includes('REFUND_ZERO')) return { error: t('actions.booking.refundZero') }
+    if (error.message.includes('REFUND_TOO_LATE')) {
+      const min = /at least (\d+)/.exec(error.message)?.[1] ?? '2'
+      return { error: t('actions.booking.refundTooLate', { min }) }
+    }
     if (error.message.includes('REFUND_NOT_ELIGIBLE')) {
       return { error: t('actions.booking.refundNotEligible') }
     }
@@ -1004,11 +1043,15 @@ export async function requestRefundAction(bookingId: string): Promise<RequestRef
   revalidatePath(`/bookings/${bookingId}`)
   revalidatePath('/manager/bookings')
 
+  await notifyBookingEvent(bookingId, {
+    refundRequestId: row?.refund_request_id ?? null,
+    refundAmount: row ? Number(row.refund_amount) : 0,
+  })
+
   return {
     success: true,
     refundAmount: row ? Number(row.refund_amount) : 0,
     penaltyAmount: row ? Number(row.penalty_amount) : 0,
-    policyName: row?.policy_name ?? '',
   }
 }
 
@@ -1071,7 +1114,6 @@ export async function cancelBookingByStaff(
   const row = Array.isArray(data) ? data[0] : data
   const refundAmount = row ? Number(row.refund_amount) : 0
   const penaltyAmount = row ? Number(row.penalty_amount) : 0
-  const policyName = row?.policy_name ?? ''
   const refundRequestId = row?.refund_request_id ?? null
 
   revalidatePath('/bookings')
@@ -1083,18 +1125,58 @@ export async function cancelBookingByStaff(
   // doesn't change the email template (guest still gets the policy notice).
   await fireCancellationNotice({
     bookingId,
-    policyName,
     penaltyAmount,
     refundAmount,
     refundRequestId,
   }).catch((e) => console.error('[cancellation_notice] failed:', e))
+  await notifyBookingEvent(bookingId, { refundRequestId, refundAmount, cancelledByStaff: true })
 
   return {
     success: true,
     refundAmount,
     penaltyAmount,
-    policyName,
     refundRequestId,
+  }
+}
+
+/**
+ * Phase 60 — in-app notifications for a cancel / refund request:
+ * managers + admins hear about a new refund request; the guest hears when
+ * staff (not they themselves) cancelled the booking. Never throws.
+ */
+async function notifyBookingEvent(
+  bookingId: string,
+  opts: { refundRequestId: string | null; refundAmount: number; cancelledByStaff?: boolean },
+): Promise<void> {
+  if (!opts.refundRequestId && !opts.cancelledByStaff) return
+  try {
+    const admin = await createAdminClient()
+    const { data: booking } = await admin
+      .from('bookings')
+      .select('id, user_id, booking_code')
+      .eq('id', bookingId)
+      .single()
+    if (!booking) return
+    if (opts.refundRequestId) {
+      await notifyRoles(['manager', 'admin'], {
+        type: 'refund_requested_new',
+        params: { code: booking.booking_code, amount: opts.refundAmount },
+        link: '/manager/bookings?tab=refunds',
+        bookingId,
+        eventKey: `refund_requested_new:${opts.refundRequestId}`,
+      })
+    }
+    if (opts.cancelledByStaff) {
+      await notifyUser(booking.user_id, {
+        type: 'booking_cancelled',
+        params: { code: booking.booking_code },
+        link: `/bookings/${bookingId}`,
+        bookingId,
+        eventKey: `booking_cancelled:${bookingId}`,
+      })
+    }
+  } catch (e) {
+    console.error('[notify] booking event failed:', e)
   }
 }
 
@@ -1112,7 +1194,6 @@ export async function cancelBookingByStaff(
  */
 export async function fireCancellationNotice(args: {
   bookingId: string
-  policyName?: string
   penaltyAmount?: number
   refundAmount?: number
   refundRequestId?: string | null
@@ -1120,13 +1201,16 @@ export async function fireCancellationNotice(args: {
   const supabase = await createClient()
   const { data: booking } = await supabase
     .from('bookings')
-    .select('id, user_id, booking_code, booker_email, booker_full_name, total, currency')
+    .select('id, user_id, booking_code, booker_email, booker_full_name, total, currency, payment_status')
     .eq('id', args.bookingId)
     .single()
   if (!booking || !booking.booker_email) return
   const refundAmount = args.refundAmount ?? 0
   const penaltyAmount = args.penaltyAmount ?? Number(booking.total)
-  const policyName = args.policyName ?? '—'
+  // Phase 57b — the email explains the outcome instead of naming a policy.
+  const outcome =
+    booking.payment_status !== 'paid' ? 'unpaid' : refundAmount > 0 ? 'refund_requested' : 'too_late'
+  const minDays = await getRefundMinDays()
   const refundRequestId = args.refundRequestId ?? null
   const emailLocale = await getRecipientLocale({ userId: booking.user_id })
   const { CancellationNoticeEmail, cancellationNoticeSubject } = await import(
@@ -1138,23 +1222,22 @@ export async function fireCancellationNotice(args: {
     template: 'cancellation_notice',
     subject: cancellationNoticeSubject({
       bookingCode: booking.booking_code,
-      policyName,
       locale: emailLocale,
     }),
     react: CancellationNoticeEmail({
       locale: emailLocale,
       bookingCode: booking.booking_code,
       guestName: booking.booker_full_name ?? '',
-      policyName,
+      outcome,
+      minDays,
       penaltyAmount,
       refundAmount,
       currency: booking.currency,
-      noRefund: refundAmount === 0,
       viewUrl: `${appUrl}/bookings/${booking.id}`,
     }),
     eventKey: `cancellation_notice:booking:${booking.id}`,
     bookingId: booking.id,
     refundRequestId: args.refundRequestId,
-    metadata: { policy: args.policyName, penalty: args.penaltyAmount },
+    metadata: { outcome, penalty: args.penaltyAmount },
   })
 }

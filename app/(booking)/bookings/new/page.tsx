@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/manager'
 import { getRoomTypeById } from '@/lib/data/rooms'
-import { getTempBookingById } from '@/lib/data/bookings'
+import { getRefundMinDays, getTempBookingById } from '@/lib/data/bookings'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { TransactionalHeader } from '@/components/layout/TransactionalHeader'
 import { TopNavBar } from '@/components/layout/TopNavBar'
@@ -73,6 +73,7 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
     })
     const minNightsBlocked = violatesMinNights(quote, seasonalRates)
     const pricingSettings = await getPricingConstants()
+    const refundMinDays = await getRefundMinDays()
 
     return (
       <>
@@ -96,6 +97,7 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
                 quote={quote}
                 minNightsBlocked={minNightsBlocked}
                 settings={pricingSettings}
+                refundMinDays={refundMinDays}
               />
             </div>
           </div>
@@ -152,6 +154,7 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
   })
   const minNightsBlocked = violatesMinNights(quote, seasonalRates)
   const pricingSettings = await getPricingConstants()
+  const refundMinDays = await getRefundMinDays()
 
   return (
     <>
@@ -182,6 +185,7 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
               quote={quote}
               minNightsBlocked={minNightsBlocked}
               settings={pricingSettings}
+              refundMinDays={refundMinDays}
             />
           </div>
         </div>

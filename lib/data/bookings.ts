@@ -1,5 +1,7 @@
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
+import { refundDeadlineOrNull } from '@/lib/refund-rule'
 import type {
   RefundRequestHistoryItem,
   RefundRequestStatus,
@@ -244,6 +246,27 @@ export async function getBookingPaymentStatus(
 /**
  * Get default cancellation policy.
  */
+/**
+ * Phase 57 — guests get a full refund when they ask at least this many days
+ * before check-in (manager approval required). The number lives in the DB
+ * (refund_min_days_before_checkin) so the page text matches request_refund.
+ * Admin client: the room page and /terms are public, and the function is not
+ * granted to anon (the value is a constant, nothing private).
+ */
+export const getRefundMinDays = cache(async (): Promise<number> => {
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = await createAdminClient()
+  const { data, error } = await admin.rpc('refund_min_days_before_checkin')
+  if (error) throw wrapSupabaseError('refund_min_days_before_checkin', error)
+  return Number(data)
+})
+
+/** Phase 57c — refund line for emails: rule days + deadline (null = no refund possible). */
+export async function getRefundNotice(checkInIso: string): Promise<{ minDays: number; deadline: string | null }> {
+  const minDays = await getRefundMinDays()
+  return { minDays, deadline: refundDeadlineOrNull(checkInIso, minDays) }
+}
+
 export async function getDefaultCancellationPolicy(): Promise<CancellationPolicy | null> {
   const supabase = await createClient()
 

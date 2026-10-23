@@ -29,6 +29,7 @@ export function RoomImage({
   alt,
   fallbackIcon = 'image',
   className,
+  onError,
   ...rest
 }: RoomImageProps) {
   const src = r2Url(imageKey)
@@ -59,8 +60,11 @@ export function RoomImage({
     <Image
       src={src}
       alt={alt}
-      onError={() => setErrored(true)}
       {...rest}
+      onError={(e) => {
+        setErrored(true)
+        onError?.(e)
+      }}
       className={className}
     />
   )

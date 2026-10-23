@@ -12,15 +12,22 @@ import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
 import { getT } from '@/lib/i18n/t'
 import { formatEmailMoney } from '../format'
 
+/**
+ * Phase 57b — why the guest does / doesn't get money back:
+ *   refund_requested — paid, cancelled ≥ minDays before check-in
+ *   too_late         — paid, cancelled < minDays before check-in
+ *   unpaid           — nothing was paid, nothing to refund
+ */
+export type CancellationOutcome = 'refund_requested' | 'too_late' | 'unpaid'
+
 export interface CancellationNoticeData {
   bookingCode: string
   guestName: string
-  policyName: string
+  outcome: CancellationOutcome
+  /** refund_min_days_before_checkin() — shown in the too_late text. */
+  minDays: number
   penaltyAmount: number
   currency: string
-  /** True when no refund is owed (already outside free window). */
-  noRefund: boolean
-  /** Optional refund amount when inside the free window AND the booking was paid. */
   refundAmount?: number
   viewUrl: string
 }
@@ -28,10 +35,10 @@ export interface CancellationNoticeData {
 export function CancellationNoticeEmail({
   bookingCode,
   guestName,
-  policyName,
+  outcome,
+  minDays,
   penaltyAmount,
   currency,
-  noRefund,
   refundAmount,
   viewUrl,
   locale = 'th',
@@ -47,11 +54,13 @@ export function CancellationNoticeEmail({
             {t('email.cancellationNotice.heading')}
           </Heading>
           <Text style={{ color: '#1a1a1a' }}>{t('email.common.greeting', { name: guestName })}</Text>
-          <Text>{t('email.cancellationNotice.body', { code: bookingCode, policy: policyName })}</Text>
+          <Text>{t('email.cancellationNotice.body', { code: bookingCode })}</Text>
           <Section style={{ borderTop: '1px solid #e0e0d0', borderBottom: '1px solid #e0e0d0', padding: '16px 0', margin: '16px 0' }}>
-            {noRefund ? (
+            {outcome === 'unpaid' ? (
+              <Text style={{ margin: '4px 0' }}>{t('email.cancellationNotice.unpaid')}</Text>
+            ) : outcome === 'too_late' ? (
               <>
-                <Text style={{ margin: '4px 0' }}>{t('email.cancellationNotice.noRefund')}</Text>
+                <Text style={{ margin: '4px 0' }}>{t('email.cancellationNotice.noRefund', { min: minDays })}</Text>
                 <Text style={{ margin: '4px 0' }}>
                   {t('email.cancellationNotice.penalty')}: <strong>{formatEmailMoney(penaltyAmount, currency, locale)}</strong>
                 </Text>
@@ -80,10 +89,8 @@ export function CancellationNoticeEmail({
 
 export const cancellationNoticeSubject = (data: {
   bookingCode: string
-  policyName: string
   locale?: Locale
 }) =>
   getT(data.locale ?? 'th')('email.cancellationNotice.subject', {
     code: data.bookingCode,
-    policy: data.policyName,
   })

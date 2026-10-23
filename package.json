@@ -12,7 +12,8 @@
     "images:upload": "node scripts/upload-image.mjs",
     "images:check": "npx tsx scripts/check-r2-images.mts",
     "images:preflight": "npx tsx scripts/preflight-google-urls.mts",
-    "db:migrate": "node scripts/run-migrations.mjs"
+    "db:migrate": "node scripts/run-migrations.mjs",
+    "test:unit": "node --import tsx --test \"lib/**/*.test.mts\""
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1112.0",
@@ -42,6 +43,7 @@
     "eslint-config-next": "16.3.0",
     "pg": "^8.23.0",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

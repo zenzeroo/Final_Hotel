@@ -26,6 +26,8 @@ import { stripe } from '@/lib/payments/stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/resend'
 import { getRecipientLocale } from '@/lib/email/recipient-locale'
+import { notifyUser } from '@/lib/notifications/notify'
+import { getRefundNotice } from '@/lib/data/bookings'
 
 export const dynamic = 'force-dynamic'
 
@@ -80,7 +82,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         if (bookingId) {
           const { data: booking } = await admin
             .from('bookings')
-            .select('id, status, payment_status, payment_due_at, booker_email, booker_full_name, booking_code, total, currency')
+            .select('id, user_id, status, payment_status, payment_due_at, booker_email, booker_full_name, booking_code, total, currency')
             .eq('id', bookingId)
             .single()
           // Phase 56 — past its deadline but not yet flipped by the
@@ -180,6 +182,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               },
             })
             // Notify the customer.
+            await notifyUser(booking.user_id, {
+              type: 'payment_auto_refunded',
+              params: { code: booking.booking_code, amount: Number(booking.total) },
+              link: `/bookings/${booking.id}`,
+              bookingId,
+              eventKey: `payment_auto_refunded:${event.id}`,
+            })
             if (booking.booker_email) {
               try {
                 const { RefundNoticeEmail, refundNoticeSubject } = await import(
@@ -300,10 +309,10 @@ async function firePaymentReceipt(
   const admin = await createAdminClient()
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, user_id, booking_code, booker_email, booker_full_name, total, currency')
+    .select('id, user_id, booking_code, booker_email, booker_full_name, total, currency, check_in')
     .eq('id', bookingId)
     .single()
-  if (!booking || !booking.booker_email) return
+  if (!booking) return
   const { data: payment } = await admin
     .from('payments')
     .select('id, amount, paid_at')
@@ -313,6 +322,15 @@ async function firePaymentReceipt(
     .limit(1)
     .maybeSingle()
   if (!payment) return
+
+  await notifyUser(booking.user_id, {
+    type: 'payment_received',
+    params: { code: booking.booking_code, amount: Number(payment.amount) },
+    link: `/bookings/${booking.id}`,
+    bookingId,
+    eventKey: `payment_received:${payment.id}`,
+  })
+  if (!booking.booker_email) return
 
   const { PaymentReceiptEmail, paymentReceiptSubject } = await import('@/lib/email/templates/payment-receipt')
   const emailLocale = await getRecipientLocale({ userId: booking.user_id })
@@ -330,6 +348,7 @@ async function firePaymentReceipt(
       method,
       paidAt: payment.paid_at ?? new Date().toISOString(),
       viewUrl: `${appUrl}/bookings/${booking.id}`,
+      refund: await getRefundNotice(booking.check_in),
     }),
     eventKey: `payment_receipt:booking:${booking.id}:${sessionId}`,
     bookingId: booking.id,

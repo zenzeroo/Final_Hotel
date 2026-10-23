@@ -90,15 +90,15 @@ async function main() {
         cn.CancellationNoticeEmail({
           bookingCode: 'ZZR-TEST1',
           guestName: 'Alex',
-          policyName: 'Flexible',
+          outcome: 'refund_requested',
+          minDays: 2,
           penaltyAmount: 0,
           refundAmount: 9000,
           currency: 'THB',
-          noRefund: false,
           viewUrl: 'https://example.com/bookings/1',
           locale,
         }),
-      subject: (locale) => cn.cancellationNoticeSubject({ bookingCode: 'ZZR-TEST1', policyName: 'Flexible', locale }),
+      subject: (locale) => cn.cancellationNoticeSubject({ bookingCode: 'ZZR-TEST1', locale }),
     },
     {
       name: 'refund_notice',

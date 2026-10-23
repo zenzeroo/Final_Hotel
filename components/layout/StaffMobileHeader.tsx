@@ -5,12 +5,14 @@ import { MaterialIcon } from '../ui/MaterialIcon'
 import { MobileOverlay } from '../ui/MobileOverlay'
 import { StaffSidebarNav, type StaffRole } from './StaffSidebar'
 import { useT } from '@/lib/i18n/useT'
+import { NotificationBell } from '../notifications/NotificationBell'
 
 interface StaffMobileHeaderProps {
   role: StaffRole
   userName: string | null
   /** R2 object key for the current user's avatar — drives the profile link icon. */
   avatarKey?: string | null
+  userId: string
 }
 
 /**
@@ -23,7 +25,7 @@ interface StaffMobileHeaderProps {
  *
  * Hidden on md+ (the desktop `<StaffSidebar>` takes over).
  */
-export function StaffMobileHeader({ role, userName, avatarKey }: StaffMobileHeaderProps) {
+export function StaffMobileHeader({ role, userName, avatarKey, userId }: StaffMobileHeaderProps) {
   const t = useT()
   const [open, setOpen] = useState(false)
 
@@ -47,6 +49,9 @@ export function StaffMobileHeader({ role, userName, avatarKey }: StaffMobileHead
               {userName}
             </span>
           )}
+          <div className={userName ? '' : 'ml-auto'}>
+            <NotificationBell userId={userId} tone="dark" />
+          </div>
         </div>
       </header>
 

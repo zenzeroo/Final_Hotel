@@ -6,6 +6,7 @@ import { requireRole } from '@/lib/auth/require'
 import { actionFail, wrapSupabaseError } from '@/lib/errors/supabase'
 import { isUuid } from '@/lib/ids'
 import { getTodayBangkok } from '@/lib/dates'
+import { notifyRoles, notifyUser } from '@/lib/notifications/notify'
 import type {
   HousekeepingTaskPriority,
   HousekeepingTaskType,
@@ -115,6 +116,16 @@ export async function completeTask(taskId: string): Promise<ActionResult> {
   return { ok: true }
 }
 
+/** Phase 60 — tell a housekeeper they got new work. Never throws. */
+async function notifyTaskAssigned(housekeeperId: string, count: number, eventKey: string): Promise<void> {
+  await notifyUser(housekeeperId, {
+    type: 'task_assigned',
+    params: { count },
+    link: '/housekeeper',
+    eventKey,
+  })
+}
+
 export async function reportMaintenance(input: {
   room_unit_id: string
   issue_type: MaintenanceIssueType
@@ -137,7 +148,7 @@ export async function reportMaintenance(input: {
   // Verify room exists and is active before allowing report
   const { data: room, error: roomErr } = await supabase
     .from('room_units')
-    .select('id')
+    .select('id, unit_label')
     .eq('id', input.room_unit_id)
     .eq('is_active', true)
     .maybeSingle()
@@ -145,16 +156,23 @@ export async function reportMaintenance(input: {
   if (roomErr) return { ok: false, error: roomErr.message }
   if (!room) return { ok: false, error: 'Room not found or inactive' }
 
-  const { error } = await supabase.from('maintenance_reports').insert({
+  const { data: report, error } = await supabase.from('maintenance_reports').insert({
     room_unit_id: input.room_unit_id,
     issue_type: input.issue_type,
     severity: input.severity,
     title: input.title.trim(),
     description: input.description?.trim() || null,
     reported_by: session.id,
-  })
+  }).select('id').single()
 
   if (error) return actionFail(error, 'Could not report maintenance')
+
+  await notifyRoles(['manager', 'reception'], {
+    type: 'maintenance_reported',
+    params: { room: room.unit_label, severity: input.severity },
+    link: (role) => (role === 'manager' ? '/manager/maintenance' : '/reception/maintenance'),
+    eventKey: `maintenance_reported:${report.id}`,
+  })
 
   revalidatePath('/housekeeper')
   revalidatePath('/housekeeper/maintenance')
@@ -232,6 +250,8 @@ export async function assignTask(taskId: string, housekeeperId: string): Promise
 
   if (error || !data) return { ok: false, error: 'Task not found or no longer available' }
 
+  await notifyTaskAssigned(housekeeperId, 1, `task_assigned:${data.id}:${housekeeperId}`)
+
   revalidatePath('/manager/housekeeping')
   revalidatePath('/housekeeper/tasks')
   revalidatePath('/housekeeper')
@@ -286,6 +306,10 @@ export async function createTask(input: {
     .single()
 
   if (error) return actionFail(error, 'Could not create task')
+
+  if (input.assignedTo && data?.id) {
+    await notifyTaskAssigned(input.assignedTo, 1, `task_assigned:${data.id}:${input.assignedTo}`)
+  }
 
   revalidatePath('/manager/housekeeping')
   revalidatePath('/housekeeper/tasks')
@@ -376,6 +400,9 @@ export async function assignFloorTasksAction(
       .select('id')
     if (error) return actionFail(error, 'Could not assign floor tasks')
     moved = data?.length ?? 0
+  }
+  if (moved > 0) {
+    await notifyTaskAssigned(housekeeperId, moved, `task_assigned:floor:${crypto.randomUUID()}`)
   }
 
   const { error: floorErr } = await supabase
@@ -632,6 +659,17 @@ export async function runAutoAllocation(): Promise<
   }
 
   const applied = rows.filter((r) => r.applied).length
+
+  const appliedByHk = new Map<string, number>()
+  for (const r of rows) {
+    if (r.applied) appliedByHk.set(r.housekeeper_id, (appliedByHk.get(r.housekeeper_id) ?? 0) + 1)
+  }
+  const batchId = crypto.randomUUID()
+  await Promise.all(
+    [...appliedByHk].map(([hkId, count]) =>
+      notifyTaskAssigned(hkId, count, `task_assigned:auto:${batchId}:${hkId}`),
+    ),
+  )
   const skipped = rows.length - applied
 
   // Quick win — U3: breakdown of skip reasons so the manager sees *why*

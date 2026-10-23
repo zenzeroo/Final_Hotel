@@ -8,6 +8,7 @@ import { AvatarBadge } from '@/components/account/AvatarBadge'
 import { TruncatedText } from '@/components/ui/TruncatedText'
 import { signOut } from '@/app/actions/auth'
 import { useT } from '@/lib/i18n/useT'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { roleHomePath } from '@/lib/supabase/roles'
 
 export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'
@@ -146,13 +147,14 @@ const ROLE_LABEL_KEY: Record<StaffRole, string> = {
  * Desktop sidebar — visible at md+ only. On mobile, the same content
  * is rendered inside `<StaffMobileHeader>`'s overlay via `<StaffSidebarNav>`.
  */
-export function StaffSidebar({ role, userName, avatarKey }: StaffSidebarProps) {
+export function StaffSidebar({ role, userName, avatarKey, userId }: StaffSidebarProps & { userId: string }) {
   return (
     <aside className="hidden md:flex w-72 shrink-0 self-start sticky top-0 z-30 bg-primary text-secondary h-screen flex-col">
       <StaffSidebarNav
         role={role}
         userName={userName}
         avatarKey={avatarKey}
+        headerAction={<NotificationBell userId={userId} align="left" tone="dark" />}
       />
     </aside>
   )
@@ -168,7 +170,8 @@ export function StaffSidebarNav({
   userName,
   avatarKey,
   onNavigate,
-}: StaffSidebarNavProps) {
+  headerAction,
+}: StaffSidebarNavProps & { headerAction?: React.ReactNode }) {
   const pathname = usePathname()
   const t = useT()
   const navGroups = NAV_BY_ROLE[role] ?? []
@@ -187,7 +190,8 @@ export function StaffSidebarNav({
   return (
     <>
       {/* Brand */}
-      <div className="px-6 py-6 border-b border-primary-container">
+      <div className={`relative px-6 py-6 border-b border-primary-container ${headerAction ? 'pr-16' : ''}`}>
+        {headerAction && <div className="absolute right-4 top-5">{headerAction}</div>}
         <Link
           href={roleHomePath(role)}
           onClick={onNavigate}

@@ -92,7 +92,6 @@ export const en: Dictionary = {
 
   // Room detail
   roomDetail: {
-    amenities: 'Amenities',
     reviews: 'Guest Reviews',
     maxGuests: 'Up to {count} guests',
     view: 'View',
@@ -364,6 +363,13 @@ export const en: Dictionary = {
     payBy: 'Pay by {time}',
     timeLeft: '{time} left',
     paymentTimedOut: 'Payment time is up',
+    // Phase 58 — expired-payment button + popup
+    paymentExpiredButton: 'Payment time is up',
+    paymentExpiredTitle: 'Payment time is up',
+    paymentExpiredBody: 'The payment time for this booking has run out. Would you like to choose another room, or try this booking again?',
+    paymentExpiredBodyNoRetry: 'This booking has expired. Please choose a room again.',
+    chooseOtherRoom: 'Choose another room',
+    retryBooking: 'Try this booking again',
     // Phase 53 — placeholder view shown to logged-out visitors on
     // /bookings. See TH counterpart.
     loginRequired: {
@@ -420,17 +426,21 @@ export const en: Dictionary = {
     cancelTempConfirm: 'Cancel this temporary booking? The room will be released to other guests immediately.',
     requestRefund: 'Request refund',
     refundConfirm: 'Are you sure you want to request a refund?',
+    // Phase 57 — full refund only when asked ≥ {min} days before check-in
+    refundRule: 'Request a refund {min} days before check-in for a full refund (subject to manager approval). After that, no refund is possible.',
+    refundCheckTitle: 'Refund eligibility',
+    refundUntilDate: 'For this booking, refunds can be requested until {date}',
+    refundNoLonger: 'The refund deadline for this booking has passed',
+    refundCheckInDate: 'Check-in date',
+    refundToday: 'Today',
+    refundDaysLeft: 'Days until check-in',
+    refundDaysValue: '{days} days',
+    refundEligibleNote: 'You will receive a full refund of {amount} once a manager approves the request.',
+    refundIneligibleNote: 'Refunds must be requested at least {min} days before check-in, so this booking cannot be refunded.',
+    sendRefundRequest: 'Send refund request',
+    refundRequestSent: 'Refund request sent. {amount} will be refunded after a manager approves it.',
     cancelSuccess: 'Booking cancelled',
     cancellationPolicy: 'Cancellation policy',
-    refundAmount: 'Refund amount',
-    penalty: 'Penalty',
-    refundPreviewTitle: 'Refund summary',
-    bookingCreatedOn: 'Booked on',
-    policyWindow: 'Cancel within {hours}h before check-in → {pct}% refund',
-    policyWindowExpired: 'Past cancellation window ({hours}h) — no refund',
-    hoursUntilCheckin: '{hours}h until check-in',
-    expectedRefund: 'Expected refund',
-    confirmRefund: 'Confirm refund',
     // Phase 29 — refund status badges (visible to user on /bookings/[id])
     refundStatusPending: 'Under review',
     refundStatusApproved: 'Approved',
@@ -1088,9 +1098,12 @@ export const en: Dictionary = {
       cancel: 'Cancel',
       confirmCancel: 'Cancel this booking?',
       cancelBooking: 'Cancel booking',
-      policyFallback: 'policy',
-      cancelledWithRefund: 'Cancelled ({policy}) — refund {refund} THB, cancellation fee {penalty} THB. The refund request has been sent to the manager.',
-      cancelledNoRefund: 'Cancelled — no refund under the policy',
+      // Phase 57b — staff cancel follows the 2-day refund rule
+      cancelOutcomeRefund: 'Full refund of {amount} — a refund request will be sent to the manager for approval.',
+      cancelOutcomeTooLate: 'No refund: cancelled less than {min} days before check-in.',
+      cancelOutcomeUnpaid: 'Not paid yet — nothing to refund.',
+      cancelledRefundRequested: 'Cancelled — a refund request of {amount} was sent to the manager.',
+      cancelledNoRefund: 'Cancelled — no refund.',
     },
     customersPage: {
       title: 'Search customers',
@@ -2000,6 +2013,12 @@ export const en: Dictionary = {
 
   // Phase 27.C — server-action messages (booking / walk-in / account)
   actions: {
+    // Phase 58 — retryExpiredBookingAction
+    payment: {
+      retryRoomTaken: 'This room has been booked for those dates. Please choose another room.',
+      retryDatesPassed: 'The stay dates for this booking have passed. Please pick new dates.',
+      retryNotPossible: 'This booking cannot be retried. Please choose a room again.',
+    },
     common: {
       invalidInput: 'Invalid input: {detail}',
       invalidInputPlain: 'Invalid input',
@@ -2040,7 +2059,7 @@ export const en: Dictionary = {
       cancelFailed: 'Could not cancel the booking: {detail}',
       cancelNotAllowed: 'This booking cannot be cancelled: {detail}',
       refundAlreadyRequested: 'A refund was already requested for this booking. Only one request is allowed per booking.',
-      refundZero: 'Under the cancellation policy there is no refund for this booking right now. Please contact the hotel if you have questions.',
+      refundTooLate: 'Refunds are only available when requested at least {min} days before check-in, so this booking cannot be refunded.',
       refundNotEligible: 'This booking is not eligible for a refund request.',
       refundRequestFailed: 'Could not send the refund request: {detail}',
       refundOverrideManagerOnly: 'Only a manager or admin can override the refund percentage',
@@ -2071,6 +2090,7 @@ export const en: Dictionary = {
     newPasswordMin: 'New password must be at least 8 characters',
     newPasswordMax: 'New password must be at most 72 characters',
     passwordMismatch: 'New password and confirmation do not match',
+    acceptRefundRule: 'Please accept the refund policy before confirming the booking',
   },
 
   // Email templates (Phase 27.D — rendered with getT(recipientLocale))
@@ -2093,6 +2113,8 @@ export const en: Dictionary = {
       total: 'Total',
       viewCta: 'View booking details and pay at:',
       footer: 'For questions, contact us at booking@zenzero.com',
+      refundUntil: 'Request a refund {min} days before check-in for a full refund — for this booking, until {date}',
+      refundNone: 'Check-in is less than {min} days away, so this booking cannot be refunded',
     },
     paymentReceipt: {
       subject: '[Zenzero] Payment receipt {code}',
@@ -2107,13 +2129,16 @@ export const en: Dictionary = {
       amount: 'Amount',
       viewCta: 'View the full receipt at:',
       footer: 'Thank you for choosing Zenzero Hotel',
+      refundUntil: 'Request a refund {min} days before check-in for a full refund — for this booking, until {date}',
+      refundNone: 'Check-in is less than {min} days away, so this booking cannot be refunded',
     },
     cancellationNotice: {
-      subject: '[Zenzero] Booking {code} cancelled — {policy} policy',
+      subject: '[Zenzero] Booking {code} cancelled',
       preview: 'Booking {code} cancelled',
       heading: 'Your booking has been cancelled',
-      body: 'Booking {code} has been cancelled under the “{policy}” policy.',
-      noRefund: 'This cancellation is outside the free-cancellation window, so no refund is due.',
+      body: 'Booking {code} has been cancelled.',
+      noRefund: 'This booking was cancelled less than {min} days before check-in, so no refund is due.',
+      unpaid: 'This booking was not paid yet, so there is nothing to refund.',
       penalty: 'Cancellation fee',
       refundRequested: 'A refund request of {amount} has been sent to our manager for review.',
       refundFollowUp: 'We will email you again once the refund is complete.',
@@ -2256,11 +2281,19 @@ export const en: Dictionary = {
       minNightsError: "A seasonal rate requires more nights than selected — please add nights",
       confirm: "Confirm booking",
       noCharge: "You won't be charged until you confirm",
-      freeCancel: "Free cancellation within 24 hours",
+      // Phase 57c — 2-day refund rule
+      refundRule: "Request a refund {min} days before check-in for a full refund",
+      refundNone: "These dates are too close to check-in for a refund",
     },
     gallery: {
       collection: "Signature collection",
-      seeMore: "+ See more",
+      // Phase 59 — adaptive gallery + full-screen viewer
+      moreCount: "+{count} photos",
+      viewImage: "View photo {n}",
+      close: "Close",
+      prev: "Previous photo",
+      next: "Next photo",
+      counter: "{n} / {total}",
     },
     rating: {
       groupLabel: "Rating",
@@ -2301,12 +2334,16 @@ export const en: Dictionary = {
       roomSubtotal: "Room total (incl. seasonal rates)",
       confirmPay: "Confirm and pay",
       afterNote: "You'll see a confirmation page once the booking is created",
+      // Phase 57c — refund rule shown + accepted before booking (also used on the Stripe page)
+      refundHeading: "Refund policy",
+      refundUntil: "Request a refund {min} days before check-in for a full refund — for this booking, until {date} (manager approval)",
+      refundNone: "Check-in is less than {min} days away, so this booking cannot be refunded",
+      acceptRefundRule: "I have read and accept the refund policy",
     },
     bookingDetail: {
       cancelFailed: "Could not cancel the booking",
       openPayFailed: "Could not open the payment page",
       cancelItemFailed: "Could not cancel this item",
-      previewFailed: "Could not preview the cancellation",
       cancelled: "This booking has been cancelled",
       roomHeld: "This room was just booked or is temporarily held by another guest. Please try again shortly (holds expire within 10 minutes).",
     },
@@ -2366,6 +2403,30 @@ export const en: Dictionary = {
     },
     loading: {
       label: 'Loading...',
+    },
+  },
+  notifications: {
+    title: 'Notifications',
+    open: 'Open notifications',
+    unreadCount: '{count} unread',
+    markAllRead: 'Mark all as read',
+    empty: 'No notifications yet',
+    loadFailed: 'Could not load notifications',
+    justNow: 'Just now',
+    minutesAgo: '{n} min ago',
+    hoursAgo: '{n} h ago',
+    daysAgo: '{n} d ago',
+    types: {
+      payment_received: 'Payment of {amount} received for booking {code}',
+      payment_auto_refunded: 'Booking {code} expired before your payment went through — {amount} has been refunded',
+      refund_approved: 'Refund of {amount} approved for booking {code}',
+      refund_rejected: 'Your refund request for booking {code} was not approved — the booking stays valid',
+      booking_cancelled: 'Booking {code} was cancelled by the hotel',
+      booking_expired: 'Booking {code} expired — payment was not received in time',
+      refund_requested_new: 'New refund request of {amount} for booking {code}',
+      maintenance_reported: 'Maintenance reported for room {room} (severity: {severity})',
+      task_assigned: 'You have {count} new task(s)',
+      booking_new: 'New booking {code}, check-in {checkIn}',
     },
   },
 }

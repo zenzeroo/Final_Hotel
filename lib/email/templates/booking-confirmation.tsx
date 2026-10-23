@@ -22,6 +22,11 @@ export interface BookingConfirmationData {
   total: number
   currency: string
   viewUrl: string
+  /**
+   * Phase 57c — refund rule line: last day for a full refund, or null when
+   * check-in is already less than `minDays` away. Omit to hide the line.
+   */
+  refund?: { minDays: number; deadline: string | null }
 }
 
 /**
@@ -39,6 +44,7 @@ export function BookingConfirmationEmail({
   total,
   currency,
   viewUrl,
+  refund,
   locale = 'th',
 }: BookingConfirmationData & { locale?: Locale }) {
   const t = getT(locale)
@@ -56,13 +62,20 @@ export function BookingConfirmationEmail({
           <Section style={{ borderTop: '1px solid #e0e0d0', borderBottom: '1px solid #e0e0d0', padding: '16px 0', margin: '16px 0' }}>
             <Text style={{ margin: '4px 0' }}>{t('email.common.bookingCode')}: <strong>{bookingCode}</strong></Text>
             <Text style={{ margin: '4px 0' }}>{t('email.bookingConfirmation.roomType')}: {roomTypeName}</Text>
-            <Text style={{ margin: '4px 0' }}>{t('email.bookingConfirmation.checkIn')}: {formatEmailDate(checkIn, locale)}</Text>
-            <Text style={{ margin: '4px 0' }}>{t('email.bookingConfirmation.checkOut')}: {formatEmailDate(checkOut, locale)}</Text>
+            <Text style={{ margin: '4px 0' }}>{t('email.bookingConfirmation.checkIn')}: {formatEmailDate(checkIn)}</Text>
+            <Text style={{ margin: '4px 0' }}>{t('email.bookingConfirmation.checkOut')}: {formatEmailDate(checkOut)}</Text>
             <Text style={{ margin: '4px 0' }}>{t('email.bookingConfirmation.nights', { count: nights })}</Text>
             <Text style={{ margin: '4px 0', fontSize: 16 }}>
               {t('email.bookingConfirmation.total')}: <strong>{formatEmailMoney(total, currency, locale)}</strong>
             </Text>
           </Section>
+          {refund && (
+            <Text style={{ margin: '8px 0', color: refund.deadline ? '#1a1a1a' : '#ba1a1a' }}>
+              {refund.deadline
+                ? t('email.bookingConfirmation.refundUntil', { date: formatEmailDate(refund.deadline), min: refund.minDays })
+                : t('email.bookingConfirmation.refundNone', { min: refund.minDays })}
+            </Text>
+          )}
           <Text>
             {t('email.bookingConfirmation.viewCta')} <a href={viewUrl} style={{ color: '#3d5a40' }}>{viewUrl}</a>
           </Text>
@@ -81,6 +94,6 @@ export const bookingConfirmationSubject = (data: {
   const locale = data.locale ?? 'th'
   return getT(locale)('email.bookingConfirmation.subject', {
     code: data.bookingCode,
-    date: formatEmailDate(data.checkIn, locale),
+    date: formatEmailDate(data.checkIn),
   })
 }

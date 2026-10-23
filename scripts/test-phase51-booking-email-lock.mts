@@ -297,10 +297,13 @@ async function main() {
     )
     assert(formSource.includes('aria-readonly="true"'), 'aria-readonly="true" missing')
     assert(/MaterialIcon[\s\S]*?name="lock"/.test(formSource), 'lock MaterialIcon missing')
+    // The helper text moved to the dictionary in the customer i18n pass.
     assert(
-      formSource.includes('อีเมลผูกกับบัญชีของคุณ'),
-      'Thai helper text missing from BookingForm',
+      formSource.includes("t('bookingForm.emailLockedHint')"),
+      'helper text (bookingForm.emailLockedHint) missing from BookingForm',
     )
+    const thDict = readFileSync(resolve(__dirname, '..', 'lib', 'i18n', 'dictionaries', 'th.ts'), 'utf-8')
+    assert(thDict.includes('อีเมลผูกกับบัญชีของคุณ'), 'Thai helper text missing from th.ts')
   })
 
   await step('Case 1b: BookingForm no longer sends bookerEmail to server actions', () => {

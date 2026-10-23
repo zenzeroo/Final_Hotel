@@ -88,7 +88,6 @@ export const th = {
 
   // Room detail
   roomDetail: {
-    amenities: 'สิ่งอำนวยความสะดวก',
     reviews: 'รีวิวจากผู้เข้าพัก',
     maxGuests: 'สูงสุด {count} ท่าน',
     view: 'วิว',
@@ -363,6 +362,13 @@ export const th = {
     payBy: 'ชำระภายใน {time} น.',
     timeLeft: 'เหลือ {time}',
     paymentTimedOut: 'หมดเวลาชำระเงิน',
+    // Phase 58 — expired-payment button + popup
+    paymentExpiredButton: 'หมดเวลาชำระเงิน',
+    paymentExpiredTitle: 'หมดเวลาชำระเงินแล้ว',
+    paymentExpiredBody: 'การจองนี้หมดเวลาชำระเงินแล้ว ต้องการไปเลือกห้องพักอื่น หรือทำรายการนี้อีกครั้ง?',
+    paymentExpiredBodyNoRetry: 'การจองนี้หมดเวลาแล้ว กรุณาเลือกห้องพักใหม่อีกครั้ง',
+    chooseOtherRoom: 'เลือกห้องพักอื่น',
+    retryBooking: 'ทำรายการนี้อีกครั้ง',
     // Phase 53 — placeholder view shown to logged-out visitors on
     // /bookings. The page itself renders an <EmptyState> + a primary
     // CTA (go to login with `?next=/bookings`) and a secondary CTA
@@ -422,17 +428,21 @@ export const th = {
     cancelTempConfirm: 'ยกเลิกการจองชั่วคราวนี้หรือไม่? ห้องจะถูกปล่อยให้ผู้ใช้อื่นทันที',
     requestRefund: 'ขอเงินคืน',
     refundConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการขอเงินคืน?',
+    // Phase 57 — full refund only when asked ≥ {min} days before check-in
+    refundRule: 'ขอคืนเงินก่อนวันเช็คอิน {min} วัน ได้เงินคืนเต็มจำนวน (ต้องได้รับการอนุมัติจากผู้จัดการ) หลังจากนั้นไม่สามารถคืนเงินได้',
+    refundCheckTitle: 'ตรวจสอบสิทธิ์การคืนเงิน',
+    refundUntilDate: 'สำหรับการจองนี้ ขอคืนเงินได้ถึงวันที่ {date}',
+    refundNoLonger: 'การจองนี้เลยกำหนดขอคืนเงินแล้ว',
+    refundCheckInDate: 'วันเช็คอิน',
+    refundToday: 'วันนี้',
+    refundDaysLeft: 'ห่างจากวันเช็คอิน',
+    refundDaysValue: '{days} วัน',
+    refundEligibleNote: 'คุณจะได้รับเงินคืนเต็มจำนวน {amount} หลังผู้จัดการอนุมัติคำขอ',
+    refundIneligibleNote: 'ต้องขอก่อนวันเช็คอินอย่างน้อย {min} วัน การจองนี้จึงไม่สามารถคืนเงินได้',
+    sendRefundRequest: 'ส่งคำขอคืนเงิน',
+    refundRequestSent: 'ส่งคำขอคืนเงินแล้ว ยอด {amount} จะคืนให้หลังผู้จัดการอนุมัติ',
     cancelSuccess: 'ยกเลิกการจองเรียบร้อย',
     cancellationPolicy: 'นโยบายการยกเลิก',
-    refundAmount: 'จำนวนเงินคืน',
-    penalty: 'ค่าธรรมเนียม',
-    refundPreviewTitle: 'สรุปการขอคืนเงิน',
-    bookingCreatedOn: 'วันที่จอง',
-    policyWindow: 'ยกเลิกก่อนเช็คอิน {hours} ชม. คืนเงิน {pct}%',
-    policyWindowExpired: 'เกินกรอบยกเลิก ({hours} ชม.) — ไม่ได้รับเงินคืน',
-    hoursUntilCheckin: 'เหลืออีก {hours} ชม. ก่อนเช็คอิน',
-    expectedRefund: 'จะได้รับเงินคืน',
-    confirmRefund: 'ยืนยันการขอคืนเงิน',
     // Phase 29 — refund status badges (visible to user on /bookings/[id])
     refundStatusPending: 'รอพิจารณา',
     refundStatusApproved: 'อนุมัติแล้ว',
@@ -1090,9 +1100,12 @@ export const th = {
       cancel: 'ยกเลิก',
       confirmCancel: 'ยกเลิกการจองนี้?',
       cancelBooking: 'ยกเลิกการจอง',
-      policyFallback: 'นโยบาย',
-      cancelledWithRefund: 'ยกเลิกสำเร็จ ({policy}) — จะคืนเงิน {refund} บาท, เสียค่าธรรมเนียม {penalty} บาท. ส่งคำขอคืนเงินให้ผู้จัดการแล้ว',
-      cancelledNoRefund: 'ยกเลิกสำเร็จ — ไม่มีการคืนเงินตามนโยบาย',
+      // Phase 57b — staff cancel follows the 2-day refund rule
+      cancelOutcomeRefund: 'คืนเงินเต็มจำนวน {amount} — ระบบจะส่งคำขอคืนเงินให้ผู้จัดการอนุมัติ',
+      cancelOutcomeTooLate: 'ไม่คืนเงิน เพราะยกเลิกน้อยกว่า {min} วันก่อนวันเช็คอิน',
+      cancelOutcomeUnpaid: 'ยังไม่ได้ชำระเงิน — ไม่มีการคืนเงิน',
+      cancelledRefundRequested: 'ยกเลิกสำเร็จ — ส่งคำขอคืนเงิน {amount} ให้ผู้จัดการแล้ว',
+      cancelledNoRefund: 'ยกเลิกสำเร็จ — ไม่มีการคืนเงิน',
     },
     customersPage: {
       title: 'ค้นหาลูกค้า',
@@ -2002,6 +2015,12 @@ export const th = {
 
   // Phase 27.C — server-action messages (booking / walk-in / account)
   actions: {
+    // Phase 58 — retryExpiredBookingAction
+    payment: {
+      retryRoomTaken: 'ห้องนี้ถูกจองไปแล้วในช่วงวันที่เดิม กรุณาเลือกห้องพักอื่น',
+      retryDatesPassed: 'วันเข้าพักของการจองนี้ผ่านไปแล้ว กรุณาเลือกวันใหม่',
+      retryNotPossible: 'ไม่สามารถทำรายการนี้อีกครั้งได้ กรุณาเลือกห้องพักใหม่',
+    },
     common: {
       invalidInput: 'ข้อมูลไม่ถูกต้อง: {detail}',
       invalidInputPlain: 'ข้อมูลไม่ถูกต้อง',
@@ -2041,7 +2060,7 @@ export const th = {
       cancelFailed: 'ไม่สามารถยกเลิกการจอง: {detail}',
       cancelNotAllowed: 'ไม่สามารถยกเลิกการจองนี้ได้: {detail}',
       refundAlreadyRequested: 'การจองนี้เคยส่งคำขอคืนเงินแล้ว ขอได้ครั้งเดียวต่อการจอง',
-      refundZero: 'ตามนโยบายการยกเลิก ตอนนี้ไม่มีเงินคืนสำหรับการจองนี้ หากมีข้อสงสัยกรุณาติดต่อโรงแรม',
+      refundTooLate: 'ขอคืนเงินได้เฉพาะก่อนวันเช็คอินอย่างน้อย {min} วัน การจองนี้จึงไม่สามารถคืนเงินได้',
       refundNotEligible: 'การจองนี้ไม่สามารถขอคืนเงินได้',
       refundRequestFailed: 'ไม่สามารถส่งคำขอคืนเงิน: {detail}',
       refundOverrideManagerOnly:
@@ -2074,6 +2093,7 @@ export const th = {
     newPasswordMin: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร',
     newPasswordMax: 'รหัสผ่านใหม่ต้องไม่เกิน 72 ตัวอักษร',
     passwordMismatch: 'รหัสผ่านใหม่และการยืนยันไม่ตรงกัน',
+    acceptRefundRule: 'กรุณายอมรับเงื่อนไขการคืนเงินก่อนยืนยันการจอง',
   },
 
   // Email templates (Phase 27.D — rendered with getT(recipientLocale))
@@ -2096,6 +2116,8 @@ export const th = {
       total: 'ยอดรวม',
       viewCta: 'ดูรายละเอียดการจองและชำระเงินได้ที่:',
       footer: 'หากมีคำถามเพิ่มเติม ติดต่อเราได้ที่ booking@zenzero.com',
+      refundUntil: 'ขอคืนเงินก่อนวันเช็คอิน {min} วัน ได้เงินคืนเต็มจำนวน — สำหรับการจองนี้ขอได้ถึงวันที่ {date}',
+      refundNone: 'การจองนี้เหลือน้อยกว่า {min} วันก่อนเช็คอิน จึงไม่สามารถขอคืนเงินได้',
     },
     paymentReceipt: {
       subject: '[Zenzero] ใบเสร็จการจอง {code}',
@@ -2110,13 +2132,16 @@ export const th = {
       amount: 'ยอดเงิน',
       viewCta: 'ดูใบเสร็จฉบับเต็มได้ที่:',
       footer: 'ขอบคุณที่ใช้บริการ Zenzero Hotel',
+      refundUntil: 'ขอคืนเงินก่อนวันเช็คอิน {min} วัน ได้เงินคืนเต็มจำนวน — สำหรับการจองนี้ขอได้ถึงวันที่ {date}',
+      refundNone: 'การจองนี้เหลือน้อยกว่า {min} วันก่อนเช็คอิน จึงไม่สามารถขอคืนเงินได้',
     },
     cancellationNotice: {
-      subject: '[Zenzero] ยกเลิกการจอง {code} — นโยบาย {policy}',
+      subject: '[Zenzero] ยกเลิกการจอง {code}',
       preview: 'ยกเลิกการจอง {code} เรียบร้อย',
       heading: 'ยกเลิกการจองเรียบร้อย',
-      body: 'การจอง {code} ถูกยกเลิกเรียบร้อยแล้ว ตามเงื่อนไขนโยบาย “{policy}”',
-      noRefund: 'การยกเลิกนี้อยู่นอกช่วงยกเลิกฟรี ไม่สามารถขอคืนเงินได้',
+      body: 'การจอง {code} ถูกยกเลิกเรียบร้อยแล้ว',
+      noRefund: 'การยกเลิกนี้เกิดขึ้นน้อยกว่า {min} วันก่อนวันเช็คอิน จึงไม่มีการคืนเงิน',
+      unpaid: 'การจองนี้ยังไม่ได้ชำระเงิน จึงไม่มียอดที่ต้องคืน',
       penalty: 'ค่าธรรมเนียมการยกเลิก',
       refundRequested: 'คำขอคืนเงินจำนวน {amount} ถูกส่งให้ผู้จัดการพิจารณาแล้ว',
       refundFollowUp: 'ระบบจะแจ้งให้ท่านทราบอีกครั้งเมื่อการคืนเงินเสร็จสมบูรณ์',
@@ -2259,11 +2284,19 @@ export const th = {
       minNightsError: "เรทฤดูกาลกำหนดจำนวนคืนขั้นต่ำมากกว่าที่เลือก — กรุณาเพิ่มจำนวนคืน",
       confirm: "ยืนยันการจอง",
       noCharge: "คุณจะไม่ถูกเรียกเก็บเงินจนกว่าจะยืนยัน",
-      freeCancel: "ยกเลิกฟรีภายใน 24 ชั่วโมง",
+      // Phase 57c — 2-day refund rule
+      refundRule: "ขอคืนเงินก่อนวันเช็คอิน {min} วัน ได้เงินคืนเต็มจำนวน",
+      refundNone: "วันเข้าพักที่เลือกนี้จะไม่สามารถขอคืนเงินได้",
     },
     gallery: {
       collection: "คอลเลกชั่นพิเศษ",
-      seeMore: "+ ดูเพิ่มเติม",
+      // Phase 59 — adaptive gallery + full-screen viewer
+      moreCount: "+{count} รูป",
+      viewImage: "ดูรูปที่ {n}",
+      close: "ปิด",
+      prev: "รูปก่อนหน้า",
+      next: "รูปถัดไป",
+      counter: "{n} / {total}",
     },
     rating: {
       groupLabel: "ให้คะแนน",
@@ -2304,12 +2337,16 @@ export const th = {
       roomSubtotal: "รวมค่าห้อง (รวมเรทฤดูกาล)",
       confirmPay: "ยืนยันการจ่ายเงิน",
       afterNote: "ระบบจะแสดงหน้ายืนยันเมื่อสร้างการจองสำเร็จ",
+      // Phase 57c — refund rule shown + accepted before booking (also used on the Stripe page)
+      refundHeading: "เงื่อนไขการคืนเงิน",
+      refundUntil: "ขอคืนเงินก่อนวันเช็คอิน {min} วัน ได้เงินคืนเต็มจำนวน — สำหรับการจองนี้ขอได้ถึงวันที่ {date} (ผู้จัดการอนุมัติ)",
+      refundNone: "การจองนี้เหลือน้อยกว่า {min} วันก่อนเช็คอิน จึงไม่สามารถขอคืนเงินได้",
+      acceptRefundRule: "ฉันรับทราบและยอมรับเงื่อนไขการคืนเงิน",
     },
     bookingDetail: {
       cancelFailed: "ไม่สามารถยกเลิกการจอง",
       openPayFailed: "ไม่สามารถเปิดหน้าชำระเงินได้",
       cancelItemFailed: "ไม่สามารถยกเลิกรายการได้",
-      previewFailed: "ไม่สามารถดูตัวอย่างการยกเลิกได้",
       cancelled: "การจองนี้ถูกยกเลิกแล้ว",
       roomHeld: "ห้องนี้เพิ่งถูกจองหรือถูกระงับชั่วคราวโดยผู้ใช้อื่น กรุณาลองใหม่ในอีกสักครู่ (การถือครองจะหมดอายุภายใน 10 นาที)",
     },
@@ -2369,6 +2406,30 @@ export const th = {
     },
     loading: {
       label: 'กำลังโหลด...',
+    },
+  },
+  notifications: {
+    title: 'การแจ้งเตือน',
+    open: 'เปิดการแจ้งเตือน',
+    unreadCount: 'ยังไม่อ่าน {count} รายการ',
+    markAllRead: 'อ่านทั้งหมดแล้ว',
+    empty: 'ยังไม่มีการแจ้งเตือน',
+    loadFailed: 'โหลดการแจ้งเตือนไม่สำเร็จ',
+    justNow: 'เมื่อสักครู่',
+    minutesAgo: '{n} นาทีที่แล้ว',
+    hoursAgo: '{n} ชั่วโมงที่แล้ว',
+    daysAgo: '{n} วันที่แล้ว',
+    types: {
+      payment_received: 'ได้รับชำระเงิน {amount} สำหรับการจอง {code} แล้ว',
+      payment_auto_refunded: 'การจอง {code} หมดอายุก่อนชำระเงินสำเร็จ — คืนเงิน {amount} ให้อัตโนมัติแล้ว',
+      refund_approved: 'อนุมัติคืนเงิน {amount} สำหรับการจอง {code} แล้ว',
+      refund_rejected: 'คำขอคืนเงินของการจอง {code} ไม่ได้รับการอนุมัติ — การจองยังใช้ได้ตามเดิม',
+      booking_cancelled: 'การจอง {code} ถูกยกเลิกโดยโรงแรม',
+      booking_expired: 'การจอง {code} หมดเวลาชำระเงินแล้ว',
+      refund_requested_new: 'มีคำขอคืนเงินใหม่ {amount} สำหรับการจอง {code}',
+      maintenance_reported: 'แจ้งซ่อมห้อง {room} (ความรุนแรง: {severity})',
+      task_assigned: 'คุณได้รับมอบหมายงานใหม่ {count} งาน',
+      booking_new: 'การจองใหม่ {code} เช็คอิน {checkIn}',
     },
   },
 } as const

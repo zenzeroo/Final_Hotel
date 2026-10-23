@@ -29,7 +29,10 @@ import {
   createPaymentSession,
   updatePaymentSessionId,
 } from '@/lib/data/payments'
-import { getBookingPaymentStatus } from '@/lib/data/bookings'
+import { getBookingPaymentStatus, getRefundMinDays, getRefundNotice } from '@/lib/data/bookings'
+import { refundDeadlineOrNull } from '@/lib/refund-rule'
+import { getServerT } from '@/lib/i18n/server'
+import { formatDate, getTodayBangkok } from '@/lib/dates'
 import { UUID_RE } from '@/lib/ids'
 import { getSession } from '@/lib/supabase/getSession'
 import { translateSupabaseError } from '@/lib/errors/translate'
@@ -94,13 +97,22 @@ export async function createCheckoutSessionAction(
   if (!sessionUser) {
     return { ok: false, error: 'กรุณาเข้าสู่ระบบ' }
   }
-  const precheckErr = await precheckPayableBooking(
+  const precheck = await precheckPayableBooking(
     parsed.data.bookingId,
     sessionUser.id,
   )
-  if (precheckErr) {
-    return { ok: false, error: precheckErr }
+  if ('error' in precheck) {
+    return { ok: false, error: precheck.error }
   }
+
+  // Phase 57c — refund rule under the Stripe Pay button, in the guest's
+  // language (same text + deadline as the booking form).
+  const { locale, t } = await getServerT()
+  const refundMinDays = await getRefundMinDays()
+  const refundDeadline = refundDeadlineOrNull(precheck.checkIn, refundMinDays)
+  const refundNote = refundDeadline
+    ? t('customer.bookingForm.refundUntil', { date: formatDate(refundDeadline), min: refundMinDays })
+    : t('customer.bookingForm.refundNone', { min: refundMinDays })
 
   // 1. Reserve the payment row (owner/staff enforced via RPC).
   let payment
@@ -143,6 +155,8 @@ export async function createCheckoutSessionAction(
         booking_id: parsed.data.bookingId,
         payment_id: payment.id,
       },
+      locale: locale === 'en' ? 'en' : 'th',
+      custom_text: { submit: { message: refundNote } },
     })
   } catch (e) {
     return actionFail(e, 'Stripe error: ไม่สามารถเปิดหน้าชำระเงินได้')
@@ -294,10 +308,10 @@ export async function markCashPaidAction(
       const admin = await createAdminClient()
       const { data: freshBooking } = await admin
         .from('bookings')
-        .select('id, user_id, booking_code, booker_email, booker_full_name, total, currency')
+        .select('id, user_id, booking_code, booker_email, booker_full_name, total, currency, check_in')
         .eq('id', booking.id)
         .single()
-      if (freshBooking && freshBooking.booker_email) {
+      if (freshBooking) {
         const { data: payment } = await admin
           .from('payments')
           .select('id, amount, paid_at')
@@ -307,6 +321,16 @@ export async function markCashPaidAction(
           .limit(1)
           .maybeSingle()
         if (payment) {
+          const { notifyUser } = await import('@/lib/notifications/notify')
+          await notifyUser(freshBooking.user_id, {
+            type: 'payment_received',
+            params: { code: freshBooking.booking_code, amount: Number(payment.amount) },
+            link: `/bookings/${freshBooking.id}`,
+            bookingId: freshBooking.id,
+            eventKey: `payment_received:${payment.id}`,
+          })
+        }
+        if (payment && freshBooking.booker_email) {
           const emailLocale = await getRecipientLocale({ userId: freshBooking.user_id })
           const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
           await sendEmail({
@@ -322,6 +346,7 @@ export async function markCashPaidAction(
               method: 'cash',
               paidAt: payment.paid_at ?? new Date().toISOString(),
               viewUrl: `${appUrl}/bookings/${freshBooking.id}`,
+              refund: await getRefundNotice(freshBooking.check_in),
             }),
             eventKey: `payment_receipt:booking:${freshBooking.id}:cash:${payment.id}`,
             bookingId: freshBooking.id,
@@ -395,11 +420,11 @@ export async function pollBookingPaymentStatusAction(
 async function precheckPayableBooking(
   bookingId: string,
   userId: string,
-): Promise<string | null> {
+): Promise<{ error: string } | { checkIn: string }> {
   const supabase = await createClient()
   const { data: booking, error } = await supabase
     .from('bookings')
-    .select('id, user_id, status, payment_status, lapsed_reason, payment_due_at')
+    .select('id, user_id, status, payment_status, lapsed_reason, payment_due_at, check_in')
     .eq('id', bookingId)
     .eq('user_id', userId)
     .maybeSingle()
@@ -407,32 +432,32 @@ async function precheckPayableBooking(
   // is not "not found" — surface it instead of hiding it.
   if (error) {
     console.error('[precheckPayableBooking] failed to load booking:', error)
-    return `ไม่สามารถโหลดข้อมูลการจอง: ${error.message}`
+    return { error: `ไม่สามารถโหลดข้อมูลการจอง: ${error.message}` }
   }
-  if (!booking) return 'ไม่พบการจองนี้'
+  if (!booking) return { error: 'ไม่พบการจองนี้' }
   if (booking.status === 'cancelled') {
-    return 'การจองนี้ถูกยกเลิกแล้ว'
+    return { error: 'การจองนี้ถูกยกเลิกแล้ว' }
   }
   if (
     booking.status !== 'confirmed' &&
     booking.status !== 'temp_pending'
   ) {
-    return 'การจองนี้ไม่อยู่ในสถานะที่ชำระเงินได้'
+    return { error: 'การจองนี้ไม่อยู่ในสถานะที่ชำระเงินได้' }
   }
   if (booking.payment_status === 'paid') {
-    return 'การจองนี้ชำระเงินแล้ว'
+    return { error: 'การจองนี้ชำระเงินแล้ว' }
   }
   if (booking.payment_status !== 'unpaid') {
-    return 'การจองนี้ไม่อยู่ในสถานะที่ชำระเงินได้'
+    return { error: 'การจองนี้ไม่อยู่ในสถานะที่ชำระเงินได้' }
   }
   if (booking.lapsed_reason !== null) {
-    return 'การจองนี้หมดเวลาชำระเงินแล้ว'
+    return { error: 'การจองนี้หมดเวลาชำระเงินแล้ว' }
   }
   if (
     booking.payment_due_at !== null &&
     new Date(booking.payment_due_at).getTime() <= Date.now()
   ) {
-    return 'การจองนี้หมดเวลาชำระเงินแล้ว'
+    return { error: 'การจองนี้หมดเวลาชำระเงินแล้ว' }
   }
 
   // Capacity re-check (defense in depth — the lazy-expiry on the read
@@ -443,10 +468,10 @@ async function precheckPayableBooking(
     p_booking_id: bookingId,
   })
   if (hasCap === false) {
-    return 'ห้องพักไม่ว่างในช่วงวันที่เลือก กรุณาเลือกห้องอื่น'
+    return { error: 'ห้องพักไม่ว่างในช่วงวันที่เลือก กรุณาเลือกห้องอื่น' }
   }
 
-  return null
+  return { checkIn: booking.check_in as string }
 }
 
 /**
@@ -518,6 +543,71 @@ export async function extendPaymentDeadlineAction(
  * next read will trigger the lazy-expiry helper if a real deadline
  * actually lapsed.
  */
+export type RetryExpiredBookingResult =
+  | { ok: true; url: string }
+  | { ok: false; reason: 'room_taken' | 'dates_passed' | 'not_retryable' | 'error'; error: string }
+
+/**
+ * Phase 58 — "ทำรายการนี้อีกครั้ง" on a booking whose payment window ran out.
+ * Re-opens the same booking (same code, dates and price) with a fresh
+ * 5-minute window via reset_payment_window — which refuses with ROOM_TAKEN
+ * when the slot was re-sold in the meantime (Phase 56) — then opens Stripe
+ * through createCheckoutSessionAction. Only payment-deadline expiries can be
+ * re-opened; a lapsed form hold or a past stay goes back to the room list.
+ */
+export async function retryExpiredBookingAction(
+  input: { bookingId: string },
+): Promise<RetryExpiredBookingResult> {
+  const { t } = await getServerT()
+  const parsed = z
+    .object({ bookingId: z.string().regex(UUID_RE, 'bookingId must be a UUID') })
+    .safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, reason: 'error', error: t('actions.common.invalidBookingId') }
+  }
+
+  const session = await getSession()
+  if (!session) return { ok: false, reason: 'error', error: t('actions.common.notLoggedIn') }
+
+  const supabase = await createClient()
+  const { data: booking, error } = await supabase
+    .from('bookings')
+    .select('id, status, payment_status, lapsed_reason, check_in')
+    .eq('id', parsed.data.bookingId)
+    .eq('user_id', session.id)
+    .maybeSingle()
+  if (error) return { ok: false, reason: 'error', error: error.message }
+  if (!booking) return { ok: false, reason: 'error', error: t('actions.common.bookingNotFound') }
+
+  if (
+    booking.status !== 'expired' ||
+    booking.payment_status !== 'unpaid' ||
+    booking.lapsed_reason !== 'payment_deadline'
+  ) {
+    return { ok: false, reason: 'not_retryable', error: t('actions.payment.retryNotPossible') }
+  }
+  if (booking.check_in < getTodayBangkok()) {
+    return { ok: false, reason: 'dates_passed', error: t('actions.payment.retryDatesPassed') }
+  }
+
+  const admin = await createAdminClient()
+  const { error: resetErr } = await admin.rpc('reset_payment_window', {
+    p_booking_id: parsed.data.bookingId,
+  })
+  if (resetErr) {
+    if (resetErr.message.includes('ROOM_TAKEN')) {
+      return { ok: false, reason: 'room_taken', error: t('actions.payment.retryRoomTaken') }
+    }
+    return { ok: false, reason: 'error', error: translateSupabaseError(resetErr.message) }
+  }
+  revalidatePath('/bookings')
+  revalidatePath(`/bookings/${parsed.data.bookingId}`)
+
+  const checkout = await createCheckoutSessionAction({ bookingId: parsed.data.bookingId })
+  if (!checkout.ok) return { ok: false, reason: 'error', error: checkout.error }
+  return { ok: true, url: checkout.data!.url }
+}
+
 export async function resetPaymentWindowAction(
   input: { bookingId: string },
 ): Promise<ActionResult<{ outcome: 'reset' | 'restored' | 'noop' }>> {

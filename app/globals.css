@@ -36,6 +36,8 @@
   --color-warning: #b26a00;
   --color-warning-container: #ffddb3;
   --color-on-warning-container: #2a1800;
+  /* Green — "free cancellation" / success hints (was used but undefined). */
+  --color-success: #2e7d32;
 
   /* Surface Scale */
   --color-background: #faf9f6;           /* Soft Cream */

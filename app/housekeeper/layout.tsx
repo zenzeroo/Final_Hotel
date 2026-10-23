@@ -16,12 +16,14 @@ export default async function HousekeeperLayout({ children }: { children: React.
         role="housekeeper"
         userName={session.fullName}
         avatarKey={session.avatarKey}
+          userId={session.id}
       />
       <div className="flex flex-1 min-h-screen">
         <StaffSidebar
           role="housekeeper"
           userName={session.fullName}
           avatarKey={session.avatarKey}
+          userId={session.id}
         />
         <main className="flex-1 bg-background min-h-screen overflow-x-auto">{children}</main>
       </div>

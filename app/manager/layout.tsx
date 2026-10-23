@@ -16,12 +16,14 @@ export default async function ManagerLayout({ children }: { children: React.Reac
         role="manager"
         userName={session.fullName}
         avatarKey={session.avatarKey}
+          userId={session.id}
       />
       <div className="flex flex-1 min-h-screen">
         <StaffSidebar
           role="manager"
           userName={session.fullName}
           avatarKey={session.avatarKey}
+          userId={session.id}
         />
         <main className="flex-1 bg-background min-h-screen overflow-x-auto">{children}</main>
       </div>

@@ -10,7 +10,7 @@ import {
 } from '@react-email/components'
 import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
 import { getT } from '@/lib/i18n/t'
-import { formatEmailDateTime, formatEmailMoney } from '../format'
+import { formatEmailDate, formatEmailDateTime, formatEmailMoney } from '../format'
 
 export interface PaymentReceiptData {
   bookingCode: string
@@ -20,6 +20,11 @@ export interface PaymentReceiptData {
   method: 'card' | 'promptpay' | 'cash'
   paidAt: string
   viewUrl: string
+  /**
+   * Phase 57c — refund rule line: last day for a full refund, or null when
+   * check-in is already less than `minDays` away. Omit to hide the line.
+   */
+  refund?: { minDays: number; deadline: string | null }
 }
 
 const METHOD_KEY: Record<PaymentReceiptData['method'], string> = {
@@ -36,6 +41,7 @@ export function PaymentReceiptEmail({
   method,
   paidAt,
   viewUrl,
+  refund,
   locale = 'th',
 }: PaymentReceiptData & { locale?: Locale }) {
   const t = getT(locale)
@@ -53,11 +59,18 @@ export function PaymentReceiptEmail({
           <Section style={{ borderTop: '1px solid #e0e0d0', borderBottom: '1px solid #e0e0d0', padding: '16px 0', margin: '16px 0' }}>
             <Text style={{ margin: '4px 0' }}>{t('email.common.bookingCode')}: <strong>{bookingCode}</strong></Text>
             <Text style={{ margin: '4px 0' }}>{t('email.paymentReceipt.method')}: {t(METHOD_KEY[method])}</Text>
-            <Text style={{ margin: '4px 0' }}>{t('email.paymentReceipt.paidAt')}: {formatEmailDateTime(paidAt, locale)}</Text>
+            <Text style={{ margin: '4px 0' }}>{t('email.paymentReceipt.paidAt')}: {formatEmailDateTime(paidAt)}</Text>
             <Text style={{ margin: '8px 0 4px', fontSize: 18 }}>
               {t('email.paymentReceipt.amount')}: <strong>{formatEmailMoney(amount, currency, locale)}</strong>
             </Text>
           </Section>
+          {refund && (
+            <Text style={{ margin: '8px 0', color: refund.deadline ? '#1a1a1a' : '#ba1a1a' }}>
+              {refund.deadline
+                ? t('email.paymentReceipt.refundUntil', { date: formatEmailDate(refund.deadline), min: refund.minDays })
+                : t('email.paymentReceipt.refundNone', { min: refund.minDays })}
+            </Text>
+          )}
           <Text>
             {t('email.paymentReceipt.viewCta')}{' '}
             <a href={viewUrl} style={{ color: '#3d5a40' }}>{viewUrl}</a>

@@ -17,6 +17,7 @@ import { calculatePrice, formatTHB, type PricingSettings } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
 import type { QuoteResult } from '@/lib/pricing/seasons'
 import { formatDate } from '@/lib/dates'
+import { refundDeadlineOrNull } from '@/lib/refund-rule'
 import type { Booking } from '@/lib/data/bookings'
 
 interface BookingFormProps {
@@ -54,6 +55,8 @@ interface BookingFormProps {
    * server action will write into `bookings.tax_total` / `fee_total`.
    */
   settings: PricingSettings
+  /** Phase 57c — refund_min_days_before_checkin() from the DB. */
+  refundMinDays: number
 }
 
 function SubmitButton({
@@ -126,6 +129,10 @@ export function BookingForm(props: BookingFormProps) {
     existing?.special_request ?? '',
   )
   const [promoCode, setPromoCode] = useState('')
+  // Phase 57c — the guest must accept the refund rule before booking
+  // (also enforced by the server schema).
+  const [acceptRefund, setAcceptRefund] = useState(false)
+  const refundDeadline = checkIn ? refundDeadlineOrNull(checkIn, props.refundMinDays) : null
 
   // Phase 8 — quote is computed server-side. Pass it to calculatePrice so
   // baseSubtotal reflects any active seasonal rates for the stay window.
@@ -149,6 +156,9 @@ export function BookingForm(props: BookingFormProps) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    // Submit is disabled until the refund rule is accepted; this also keeps
+    // a keyboard submit from skipping the checkbox.
+    if (!acceptRefund) return
     if (isCompletingExisting && existing) {
       // Phase 42 path — complete existing temp booking.
       startTransition(async () => {
@@ -158,6 +168,7 @@ export function BookingForm(props: BookingFormProps) {
           bookerPhone: phone,
           specialRequest: specialRequest || undefined,
           promoCode: promoCode || undefined,
+          acceptRefundRule: true,
         })
         if (!result.ok || result.error) {
           setState({ error: result.error })
@@ -181,6 +192,7 @@ export function BookingForm(props: BookingFormProps) {
         bookerPhone: phone,
         specialRequest: specialRequest || undefined,
         promoCode: promoCode || undefined,
+        acceptRefundRule: true,
       })
 
       if (result.error) {
@@ -348,8 +360,32 @@ export function BookingForm(props: BookingFormProps) {
             <div className="my-4 border-t border-outline-variant" />
             <PriceRow label={t('customer.common.total')} value={formatTHB(price.total)} emphasis />
 
+            {/* Phase 57c — refund rule for this check-in date, accepted before booking */}
+            <div
+              className={`mt-6 rounded-lg border px-4 py-3 text-caption ${
+                refundDeadline ? 'border-outline-variant bg-surface-container-low' : 'border-error/30 bg-error/10'
+              }`}
+            >
+              <p className="font-semibold text-on-surface mb-1">{t('customer.bookingForm.refundHeading')}</p>
+              <p className={refundDeadline ? 'text-on-surface-variant' : 'text-error'}>
+                {refundDeadline
+                  ? t('customer.bookingForm.refundUntil', { date: formatDate(refundDeadline), min: props.refundMinDays })
+                  : t('customer.bookingForm.refundNone', { min: props.refundMinDays })}
+              </p>
+              <label className="mt-3 flex items-start gap-2 cursor-pointer text-on-surface">
+                <input
+                  type="checkbox"
+                  checked={acceptRefund}
+                  onChange={(e) => setAcceptRefund(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                  required
+                />
+                <span>{t('customer.bookingForm.acceptRefundRule')}</span>
+              </label>
+            </div>
+
             <SubmitButton
-              disabled={isPending || nights === 0 || minNightsBlocked}
+              disabled={isPending || nights === 0 || minNightsBlocked || !acceptRefund}
               label={t('customer.bookingForm.confirmPay')}
             />
 

@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { calculatePrice, generateBookingCode } from '@/lib/pricing'
 import { quoteStay, violatesMinNights } from '@/lib/pricing/seasons'
 import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/manager'
-import { getDefaultCancellationPolicy } from '@/lib/data/bookings'
+import { getDefaultCancellationPolicy, getRefundNotice } from '@/lib/data/bookings'
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
 import { sendEmail } from '@/lib/email/resend'
 
@@ -282,6 +282,7 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
           total: Number(booking.total),
           currency: booking.currency,
           viewUrl: `${appUrl}/bookings/${booking.id}`,
+          refund: await getRefundNotice(booking.check_in),
         }),
         eventKey: `booking_confirmation:booking:${booking.id}`,
         bookingId: booking.id,

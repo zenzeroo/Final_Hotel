@@ -9,7 +9,7 @@
  *   4. non-owner authenticated caller → 42501
  *   5. reject (note required) → booking still confirmed, new request still blocked (reject is final)
  *   6. approve_refund → booking cancelled + payment_status refunded + 'cancelled' event
- *   7. outside the free window (0 refund) → REFUND_ZERO, no row created
+ *   7. less than 2 days before check-in → REFUND_TOO_LATE, no row created (Phase 57 rule)
  *
  * Prereqs: migration 20261012_refund_request_flow.sql applied + NOTIFY pgrst, 'reload schema';
  *          test@zenzero.com fixture (scripts/_rbac-fixture.mts).
@@ -214,12 +214,12 @@ await step('6. approve_refund → booking cancelled + refunded + cancelled event
   assert(ev?.length === 1, 'cancelled event missing')
 })
 
-await step('7. outside free window (0 refund) → REFUND_ZERO, no row', async () => {
+await step('7. less than 2 days before check-in → REFUND_TOO_LATE, no row', async () => {
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date())
   const tomorrow = new Date(Date.parse(`${today}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
   const soon = await makeBooking(today, tomorrow, true)
   const { error } = await svc.rpc('request_refund', { p_booking_id: soon })
-  assert(error?.message.includes('REFUND_ZERO'), `got: ${error?.message}`)
+  assert(error?.message.includes('REFUND_TOO_LATE'), `got: ${error?.message}`)
   const { count } = await svc.from('refund_requests').select('id', { count: 'exact', head: true }).eq('booking_id', soon)
   assert(count === 0, 'no refund row should be created')
 })

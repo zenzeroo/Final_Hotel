@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Live-DB tooling (run with npx tsx) — excluded from tsconfig too.
+    "scripts/**",
   ]),
 ]);
 

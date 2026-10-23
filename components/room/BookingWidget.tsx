@@ -17,6 +17,7 @@ import { createTempBookingAction } from '@/app/actions/booking'
 import type { AppliedRate, QuoteResult } from '@/lib/pricing/seasons'
 import type { RoomType } from '@/lib/data/types'
 import { getLocalIsoDate, getMinCheckInLocalIso, addDaysLocalIso } from '@/lib/dates'
+import { isRefundable } from '@/lib/refund-rule'
 import { DatePickerField } from '../ui/DatePickerField'
 
 interface BookingWidgetProps {
@@ -34,6 +35,8 @@ interface BookingWidgetProps {
    * navigates straight to /bookings/new as before.
    */
   isAuthed: boolean
+  /** Phase 57c — refund_min_days_before_checkin() from the DB. */
+  refundMinDays: number
 }
 
 /** Tomorrow + 1 day (i.e. 2 nights out) — the historical default checkout. */
@@ -43,7 +46,7 @@ function getTomorrowPlusOneIso() {
   return getLocalIsoDate(d)
 }
 
-export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut, isAuthed }: BookingWidgetProps) {
+export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut, isAuthed, refundMinDays }: BookingWidgetProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -279,11 +282,18 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
         {t('customer.widget.noCharge')}
       </p>
 
-      <div className="mt-4 pt-4 border-t border-outline-variant">
+      <div className="mt-4 pt-4 border-t border-outline-variant flex flex-col gap-1.5">
+        {/* Phase 57c/d — refund rule always; a warning when the picked dates are too close */}
         <div className="flex items-center gap-2 text-caption text-on-surface-variant">
           <MaterialIcon name="verified" size={16} className="text-primary" />
-          <span>{t('customer.widget.freeCancel')}</span>
+          <span>{t('customer.widget.refundRule', { min: refundMinDays })}</span>
         </div>
+        {checkIn && !isRefundable(checkIn, refundMinDays) && (
+          <div className="flex items-center gap-2 text-caption text-error">
+            <MaterialIcon name="info" size={16} />
+            <span>{t('customer.widget.refundNone')}</span>
+          </div>
+        )}
       </div>
 
       {/* Login prompt — shown when logged-out user clicks "ยืนยันการจอง".

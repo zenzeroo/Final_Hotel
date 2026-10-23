@@ -8,6 +8,7 @@ import { UserDropdownMenu } from './UserDropdownMenu'
 import { LanguageToggle } from './LanguageToggle'
 import { NavLink } from './NavLink'
 import { MobileNavMenu } from './MobileNavMenu'
+import { NotificationBell } from '../notifications/NotificationBell'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
@@ -62,13 +63,8 @@ export async function TopNavBar() {
                 }}
               />
 
-              {/* Desktop notification button */}
-              <button
-                className="hidden md:inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-primary-fixed transition-colors"
-                aria-label={t('nav.notification')}
-              >
-                <MaterialIcon name="notifications" size={22} />
-              </button>
+              {/* Notifications — signed-in users only (mobile + desktop) */}
+              {session && <NotificationBell userId={session.id} />}
 
               {/* Language toggle */}
               <LanguageToggle currentLocale={locale} />

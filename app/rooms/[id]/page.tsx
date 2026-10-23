@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation'
 import { getRoomBySlug } from '@/lib/data/rooms'
 import { getPricingConstants } from '@/lib/data/manager'
+import { getRefundMinDays } from '@/lib/data/bookings'
 import { getSession } from '@/lib/supabase/getSession'
 import { bedTypeLabel } from '@/lib/format/bedType'
 import { roomTypeLabel } from '@/lib/format/roomType'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { RoomGallery } from '@/components/room/RoomGallery'
-import { AmenityGrid } from '@/components/room/AmenityGrid'
 import { RatingStars } from '@/components/room/RatingStars'
 import { BookingWidget } from '@/components/room/BookingWidget'
 import { ReviewList } from '@/components/room/ReviewList'
@@ -29,6 +29,7 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
   // preview totals match `/bookings/new`. Without this, the widget falls
   // back to the hardcoded DEFAULT_PRICING (0.07 / 150).
   const pricingSettings = await getPricingConstants()
+  const refundMinDays = await getRefundMinDays()
 
   // Forward the dates the user picked in /rooms so the BookingWidget
   // pre-fills instead of resetting to defaults. Casing is lowercase
@@ -119,12 +120,6 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
                 </div>
               </div>
 
-              {/* Amenities */}
-              <section>
-                <h2 className="font-display text-2xl text-primary mb-4">{t('roomDetail.amenities')}</h2>
-                <AmenityGrid amenitySlugs={room.amenities} />
-              </section>
-
               {/* Description */}
               <section>
                 <h2 className="font-display text-2xl text-primary mb-4">{t('roomDetail.description')}</h2>
@@ -154,6 +149,7 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
               defaultCheckIn={defaultCheckIn}
               defaultCheckOut={defaultCheckOut}
               isAuthed={isAuthed}
+              refundMinDays={refundMinDays}
             />
           </div>
         </div>

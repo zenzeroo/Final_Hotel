@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getSession } from '@/lib/supabase/getSession'
-import { getBookingById, getCancellationPolicyById, getDefaultCancellationPolicy, getRefundStatusForBooking } from '@/lib/data/bookings'
+import { getBookingById, getRefundMinDays, getRefundStatusForBooking } from '@/lib/data/bookings'
 import { TransactionalHeader } from '@/components/layout/TransactionalHeader'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
@@ -19,6 +19,8 @@ import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
 import { formatDate } from '@/lib/dates'
+import { refundDeadlineOrNull } from '@/lib/refund-rule'
+import { roomsSearchHref } from '@/lib/booking-links'
 import Image from 'next/image'
 import { CancelledFromStripeBanner } from './CancelledFromStripeBanner'
 import { resetPaymentWindowAction } from '@/app/actions/payment'
@@ -131,15 +133,10 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
   const booking = await getBookingById(id, session.id)
   if (!booking) notFound()
 
-  // Phase 27 — render the cancellation policy that applies to this
-  // booking (linked via cancellation_policy_id, falling back to the
-  // seeded default if the booking has no linked policy). Done
-  // server-side so the dead placeholder at the bottom of the page
-  // (was just rendering the totalPrice label) actually displays.
-  const policy =
-    (booking.cancellation_policy_id
-      ? await getCancellationPolicyById(booking.cancellation_policy_id)
-      : null) ?? (await getDefaultCancellationPolicy())
+  // Phase 57 — one refund rule for every booking (replaces the per-policy
+  // text, which promised refunds the code never gave).
+  const refundMinDays = await getRefundMinDays()
+  const refundDeadline = refundDeadlineOrNull(booking.check_in, refundMinDays)
 
   // Phase 29 — surface refund_requests.status as a badge so the user sees
   // pending / approved / rejected without having to wait for the eventual
@@ -286,17 +283,19 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
               {/* Cancellation policy */}
               <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
                 <h2 className="font-display text-xl text-primary mb-2">{t('bookingDetail.cancellationPolicy')}</h2>
-                {policy ? (
-                  <div className="flex flex-col gap-2 text-body-md">
-                    <p className="font-semibold text-on-surface">{policy.name}</p>
+                <div className="flex flex-col gap-2 text-body-md">
                     <p className="text-on-surface-variant text-body-md">
-                      {t('bookingDetail.policyWindow', {
-                        hours: policy.free_cancel_hours,
-                        pct: policy.refund_pct,
-                      })}
+                      {t('bookingDetail.refundRule', { min: refundMinDays })}
                     </p>
-                    {policy.description && (
-                      <p className="text-caption text-on-surface-variant">{policy.description}</p>
+                    {/* Phase 57c — the concrete last day for this booking */}
+                    {booking.status === 'confirmed' && (
+                      refundDeadline ? (
+                        <p className="text-body-md font-medium text-on-surface">
+                          {t('bookingDetail.refundUntilDate', { date: formatDate(refundDeadline, localeBcp) })}
+                        </p>
+                      ) : (
+                        <p className="text-body-md font-medium text-error">{t('bookingDetail.refundNoLonger')}</p>
+                      )
                     )}
                     {/* Phase 52 — free-cancel hint for confirmed+unpaid
                         bookings. Signals to the customer that they can
@@ -307,11 +306,6 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                       </p>
                     )}
                   </div>
-                ) : (
-                  <p className="text-body-md text-on-surface-variant">
-                    {t('bookingDetail.cancellationPolicy')} —
-                  </p>
-                )}
               </section>
 
               {/* Review prompt — only after checkout */}
@@ -350,6 +344,8 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                   status={booking.status}
                   paymentStatus={booking.payment_status}
                   refundRequested={refundStatus !== null}
+                  lapsedReason={booking.lapsed_reason}
+                  roomsHref={roomsSearchHref(booking)}
                 />
               </div>
             </div>

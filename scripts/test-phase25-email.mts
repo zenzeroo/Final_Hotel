@@ -65,6 +65,15 @@ const EVENT_PREFIX = 'test-phase25-'
 // ── Cleanup any leftover rows from previous runs ─────────────────────────
 async function cleanup() {
   await svc.from('email_log').delete().like('event_key', `${EVENT_PREFIX}%`)
+  // Case 5 books a real room (booking_code = `${EVENT_PREFIX}case5-…`); a
+  // leftover row blocks the next run's create_booking for the same dates.
+  const { data: left } = await svc.from('bookings').select('id').like('booking_code', `${EVENT_PREFIX}%`)
+  const ids = (left ?? []).map((r) => r.id)
+  if (ids.length) {
+    await svc.from('refund_requests').delete().in('booking_id', ids)
+    await svc.from('payments').delete().in('booking_id', ids)
+    await svc.from('bookings').delete().in('id', ids)
+  }
 }
 await cleanup()
 

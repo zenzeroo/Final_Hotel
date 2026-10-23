@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
+import { getRefundMinDays } from '@/lib/data/bookings'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
   description: 'เงื่อนไขและข้อกำหนดการใช้บริการ Zenzero Hotel',
 }
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  // Phase 57c — same number the refund RPCs enforce.
+  const refundMinDays = await getRefundMinDays()
   return (
     <>
       <TopNavBar />
@@ -46,18 +49,16 @@ export default function TermsPage() {
                 </ul>
               </Section>
 
-              <Section title="3. นโยบายการยกเลิก">
-                <p>
-                  นโยบายการยกเลิกขึ้นอยู่กับนโยบายที่เลือกตอนจอง (Flexible / Moderate / Strict):
-                </p>
+              <Section title="3. การยกเลิกและการคืนเงิน">
                 <ul className="list-disc list-inside space-y-2">
-                  <li><strong>Flexible</strong> — ยกเลิกฟรีภายใน 24 ชั่วโมงก่อนเช็คอิน คืนเงิน 100%</li>
-                  <li><strong>Moderate</strong> — ยกเลิกฟรีภายใน 72 ชั่วโมงก่อนเช็คอิน คืนเงิน 100%</li>
-                  <li><strong>Strict</strong> — ยกเลิกฟรีภายใน 168 ชั่วโมงก่อนเช็คอิน คืนเงิน 50%</li>
+                  <li>
+                    ขอคืนเงินก่อนวันเช็คอิน {refundMinDays} วัน ได้เงินคืน<strong>เต็มจำนวน</strong>{' '}
+                    (นับตามวันที่ เวลาประเทศไทย เช่น เช็คอิน 24/10 ขอได้ถึง 22/10) และต้องได้รับการอนุมัติจากผู้จัดการ
+                  </li>
+                  <li>หากยื่นคำขอน้อยกว่า {refundMinDays} วันก่อนวันเช็คอิน จะไม่สามารถคืนเงินได้</li>
+                  <li>ขอคืนเงินได้ 1 ครั้งต่อการจอง หากคำขอถูกปฏิเสธ การจองยังคงมีผลตามเดิม</li>
+                  <li>การจองที่ยังไม่ได้ชำระเงินสามารถยกเลิกได้โดยไม่มีค่าใช้จ่าย</li>
                 </ul>
-                <p>
-                  หากไม่ปรากฏการยกเลิกก่อนเส้นตาย เงินค่าห้องพักจะไม่สามารถคืนได้
-                </p>
               </Section>
 
               <Section title="4. ความรับผิดชอบของผู้เข้าพัก">

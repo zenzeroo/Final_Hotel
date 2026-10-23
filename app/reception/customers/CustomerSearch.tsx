@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useT } from '@/lib/i18n/useT'
 
@@ -14,10 +14,13 @@ export function CustomerSearch({ initialQuery }: CustomerSearchProps) {
   const router = useRouter()
   const params = useSearchParams()
   const [q, setQ] = useState(initialQuery)
-
-  useEffect(() => {
+  // Re-sync when the URL query changes (back/forward) — adjust during render
+  // instead of in an effect.
+  const [syncedQuery, setSyncedQuery] = useState(initialQuery)
+  if (syncedQuery !== initialQuery) {
+    setSyncedQuery(initialQuery)
     setQ(initialQuery)
-  }, [initialQuery])
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

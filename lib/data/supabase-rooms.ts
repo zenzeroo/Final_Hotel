@@ -276,7 +276,8 @@ export async function getFloors(): Promise<number[]> {
 }
 
 /**
- * Catalog of amenity slugs the UI knows how to render.
+ * Catalog of amenity slugs offered on the admin room-type form
+ * (Phase 59b — no longer shown on the guest room page).
  * Catalog moved here from data/mock-amenities.json when the mock layer was deleted.
  * Slug set is the canonical set used by `room_types.amenities` — add new slugs here when adding rows.
  */
@@ -290,11 +291,6 @@ const AMENITY_CATALOG: Amenity[] = [
   { slug: 'room_service', name: '24/7 Room Service', name_th: 'รูมเซอร์วิส 24 ชม.', icon: 'room_service', category: 'service' },
   { slug: 'valet_laundry', name: 'Valet Laundry', name_th: 'บริการซักรีด', icon: 'dry_cleaning', category: 'service' },
 ]
-
-export async function getApprovedAmenities(slugs: readonly string[]): Promise<Amenity[]> {
-  const set = new Set(slugs)
-  return AMENITY_CATALOG.filter((a) => set.has(a.slug))
-}
 
 /** Full amenity catalog — admin room-type form renders it as checkboxes. */
 export function getAmenityCatalog(): Amenity[] {
