@@ -79,7 +79,6 @@ export const en: Dictionary = {
     guests: 'Guests',
     any: 'Any',
     viewDetails: 'View details',
-    seeAll: 'See all',
     searchBar: {
       checkIn: 'Check-in',
       checkOut: 'Check-out',
@@ -87,6 +86,7 @@ export const en: Dictionary = {
       decGuests: 'Decrease guests',
       incGuests: 'Increase guests',
       search: 'Search rooms',
+      reset: 'Reset',
     },
   },
 
@@ -319,6 +319,7 @@ export const en: Dictionary = {
     statusRefunded: 'Refunded',
     statusCheckedIn: 'Checked in',
     statusCheckedOut: 'Checked out',
+    statusNoShow: 'Did not check in',
     // Phase 50 — temp_pending (lease held by heartbeat) + expired
     // (lease lapsed via lazy-expiry helper or daily cron). No user-
     // facing countdown — the lease is invisible.
@@ -383,6 +384,7 @@ export const en: Dictionary = {
   // Booking detail page
   bookingDetail: {
     title: 'Booking Details',
+    noShowNote: 'You did not check in on the booked date — please contact the hotel if you need help.',
     backToList: 'Back to bookings',
     bookingCode: 'Booking code',
     guestInfo: 'Guest information',
@@ -1067,6 +1069,12 @@ export const en: Dictionary = {
       tabUpcoming: 'Upcoming ({count})',
       tabInHouse: 'In house ({count})',
       selectRoomFirst: 'Please select a room before checking in',
+      noRoomReady: 'No room is ready for check-in — check room status on the Rooms page',
+      roomProblem: 'Room has a problem? Choose another room',
+      useBookedRoom: 'Use the booked room',
+      bookedRoomNotReady: 'The booked room is not ready — choose another room instead',
+      bookedRoomNotReadyNamed: 'Booked room {rooms} is not ready — choose another room instead',
+      unitTypeFloor: '{unit} · {type} (floor {floor})',
       unitFloor: '{unit} (floor {floor})',
       searchPlaceholder: 'Search name / booking code / email',
       searchAria: 'Search this list',
@@ -1118,8 +1126,8 @@ export const en: Dictionary = {
       colPhone: 'Phone',
       colJoined: 'Joined',
       colActions: 'Actions',
-      typeToSearch: 'Type a name or phone number to search',
-      inputPlaceholder: 'Full name or phone number',
+      typeToSearch: 'Type a name, email or phone number to search',
+      inputPlaceholder: 'Full name, email or phone number',
       search: 'Search',
     },
     roomsPage: {
@@ -1133,6 +1141,13 @@ export const en: Dictionary = {
       statusCleaning: 'Needs cleaning',
       statusMaintenance: 'Maintenance',
       statusOutOfOrder: 'Out of order',
+      lockedGuest: 'Guest staying · {name} ({code}) — change after check-out',
+      lockedOccupied: 'Guest staying — change after check-out',
+      lockedClosed: 'Closed for maintenance — the manager reopens it',
+      changeStatus: 'Change status of room {room}',
+      changeStatusTitle: 'Change status of room {room}',
+      statusChanged: 'Room {room} status updated',
+      currentStatus: 'Current',
     },
     requestsPage: {
       title: 'Guest requests',
@@ -1344,8 +1359,46 @@ export const en: Dictionary = {
       promotions: 'Promotions',
       rates: 'Rates',
       heroCarousel: 'Homepage Hero',
+      legal: 'Legal documents',
       staff: 'Staff',
       settings: 'Settings',
+    },
+    // Phase 62 — admin-uploaded legal PDFs.
+    legalPage: {
+      title: 'Legal documents',
+      subtitle: 'Upload the privacy policy and terms of service as PDFs, check them, then publish once',
+      hint: 'In Word, use File → Save As → PDF so fonts are embedded and the page looks exactly like your file.',
+      docPrivacyTh: 'Privacy policy (Thai)',
+      docPrivacyEn: 'Privacy policy (English)',
+      docTermsTh: 'Terms of service (Thai)',
+      docTermsEn: 'Terms of service (English)',
+      statusPublished: 'Using published version',
+      statusDraft: 'New draft',
+      statusEmpty: 'No file yet',
+      upload: 'Upload PDF',
+      preview: 'Preview',
+      removeDraft: 'Remove draft',
+      uploading: 'Uploading…',
+      uploadOk: 'Draft uploaded',
+      removeOk: 'Draft removed',
+      publish: 'Publish',
+      publishWarn: 'After publishing, every customer must accept the new documents before continuing.',
+      publishOk: 'Published — customers will be asked to accept the new version',
+      publishNeedsAll: 'All four documents need a file before the first publish.',
+      publishNothing: 'Upload at least one new file to publish.',
+      history: 'Published versions',
+      historyEmpty: 'Nothing published yet — the site shows the built-in policy pages.',
+      colVersion: 'Version',
+      colDate: 'Published',
+      colBy: 'By',
+      colFiles: 'Files',
+      errEmpty: 'The file is empty.',
+      errType: 'Only PDF files can be uploaded.',
+      errSize: 'The file is larger than 4 MB.',
+      errMagic: 'This is not a real PDF file — save it from Word as PDF.',
+      errStorage: 'Could not save the file. Please try again.',
+      errNothing: 'There is no new file to publish.',
+      errIncomplete: 'All four documents need a file before publishing.',
     },
     // Phase 43 — hero carousel management page.
     heroCarouselPage: {
@@ -2431,8 +2484,20 @@ export const en: Dictionary = {
     },
   },
   // Phase 61 — PDPA consent (register form, /consent, profile card)
+  // Phase 62 — admin-uploaded legal PDFs (PdfViewer)
+  legal: {
+    download: 'Download PDF',
+    openPdf: 'Open the PDF',
+    viewerFailed: 'This document could not be displayed here.',
+    updatedAt: 'Last updated {date}',
+    termsEyebrow: 'Terms',
+    termsTitle: 'Terms of service',
+  },
+
   consent: {
     title: 'Before you continue',
+    versionChanged:
+      'The terms or privacy notice were updated while this page was open. Please read the latest version and confirm again.',
     intro:
       'We keep your name, email, phone number, date of birth and booking details to provide room bookings. Please read and accept the terms of use and the privacy policy to continue.',
     introUpdated:

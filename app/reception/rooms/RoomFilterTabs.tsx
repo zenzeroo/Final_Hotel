@@ -2,45 +2,49 @@
 
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useT } from '@/lib/i18n/useT'
-
-interface RoomFilterTabsProps {
-  current: string
-  counts: Record<string, number>
-  statusMeta: Record<string, { label: string; color: string; bgColor: string; icon: string }>
-}
+import { FILTER_BUCKET, type RoomBucket } from '@/components/manager/roomStatusBuckets'
 
 const TABS = [
-  { value: 'all', label: 'reception.roomsPage.filterAll' },
-  { value: 'available', label: 'reception.roomsPage.statusAvailable' },
-  { value: 'occupied', label: 'reception.roomsPage.statusOccupied' },
-  { value: 'cleaning', label: 'reception.roomsPage.statusCleaning' },
-  { value: 'maintenance', label: 'reception.roomsPage.statusMaintenance' },
-]
+  { value: 'all', label: 'reception.roomsPage.filterAll', icon: null },
+  { value: 'available', label: 'reception.roomsPage.statusAvailable', icon: 'check_circle' },
+  { value: 'occupied', label: 'reception.roomsPage.statusOccupied', icon: 'group' },
+  { value: 'cleaning', label: 'reception.roomsPage.statusCleaning', icon: 'cleaning_services' },
+  { value: 'maintenance', label: 'reception.roomsPage.statusMaintenance', icon: 'build' },
+] as const
 
-export function RoomFilterTabs({ current, counts, statusMeta }: RoomFilterTabsProps) {
+export function RoomFilterTabs({
+  current,
+  counts,
+}: {
+  current: string
+  counts: { all: number } & Record<RoomBucket, number>
+}) {
   const t = useT()
+  // Same underlined tab style as /reception/check-in-out (CheckInOutViewTabs).
+  const baseTab =
+    'inline-flex items-center gap-2 px-4 py-2 -mb-px text-label-md font-semibold uppercase tracking-wider transition-colors border-b-2 whitespace-nowrap'
+  const activeClass = 'border-primary text-primary bg-surface-container'
+  const inactiveClass = 'border-transparent text-on-surface-variant hover:bg-surface-container hover:text-primary'
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+    <div
+      role="tablist"
+      aria-label={t('reception.roomsPage.title')}
+      className="flex items-center gap-1 border-b border-outline-variant overflow-x-auto"
+      suppressHydrationWarning
+    >
       {TABS.map((tab) => {
         const isActive = current === tab.value
-        const count = counts[tab.value] ?? 0
-        const meta = statusMeta[tab.value]
+        const count = tab.value === 'all' ? counts.all : counts[FILTER_BUCKET[tab.value]]
         return (
           <a
             key={tab.value}
             href={`/reception/rooms?status=${tab.value}`}
-            aria-current={isActive ? 'page' : undefined}
-            className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md font-semibold transition-colors ${
-              isActive
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container-lowest text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
-            }`}
+            role="tab"
+            aria-selected={isActive}
+            className={`${baseTab} ${isActive ? activeClass : inactiveClass}`}
           >
-            {meta && <MaterialIcon name={meta.icon} size={16} />}
-            {t(tab.label)}
-            <span className={`px-2 py-0.5 rounded-full text-caption ${isActive ? 'bg-secondary/20 text-secondary' : 'bg-surface-container text-on-surface-variant'}`}>
-              {count}
-            </span>
+            {tab.icon && <MaterialIcon name={tab.icon} size={16} />}
+            {t(tab.label)} ({count})
           </a>
         )
       })}

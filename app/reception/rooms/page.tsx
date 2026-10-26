@@ -1,25 +1,25 @@
 import { getRoomsStatus } from '@/lib/data/staff'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { RoomStatusGrid } from './RoomStatusGrid'
+import { RoomStatusList } from './RoomStatusList'
 import { RoomFilterTabs } from './RoomFilterTabs'
+import { bucketWithGuest, countRoomBuckets, filterToBucket } from '@/components/manager/roomStatusBuckets'
+import type { RoomUnitStatus } from '@/lib/data/types'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
-// `label` is a dictionary key, translated by the client grid/tabs.
-const STATUS_META: Record<string, { label: string; color: string; bgColor: string; icon: string }> = {
-  available: { label: 'reception.roomsPage.statusAvailable', color: 'text-primary', bgColor: 'bg-primary/10 border-primary/30', icon: 'check_circle' },
-  occupied: { label: 'reception.roomsPage.statusOccupied', color: 'text-secondary', bgColor: 'bg-secondary/20 border-secondary/30', icon: 'group' },
-  cleaning: { label: 'reception.roomsPage.statusCleaning', color: 'text-tertiary', bgColor: 'bg-tertiary/10 border-tertiary/30', icon: 'cleaning_services' },
-  maintenance: { label: 'reception.roomsPage.statusMaintenance', color: 'text-error', bgColor: 'bg-error/10 border-error/30', icon: 'build' },
-  out_of_order: { label: 'reception.roomsPage.statusOutOfOrder', color: 'text-on-surface-variant', bgColor: 'bg-surface-container border-outline-variant', icon: 'block' },
-}
-
+/**
+ * Reception room board: one row per room with its live `room_units.status`
+ * (all 9 statuses) and a dropdown for the cleaning flow. Rooms with a guest
+ * staying or closed for maintenance are locked (updateRoomStatus refuses
+ * them too). Filters and counts use the shared buckets so they match the
+ * reception dashboard.
+ */
 export default async function RoomsStatusPage(props: PageProps<'/reception/rooms'>) {
   const t = getT(await getLocale())
   const searchParams = await props.searchParams
   const filter = typeof searchParams.status === 'string' ? searchParams.status : 'all'
+  const bucket = filterToBucket(filter)
 
   const rooms = await getRoomsStatus()
 
@@ -34,13 +34,7 @@ export default async function RoomsStatusPage(props: PageProps<'/reception/rooms
     .map(Number)
     .sort((a, b) => a - b)
 
-  const counts = {
-    all: rooms.length,
-    available: rooms.filter((r) => r.status === 'available').length,
-    occupied: rooms.filter((r) => r.status === 'occupied').length,
-    cleaning: rooms.filter((r) => r.status === 'cleaning').length,
-    maintenance: rooms.filter((r) => r.status === 'maintenance').length,
-  }
+  const counts = { all: rooms.length, ...countRoomBuckets(rooms) }
 
   return (
     <div className="p-6 md:p-8">
@@ -51,23 +45,28 @@ export default async function RoomsStatusPage(props: PageProps<'/reception/rooms
         </p>
       </div>
 
-      <RoomFilterTabs
-        current={filter}
-        counts={counts}
-        statusMeta={STATUS_META}
-      />
+      <RoomFilterTabs current={filter} counts={counts} />
 
       <div className="mt-6 flex flex-col gap-6">
         {floors.map((floor) => {
-          const floorRooms = grouped[floor]
-          const filtered = filter === 'all' ? floorRooms : floorRooms.filter((r) => r.status === filter)
-
+          const filtered = grouped[floor].filter(
+            (r) => !bucket || bucketWithGuest(r.status as RoomUnitStatus, !!r.staying) === bucket,
+          )
           if (filtered.length === 0) return null
 
           return (
             <section key={floor}>
               <h2 className="font-display text-xl text-primary mb-3">{t('reception.roomsPage.floorN', { floor })}</h2>
-              <RoomStatusGrid rooms={filtered} statusMeta={STATUS_META} />
+              <RoomStatusList
+                rooms={filtered.map((r) => ({
+                  id: r.id,
+                  unit_label: r.unit_label,
+                  view_label: r.view_label,
+                  status: r.status,
+                  roomTypeName: (Array.isArray(r.room_type) ? r.room_type[0] : r.room_type)?.name_th ?? null,
+                  staying: r.staying,
+                }))}
+              />
             </section>
           )
         })}

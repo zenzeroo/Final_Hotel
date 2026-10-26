@@ -7,6 +7,11 @@ import { actionFail, wrapSupabaseError } from '@/lib/errors/supabase'
 import { isUuid } from '@/lib/ids'
 import { getTodayBangkok } from '@/lib/dates'
 import { notifyRoles, notifyUser } from '@/lib/notifications/notify'
+import {
+  RECEPTION_SETTABLE_STATUSES,
+  roomLockReason,
+  type ReceptionSettableStatus,
+} from '@/lib/room-status'
 import type {
   HousekeepingTaskPriority,
   HousekeepingTaskType,
@@ -167,10 +172,11 @@ export async function reportMaintenance(input: {
 
   if (error) return actionFail(error, 'Could not report maintenance')
 
-  await notifyRoles(['manager', 'reception'], {
+  // Reception gets no in-app notifications; managers decide on room closure.
+  await notifyRoles(['manager'], {
     type: 'maintenance_reported',
     params: { room: room.unit_label, severity: input.severity },
-    link: (role) => (role === 'manager' ? '/manager/maintenance' : '/reception/maintenance'),
+    link: '/manager/maintenance',
     eventKey: `maintenance_reported:${report.id}`,
   })
 
@@ -180,25 +186,54 @@ export async function reportMaintenance(input: {
   return { ok: true }
 }
 
+/**
+ * Manual room status change (/reception/rooms dropdown). Only the cleaning
+ * flow (lib/room-status.ts RECEPTION_SETTABLE_STATUSES). A room with a
+ * guest staying — status 'occupied' or a checked-in booking pointing at it —
+ * or a closed room (maintenance / out_of_order, manager-only) is refused.
+ */
 export async function updateRoomStatus(
   unitId: string,
-  newStatus: 'waiting_cleaning' | 'cleaning' | 'ready' | 'available'
+  newStatus: ReceptionSettableStatus,
 ): Promise<ActionResult> {
   await requireRole(['reception', 'manager', 'admin'], '/login')
   if (!isUuid(unitId)) return { ok: false, error: 'Invalid unit id' }
+  if (!(RECEPTION_SETTABLE_STATUSES as readonly string[]).includes(newStatus)) {
+    return { ok: false, error: 'สถานะนี้เปลี่ยนจากหน้านี้ไม่ได้' }
+  }
   const supabase = await createClient()
 
-  if (!['waiting_cleaning', 'cleaning', 'ready', 'available'].includes(newStatus)) {
-    return { ok: false, error: 'Invalid status. Only waiting_cleaning/cleaning/ready/available allowed' }
-  }
+  const [{ data: unit, error: unitErr }, { count: staying, error: stayErr }] = await Promise.all([
+    supabase.from('room_units').select('status').eq('id', unitId).maybeSingle(),
+    supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_unit_id', unitId)
+      .eq('status', 'checked_in'),
+  ])
+  if (unitErr) return actionFail(unitErr, 'Could not update room status')
+  if (stayErr) return actionFail(stayErr, 'Could not update room status')
+  if (!unit) return { ok: false, error: 'ไม่พบห้อง' }
+  const lock = roomLockReason(unit.status as string, (staying ?? 0) > 0)
+  if (lock === 'occupied') return { ok: false, error: 'ห้องนี้มีแขกเข้าพักอยู่ — เปลี่ยนสถานะได้หลังเช็คเอาท์' }
+  if (lock === 'closed') return { ok: false, error: 'ห้องปิดซ่อม — ให้ผู้จัดการเปิดห้อง' }
 
-  const { error } = await supabase
+  // Conditional: a check-in (→ occupied) or closure landing after the read
+  // above must not be overwritten.
+  const { data: updated, error } = await supabase
     .from('room_units')
     .update({ status: newStatus, updated_at: new Date().toISOString() })
     .eq('id', unitId)
+    .not('status', 'in', '(occupied,maintenance,out_of_order)')
+    .select('id')
 
   if (error) return actionFail(error, 'Could not update room status')
+  if (!updated || updated.length === 0) {
+    return { ok: false, error: 'ห้องนี้มีแขกเข้าพักอยู่ — เปลี่ยนสถานะได้หลังเช็คเอาท์' }
+  }
 
+  revalidatePath('/reception/rooms')
+  revalidatePath('/reception')
   revalidatePath('/housekeeper/rooms')
   revalidatePath('/manager/housekeeping')
   return { ok: true }

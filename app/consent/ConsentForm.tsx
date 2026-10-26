@@ -6,6 +6,7 @@ import { acceptConsentAction, type ConsentState } from '@/app/actions/consent'
 import { signOut } from '@/app/actions/auth'
 import { ConsentCheckboxes } from '@/components/consent/ConsentCheckboxes'
 import { useT } from '@/lib/i18n/useT'
+import type { ConsentLegalProps } from '@/lib/legal/props'
 
 function Buttons() {
   const { pending } = useFormStatus()
@@ -33,13 +34,13 @@ function Buttons() {
   )
 }
 
-export function ConsentForm({ next }: { next: string }) {
+export function ConsentForm({ next, legal }: { next: string; legal: ConsentLegalProps }) {
   const [state, formAction] = useActionState<ConsentState | null, FormData>(acceptConsentAction, null)
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next} />
-      <ConsentCheckboxes />
+      <ConsentCheckboxes legal={legal} />
       {state?.error && (
         <p role="alert" className="text-body-md text-error">
           {state.error}

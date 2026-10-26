@@ -1,5 +1,6 @@
 import { listAllCustomers } from '@/lib/data/staff'
 import { formatDate } from '@/lib/dates'
+import { maskPhone } from '@/lib/phone'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { CustomerSearch } from './CustomerSearch'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
@@ -53,10 +54,11 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
                 <tr key={c.id} className="border-t border-outline-variant hover:bg-primary-fixed transition-colors">
                   <Td>
                     <p className="text-body-md font-medium text-on-surface">{c.full_name ?? '—'}</p>
-                    <p className="text-caption text-on-surface-variant font-mono">#{c.id.slice(0, 8)}</p>
+                    <p className="text-caption text-on-surface-variant break-all">{c.email ?? '—'}</p>
                   </Td>
                   <Td>
-                    <span className="text-body-md text-on-surface">{c.phone ?? '—'}</span>
+                    {/* Masked on the server — the full number never reaches the browser. */}
+                    <span className="text-body-md text-on-surface font-mono whitespace-nowrap">{maskPhone(c.phone) ?? '—'}</span>
                   </Td>
                   <Td>
                     <span className="text-body-md text-on-surface-variant">

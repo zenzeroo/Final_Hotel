@@ -14,7 +14,7 @@
  * Exposes a `useLeaveGuard()` hook (via React context) returning
  * `{ requestLeave(href: string | null) => void }`. Any client
  * component inside the provider can call this to open the dialog
- * (e.g. `LeaveGuardBackButton`, the cancel button in
+ * (e.g. the cancel button in
  * `ConfirmationActions`, the `CancelledFromStripeBanner` cancel
  * button). No more custom events on `window` — the hook is the
  * single shared API.

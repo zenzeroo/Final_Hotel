@@ -13,6 +13,11 @@ import { roleHomePath } from '@/lib/supabase/roles'
 
 export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'
 
+/** Reception gets no in-app notifications (nothing is sent to it either). */
+export function showsNotificationBell(role: StaffRole): boolean {
+  return role !== 'reception'
+}
+
 interface StaffSidebarProps {
   role: StaffRole
   userName: string | null
@@ -131,7 +136,14 @@ const NAV_BY_ROLE: Record<StaffRole, NavGroup[]> = {
       ],
     },
     // Phase 43 — homepage hero carousel admin (curated slides).
-    { key: 'website', items: [{ key: 'heroCarousel', href: '/admin/hero-carousel', icon: 'image' }] },
+    // Phase 62 — legal PDFs (privacy / terms) shown on the site + consent.
+    {
+      key: 'website',
+      items: [
+        { key: 'heroCarousel', href: '/admin/hero-carousel', icon: 'image' },
+        { key: 'legal', href: '/admin/legal', icon: 'gavel' },
+      ],
+    },
     { key: 'system', items: [{ key: 'settings', href: '/admin/settings', icon: 'settings' }] },
   ],
 }
@@ -154,7 +166,11 @@ export function StaffSidebar({ role, userName, avatarKey, userId }: StaffSidebar
         role={role}
         userName={userName}
         avatarKey={avatarKey}
-        headerAction={<NotificationBell userId={userId} align="left" tone="dark" />}
+        headerAction={
+          showsNotificationBell(role) ? (
+            <NotificationBell userId={userId} align="left" tone="dark" />
+          ) : undefined
+        }
       />
     </aside>
   )

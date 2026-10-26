@@ -4,10 +4,13 @@ import { r2Url } from '@/lib/r2/publicUrl'
 import { RegisterForm } from './RegisterForm'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
+import { getConsentLegalProps } from '@/lib/legal/props'
 
 export default async function RegisterPage(props: PageProps<'/register'>) {
   const searchParams = await props.searchParams
-  const t = getT(await getLocale())
+  const locale = await getLocale()
+  const t = getT(locale)
+  const legal = await getConsentLegalProps(locale)
   const next = typeof searchParams.next === 'string' ? searchParams.next : '/'
   // Phase 14 — surface OAuth callback failures into the form banner.
   const errorMessage = mapOAuthError(searchParams.error, t)
@@ -52,6 +55,7 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
           next={next}
           errorMessage={errorMessage}
           showCheckEmailModal={showCheckEmailModal}
+          legal={legal}
         />
 
         <p className="mt-8 text-center text-body-md text-on-surface-variant">

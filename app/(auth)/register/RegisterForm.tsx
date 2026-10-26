@@ -11,6 +11,7 @@ import { CheckEmailModal } from '@/components/auth/register/CheckEmailModal'
 import { ConsentCheckboxes } from '@/components/consent/ConsentCheckboxes'
 import { useT } from '@/lib/i18n/useT'
 import { maxBirthdateIso } from '@/lib/dates'
+import type { ConsentLegalProps } from '@/lib/legal/props'
 
 interface RegisterFormProps {
   next: string
@@ -25,6 +26,8 @@ interface RegisterFormProps {
    * email confirmation is enabled).
    */
   showCheckEmailModal?: boolean
+  /** Phase 62 — consent version + published legal PDFs. */
+  legal: ConsentLegalProps
 }
 
 function SubmitButton() {
@@ -48,7 +51,7 @@ function SubmitButton() {
   )
 }
 
-export function RegisterForm({ next, errorMessage, showCheckEmailModal }: RegisterFormProps) {
+export function RegisterForm({ next, errorMessage, showCheckEmailModal, legal }: RegisterFormProps) {
   const [state, formAction] = useActionState<AuthState | null, FormData>(signUp, null)
   const [googleError, setGoogleError] = useState<string | undefined>()
   const [googlePending, startGoogleTransition] = useTransition()
@@ -188,7 +191,7 @@ export function RegisterForm({ next, errorMessage, showCheckEmailModal }: Regist
         </label>
 
         {/* Phase 61 — PDPA consent (terms required, marketing optional). */}
-        <ConsentCheckboxes />
+        <ConsentCheckboxes legal={legal} />
 
         <SubmitButton />
 

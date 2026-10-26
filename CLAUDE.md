@@ -41,16 +41,17 @@ Rules ละเอียดเต็มอยู่ใน `Rule.md` ที่ ro
 
 ## 📊 Current State
 
-**HEAD**: `5372322` on `notmain` (Phases 57–60 committed; Phase 61 uncommitted). All DB migrations through `20261018` are applied live, except `20261007_bkk_today_helper.sql` (staged for review on purpose, nothing calls `bkk_today()`). `booking_holds` table no longer exists (dropped in Phase 42).
+**HEAD**: `1428967` on `notmain` (Phase 62 + the /rooms search-bar, multi room-type and /bookings no-show changes uncommitted). All DB migrations through `20261020` are applied live, except `20261007_bkk_today_helper.sql` (staged for review on purpose, nothing calls `bkk_today()`). `booking_holds` table no longer exists (dropped in Phase 42).
 
-Full phase history (phases 1–60, one row each): `docs/phases-done.md` → section "Status table". Latest phases:
+Full phase history (phases 1–62, one row each): `docs/phases-done.md` → section "Status table". Latest phases:
 - **55** — guest refund request (`request_refund`), booking stays confirmed until manager approves; refund-history tab on `/bookings`.
 - **56** — unpaid web bookings expire after 5 + 5 min (`pg_cron` every minute); capacity ignores overdue unpaid rows; `PaymentCountdown`.
 - **57 / 57b / 57c** — one refund rule for guests and staff: full refund if asked ≥ `refund_min_days_before_checkin()` (= 2) days before check-in (Bangkok); shown before payment (widget, form checkbox, Stripe, emails). `cancellation_policies` no longer affect refunds.
 - **58** — expired-payment button: choose another room / retry (`retryExpiredBookingAction`).
 - **59** — room gallery layout by photo count + `ImageLightbox`; amenities section removed from guest room page.
 - **60** — CI (`.github/workflows/ci.yml`: lint, typecheck, `npm run test:unit`, build) + in-app realtime notifications (`notifications` table, `lib/notifications/notify.ts`, `NotificationBell`).
-- **61** — PDPA consent: required terms/privacy checkbox + optional marketing on `/register` (`components/consent/ConsentCheckboxes.tsx`); `profiles.terms_version`/`marketing_opt_in` + append-only `consent_events` (`20261018`), written only by `recordConsent()` (admin client); `PRIVACY_POLICY_VERSION` in `lib/consent.ts` — customers on an older/no version are sent to `/consent` by `lib/supabase/proxy.ts` (GET `/bookings`, `/account`) and by the booking actions (`redirectIfConsentMissing`); staff never gated. Marketing switch on `/account/profile`; `/privacy` rewritten (TH/EN, retention, `privacy@zenzerohotel.xyz`). **Changing `/terms` or `/privacy` wording = bump `PRIVACY_POLICY_VERSION`.** Test: `scripts/test-phase61-consent.mts` 8/8 (needs dev server).
+- **61** — PDPA consent: required terms/privacy checkbox + optional marketing on `/register` (`components/consent/ConsentCheckboxes.tsx`); `profiles.terms_version`/`marketing_opt_in` + append-only `consent_events` (`20261018`), written only by `recordConsent()` (admin client); `PRIVACY_POLICY_VERSION` in `lib/consent.ts` — customers on an older/no version are sent to `/consent` by `lib/supabase/proxy.ts` (GET `/bookings`, `/account`) and by the booking actions (`redirectIfConsentMissing`); staff never gated. Marketing switch on `/account/profile`; `/privacy` rewritten (TH/EN, retention, `privacy@zenzerohotel.xyz`). Test: `scripts/test-phase61-consent.mts` 8/8 (needs dev server).
+- **62** — admin-uploaded legal PDFs at `/admin/legal`: 4 docs (privacy/terms × TH/EN) uploaded as a draft (`legal_draft` singleton), previewed, published once via `publish_legal_version()` RPC → append-only `legal_versions` (`20261019`; atomic draft swap `set_legal_draft_key()` in `20261020`). **The consent version is the newest `legal_versions.version`** (`getCurrentConsentVersion()` / `fetchCurrentLegalVersion()` + `consentVersionOf()`); `PRIVACY_POLICY_VERSION` is only the fallback while the table is empty (JSX `/privacy`, `/terms` shown then). Every publish = everyone re-consents. Forms post `legal_version`; signUp / `acceptConsentAction` refuse a stale one (`consent.versionChanged`). PDFs served same-origin by `app/legal-files/[doc]/route.ts` (`?v=<id>` immutable, `?v=draft` admin only) and rendered by `components/legal/PdfViewer.tsx` (react-pdf 10.5 / pdfjs 5.4) on `/privacy`, `/terms` and in `LegalDocModal` from `ConsentCheckboxes`. Test: `scripts/test-phase62-legal-docs.mts` 12/12 (needs dev server + empty `legal_versions`; publishes a test row on the live DB while it runs).
 
 ## 🔭 Open Items
 
@@ -350,6 +351,8 @@ Full text with symptoms, causes and file references: **`docs/pitfalls.md`** — 
 - No `FOR UPDATE` with aggregates — `PERFORM 1 … FOR UPDATE`, then a separate `count(*)`.
 - text → enum needs an explicit cast (`v::payment_status`). Check live enum values before filtering (`no_show` does not exist).
 - Renaming a stored key/path: update every column/array holding a copy (`gallery_keys`, `hero_slides`, …).
+- Consent version: never compare `profiles.terms_version` with `PRIVACY_POLICY_VERSION` directly — use `needsConsent(session, await getCurrentConsentVersion())` (the newest `legal_versions` row wins; the constant is only the empty-table fallback).
+- Check-in rooms: `available` **or** `ready` (`lib/room-status.ts`) — cleaned rooms end at `ready`; check-in flips the room to `occupied`.
 - Capacity predicate (overdue unpaid rows do not occupy) must stay identical in `create_booking`, `create_temp_booking`, `has_capacity_for_booking` and `filterByAvailability`.
 - `approve_refund` needs a logged-in manager (`decided_by` trigger) — tests sign in a temp manager, not service_role.
 
@@ -359,6 +362,7 @@ Full text with symptoms, causes and file references: **`docs/pitfalls.md`** — 
 - Zod messages are dictionary keys (`'validation.phone10'`), resolved by `translateZodIssues` / `localizeIssueMessage`.
 - Emails use the recipient's locale: `getRecipientLocale({ userId | bookingId })`.
 - A Tailwind colour token must exist as `--color-<name>` in `@theme`, or it renders no colour.
+- `position: sticky` needs no `overflow-x-auto` ancestor — staff layouts' `<main>` use it (reception switched to `overflow-x-clip`).
 - One-line notices: `useToast()`. `AlertModal` only for content the user must read or copy.
 - Dates: compare with `toBangkokIsoDate()` / `bangkokMonthRange()`; import date helpers from `lib/dates.ts`, never local ones.
 
@@ -366,6 +370,7 @@ Full text with symptoms, causes and file references: **`docs/pitfalls.md`** — 
 - Stripe refund first, DB flip second — never mark `refunded` before `stripe.refunds.create()` succeeds.
 - Stripe webhook: `await request.text()` + `constructEvent`; no `auth.getUser()` in `/api/*`; all writes through SECURITY DEFINER RPCs.
 - Stripe idempotency key must change when any param can change (time fields especially).
+- Server actions accept 1 MB bodies by default — `next.config.ts` sets `serverActions.bodySizeLimit: '5mb'`; keep uploads ≤ 4 MB (Vercel ~4.5 MB cap), check size client-side, and wrap action calls in try/catch/finally.
 - Browser Supabase client reads `process.env.NEXT_PUBLIC_*` by literal name — never via `lib/env.ts` on a client path.
 - Realtime: `await supabase.realtime.setAuth(token)` before `.subscribe()`, or RLS hides every row.
 - Never `console.log` PII (emails, phones, names, amounts).

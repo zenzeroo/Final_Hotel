@@ -86,7 +86,7 @@ export interface SearchFilters {
   checkin?: string // ISO date YYYY-MM-DD
   checkout?: string
   guests?: number
-  type?: RoomTypeName | 'all'
+  types?: RoomTypeName[] // empty / undefined = all types
   floor?: number | 'all'
   priceRange?: 'under3000' | '3000-6000' | 'over6000' | 'all'
 }

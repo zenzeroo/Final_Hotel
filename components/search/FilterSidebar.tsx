@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { useT } from '@/lib/i18n/useT'
 import type { RoomTypeName } from '@/lib/data/types'
+import { formatRoomTypesParam, parseRoomTypesParam } from '@/lib/search/roomTypes'
 
 const PRICE_RANGES = [
   { value: 'under3000' as const },
@@ -28,7 +29,7 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
   const params = useSearchParams()
   const t = useT()
 
-  const currentType = params.get('type') ?? 'all'
+  const currentTypes = parseRoomTypesParam(params.get('type'))
   const currentFloor = params.get('floor') ?? 'all'
   const currentPrice = params.get('priceRange') ?? 'all'
 
@@ -80,10 +81,14 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
             <Checkbox
               key={type}
               label={ROOM_TYPE_LABELS[type][isEn ? 'en' : 'th']}
-              checked={currentType === type}
-              onChange={(checked) =>
-                updateParam('type', checked ? type : null)
-              }
+              checked={currentTypes.includes(type)}
+              onChange={(checked) => {
+                // Multi-select: add/remove this type, keep the others.
+                const next = checked
+                  ? [...currentTypes, type]
+                  : currentTypes.filter((name) => name !== type)
+                updateParam('type', next.length ? formatRoomTypesParam(next) : null)
+              }}
             />
           ))}
         </div>

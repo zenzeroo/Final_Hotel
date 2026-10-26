@@ -9,7 +9,6 @@ import { WriteReviewPrompt } from './WriteReviewPrompt'
 import { PaymentSuccessModal } from '@/components/payment/PaymentSuccessModal'
 import { RefundStatusBadge } from '@/components/booking/RefundStatusBadge'
 import { LeaveGuardProvider } from '@/components/booking/LeaveGuardProvider'
-import { LeaveGuardBackButton } from '@/components/booking/LeaveGuardBackButton'
 import { PaymentCountdown } from '@/components/booking/PaymentCountdown'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
@@ -20,6 +19,7 @@ import { getT } from '@/lib/i18n/t'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
 import { formatDate } from '@/lib/dates'
 import { refundDeadlineOrNull } from '@/lib/refund-rule'
+import { isNoShow } from '@/lib/no-show'
 import { roomsSearchHref } from '@/lib/booking-links'
 import Image from 'next/image'
 import { CancelledFromStripeBanner } from './CancelledFromStripeBanner'
@@ -31,13 +31,23 @@ function StatusBadge({
   status,
   paymentStatus,
   lapsedReason,
+  noShow,
   t,
 }: {
   status: string
   paymentStatus: string
   lapsedReason: string | null
+  noShow: boolean
   t: ReturnType<typeof getT>
 }) {
+  if (noShow) {
+    return (
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold uppercase tracking-wider">
+        <MaterialIcon name="event_busy" size={16} />
+        {t('bookings.statusNoShow')}
+      </span>
+    )
+  }
   const isPaid = paymentStatus === 'paid'
   const isUnpaid = paymentStatus === 'unpaid'
   const isCancelled = status === 'cancelled'
@@ -137,6 +147,7 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
   // text, which promised refunds the code never gave).
   const refundMinDays = await getRefundMinDays()
   const refundDeadline = refundDeadlineOrNull(booking.check_in, refundMinDays)
+  const noShow = isNoShow(booking.status, booking.check_in)
 
   // Phase 29 — surface refund_requests.status as a badge so the user sees
   // pending / approved / rejected without having to wait for the eventual
@@ -146,10 +157,9 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
 
   // Phase 52 — gate the leave-guard on the same condition:
   // confirmed (or temp_pending) + payment_status='unpaid'. When true,
-  // the page mounts <LeaveGuardProvider> (which owns the leave dialog
-  // state) + <LeaveGuardBackButton> (the fixed-position overlay that
-  // intercepts the header's back-button area). When false, the
-  // header's plain <Link> is the only back control.
+  // <LeaveGuardProvider> is enabled: its click-capture listener turns
+  // any same-origin link click — the header's back link included —
+  // into the leave dialog. When false, links navigate normally.
   const isUnpaidActive =
     booking.payment_status === 'unpaid' &&
     (booking.status === 'confirmed' || booking.status === 'temp_pending')
@@ -184,11 +194,12 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
         />
       )}
       {/*
-        Phase 52 follow-up (RSC fix) — the page wraps the main
-        content in <LeaveGuardProvider> only when the booking is
-        unpaid+active. For paid/cancelled/expired bookings, no
-        provider is mounted and the header's plain <Link> is the
-        only back control. The provider receives only serializable
+        Phase 52 follow-up (RSC fix) — <LeaveGuardProvider> is inert
+        unless the booking is unpaid+active. The header's <Link> is the
+        only back control either way; while the guard is on, the
+        provider's click-capture intercepts it (the old fixed overlay
+        button showed up as a second "ย้อนกลับ" once TopNavBar sat
+        above the header). The provider receives only serializable
         props (bookingId, enabled, backHref) — no function props
         cross the server→client boundary.
       */}
@@ -197,13 +208,12 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
         enabled={isUnpaidActive}
         backHref="/bookings"
       >
-        {isUnpaidActive && <LeaveGuardBackButton />}
         <TransactionalHeader backHref="/bookings" />
         <main className="flex-1 bg-background">
           <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">
           <div className="flex items-center gap-3 mb-2 flex-wrap">
             <h1 className="font-display text-3xl text-primary">{t('bookingDetail.title')}</h1>
-            <StatusBadge status={booking.status} paymentStatus={booking.payment_status} lapsedReason={booking.lapsed_reason} t={t} />
+            <StatusBadge status={booking.status} paymentStatus={booking.payment_status} lapsedReason={booking.lapsed_reason} noShow={noShow} t={t} />
             {refundStatus && (
               <RefundStatusBadge
                 status={refundStatus.status}
@@ -346,6 +356,7 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                   refundRequested={refundStatus !== null}
                   lapsedReason={booking.lapsed_reason}
                   roomsHref={roomsSearchHref(booking)}
+                  noShow={noShow}
                 />
               </div>
             </div>

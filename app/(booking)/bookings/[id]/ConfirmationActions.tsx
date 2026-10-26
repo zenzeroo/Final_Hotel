@@ -24,6 +24,8 @@ interface ConfirmationActionsProps {
   lapsedReason?: string | null
   /** Phase 58 — room list with this booking's dates ("เลือกห้องพักอื่น"). */
   roomsHref?: string
+  /** Confirmed but the check-in day has passed (lib/no-show.ts): no actions, just a note. */
+  noShow?: boolean
 }
 
 export function ConfirmationActions({
@@ -33,6 +35,7 @@ export function ConfirmationActions({
   refundRequested = false,
   lapsedReason = null,
   roomsHref = '/rooms',
+  noShow = false,
 }: ConfirmationActionsProps) {
   const router = useRouter()
   const t = useT()
@@ -111,6 +114,14 @@ export function ConfirmationActions({
           <AlertModal open onClose={() => setAlertMessage(null)} body={alertMessage} />
         )}
       </>
+    )
+  }
+
+  if (noShow) {
+    return (
+      <div className="mt-6 px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-center">
+        <p className="text-body-md text-error font-medium">{t('bookingDetail.noShowNote')}</p>
+      </div>
     )
   }
 

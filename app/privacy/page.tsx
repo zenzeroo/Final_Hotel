@@ -5,6 +5,8 @@ import { PRIVACY_POLICY_VERSION } from '@/lib/consent'
 import { formatBangkokDate } from '@/lib/dates'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
+import { getCurrentLegalVersion } from '@/lib/data/legal'
+import { PublishedLegalPage } from '@/components/legal/PublishedLegalPage'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,10 +21,26 @@ export async function generateMetadata(): Promise<Metadata> {
  * Phase 61 — rewritten for PDPA: every field the app collects, legal basis,
  * retention, sharing (incl. storage abroad), rights, and the real policy
  * version (PRIVACY_POLICY_VERSION — the same value /consent checks).
- * Changing this text means bumping PRIVACY_POLICY_VERSION in lib/consent.ts.
+ * Phase 62 — this JSX is only the fallback until the admin publishes PDFs;
+ * changing it before then still means bumping PRIVACY_POLICY_VERSION.
  */
 export default async function PrivacyPage() {
-  const t = getT(await getLocale())
+  const locale = await getLocale()
+  const t = getT(locale)
+
+  // Phase 62 — once the admin has published PDFs (/admin/legal), show those.
+  const published = await getCurrentLegalVersion()
+  if (published) {
+    return (
+      <PublishedLegalPage
+        kind="privacy"
+        row={published}
+        locale={locale}
+        eyebrow={t('privacyPage.eyebrow')}
+        title={t('privacyPage.title')}
+      />
+    )
+  }
 
   const contactLink = (
     <a

@@ -22,6 +22,7 @@ import type { RoomTypeName } from '@/lib/data/types'
 import { requireRole } from '@/lib/auth/require'
 import { sanitizeNext } from '@/lib/auth/sanitize'
 import { needsConsent } from '@/lib/consent'
+import { getCurrentConsentVersion } from '@/lib/data/legal'
 import type { UserRole } from '@/lib/supabase/roles'
 import { sendEmail } from '@/lib/email/resend'
 import { getRecipientLocale } from '@/lib/email/recipient-locale'
@@ -67,7 +68,8 @@ async function redirectIfConsentMissing(
 ): Promise<void> {
   if (!profile) return
   const role = (profile.role ?? 'user') as UserRole
-  if (!needsConsent({ role, termsVersion: profile.terms_version ?? null })) return
+  const current = await getCurrentConsentVersion()
+  if (!needsConsent({ role, termsVersion: profile.terms_version ?? null }, current)) return
   let next = '/'
   const referer = (await headers()).get('referer')
   if (referer) {
@@ -277,15 +279,6 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       .select('id, booking_code, check_in, check_out, nights, total, currency, booker_email, booker_full_name, room_type:room_types(name)')
       .eq('id', bookingId)
       .single()
-    if (booking) {
-      await notifyRoles(['reception'], {
-        type: 'booking_new',
-        params: { code: booking.booking_code, checkIn: booking.check_in },
-        link: `/reception/bookings/${booking.id}`,
-        bookingId: booking.id,
-        eventKey: `booking_new:${booking.id}`,
-      })
-    }
     if (booking && sessionEmail) {
       const emailLocale = await getRecipientLocale({ userId: user.id })
       const roomTypeName =
@@ -713,15 +706,6 @@ export async function completeTempBookingAction(
         )
         .eq('id', data.bookingId)
         .single()
-      if (booking) {
-        await notifyRoles(['reception'], {
-          type: 'booking_new',
-          params: { code: booking.booking_code, checkIn: booking.check_in },
-          link: `/reception/bookings/${booking.id}`,
-          bookingId: booking.id,
-          eventKey: `booking_new:${booking.id}`,
-        })
-      }
       if (booking && sessionEmail) {
         const emailLocale = await getRecipientLocale({ userId: user.id })
         const roomTypeName =

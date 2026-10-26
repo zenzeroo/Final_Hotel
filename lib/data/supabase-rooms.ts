@@ -56,8 +56,8 @@ export async function searchRooms(filters: SearchFilters): Promise<SearchResult>
     .eq('is_active', true)
     .is('deleted_at', null)
 
-  if (filters.type && filters.type !== 'all') {
-    query = query.eq('type', filters.type)
+  if (filters.types && filters.types.length > 0) {
+    query = query.in('type', filters.types)
   }
 
   if (filters.floor !== undefined && filters.floor !== 'all') {

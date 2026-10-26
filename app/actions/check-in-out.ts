@@ -23,6 +23,7 @@ import { requireRole } from '@/lib/auth/require'
 import { actionFail } from '@/lib/errors/supabase'
 import { isUuid } from '@/lib/ids'
 import { sendEmail } from '@/lib/email/resend'
+import { CHECK_IN_READY_STATUSES } from '@/lib/room-status'
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
@@ -38,9 +39,11 @@ const checkOutSchema = z.object({
 })
 
 /**
- * Check a guest in. Assigns the selected physical `room_unit_id` and flips
- * `bookings.status` from `confirmed` → `checked_in`. Validates the booking
- * exists + is in a check-in-eligible status before mutating.
+ * Check a guest in. Claims the selected physical room (`available`/`ready`
+ * → `occupied`), assigns it as `room_unit_id` and flips `bookings.status`
+ * from `confirmed` → `checked_in`. Validates the booking exists + is in a
+ * check-in-eligible status before mutating. Check-out sends the room to
+ * `waiting_cleaning` (trigger on_booking_checked_out).
  *
  * audit row + housekeeping task creation are deferred to the existing
  * downstream trigger / data layer.
@@ -57,7 +60,7 @@ export async function checkInBookingAction(
   try {
     const { data: booking, error: readErr } = await supabase
       .from('bookings')
-      .select('id, status')
+      .select('id, status, room_type_id')
       .eq('id', parsed.data.bookingId)
       .maybeSingle()
     if (readErr) throw readErr
@@ -78,11 +81,42 @@ export async function checkInBookingAction(
       return { ok: false, error: 'การจองนี้มีคำขอคืนเงินที่รอ Manager พิจารณา — ยังเช็คอินไม่ได้จนกว่าจะมีคำตัดสิน' }
     }
 
+    // Claim the room first: only an active 'available' / 'ready' room can be
+    // taken, and the conditional UPDATE means two receptionists picking the
+    // same room (or a room turned dirty meanwhile) can't both succeed.
+    const { data: unit, error: unitErr } = await supabase
+      .from('room_units')
+      .select('status, room_type_id')
+      .eq('id', parsed.data.roomUnitId)
+      .maybeSingle()
+    if (unitErr) throw unitErr
+    const previousStatus = unit?.status as string | undefined
+    const roomChanged = !!unit && unit.room_type_id !== booking.room_type_id
+    const { data: claimed, error: claimErr } = await supabase
+      .from('room_units')
+      .update({ status: 'occupied', updated_at: new Date().toISOString() })
+      .eq('id', parsed.data.roomUnitId)
+      .eq('is_active', true)
+      .in('status', CHECK_IN_READY_STATUSES)
+      .select('id')
+    if (claimErr) throw claimErr
+    if (!previousStatus || !claimed || claimed.length === 0) {
+      return { ok: false, error: 'ห้องนี้ไม่พร้อมเข้าพักแล้ว — กรุณาเลือกห้องอื่น' }
+    }
+
     const { error: updateErr } = await supabase
       .from('bookings')
       .update({ status: 'checked_in', room_unit_id: parsed.data.roomUnitId })
       .eq('id', parsed.data.bookingId)
-    if (updateErr) throw updateErr
+    if (updateErr) {
+      // Give the room back so it can be picked again.
+      await supabase
+        .from('room_units')
+        .update({ status: previousStatus, updated_at: new Date().toISOString() })
+        .eq('id', parsed.data.roomUnitId)
+        .eq('status', 'occupied')
+      throw updateErr
+    }
 
     // Audit row (the original client-component path skipped this — Phase 25
     // closes that gap so the booking timeline shows who checked the guest in).
@@ -92,11 +126,16 @@ export async function checkInBookingAction(
       actor_id: session.id,
       actor_role: session.role,
       event_type: 'checked_in',
-      description: 'Guest checked in',
-      metadata: { room_unit_id: parsed.data.roomUnitId },
+      // Reception may move the guest when the booked room has a problem —
+      // keep that visible on the booking timeline.
+      description: roomChanged ? 'Guest checked in (moved to another room type)' : 'Guest checked in',
+      metadata: roomChanged
+        ? { room_unit_id: parsed.data.roomUnitId, booked_room_type_id: booking.room_type_id, room_type_id: unit?.room_type_id }
+        : { room_unit_id: parsed.data.roomUnitId },
     })
 
     revalidatePath('/reception/check-in-out')
+    revalidatePath('/reception/rooms')
     revalidatePath('/reception')
     revalidatePath('/manager')
     return { ok: true }

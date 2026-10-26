@@ -23,6 +23,7 @@ import { formatTHB } from '@/lib/pricing'
 import { r2Url } from '@/lib/r2/publicUrl'
 import { useT, useLocale } from '@/lib/i18n/useT'
 import { formatDate } from '@/lib/dates'
+import { isNoShow } from '@/lib/no-show'
 import type { Booking } from '@/lib/data/bookings'
 import type { RefundRequestHistoryItem, RefundRequestStatus } from '@/lib/data/types'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
@@ -31,6 +32,8 @@ import { localizedName } from '@/lib/format/roomType'
 interface BookingHistoryProps {
   bookings: Booking[]
   refundRequests: RefundRequestHistoryItem[]
+  /** Bangkok date (YYYY-MM-DD) from the server, so the no-show split matches SSR. */
+  today: string
 }
 
 type Tab = 'active' | 'checkedIn' | 'cancelled' | 'refunds'
@@ -39,8 +42,10 @@ function statusLabel(
   status: Booking['status'],
   paymentStatus: Booking['payment_status'],
   lapsedReason: Booking['lapsed_reason'],
+  noShow: boolean,
   t: ReturnType<typeof useT>,
 ) {
+  if (noShow) return t('bookings.statusNoShow')
   // Phase 42 — new statuses before the legacy fallthrough.
   // Phase 52 — added 'awaitingPayment' for confirmed+unpaid rows.
   // Phase 52 follow-up — 'expired' is now shared between two flows;
@@ -62,9 +67,14 @@ function statusLabel(
   return t('bookings.statusPending')
 }
 
-function statusClass(status: Booking['status'], paymentStatus: Booking['payment_status']) {
+function statusClass(
+  status: Booking['status'],
+  paymentStatus: Booking['payment_status'],
+  noShow: boolean,
+) {
   // Phase 42 — distinct classes for temp_pending (amber) + expired (error red).
   // Phase 52 — added 'payment_expired' (error red, same as 'cancelled' / 'expired').
+  if (noShow) return 'bg-error/10 text-error'
   if (status === 'expired') return 'bg-error/10 text-error'
   if (status === 'payment_expired') return 'bg-error/10 text-error'
   if (status === 'temp_pending') return 'bg-warning/15 text-warning'
@@ -80,7 +90,7 @@ function statusClass(status: Booking['status'], paymentStatus: Booking['payment_
  * free themselves via the existing lazy-expiry helper. No timer UI.
  */
 
-export function BookingHistory({ bookings, refundRequests }: BookingHistoryProps) {
+export function BookingHistory({ bookings, refundRequests, today }: BookingHistoryProps) {
   const [tab, setTab] = useState<Tab>('active')
   const [refundSub, setRefundSub] = useState<RefundRequestStatus>('pending')
   const router = useRouter()
@@ -99,14 +109,20 @@ export function BookingHistory({ bookings, refundRequests }: BookingHistoryProps
   // Phase 42 — Active tab now also includes 'temp_pending' (Phase 42 temporary bookings).
   // 'expired' goes into the Cancelled tab (semantically: no longer in use).
   // Phase 52 — 'payment_expired' (30-min deadline lapsed) also goes to Cancelled.
+  // A confirmed booking whose check-in day has passed (no-show) leaves
+  // "upcoming" and is listed with the stays as "ไม่ได้เข้าเช็คอิน".
+  const noShowIds = new Set(
+    bookings.filter((b) => isNoShow(b.status, b.check_in, today)).map((b) => b.id),
+  )
   const activeBookings = bookings.filter(
     (b) =>
-      b.status === 'pending' ||
-      b.status === 'confirmed' ||
-      b.status === 'temp_pending',
+      !noShowIds.has(b.id) &&
+      (b.status === 'pending' ||
+        b.status === 'confirmed' ||
+        b.status === 'temp_pending'),
   )
   const checkedInBookings = bookings.filter(
-    (b) => b.status === 'checked_in' || b.status === 'checked_out',
+    (b) => b.status === 'checked_in' || b.status === 'checked_out' || noShowIds.has(b.id),
   )
   const cancelledBookings = bookings.filter(
     (b) =>
@@ -272,6 +288,7 @@ export function BookingHistory({ bookings, refundRequests }: BookingHistoryProps
               localeBcp={localeBcp}
               refundRequested={requestedBookingIds.has(b.id)}
               refundStatus={refundStatusByBooking.get(b.id) ?? null}
+              noShow={noShowIds.has(b.id)}
             />
           ))}
         </div>
@@ -346,6 +363,7 @@ function BookingRow({
   localeBcp,
   refundRequested,
   refundStatus,
+  noShow,
 }: {
   booking: Booking
   onCancel: (id: string, isPaid: boolean, isTemp: boolean) => void
@@ -355,6 +373,7 @@ function BookingRow({
   localeBcp: string
   refundRequested: boolean
   refundStatus: RefundRequestStatus | null
+  noShow: boolean
 }) {
   const isCancelled = booking.status === 'cancelled'
   const isExpired = booking.status === 'expired'
@@ -393,9 +412,9 @@ function BookingRow({
             </h3>
             <div className="flex items-center gap-2 shrink-0">
               <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-caption font-semibold ${statusClass(booking.status, booking.payment_status)}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-caption font-semibold ${statusClass(booking.status, booking.payment_status, noShow)}`}
               >
-                {statusLabel(booking.status, booking.payment_status, booking.lapsed_reason, t)}
+                {statusLabel(booking.status, booking.payment_status, booking.lapsed_reason, noShow, t)}
               </span>
               {booking.status === 'confirmed' && booking.payment_status === 'unpaid' && booking.payment_due_at && (
                 <PaymentCountdown deadlineIso={booking.payment_due_at} variant="chip" />
@@ -425,7 +444,7 @@ function BookingRow({
       </Link>
 
       {/* Actions */}
-      {!isCancelled && !isExpired && !isPaymentExpired && !isCheckedIn && !isCheckedOut && (
+      {!isCancelled && !isExpired && !isPaymentExpired && !isCheckedIn && !isCheckedOut && !noShow && (
         <div className="flex items-center gap-2 px-4 md:px-6 pb-4 flex-wrap">
           {isTempPending ? (
             // Phase 42 — temp_pending: primary action "ดำเนินการต่อ" + secondary "ยกเลิก"

@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getBookingEvents } from '@/lib/data/staff'
 import { listPaymentsByBooking } from '@/lib/data/supabase-payments'
 import { getAllRoomUnits } from '@/lib/data/supabase-housekeeper'
+import { splitCheckInUnits } from '@/lib/room-status'
 import { formatTHB } from '@/lib/pricing'
 import { formatDate, formatDateTime } from '@/lib/dates'
 import { getT } from '@/lib/i18n/t'
@@ -224,21 +225,27 @@ export async function StaffBookingDetail({
   const isConfirmed = booking.status === 'confirmed'
   const isPaid = booking.payment_status === 'paid'
 
-  // Available units for check-in: same room_type, status='available'.
-  // Housekeeper helper returns ALL active units with nested room_type
-  // join (no flat room_type_id column), so we filter via u.room_type?.id.
-  const availableUnits = allRoomUnits.filter(
-    (u) =>
-      roomType &&
-      u.room_type?.id === roomType.id &&
-      u.status === 'available'
+  // Rooms for check-in (lib/room-status.ts): the booked room type's ready
+  // room is the default; other ready rooms only when reception says the
+  // booked one has a problem. Housekeeper helper returns ALL active units
+  // with a nested room_type join (no flat room_type_id column).
+  const { booked: bookedUnits, others: otherUnits, bookedNotReady } = splitCheckInUnits(
+    allRoomUnits.map((u) => ({
+      id: u.id,
+      unit_label: u.unit_label,
+      floor: u.floor,
+      status: u.status,
+      roomTypeId: u.room_type?.id ?? null,
+      roomTypeName: u.room_type?.name_th ?? null,
+    })),
+    roomType?.id ?? null,
   )
 
   const sectionClass =
     'bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant'
 
   return (
-    <div className="p-6 md:p-8 max-w-5xl">
+    <div className={`p-6 md:p-8 ${showActions ? 'max-w-7xl' : 'max-w-5xl'}`}>
       <div className="mb-4">
         <Link
           href={backHref}
@@ -272,7 +279,12 @@ export async function StaffBookingDetail({
         })}
       </p>
 
-      <div className="flex flex-col gap-6">
+      <div
+        className={
+          showActions ? 'grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start' : undefined
+        }
+      >
+      <div className="flex flex-col gap-6 min-w-0">
         {/* Section 1: Booking info */}
         <section className={sectionClass}>
           <h2 className="font-display text-xl text-primary mb-4">{t('bookingDetailStaff.sectionBooking')}</h2>
@@ -466,8 +478,12 @@ export async function StaffBookingDetail({
           </section>
         )}
 
-        {/* Actions (reception only) */}
-        {showActions && (
+      </div>
+      {/* Actions (reception only) — right column, sticky on xl+ (below
+          that the sidebar leaves too little width for two columns); first
+          on narrower screens so the check-in button needs no scrolling. */}
+      {showActions && (
+        <aside className="order-first xl:order-none xl:sticky xl:top-6">
           <section className={sectionClass}>
             <h2 className="font-display text-xl text-primary mb-4">{t('bookingDetailStaff.sectionActions')}</h2>
             <div className="flex flex-wrap items-center gap-3">
@@ -476,11 +492,9 @@ export async function StaffBookingDetail({
                   bookingId={booking.id}
                   action="check_in"
                   label={t('bookingDetailStaff.checkIn')}
-                  availableUnits={availableUnits.map((u) => ({
-                    id: u.id,
-                    unit_label: u.unit_label,
-                    floor: u.floor,
-                  }))}
+                  bookedUnits={bookedUnits}
+                  otherUnits={otherUnits}
+                  bookedNotReady={bookedNotReady}
                 />
               )}
               {isCheckedIn && (
@@ -488,7 +502,6 @@ export async function StaffBookingDetail({
                   bookingId={booking.id}
                   action="check_out"
                   label={t('bookingDetailStaff.checkOut')}
-                  availableUnits={[]}
                 />
               )}
               {isCheckedOut && (
@@ -503,13 +516,13 @@ export async function StaffBookingDetail({
                   {t('bookingDetailStaff.cancelledBadge')}
                 </span>
               )}
-              <div className="ml-auto">
-                <BookingRowActions
-                  bookingId={booking.id}
-                  status={booking.status}
-                  paymentStatus={booking.payment_status}
-                />
-              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-outline-variant">
+              <BookingRowActions
+                bookingId={booking.id}
+                status={booking.status}
+                paymentStatus={booking.payment_status}
+              />
             </div>
             {!isPaid && !isCancelled && (
               <p className="text-caption text-on-surface-variant mt-3">
@@ -518,7 +531,8 @@ export async function StaffBookingDetail({
               </p>
             )}
           </section>
-        )}
+        </aside>
+      )}
       </div>
     </div>
   )
@@ -528,7 +542,7 @@ function DataRow({ label, value, muted }: { label: string; value: string; muted?
   return (
     <div>
       <dt className="text-caption text-on-surface-variant uppercase tracking-wider">{label}</dt>
-      <dd className={`text-body-md mt-1 font-medium ${muted ? 'text-on-surface-variant font-normal italic' : 'text-on-surface'}`}>
+      <dd className={`text-body-md mt-1 font-medium [overflow-wrap:anywhere] ${muted ?'text-on-surface-variant font-normal italic' : 'text-on-surface'}`}>
         {value}
       </dd>
     </div>

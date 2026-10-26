@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getTodayStats, getRecentBookings, getRoomsStatus } from '@/lib/data/staff'
+import { countRoomBuckets } from '@/components/manager/roomStatusBuckets'
 import { formatTHB } from '@/lib/pricing'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
@@ -19,11 +20,14 @@ export default async function ReceptionDashboard() {
     getRoomsStatus(),
   ])
 
+  // Same buckets as /reception/rooms: ready counts as available, the whole
+  // cleaning flow as cleaning, a checked-in booking as occupied.
+  const buckets = countRoomBuckets(rooms)
   const roomStats = {
-    available: rooms.filter((r) => r.status === 'available').length,
-    occupied: rooms.filter((r) => r.status === 'occupied').length,
-    cleaning: rooms.filter((r) => r.status === 'cleaning').length,
-    maintenance: rooms.filter((r) => r.status === 'maintenance').length,
+    available: buckets.available,
+    occupied: buckets.occupied,
+    cleaning: buckets.cleaning,
+    maintenance: buckets.closed,
   }
 
   return (

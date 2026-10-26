@@ -143,7 +143,9 @@ try {
     assert(!/name="marketing_opt_in"[^>]*required/.test(box), 'marketing checkbox must not be required')
     assert(!/name="marketing_opt_in"[^>]*defaultChecked=\{true\}/.test(box), 'marketing must not be pre-ticked')
     const form = readFileSync(resolve(__dirname, '..', 'app/(auth)/register/RegisterForm.tsx'), 'utf8')
-    assert(form.includes('<ConsentCheckboxes />'), 'RegisterForm does not render ConsentCheckboxes')
+    // Phase 62 — the component now takes `legal` (version + published PDFs).
+    assert(/<ConsentCheckboxes\b[^>]*\/>/.test(form), 'RegisterForm does not render ConsentCheckboxes')
+    assert(box.includes('name="legal_version"'), 'ConsentCheckboxes does not post legal_version')
     const auth = readFileSync(resolve(__dirname, '..', 'app/actions/auth.ts'), 'utf8')
     assert(/acceptTerms: z\.literal\(true/.test(auth), 'signUp schema does not require acceptTerms')
   })

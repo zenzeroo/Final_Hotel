@@ -75,7 +75,6 @@ export const th = {
     guests: 'ผู้เข้าพัก',
     any: 'ทั้งหมด',
     viewDetails: 'ดูรายละเอียด',
-    seeAll: 'ดูทั้งหมด',
     searchBar: {
       checkIn: 'เช็คอิน',
       checkOut: 'เช็คเอาท์',
@@ -83,6 +82,7 @@ export const th = {
       decGuests: 'ลดจำนวนผู้เข้าพัก',
       incGuests: 'เพิ่มจำนวนผู้เข้าพัก',
       search: 'ค้นหาห้องพัก',
+      reset: 'รีเซ็ต',
     },
   },
 
@@ -315,6 +315,7 @@ export const th = {
     statusRefunded: 'คืนเงินแล้ว',
     statusCheckedIn: 'เข้าพักอยู่',
     statusCheckedOut: 'เช็คเอาท์แล้ว',
+    statusNoShow: 'ไม่ได้เข้าเช็คอิน',
     // Phase 50 — temp_pending (lease held by heartbeat) + expired
     // (lease lapsed via lazy-expiry helper or daily cron). No user-
     // facing countdown — the lease is invisible.
@@ -385,6 +386,7 @@ export const th = {
   // Booking detail page
   bookingDetail: {
     title: 'รายละเอียดการจอง',
+    noShowNote: 'ไม่ได้เข้าเช็คอินตามวันที่จอง — ติดต่อโรงแรมหากต้องการความช่วยเหลือ',
     backToList: 'กลับไปประวัติการจอง',
     bookingCode: 'รหัสการจอง',
     guestInfo: 'ข้อมูลผู้จอง',
@@ -1069,6 +1071,12 @@ export const th = {
       tabUpcoming: 'กำลังจะมา ({count})',
       tabInHouse: 'พักอยู่ในขณะนี้ ({count})',
       selectRoomFirst: 'กรุณาเลือกห้องก่อนเช็คอิน',
+      noRoomReady: 'ไม่มีห้องที่พร้อมเข้าพัก — ตรวจสถานะห้องที่หน้า "ห้องพัก"',
+      roomProblem: 'ห้องมีปัญหา? เลือกห้องอื่น',
+      useBookedRoom: 'ใช้ห้องที่จองไว้',
+      bookedRoomNotReady: 'ห้องที่จองไว้ยังไม่พร้อม — เลือกห้องอื่นแทน',
+      bookedRoomNotReadyNamed: 'ห้องที่จองไว้ {rooms} ยังไม่พร้อม — เลือกห้องอื่นแทน',
+      unitTypeFloor: '{unit} · {type} (ชั้น {floor})',
       unitFloor: '{unit} (ชั้น {floor})',
       searchPlaceholder: 'ค้นหาชื่อ / รหัสการจอง / อีเมล',
       searchAria: 'ค้นหารายการในหน้านี้',
@@ -1120,8 +1128,8 @@ export const th = {
       colPhone: 'เบอร์โทร',
       colJoined: 'สมัครเมื่อ',
       colActions: 'ดำเนินการ',
-      typeToSearch: 'พิมพ์ชื่อหรือเบอร์โทรเพื่อค้นหา',
-      inputPlaceholder: 'ชื่อ-นามสกุล หรือเบอร์โทรศัพท์',
+      typeToSearch: 'พิมพ์ชื่อ อีเมล หรือเบอร์โทรเพื่อค้นหา',
+      inputPlaceholder: 'ชื่อ-นามสกุล อีเมล หรือเบอร์โทรศัพท์',
       search: 'ค้นหา',
     },
     roomsPage: {
@@ -1135,6 +1143,13 @@ export const th = {
       statusCleaning: 'รอทำความสะอาด',
       statusMaintenance: 'ปรับปรุง',
       statusOutOfOrder: 'ปิดใช้งาน',
+      lockedGuest: 'มีแขกเข้าพัก · {name} ({code}) — เปลี่ยนได้หลังเช็คเอาท์',
+      lockedOccupied: 'มีแขกเข้าพัก — เปลี่ยนได้หลังเช็คเอาท์',
+      lockedClosed: 'ปิดซ่อม — ผู้จัดการเป็นผู้เปิดห้อง',
+      changeStatus: 'เปลี่ยนสถานะห้อง {room}',
+      changeStatusTitle: 'เปลี่ยนสถานะห้อง {room}',
+      statusChanged: 'เปลี่ยนสถานะห้อง {room} แล้ว',
+      currentStatus: 'สถานะปัจจุบัน',
     },
     requestsPage: {
       title: 'คำขอจากแขก',
@@ -1346,8 +1361,46 @@ export const th = {
       promotions: 'โปรโมชั่น',
       rates: 'ราคา',
       heroCarousel: 'หน้าแรก',
+      legal: 'เอกสารกฎหมาย',
       staff: 'พนักงาน',
       settings: 'ตั้งค่า',
+    },
+    // Phase 62 — admin-uploaded legal PDFs.
+    legalPage: {
+      title: 'เอกสารกฎหมาย',
+      subtitle: 'อัปโหลดนโยบายความเป็นส่วนตัวและเงื่อนไขการให้บริการเป็นไฟล์ PDF ตรวจดูก่อน แล้วกดเผยแพร่ครั้งเดียว',
+      hint: 'ใน Word ให้ใช้ ไฟล์ → บันทึกเป็น → PDF เพื่อฝังฟอนต์ไว้ในไฟล์ หน้าเว็บจะแสดงเหมือนไฟล์ต้นฉบับ',
+      docPrivacyTh: 'นโยบายความเป็นส่วนตัว (ไทย)',
+      docPrivacyEn: 'นโยบายความเป็นส่วนตัว (อังกฤษ)',
+      docTermsTh: 'เงื่อนไขการให้บริการ (ไทย)',
+      docTermsEn: 'เงื่อนไขการให้บริการ (อังกฤษ)',
+      statusPublished: 'ใช้ฉบับที่เผยแพร่',
+      statusDraft: 'มีร่างใหม่',
+      statusEmpty: 'ยังไม่มีไฟล์',
+      upload: 'อัปโหลด PDF',
+      preview: 'ดูตัวอย่าง',
+      removeDraft: 'ลบร่าง',
+      uploading: 'กำลังอัปโหลด…',
+      uploadOk: 'อัปโหลดร่างแล้ว',
+      removeOk: 'ลบร่างแล้ว',
+      publish: 'เผยแพร่',
+      publishWarn: 'เมื่อเผยแพร่ ลูกค้าทุกคนจะต้องกดยอมรับเอกสารฉบับใหม่ก่อนใช้งานต่อ',
+      publishOk: 'เผยแพร่แล้ว — ลูกค้าจะถูกขอให้ยอมรับฉบับใหม่',
+      publishNeedsAll: 'การเผยแพร่ครั้งแรกต้องมีไฟล์ครบทั้ง 4 เอกสาร',
+      publishNothing: 'อัปโหลดไฟล์ใหม่อย่างน้อย 1 ไฟล์ก่อนเผยแพร่',
+      history: 'ฉบับที่เผยแพร่แล้ว',
+      historyEmpty: 'ยังไม่เคยเผยแพร่ — เว็บใช้หน้านโยบายที่มีอยู่ในระบบ',
+      colVersion: 'เวอร์ชัน',
+      colDate: 'วันที่เผยแพร่',
+      colBy: 'โดย',
+      colFiles: 'ไฟล์',
+      errEmpty: 'ไฟล์ว่างเปล่า',
+      errType: 'อัปโหลดได้เฉพาะไฟล์ PDF',
+      errSize: 'ไฟล์ใหญ่เกิน 4 MB',
+      errMagic: 'ไฟล์นี้ไม่ใช่ PDF จริง — กรุณาบันทึกจาก Word เป็น PDF',
+      errStorage: 'บันทึกไฟล์ไม่สำเร็จ กรุณาลองใหม่',
+      errNothing: 'ยังไม่มีไฟล์ใหม่ให้เผยแพร่',
+      errIncomplete: 'ต้องมีไฟล์ครบทั้ง 4 เอกสารก่อนเผยแพร่',
     },
     // Phase 43 — hero carousel management page.
     heroCarouselPage: {
@@ -2434,8 +2487,20 @@ export const th = {
     },
   },
   // Phase 61 — PDPA consent (register form, /consent, profile card)
+  // Phase 62 — admin-uploaded legal PDFs (PdfViewer)
+  legal: {
+    download: 'ดาวน์โหลด PDF',
+    openPdf: 'เปิดไฟล์ PDF',
+    viewerFailed: 'แสดงเอกสารในหน้านี้ไม่ได้',
+    updatedAt: 'อัปเดตล่าสุด {date}',
+    termsEyebrow: 'ข้อกำหนด',
+    termsTitle: 'เงื่อนไขการให้บริการ',
+  },
+
   consent: {
     title: 'ยืนยันข้อตกลงก่อนใช้งานต่อ',
+    versionChanged:
+      'เอกสารข้อกำหนดหรือนโยบายมีการอัปเดตระหว่างที่คุณเปิดหน้านี้ กรุณาอ่านฉบับล่าสุดแล้วยืนยันอีกครั้ง',
     intro:
       'เราเก็บชื่อ อีเมล เบอร์โทร วันเกิด และข้อมูลการจองของท่าน เพื่อให้บริการจองห้องพัก กรุณาอ่านและยอมรับข้อตกลงการใช้งานและนโยบายความเป็นส่วนตัวก่อนใช้งานต่อ',
     introUpdated:

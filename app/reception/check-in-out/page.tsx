@@ -21,6 +21,7 @@ import {
 } from './CheckInOutViewTabs'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
+import { splitCheckInUnits } from '@/lib/room-status'
 
 export const dynamic = 'force-dynamic'
 
@@ -169,15 +170,14 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
       upcomingCheckInsQuery,
       upcomingCheckOutsQuery,
       inHouseQuery,
-      // Phase 12: list of rooms reception can assign during check-in.
-      // Filtered to active + status='available'. Staff may also pick a
-      // maintenance-status room (e.g. resolved between shifts) — but
-      // the default UI restricts to available for safety.
+      // Phase 12: all active rooms. splitCheckInUnits (lib/room-status.ts)
+      // keeps the 'available' / 'ready' ones as choices and names the
+      // booked type's rooms that aren't ready yet. checkInBookingAction
+      // re-checks and flips the chosen room to 'occupied'.
       supabase
         .from('room_units')
-        .select('id, unit_label, floor, room_type_id, status')
+        .select('id, unit_label, floor, room_type_id, status, room_type:room_types(name_th)')
         .eq('is_active', true)
-        .eq('status', 'available')
         .order('floor')
         .order('unit_label'),
     ])
@@ -187,7 +187,14 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
   const upcomingCheckOuts = upcomingCheckOutsRes.data ?? []
   const inHouse = inHouseRes.data ?? []
   // availableUnits may be undefined if RLS blocks; treat as empty.
-  const allAvailableUnits = availableUnitsRes.data ?? []
+  const allAvailableUnits = (availableUnitsRes.data ?? []).map((u) => ({
+    id: u.id as string,
+    unit_label: u.unit_label as string,
+    floor: u.floor as number,
+    status: u.status as string,
+    roomTypeId: u.room_type_id as string | null,
+    roomTypeName: (u.room_type as { name_th?: string } | null)?.name_th ?? null,
+  }))
 
   // Topic-aware upcoming list — drives both the rendered content AND
   // the count badge on the "กำลังจะมา" view-tab pill.
@@ -255,12 +262,10 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
       </div>
 
       {/* Phase 48e — only the active view is rendered below. The other
-          two are hidden (not just collapsed/scrolled past). The search
-          input lives inside the "วันนี้" section since per spec the
-          search applies to the active view's data — the today view is
-          the only one where the search currently has wired-up query
-          filters (see listQuery + upcomingCheckInsQuery +
-          upcomingCheckOutsQuery + inHouseQuery). */}
+          two are hidden (not just collapsed/scrolled past). Each view's
+          header has the search input; ?q= filters that view's query
+          (listQuery / upcomingCheckInsQuery / upcomingCheckOutsQuery /
+          inHouseQuery). */}
       {activeView === 'today' && (
         <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
           <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center">
@@ -291,17 +296,14 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
           {list.length === 0 ? (
             <EmptyStateWithCta locale={locale} message={emptyLabel} />
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               {list.map((b) => {
-                // Prefer units of the same room_type; fall back to any
-                // available unit if none match the booking's type.
-                const matchingType = allAvailableUnits.filter(
-                  (u) => u.room_type_id === b.room_type_id,
-                )
-                const availableForBooking =
-                  matchingType.length > 0 ? matchingType : allAvailableUnits
+                // The booked room type's ready room is the default; other
+                // ready rooms only if reception says the booked one has a
+                // problem (or it isn't ready).
+                const { booked, others, bookedNotReady } = splitCheckInUnits(allAvailableUnits, b.room_type_id)
                 return (
-                  <GuestCard
+                  <BookingRow
                     locale={locale}
                     key={b.id}
                     booking={b}
@@ -320,9 +322,9 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
                           bookingId={b.id}
                           action={activeTab === 'checkin' ? 'check_in' : 'check_out'}
                           label={actionVerb}
-                          availableUnits={
-                            activeTab === 'checkin' ? availableForBooking : undefined
-                          }
+                          bookedUnits={activeTab === 'checkin' ? booked : undefined}
+                          otherUnits={activeTab === 'checkin' ? others : undefined}
+                          bookedNotReady={activeTab === 'checkin' ? bookedNotReady : undefined}
                         />
                       )
                     }
@@ -336,30 +338,36 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
 
       {activeView === 'upcoming' && (
         <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-secondary/15 text-secondary">
-              <MaterialIcon name="schedule" size={20} />
+          <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-secondary/15 text-secondary">
+                <MaterialIcon name="schedule" size={20} />
+              </div>
+              <div>
+                <h2 className="font-display text-xl text-primary">{upcomingTitle}</h2>
+                <p className="text-caption text-on-surface-variant">
+                  {formatDate(upcomingFrom, LOCALE_BCP47[locale])} – {formatDate(upcomingTo, LOCALE_BCP47[locale])}
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-secondary text-on-secondary text-caption font-semibold">
+                {upcoming.length}
+              </span>
             </div>
-            <div>
-              <h2 className="font-display text-xl text-primary">{upcomingTitle}</h2>
-              <p className="text-caption text-on-surface-variant">
-                {formatDate(upcomingFrom, LOCALE_BCP47[locale])} – {formatDate(upcomingTo, LOCALE_BCP47[locale])}
-              </p>
-            </div>
-            <span className="ml-auto px-3 py-1 rounded-full bg-secondary text-on-secondary text-caption font-semibold">
-              {upcoming.length}
-            </span>
+            {/* ?q= already filters upcomingCheckInsQuery / upcomingCheckOutsQuery. */}
+            <CheckInOutListSearch initialQuery={searchTerm} />
           </div>
           {upcoming.length === 0 ? (
             <EmptyStateWithCta locale={locale} message={upcomingEmptyLabel} />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="flex flex-col gap-2">
               {upcoming.map((b) => (
-                <UpcomingCard
+                <BookingRow
                   locale={locale}
                   key={b.id}
                   booking={b}
-                  topic={activeTab}
+                  dateLabel={upcomingDateLabel(b, activeTab, locale)}
+                  nights={b.nights}
+                  total={b.total}
                 />
               ))}
             </div>
@@ -369,37 +377,31 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
 
       {activeView === 'inhouse' && (
         <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary">
-              <MaterialIcon name="group" size={20} />
+          <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary">
+                <MaterialIcon name="group" size={20} />
+              </div>
+              <h2 className="font-display text-xl text-primary">{t('reception.checkInOutPage.inHouseTitle')}</h2>
+              <span className="px-3 py-1 rounded-full bg-primary text-secondary text-caption font-semibold">
+                {inHouse.length}
+              </span>
             </div>
-            <h2 className="font-display text-xl text-primary">{t('reception.checkInOutPage.inHouseTitle')}</h2>
-            <span className="ml-auto px-3 py-1 rounded-full bg-primary text-secondary text-caption font-semibold">
-              {inHouse.length}
-            </span>
+            {/* ?q= already filters inHouseQuery (only while this view is active). */}
+            <CheckInOutListSearch initialQuery={searchTerm} />
           </div>
           {inHouse.length === 0 ? (
             <EmptyStateWithCta locale={locale} message={t('reception.checkInOutPage.noInHouseGuests')} />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="flex flex-col gap-2">
               {inHouse.map((b) => (
-                <Link
+                <BookingRow
+                  locale={locale}
                   key={b.id}
-                  href={`/reception/bookings/${b.id}`}
-                  className="block p-4 bg-surface-container-low rounded-xl hover:bg-surface-container transition-colors focus-visible:outline-2 focus-visible:outline-secondary"
-                >
-                  <p className="text-body-md font-semibold text-on-surface truncate">{b.booker_full_name}</p>
-                  <p className="text-caption text-on-surface-variant truncate">
-                    {b.room_type?.name_th}
-                  </p>
-                  <div className="mt-2 flex items-center gap-1.5 text-caption text-on-surface-variant">
-                    <MaterialIcon name="event" size={14} />
-                    {t('reception.checkInOutPage.checkoutOn', { date: formatDate(b.check_out, LOCALE_BCP47[locale]) })}
-                  </div>
-                  <div className="mt-1 text-caption text-on-surface-variant">
-                    {t('reception.common.guestsN', { count: b.guests })} · {formatTHB(b.total)}
-                  </div>
-                </Link>
+                  booking={b}
+                  dateLabel={t('reception.checkInOutPage.checkoutOn', { date: formatDate(b.check_out, LOCALE_BCP47[locale]) })}
+                  total={b.total}
+                />
               ))}
             </div>
           )}
@@ -424,33 +426,62 @@ interface UpcomingBooking extends GuestCardBooking {
   total: number
 }
 
-function GuestCard({
+/**
+ * One compact row per booking (all three views): name + code, room ·
+ * guests, then the optional date / nights / total, and the action outside
+ * the link (a button must not sit inside an <a>). Wraps to two lines on
+ * narrow screens.
+ */
+function BookingRow({
   booking,
-  action,
   locale,
+  dateLabel,
+  nights,
+  total,
+  action,
 }: {
   locale: Locale
   booking: GuestCardBooking
-  action: React.ReactNode
+  dateLabel?: string
+  nights?: number
+  total?: number
+  action?: React.ReactNode
 }) {
   const t = getT(locale)
   return (
-    <div className="p-4 bg-surface-container-low rounded-xl flex items-center gap-3">
+    <div className="flex items-center gap-3 px-4 py-3 bg-surface-container-low rounded-xl hover:bg-surface-container transition-colors">
       <Link
         href={`/reception/bookings/${booking.id}`}
-        className="flex-1 min-w-0 hover:opacity-80 transition-opacity focus-visible:outline-2 focus-visible:outline-secondary rounded-md"
+        // flex-wrap at every width: one line when it fits, otherwise the
+        // fixed-width date / nights / total drop to a second line instead
+        // of widening the page.
+        className="flex-1 min-w-0 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md focus-visible:outline-2 focus-visible:outline-secondary"
       >
-        <p className="text-body-md font-semibold text-on-surface truncate">
-          {booking.booker_full_name}
-        </p>
-        <p className="text-caption text-on-surface-variant truncate">
+        <span className="w-full md:w-auto md:flex-[3] min-w-0 flex items-baseline gap-2">
+          <span className="text-body-md font-semibold text-on-surface truncate">{booking.booker_full_name}</span>
+          <span className="shrink-0 text-caption text-on-surface-variant font-mono">#{booking.booking_code}</span>
+        </span>
+        <span className="md:flex-[2] min-w-0 text-caption text-on-surface-variant truncate">
           {booking.room_type?.name_th} · {t('reception.common.guestsN', { count: booking.guests })}
-        </p>
-        <p className="text-caption text-on-surface-variant mt-0.5 font-mono">
-          #{booking.booking_code}
-        </p>
+        </span>
+        {dateLabel && (
+          <span className="shrink-0 inline-flex items-center gap-1.5 text-caption text-on-surface-variant">
+            <MaterialIcon name="event" size={14} />
+            {dateLabel}
+          </span>
+        )}
+        {nights !== undefined && (
+          <span className="shrink-0 text-caption text-on-surface-variant">
+            {t('reception.common.nightsN', { count: nights })}
+          </span>
+        )}
+        {total !== undefined && (
+          <span className="shrink-0 md:w-24 md:text-right text-caption font-semibold text-on-surface">
+            {formatTHB(total)}
+          </span>
+        )}
       </Link>
-      <div className="shrink-0">{action}</div>
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   )
 }
@@ -475,46 +506,10 @@ function EmptyStateWithCta({ message, locale }: { message: string; locale: Local
   )
 }
 
-function UpcomingCard({
-  booking,
-  topic,
-  locale,
-}: {
-  locale: Locale
-  booking: UpcomingBooking
-  topic: CheckInOutTopic
-}) {
+/** Phase 48e — the date label follows the topic (เช็คอิน vs เช็คเอาท์). */
+function upcomingDateLabel(booking: UpcomingBooking, topic: CheckInOutTopic, locale: Locale): string {
   const t = getT(locale)
-  // Phase 48e — UpcomingCard now takes the topic so the action verb
-  // matches the active direction (เช็คอิน vs เช็คเอาท์) and the date
-  // label in the card footer reads correctly for both.
   const eventVerb = t(topic === 'checkin' ? 'reception.checkInOutPage.checkIn' : 'reception.checkInOutPage.checkOut')
   const eventDateIso = topic === 'checkin' ? booking.check_in : booking.check_out
-  const eventDateColumn = topic === 'checkin' ? 'check_in' : 'check_out'
-  return (
-    <Link
-      href={`/reception/bookings/${booking.id}`}
-      className="block p-4 bg-surface-container-low rounded-xl hover:bg-surface-container transition-colors focus-visible:outline-2 focus-visible:outline-secondary"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-body-md font-semibold text-on-surface truncate">
-          {booking.booker_full_name}
-        </p>
-        <span className="shrink-0 text-caption text-on-surface-variant font-mono">
-          #{booking.booking_code}
-        </span>
-      </div>
-      <p className="mt-1 text-caption text-on-surface-variant truncate">
-        {booking.room_type?.name_th} · {t('reception.common.guestsN', { count: booking.guests })}
-      </p>
-      <div className="mt-2 flex items-center gap-1.5 text-caption text-on-surface-variant">
-        <MaterialIcon name="event" size={14} />
-        {t('reception.checkInOutPage.eventOn', { verb: eventVerb, date: formatDate(eventDateIso, LOCALE_BCP47[locale]) })}
-      </div>
-      <div className="mt-1 flex items-center justify-between text-caption text-on-surface-variant">
-        <span>{t('reception.common.nightsN', { count: booking.nights })}</span>
-        <span>{formatTHB(booking.total)}</span>
-      </div>
-    </Link>
-  )
+  return t('reception.checkInOutPage.eventOn', { verb: eventVerb, date: formatDate(eventDateIso, LOCALE_BCP47[locale]) })
 }

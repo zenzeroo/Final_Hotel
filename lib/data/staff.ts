@@ -162,30 +162,46 @@ export async function getRecentBookings(limit = 5): Promise<StaffBooking[]> {
   return page.rows
 }
 
+/**
+ * Active rooms for /reception/rooms, each with the booking currently
+ * checked in to it (if any) — a staying guest locks the room's status.
+ */
 export async function getRoomsStatus() {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('room_units')
-    .select(`
-      id,
-      floor,
-      unit_label,
-      view_label,
-      status,
-      room_type:room_types(id, slug, name, name_th, hero_image_key, base_price)
-    `)
-    .eq('is_active', true)
-    .order('floor')
-    .order('unit_label')
+  const [{ data, error }, { data: staying, error: stayErr }] = await Promise.all([
+    supabase
+      .from('room_units')
+      .select(`
+        id,
+        floor,
+        unit_label,
+        view_label,
+        status,
+        room_type:room_types(id, slug, name, name_th, hero_image_key, base_price)
+      `)
+      .eq('is_active', true)
+      .order('floor')
+      .order('unit_label'),
+    supabase
+      .from('bookings')
+      .select('room_unit_id, booking_code, booker_full_name')
+      .eq('status', 'checked_in')
+      .not('room_unit_id', 'is', null),
+  ])
 
   if (error) wrapSupabaseError('', error)
-  return data ?? []
+  if (stayErr) wrapSupabaseError('', stayErr)
+  const guestByUnit = new Map(
+    (staying ?? []).map((b) => [b.room_unit_id as string, { code: b.booking_code as string, name: b.booker_full_name as string }]),
+  )
+  return (data ?? []).map((u) => ({ ...u, staying: guestByUnit.get(u.id) ?? null }))
 }
 
 export interface CustomerSummary {
   id: string
   full_name: string | null
   phone: string | null
+  email: string | null
   created_at: string
 }
 
@@ -200,7 +216,7 @@ export interface CustomerListPage {
  * admins, managers, or other staff in the search results).
  *
  * Without `search`: returns the 20 most recent customers + total count.
- * With `search`: filters by full_name OR phone via case-insensitive
+ * With `search`: filters by full_name, phone OR email via case-insensitive
  * ILIKE. Requires `search.trim().length >= 2` to avoid useless
  * single-character queries hitting the DB.
  */
@@ -216,7 +232,7 @@ export async function listAllCustomers(
   // admin/manager/housekeeper) showing up in the customer picker.
   let dataQuery = supabase
     .from('profiles')
-    .select('id, full_name, phone, created_at')
+    .select('id, full_name, phone, email, created_at')
     .eq('role', 'user')
     .order('created_at', { ascending: false })
     .limit(20)
@@ -229,8 +245,8 @@ export async function listAllCustomers(
     .eq('role', 'user')
 
   if (term) {
-    dataQuery = dataQuery.or(`full_name.ilike.${term},phone.ilike.${term}`)
-    countQuery = countQuery.or(`full_name.ilike.${term},phone.ilike.${term}`)
+    dataQuery = dataQuery.or(`full_name.ilike.${term},phone.ilike.${term},email.ilike.${term}`)
+    countQuery = countQuery.or(`full_name.ilike.${term},phone.ilike.${term},email.ilike.${term}`)
   }
 
   const [dataRes, countRes] = await Promise.all([dataQuery, countQuery])

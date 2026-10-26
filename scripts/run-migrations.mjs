@@ -133,7 +133,7 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 //   and adds max-1 enforcement (a new booking cancels any prior active hold for the
 //   same user, with audit row).
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)|202610(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18)_.*\.sql$/.test(f))
+  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)|202610(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20)_.*.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 

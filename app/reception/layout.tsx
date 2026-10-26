@@ -28,7 +28,12 @@ export default async function ReceptionLayout({ children }: { children: React.Re
           avatarKey={session.avatarKey}
           userId={session.id}
         />
-        <main className="flex-1 bg-background min-h-screen overflow-x-auto">{children}</main>
+        {/* overflow-x-clip, not -auto: -auto makes <main> its own scroll
+            container, which breaks position:sticky (booking-detail actions).
+            min-w-0: unlike -auto, -clip doesn't let a flex item shrink below
+            its content, so without it wide content (e.g. the scrolling
+            filter tabs) stretches the page past the screen on phones. */}
+        <main className="flex-1 min-w-0 bg-background min-h-screen overflow-x-clip">{children}</main>
       </div>
     </div>
   )

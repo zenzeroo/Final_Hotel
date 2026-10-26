@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { refresh, revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
@@ -10,7 +10,7 @@ import { translateSupabaseError, translateZodIssues } from '@/lib/errors/transla
 import { getT } from '@/lib/i18n/t'
 import { getServerT } from '@/lib/i18n/server'
 import { isOver18 } from '@/lib/dates'
-import { PRIVACY_POLICY_VERSION } from '@/lib/consent'
+import { getCurrentConsentVersion } from '@/lib/data/legal'
 import { recordConsent } from '@/lib/data/account'
 
 // Sign-up schema — same phone regex used by BookingForm / WalkInForm /
@@ -143,6 +143,16 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
   }
   const formDataParsed = parsed.data
 
+  // Phase 62 — consent is recorded only for the documents the visitor was
+  // shown. An admin may publish a new version while the form is open.
+  const consentVersion = await getCurrentConsentVersion()
+  if (String(formData.get('legal_version') ?? '') !== consentVersion) {
+    const { t } = await getServerT()
+    // Re-render the page so the form and the "read" links carry the new version.
+    refresh()
+    return { error: t('consent.versionChanged') }
+  }
+
   const origin = await getOrigin()
 
   const { data, error } = await supabase.auth.signUp({
@@ -180,10 +190,10 @@ export async function signUp(prevState: AuthState | null, formData: FormData): P
   if (data.user && (data.user.identities?.length ?? 0) > 0) {
     try {
       await recordConsent(data.user.id, {
-        termsVersion: PRIVACY_POLICY_VERSION,
+        termsVersion: consentVersion,
         marketing: formDataParsed.marketingOptIn,
         source: 'register',
-        version: PRIVACY_POLICY_VERSION,
+        version: consentVersion,
       })
     } catch (e) {
       console.error('[signUp] recordConsent failed:', e instanceof Error ? e.message : e)

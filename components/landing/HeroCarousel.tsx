@@ -21,8 +21,8 @@
  * Client state lives in `activeIdx` — changing it triggers a re-render
  * with the new slide visible.
  *
- * The overlay SearchBar (variant="overlay") sits on top of the hero and
- * auto-navigates to /rooms when dates/guests change (debounced 400ms).
+ * The SearchBar (variant="hero") sits on top of the hero and goes to
+ * /rooms when the user presses ค้นหา.
  */
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
@@ -161,8 +161,7 @@ export function HeroCarousel({
         </>
       )}
 
-      {/* Overlay SearchBar — below the dots, near the bottom of the hero.
-          variant="overlay" auto-navigates to /rooms on date/guests change. */}
+      {/* SearchBar — below the dots, near the bottom of the hero. */}
       <div className="absolute inset-x-0 z-20 px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) bottom-0 pb-6 md:bottom-auto md:top-[76%] md:pb-0">
         <div className="max-w-(--spacing-container-max) mx-auto">
           <SearchBar variant="hero" />

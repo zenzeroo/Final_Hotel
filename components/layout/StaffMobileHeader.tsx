@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { MobileOverlay } from '../ui/MobileOverlay'
-import { StaffSidebarNav, type StaffRole } from './StaffSidebar'
+import { StaffSidebarNav, showsNotificationBell, type StaffRole } from './StaffSidebar'
 import { useT } from '@/lib/i18n/useT'
 import { NotificationBell } from '../notifications/NotificationBell'
 
@@ -49,9 +49,11 @@ export function StaffMobileHeader({ role, userName, avatarKey, userId }: StaffMo
               {userName}
             </span>
           )}
-          <div className={userName ? '' : 'ml-auto'}>
-            <NotificationBell userId={userId} tone="dark" />
-          </div>
+          {showsNotificationBell(role) && (
+            <div className={userName ? '' : 'ml-auto'}>
+              <NotificationBell userId={userId} tone="dark" />
+            </div>
+          )}
         </div>
       </header>
 

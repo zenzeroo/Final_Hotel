@@ -5,28 +5,25 @@ import { getT } from '@/lib/i18n/t'
 
 interface TransactionalHeaderProps {
   backHref: string
-  title?: string
 }
 
 /**
  * Server component (Phase 52 fix — was briefly a client component
- * to support an `onBack` prop for the unpaid-booking leave-guard).
- * The leave-guard back button is now a separate client component
- * (`components/booking/LeaveGuardBackButton.tsx`) that the page mounts
- * alongside this header. Functions cannot cross the RSC boundary,
- * so passing `onBack` from a server file is forbidden.
+ * to support an `onBack` prop for the unpaid-booking leave-guard;
+ * functions cannot cross the RSC boundary).
  *
  * Always renders a plain `<Link href={backHref}>` for the back control.
- * When the leave-guard is active, the page also renders a fixed-
- * position button overlay (LeaveGuardBackButton) that sits on top of
- * this Link and intercepts the click.
+ * On an unpaid /bookings/[id], LeaveGuardProvider's click-capture
+ * listener intercepts this Link (like every same-origin link) and opens
+ * the leave dialog — no overlay button is needed.
  */
-export async function TransactionalHeader({ backHref, title }: TransactionalHeaderProps) {
+export async function TransactionalHeader({ backHref }: TransactionalHeaderProps) {
   const t = getT(await getLocale())
   return (
     <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-outline-variant">
       <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop)">
-        <div className="flex items-center justify-between h-16">
+        {/* Back control only — the hotel name already sits in TopNavBar above. */}
+        <div className="flex items-center h-16">
           <Link
             href={backHref}
             className="inline-flex items-center gap-2 px-2 py-1 rounded text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors"
@@ -34,13 +31,6 @@ export async function TransactionalHeader({ backHref, title }: TransactionalHead
             <MaterialIcon name="arrow_back" size={20} />
             <span>{t('customer.common.back')}</span>
           </Link>
-          <Link
-            href="/"
-            className="font-display text-xl font-bold text-primary"
-          >
-            {title ?? 'Zenzero Hotel'}
-          </Link>
-          <div className="w-20" /> {/* Spacer for centering */}
         </div>
       </div>
     </header>

@@ -74,13 +74,13 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
       {/* Phase 45 — SearchBar at top, similar to /rooms list. Compact
           variant reused via navigateTo prop so URL updates stay on this
           picker page (filtering in-place) instead of jumping to /rooms.
-          showSeeAll=false because the walk-in picker doesn't honour the
-          viewAll=1 param. */}
+          showReset=false because the walk-in picker has no sidebar
+          filters to reset. */}
       <div className="mb-6">
         <SearchBar
           variant="compact"
           navigateTo="/reception/bookings/new"
-          showSeeAll={false}
+          showReset={false}
           defaultCheckin={checkin}
           defaultCheckout={checkout}
           defaultGuests={guests}

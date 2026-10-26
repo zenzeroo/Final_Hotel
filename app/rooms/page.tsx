@@ -9,6 +9,7 @@ import type { SearchFilters } from '@/lib/data/types'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { getTomorrowBangkok, addDaysLocalIso } from '@/lib/dates'
+import { parseRoomTypesParam } from '@/lib/search/roomTypes'
 
 // Server-render on demand (Supabase data + searchParams)
 export const dynamic = 'force-dynamic'
@@ -37,24 +38,15 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
       ? searchParams.checkout
       : addDaysLocalIso(todayPlus1, 1)
 
-  // viewAll=1 is set by SearchBar's "ดูทั้งหมด" button — keeps guests
-  // in URL for downstream BookingWidget prefilling (via RoomCard's
-  // link forwarding) but tells the results page to skip the
-  // `max_guests >= guests` filter. Date availability filter still runs.
-  const skipGuestsFilter = searchParams.viewAll === '1'
-
+  // No `guests` param (e.g. after SearchBar's "รีเซ็ต") = no capacity
+  // filter; the date availability filter always runs.
   const filters: SearchFilters = {
     checkin: todayPlus1,
     checkout: todayPlus2,
-    guests: skipGuestsFilter
-      ? undefined
-      : searchParams.guests
-        ? parseInt(String(searchParams.guests), 10)
-        : undefined,
-    type:
-      typeof searchParams.type === 'string'
-        ? (searchParams.type as SearchFilters['type'])
-        : 'all',
+    guests: searchParams.guests
+      ? parseInt(String(searchParams.guests), 10)
+      : undefined,
+    types: parseRoomTypesParam(searchParams.type),
     floor:
       typeof searchParams.floor === 'string'
         ? searchParams.floor === 'all'

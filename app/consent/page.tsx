@@ -5,6 +5,8 @@ import { Footer } from '@/components/layout/Footer'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getSession, roleHomePath } from '@/lib/supabase/getSession'
 import { needsConsent } from '@/lib/consent'
+import { getCurrentConsentVersion } from '@/lib/data/legal'
+import { getConsentLegalProps } from '@/lib/legal/props'
 import { sanitizeNext } from '@/lib/auth/sanitize'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
@@ -30,9 +32,11 @@ export default async function ConsentPage(props: PageProps<'/consent'>) {
   if (!session) redirect(`/login?next=${encodeURIComponent(`/consent?next=${next}`)}`)
   if (session.role !== 'user') redirect(roleHomePath(session.role))
   // Already accepted the current version — never show the page twice.
-  if (!needsConsent(session)) redirect(next)
+  if (!needsConsent(session, await getCurrentConsentVersion())) redirect(next)
 
-  const t = getT(await getLocale())
+  const locale = await getLocale()
+  const t = getT(locale)
+  const legal = await getConsentLegalProps(locale)
 
   return (
     <>
@@ -47,7 +51,7 @@ export default async function ConsentPage(props: PageProps<'/consent'>) {
             <p className="text-body-md text-on-surface-variant mb-6">
               {session.termsVersion ? t('consent.introUpdated') : t('consent.intro')}
             </p>
-            <ConsentForm next={next} />
+            <ConsentForm next={next} legal={legal} />
           </div>
         </div>
       </main>

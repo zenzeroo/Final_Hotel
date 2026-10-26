@@ -41,6 +41,13 @@ const nextConfig: NextConfig = {
     ],
     formats: ['image/webp'],
   },
+  // Phase 62 — server actions accept 1 MB by default; admin legal PDFs
+  // (lib/legal/pdf-validate.ts: max 4 MB) travel in the action body.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '5mb',
+    },
+  },
 };
 
 // `silent: !process.env.CI` — don't print Sentry messages on local builds

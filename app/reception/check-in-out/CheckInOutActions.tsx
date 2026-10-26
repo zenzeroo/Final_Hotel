@@ -1,14 +1,17 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useT } from '@/lib/i18n/useT'
 
-interface AvailableUnit {
+export interface CheckInUnit {
   id: string
   unit_label: string
   floor: number
+  /** Shown for alternative rooms so reception sees it is a different type. */
+  roomTypeName?: string | null
 }
 
 interface CheckInOutActionsProps {
@@ -16,28 +19,56 @@ interface CheckInOutActionsProps {
   action: 'check_in' | 'check_out'
   label: string
   /**
-   * Phase 12: list of available room units the staff can assign to a
-   * check-in. Required when `action === 'check_in'`; ignored for check-out.
-   * Falls back to "no room assigned" if the list is empty (status update only).
+   * Check-in only. Ready rooms of the booked room type — the default
+   * (lib/room-status.ts splitCheckInUnits). Ignored for check-out.
    */
-  availableUnits?: AvailableUnit[]
+  bookedUnits?: CheckInUnit[]
+  /**
+   * Check-in only. Every other ready room, offered when the booked room has
+   * a problem ("ห้องมีปัญหา — เลือกห้องอื่น") or isn't ready.
+   */
+  otherUnits?: CheckInUnit[]
+  /** Check-in only. Booked-type rooms that aren't ready, named in the message. */
+  bookedNotReady?: { unit_label: string; status: string }[]
 }
+
+const selectClass =
+  'px-2 py-1 rounded-full bg-surface-container-low border border-outline-variant text-caption text-on-surface focus:outline-none focus:border-secondary'
+const linkButtonClass = 'text-caption text-primary underline-offset-2 hover:underline disabled:opacity-60'
 
 export function CheckInOutActions({
   bookingId,
   action,
   label,
-  availableUnits = [],
+  bookedUnits = [],
+  otherUnits = [],
+  bookedNotReady = [],
 }: CheckInOutActionsProps) {
   const t = useT()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  // Default to the first available unit so a quick check-in (no select) still
-  // assigns a real room when one is available. Empty string = no assignment.
+  const isCheckIn = action === 'check_in'
+  // Default: the room the guest booked. Alternatives only on request, or
+  // straight away when the booked room isn't ready.
+  const [useOther, setUseOther] = useState(bookedUnits.length === 0)
+  const units = useOther ? otherUnits : bookedUnits
   const [selectedUnitId, setSelectedUnitId] = useState<string>(
-    availableUnits[0]?.id ?? '',
+    (bookedUnits.length > 0 ? bookedUnits : otherUnits)[0]?.id ?? '',
   )
   const [error, setError] = useState<string | null>(null)
+  // No ready room anywhere → say so instead of failing with "select a room first".
+  const noRoomReady = isCheckIn && bookedUnits.length === 0 && otherUnits.length === 0
+
+  function switchList(other: boolean) {
+    setUseOther(other)
+    setSelectedUnitId((other ? otherUnits : bookedUnits)[0]?.id ?? '')
+    setError(null)
+  }
+
+  const unitLabel = (u: CheckInUnit) =>
+    useOther && u.roomTypeName
+      ? t('reception.checkInOutPage.unitTypeFloor', { unit: u.unit_label, type: u.roomTypeName, floor: u.floor })
+      : t('reception.checkInOutPage.unitFloor', { unit: u.unit_label, floor: u.floor })
 
   const handleClick = async () => {
     setError(null)
@@ -46,7 +77,6 @@ export function CheckInOutActions({
       // (checkout_thank_you on check-out) runs server-side where it has
       // access to Resend + the admin client. Client-side supabase updates
       // can't reach Resend's API key.
-      const isCheckIn = action === 'check_in'
       const roomUnitId = isCheckIn ? selectedUnitId : null
 
       if (isCheckIn && !roomUnitId) {
@@ -72,17 +102,24 @@ export function CheckInOutActions({
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center gap-2">
-        {action === 'check_in' && availableUnits.length > 0 && (
+        {isCheckIn && units.length === 1 && !useOther && (
+          // The booked room — a fixed label, nothing to choose.
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-caption font-semibold">
+            <MaterialIcon name="meeting_room" size={14} />
+            {unitLabel(units[0])}
+          </span>
+        )}
+        {isCheckIn && (units.length > 1 || (useOther && units.length > 0)) && (
           <select
             value={selectedUnitId}
             onChange={(e) => setSelectedUnitId(e.target.value)}
             disabled={isPending}
-            className="px-2 py-1 rounded-full bg-surface-container-low border border-outline-variant text-caption text-on-surface focus:outline-none focus:border-secondary"
+            className={selectClass}
             aria-label={t('reception.checkInOutPage.selectRoom')}
           >
-            {availableUnits.map((u) => (
+            {units.map((u) => (
               <option key={u.id} value={u.id}>
-                {t('reception.checkInOutPage.unitFloor', { unit: u.unit_label, floor: u.floor })}
+                {unitLabel(u)}
               </option>
             ))}
           </select>
@@ -90,17 +127,51 @@ export function CheckInOutActions({
         <button
           type="button"
           onClick={handleClick}
-          disabled={isPending}
+          disabled={isPending || noRoomReady || (isCheckIn && units.length === 0)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-secondary text-caption font-semibold uppercase tracking-wider hover:bg-primary-container transition-colors disabled:opacity-60"
         >
           {isPending ? (
             <span className="inline-block w-3 h-3 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
           ) : (
-            <MaterialIcon name={action === 'check_in' ? 'login' : 'logout'} size={14} />
+            <MaterialIcon name={isCheckIn ? 'login' : 'logout'} size={14} />
           )}
           {label}
         </button>
       </div>
+
+      {isCheckIn && !noRoomReady && (
+        <>
+          {bookedUnits.length === 0 && (
+            <p className="text-caption text-error max-w-64 text-right">
+              {bookedNotReady.length > 0
+                ? t('reception.checkInOutPage.bookedRoomNotReadyNamed', {
+                    rooms: bookedNotReady
+                      .map((u) => `${u.unit_label} (${t(`staff.status.${u.status}`)})`)
+                      .join(', '),
+                  })
+                : t('reception.checkInOutPage.bookedRoomNotReady')}
+            </p>
+          )}
+          {bookedUnits.length > 0 && !useOther && otherUnits.length > 0 && (
+            <button type="button" onClick={() => switchList(true)} disabled={isPending} className={linkButtonClass}>
+              {t('reception.checkInOutPage.roomProblem')}
+            </button>
+          )}
+          {bookedUnits.length > 0 && useOther && (
+            <button type="button" onClick={() => switchList(false)} disabled={isPending} className={linkButtonClass}>
+              {t('reception.checkInOutPage.useBookedRoom')}
+            </button>
+          )}
+        </>
+      )}
+      {noRoomReady && (
+        <Link
+          href="/reception/rooms"
+          className="text-caption text-error max-w-56 text-right underline-offset-2 hover:underline"
+        >
+          {t('reception.checkInOutPage.noRoomReady')}
+        </Link>
+      )}
       {error && (
         <p className="text-caption text-error max-w-48 text-right">{error}</p>
       )}

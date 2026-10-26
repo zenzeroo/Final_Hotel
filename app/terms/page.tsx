@@ -2,6 +2,10 @@ import type { Metadata } from 'next'
 import { TopNavBar } from '@/components/layout/TopNavBar'
 import { Footer } from '@/components/layout/Footer'
 import { getRefundMinDays } from '@/lib/data/bookings'
+import { getCurrentLegalVersion } from '@/lib/data/legal'
+import { PublishedLegalPage } from '@/components/legal/PublishedLegalPage'
+import { getLocale } from '@/lib/i18n/getLocale'
+import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +15,22 @@ export const metadata: Metadata = {
 }
 
 export default async function TermsPage() {
+  // Phase 62 — once the admin has published PDFs (/admin/legal), show those.
+  const published = await getCurrentLegalVersion()
+  if (published) {
+    const locale = await getLocale()
+    const t = getT(locale)
+    return (
+      <PublishedLegalPage
+        kind="terms"
+        row={published}
+        locale={locale}
+        eyebrow={t('legal.termsEyebrow')}
+        title={t('legal.termsTitle')}
+      />
+    )
+  }
+
   // Phase 57c — same number the refund RPCs enforce.
   const refundMinDays = await getRefundMinDays()
   return (

@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { Button } from '@/components/ui/Button'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
+import { getTodayBangkok } from '@/lib/dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -97,7 +98,11 @@ export default async function BookingsHistoryPage() {
               ctaHref="/rooms"
             />
           ) : (
-            <BookingHistory bookings={bookings} refundRequests={refundRequests} />
+            <BookingHistory
+              bookings={bookings}
+              refundRequests={refundRequests}
+              today={getTodayBangkok()}
+            />
           )}
         </div>
       </main>

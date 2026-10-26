@@ -1,5 +1,6 @@
 import { getMaintenanceReports } from '@/lib/data/housekeeper'
-import { MaintenanceReportCard } from '@/components/housekeeping/MaintenanceReportCard'
+import { MaintenanceReportRow } from '@/components/housekeeping/MaintenanceReportRow'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import type { MaintenanceStatus } from '@/lib/data/types'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
@@ -17,6 +18,13 @@ const STATUS_FILTER_KEYS: Record<FilterStatus, string> = {
   resolved: 'reception.maintenancePage.statusResolved',
 }
 
+const STATUS_FILTER_ICONS: Record<FilterStatus, string> = {
+  all: 'list',
+  open: 'report',
+  in_progress: 'autorenew',
+  resolved: 'task_alt',
+}
+
 export default async function ReceptionMaintenance(props: {
   searchParams: Promise<{ status?: string }>
 }) {
@@ -29,7 +37,11 @@ export default async function ReceptionMaintenance(props: {
 
   // Read-only view — reception sees the same report queue as manager.
   // Status changes happen via /manager/maintenance.
-  const reports = await getMaintenanceReports(filter === 'all' ? undefined : { status: [filter] })
+  // Load all once so every tab can show its count.
+  const allReports = await getMaintenanceReports()
+  const countOf = (f: FilterStatus) =>
+    f === 'all' ? allReports.length : allReports.filter(r => r.status === f).length
+  const reports = filter === 'all' ? allReports : allReports.filter(r => r.status === filter)
 
   return (
     <div className="p-6 md:p-8">
@@ -42,30 +54,38 @@ export default async function ReceptionMaintenance(props: {
         </p>
       </header>
 
-      <nav className="flex gap-2 mb-6 flex-wrap">
+      {/* Same underlined tab style as /reception/rooms (RoomFilterTabs). */}
+      <div
+        role="tablist"
+        aria-label={t('reception.maintenancePage.title')}
+        className="flex items-center gap-1 border-b border-outline-variant overflow-x-auto mb-6"
+      >
         {STATUS_FILTERS.map(f => (
           <a
             key={f}
             href={f === 'all' ? '/reception/maintenance' : `/reception/maintenance?status=${f}`}
-            className={`px-4 py-1.5 rounded-full text-caption uppercase tracking-wider transition-colors ${
+            role="tab"
+            aria-selected={filter === f}
+            className={`inline-flex items-center gap-2 px-4 py-2 -mb-px text-label-md font-semibold uppercase tracking-wider transition-colors border-b-2 whitespace-nowrap ${
               filter === f
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
+                ? 'border-primary text-primary bg-surface-container'
+                : 'border-transparent text-on-surface-variant hover:bg-surface-container hover:text-primary'
             }`}
           >
-            {t(STATUS_FILTER_KEYS[f])}
+            <MaterialIcon name={STATUS_FILTER_ICONS[f]} size={16} />
+            {t(STATUS_FILTER_KEYS[f])} ({countOf(f)})
           </a>
         ))}
-      </nav>
+      </div>
 
       {reports.length === 0 ? (
         <p className="text-body-md text-on-surface-variant italic">
           {t('reception.maintenancePage.noReports')}
         </p>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-2">
           {reports.map(r => (
-            <MaintenanceReportCard key={r.id} report={r} locale={locale} />
+            <MaintenanceReportRow key={r.id} report={r} locale={locale} />
           ))}
         </div>
       )}

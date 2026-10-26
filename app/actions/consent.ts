@@ -9,11 +9,11 @@
  *
  * The user id always comes from the session, never from the form.
  */
-import { revalidatePath } from 'next/cache'
+import { refresh, revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/supabase/getSession'
 import { recordConsent } from '@/lib/data/account'
-import { PRIVACY_POLICY_VERSION } from '@/lib/consent'
+import { getCurrentConsentVersion } from '@/lib/data/legal'
 import { sanitizeNext } from '@/lib/auth/sanitize'
 import { getServerT } from '@/lib/i18n/server'
 import { actionFail } from '@/lib/errors/supabase'
@@ -35,12 +35,20 @@ export async function acceptConsentAction(
   }
   const marketing = formData.get('marketing_opt_in') === 'on'
 
+  // Phase 62 — record consent only for the version the customer was shown.
+  const version = await getCurrentConsentVersion()
+  if (String(formData.get('legal_version') ?? '') !== version) {
+    // Re-render the page so the form and the "read" links carry the new version.
+    refresh()
+    return { error: t('consent.versionChanged') }
+  }
+
   try {
     await recordConsent(session.id, {
-      termsVersion: PRIVACY_POLICY_VERSION,
+      termsVersion: version,
       marketing,
       source: 'consent_page',
-      version: PRIVACY_POLICY_VERSION,
+      version,
     })
   } catch (e) {
     return { error: actionFail(e, t('consent.saveFailed')).error }
@@ -61,7 +69,7 @@ export async function setMarketingConsentAction(
     await recordConsent(session.id, {
       marketing: optIn,
       source: 'profile',
-      version: session.termsVersion ?? PRIVACY_POLICY_VERSION,
+      version: session.termsVersion ?? (await getCurrentConsentVersion()),
     })
   } catch (e) {
     return actionFail(e, t('consent.saveFailed'))

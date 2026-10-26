@@ -2,7 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { env, hasSupabase } from '../env'
 import { roleHomePath, type UserRole } from './getSession'
-import { needsConsent } from '../consent'
+import { consentVersionOf, needsConsent } from '../consent'
+import { fetchCurrentLegalVersion } from '../legal/current'
 
 /**
  * Proxy (Next.js 16 — replaces middleware.ts).
@@ -130,13 +131,16 @@ export async function updateSession(request: NextRequest) {
     request.method === 'GET' &&
     consentPaths.some((p) => request.nextUrl.pathname.startsWith(p))
   ) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, terms_version')
-      .eq('id', user.id)
-      .maybeSingle()
+    // Phase 62 — the current version comes from legal_versions (newest
+    // admin publish); only these gated GETs pay for the extra query.
+    const [{ data: profile }, current] = await Promise.all([
+      supabase.from('profiles').select('role, terms_version').eq('id', user.id).maybeSingle(),
+      fetchCurrentLegalVersion(supabase),
+    ])
     const role = (profile?.role as UserRole | undefined) ?? 'user'
-    if (needsConsent({ role, termsVersion: profile?.terms_version ?? null })) {
+    if (
+      needsConsent({ role, termsVersion: profile?.terms_version ?? null }, consentVersionOf(current))
+    ) {
       const url = request.nextUrl.clone()
       url.pathname = '/consent'
       url.search = ''
