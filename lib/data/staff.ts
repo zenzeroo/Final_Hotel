@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Booking } from './bookings'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
+import { addDaysIso } from '@/lib/dates'
+import { notReadyReason, type NotReadyReason } from '@/lib/room-status'
 
 /**
  * Staff data access — queries that bypass RLS for reception/housekeeper.
@@ -259,23 +261,60 @@ export async function listAllCustomers(
   }
 }
 
-export async function getRecentEvents(limit = 10) {
+export interface RecentEvent {
+  id: string
+  event_type: string
+  created_at: string
+  booking_id: string | null
+  actor: { full_name: string | null; role: string } | null
+  booking: { booking_code: string; booker_full_name: string | null } | null
+}
+
+/**
+ * Newest booking_events, optionally only the given event types, only
+ * bookings whose guest name or booking code matches `search` (≥ 2 chars),
+ * and only within the Bangkok calendar days `from`..`to` (YYYY-MM-DD,
+ * inclusive; either may be omitted).
+ */
+export async function getRecentEvents(opts: {
+  limit?: number
+  eventTypes?: readonly string[]
+  search?: string
+  from?: string
+  to?: string
+} = {}): Promise<RecentEvent[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  // Characters that would break the PostgREST `or=(…)` filter syntax.
+  const term = (opts.search ?? '').replace(/[,()]/g, ' ').trim()
+  const hasSearch = term.length >= 2
+  // !inner turns the embed into a join, so the filter drops non-matching events.
+  const bookingEmbed = hasSearch
+    ? 'booking:bookings!inner(booking_code, booker_full_name)'
+    : 'booking:bookings(booking_code, booker_full_name)'
+  let query = supabase
     .from('booking_events')
     .select(`
       id,
       event_type,
-      description,
       created_at,
       booking_id,
-      actor:profiles!booking_events_actor_id_fkey(full_name, role)
+      actor:profiles!booking_events_actor_id_fkey(full_name, role),
+      ${bookingEmbed}
     `)
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .limit(opts.limit ?? 10)
+  if (opts.eventTypes?.length) query = query.in('event_type', [...opts.eventTypes])
+  if (opts.from) query = query.gte('created_at', `${opts.from}T00:00:00+07:00`)
+  if (opts.to) query = query.lt('created_at', `${addDaysIso(opts.to, 1)}T00:00:00+07:00`)
+  if (hasSearch) {
+    query = query.or(`booker_full_name.ilike.%${term}%,booking_code.ilike.%${term}%`, {
+      referencedTable: 'bookings',
+    })
+  }
 
+  const { data, error } = await query
   if (error) wrapSupabaseError('', error)
-  return data ?? []
+  return (data ?? []) as unknown as RecentEvent[]
 }
 
 // Phase 46 — booking_events audit log scoped to a single booking.
@@ -303,4 +342,79 @@ export async function getBookingEvents(bookingId: string) {
 
   if (error) wrapSupabaseError('', error)
   return data ?? []
+}
+
+/**
+ * Why each given room (normally the booked type's not-ready rooms on the
+ * check-in screen) can't take a guest yet. One query per source, only for
+ * these rooms; reception's RLS reads all four tables.
+ */
+export async function getRoomNotReadyReasons(
+  units: readonly { id: string; status: string }[],
+): Promise<Record<string, NotReadyReason>> {
+  if (units.length === 0) return {}
+  const ids = units.map((u) => u.id)
+  const supabase = await createClient()
+  const [guests, tasks, repairs, damages] = await Promise.all([
+    supabase.from('bookings').select('room_unit_id, check_out').in('room_unit_id', ids).eq('status', 'checked_in'),
+    supabase
+      .from('housekeeping_tasks')
+      .select('room_unit_id, status, assignee:profiles!housekeeping_tasks_assigned_to_fkey(full_name)')
+      .in('room_unit_id', ids)
+      .in('status', ['assigned', 'in_progress', 'unassigned'])
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('maintenance_reports')
+      .select('room_unit_id, title')
+      .in('room_unit_id', ids)
+      .in('status', ['open', 'in_progress'])
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('damage_reports')
+      .select('room_unit_id, description')
+      .in('room_unit_id', ids)
+      .eq('resolved', false)
+      .order('created_at', { ascending: false }),
+  ])
+  // A failed lookup only drops that detail — the plain reason still shows.
+  const firstBy = <R extends { room_unit_id: string }>(rows: R[] | null) => {
+    const m = new Map<string, R>()
+    for (const r of rows ?? []) if (!m.has(r.room_unit_id)) m.set(r.room_unit_id, r)
+    return m
+  }
+  const guestBy = firstBy(guests.data as { room_unit_id: string; check_out: string }[] | null)
+  // Prefer the task someone is actually working on.
+  const taskRows = (tasks.data ?? []) as unknown as {
+    room_unit_id: string
+    status: string
+    assignee: { full_name: string | null } | null
+  }[]
+  const taskBy = firstBy([...taskRows].sort((a, b) => Number(b.status === 'in_progress') - Number(a.status === 'in_progress')))
+  const repairBy = firstBy(repairs.data as { room_unit_id: string; title: string }[] | null)
+  const damageBy = firstBy(damages.data as { room_unit_id: string; description: string }[] | null)
+
+  return Object.fromEntries(
+    units.map((u) => [
+      u.id,
+      notReadyReason(u.status, {
+        hasGuest: guestBy.has(u.id),
+        guestUntil: guestBy.get(u.id)?.check_out ?? null,
+        cleanerName: taskBy.get(u.id)?.assignee?.full_name ?? null,
+        repairTitle: repairBy.get(u.id)?.title ?? null,
+        damageDescription: damageBy.get(u.id)?.description ?? null,
+      }),
+    ]),
+  )
+}
+
+/**
+ * Room types this booking could be moved into at check-in — those with a
+ * free room for the whole stay (RPC movable_room_type_ids). On error an
+ * empty set: offering no other room is the safe side.
+ */
+export async function getMovableRoomTypeIds(bookingId: string): Promise<Set<string>> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('movable_room_type_ids', { p_booking_id: bookingId })
+  if (error) return new Set()
+  return new Set(((data ?? []) as unknown[]).map(String))
 }

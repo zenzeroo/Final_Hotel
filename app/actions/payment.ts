@@ -105,92 +105,15 @@ export async function createCheckoutSessionAction(
     return { ok: false, error: precheck.error }
   }
 
-  // Phase 57c — refund rule under the Stripe Pay button, in the guest's
-  // language (same text + deadline as the booking form).
-  const { locale, t } = await getServerT()
-  const refundMinDays = await getRefundMinDays()
-  const refundDeadline = refundDeadlineOrNull(precheck.checkIn, refundMinDays)
-  const refundNote = refundDeadline
-    ? t('customer.bookingForm.refundUntil', { date: formatDate(refundDeadline), min: refundMinDays })
-    : t('customer.bookingForm.refundNone', { min: refundMinDays })
-
-  // 1. Reserve the payment row (owner/staff enforced via RPC).
-  let payment
-  try {
-    payment = await createPaymentSession({ bookingId: parsed.data.bookingId })
-  } catch (e) {
-    return actionFail(e, 'ไม่สามารถสร้างการชำระเงินได้')
-  }
-
-  // 2. Open the Stripe Checkout Session.
   const appUrl = env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const successUrl = `${appUrl}/bookings/${parsed.data.bookingId}?session_id={CHECKOUT_SESSION_ID}`
-  const cancelUrl = `${appUrl}/bookings/${parsed.data.bookingId}?cancelled=1`
-
-  // Phase 52 follow-up — Stage 2: 30-min Stripe session (Stripe's hard
-  // floor). Coming back from Stripe and clicking Pay again reuses the
-  // still-open session instead of opening a second one; see
-  // lib/payments/checkout.ts for the reuse + idempotency-key rules.
-  let opened
-  try {
-    opened = await openCheckoutSession(stripe, payment, {
-      bookingId: parsed.data.bookingId,
-      mode: 'payment',
-      payment_method_types: ['card', 'promptpay'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'thb',
-            product_data: {
-              name: `Zenzero Hotel — Booking ${parsed.data.bookingId.slice(0, 8)}`,
-            },
-            unit_amount: Math.round(Number(payment.amount) * 100), // THB → satang
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      metadata: {
-        booking_id: parsed.data.bookingId,
-        payment_id: payment.id,
-      },
-      locale: locale === 'en' ? 'en' : 'th',
-      custom_text: { submit: { message: refundNote } },
-    })
-  } catch (e) {
-    return actionFail(e, 'Stripe error: ไม่สามารถเปิดหน้าชำระเงินได้')
-  }
-
-  if (opened.kind === 'already_paid') {
-    return {
-      ok: false,
-      error: 'การชำระเงินนี้สำเร็จแล้ว ระบบกำลังอัปเดตสถานะ กรุณารีเฟรชหน้าอีกครั้งในอีกสักครู่',
-    }
-  }
-  const session = opened.session
-  if (!session.url) {
-    return { ok: false, error: 'Stripe returned no checkout URL' }
-  }
+  const opened = await openStripeCheckoutForBooking(parsed.data.bookingId, {
+    checkIn: precheck.checkIn,
+    successUrl: `${appUrl}/bookings/${parsed.data.bookingId}?session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${appUrl}/bookings/${parsed.data.bookingId}?cancelled=1`,
+  })
+  if (!opened.ok) return opened
   // A reused session already has its id stored and the DB deadline extended.
-  if (opened.kind === 'reused') {
-    return { ok: true, data: { url: session.url } }
-  }
-
-  // 3. Persist the Stripe session id + URLs back to the pending payments row.
-  //    Use the admin client because user-context RLS would block this UPDATE
-  //    (the owner has SELECT only on payments — see RLS policy).
-  try {
-    await updatePaymentSessionId({
-      paymentId: payment.id,
-      sessionId: session.id,
-      successUrl,
-      cancelUrl,
-    })
-  } catch (e) {
-    // Non-fatal — webhook handler will still find the booking via metadata.
-    console.warn('[createCheckoutSessionAction] failed to persist session_id:', e)
-  }
+  if (opened.reused) return { ok: true, data: { url: opened.url } }
 
   // 4. Stage 2 — give the guest 5 min on the Stripe page. The session
   //    stays open longer (Stripe's 30-min floor) but is closed by the
@@ -217,7 +140,133 @@ export async function createCheckoutSessionAction(
     )
   }
 
-  return { ok: true, data: { url: session.url } }
+  return { ok: true, data: { url: opened.url } }
+}
+
+/**
+ * Walk-in card / PromptPay at the desk — reception opens Stripe Checkout
+ * for a guest's booking. Not the guest action: that one only accepts the
+ * booking's owner, returns to the guest pages and sets a 5-minute
+ * payment_due_at — a walk-in must not carry a deadline (the per-minute job
+ * would expire it). An abandoned Stripe page leaves an unpaid walk-in, the
+ * same as "pay later"; the webhook confirms a completed payment.
+ */
+export async function createWalkInCheckoutSessionAction(
+  input: { bookingId: string },
+): Promise<ActionResult<{ url: string }>> {
+  await requireRole(['reception', 'manager', 'admin'], '/reception')
+  const parsed = createCheckoutSessionSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'ข้อมูลไม่ถูกต้อง' }
+  if (!hasPaymentGateway || !stripe) {
+    return { ok: false, error: 'Payment gateway not configured' }
+  }
+
+  const precheck = await precheckPayableBooking(parsed.data.bookingId, null)
+  if ('error' in precheck) return { ok: false, error: precheck.error }
+
+  const appUrl = env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const detail = `${appUrl}/reception/bookings/${parsed.data.bookingId}`
+  const opened = await openStripeCheckoutForBooking(parsed.data.bookingId, {
+    checkIn: precheck.checkIn,
+    successUrl: `${detail}?paid=1`,
+    cancelUrl: `${detail}?cancelled=1`,
+  })
+  if (!opened.ok) return opened
+  return { ok: true, data: { url: opened.url } }
+}
+
+/**
+ * Steps shared by the guest and walk-in actions: reserve the payment row
+ * (create_payment_session — owner or staff), open (or reuse) the Stripe
+ * Checkout Session for card + PromptPay with the refund rule under the Pay
+ * button, and store the session id. Callers do their own precheck.
+ */
+async function openStripeCheckoutForBooking(
+  bookingId: string,
+  opts: { checkIn: string; successUrl: string; cancelUrl: string },
+): Promise<{ ok: true; url: string; reused: boolean } | { ok: false; error: string }> {
+  if (!stripe) return { ok: false, error: 'Payment gateway not configured' }
+
+  // Phase 57c — refund rule under the Stripe Pay button, in the caller's
+  // language (same text + deadline as the booking form).
+  const { locale, t } = await getServerT()
+  const refundMinDays = await getRefundMinDays()
+  const refundDeadline = refundDeadlineOrNull(opts.checkIn, refundMinDays)
+  const refundNote = refundDeadline
+    ? t('customer.bookingForm.refundUntil', { date: formatDate(refundDeadline), min: refundMinDays })
+    : t('customer.bookingForm.refundNone', { min: refundMinDays })
+
+  // 1. Reserve the payment row (owner/staff enforced via RPC).
+  let payment
+  try {
+    payment = await createPaymentSession({ bookingId })
+  } catch (e) {
+    return actionFail(e, 'ไม่สามารถสร้างการชำระเงินได้')
+  }
+
+  // 2. Open the Stripe Checkout Session.
+  // Phase 52 follow-up — Stage 2: 30-min Stripe session (Stripe's hard
+  // floor). Coming back from Stripe and clicking Pay again reuses the
+  // still-open session instead of opening a second one; see
+  // lib/payments/checkout.ts for the reuse + idempotency-key rules.
+  let opened
+  try {
+    opened = await openCheckoutSession(stripe, payment, {
+      bookingId,
+      mode: 'payment',
+      payment_method_types: ['card', 'promptpay'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'thb',
+            product_data: {
+              name: `Zenzero Hotel — Booking ${bookingId.slice(0, 8)}`,
+            },
+            unit_amount: Math.round(Number(payment.amount) * 100), // THB → satang
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: opts.successUrl,
+      cancel_url: opts.cancelUrl,
+      metadata: {
+        booking_id: bookingId,
+        payment_id: payment.id,
+      },
+      locale: locale === 'en' ? 'en' : 'th',
+      custom_text: { submit: { message: refundNote } },
+    })
+  } catch (e) {
+    return actionFail(e, 'Stripe error: ไม่สามารถเปิดหน้าชำระเงินได้')
+  }
+
+  if (opened.kind === 'already_paid') {
+    return {
+      ok: false,
+      error: 'การชำระเงินนี้สำเร็จแล้ว ระบบกำลังอัปเดตสถานะ กรุณารีเฟรชหน้าอีกครั้งในอีกสักครู่',
+    }
+  }
+  const session = opened.session
+  if (!session.url) {
+    return { ok: false, error: 'Stripe returned no checkout URL' }
+  }
+  if (opened.kind === 'reused') return { ok: true, url: session.url, reused: true }
+
+  // 3. Persist the Stripe session id + URLs back to the pending payments row.
+  //    Use the admin client because user-context RLS would block this UPDATE
+  //    (the owner has SELECT only on payments — see RLS policy).
+  try {
+    await updatePaymentSessionId({
+      paymentId: payment.id,
+      sessionId: session.id,
+      successUrl: opts.successUrl,
+      cancelUrl: opts.cancelUrl,
+    })
+  } catch (e) {
+    // Non-fatal — webhook handler will still find the booking via metadata.
+    console.warn('[openStripeCheckoutForBooking] failed to persist session_id:', e)
+  }
+  return { ok: true, url: session.url, reused: false }
 }
 
 const markCashPaidSchema = z.object({
@@ -419,15 +468,16 @@ export async function pollBookingPaymentStatusAction(
  */
 async function precheckPayableBooking(
   bookingId: string,
-  userId: string,
+  /** The booking's owner; null = staff (walk-in), who may pay any booking. */
+  ownerId: string | null,
 ): Promise<{ error: string } | { checkIn: string }> {
   const supabase = await createClient()
-  const { data: booking, error } = await supabase
+  let query = supabase
     .from('bookings')
     .select('id, user_id, status, payment_status, lapsed_reason, payment_due_at, check_in')
     .eq('id', bookingId)
-    .eq('user_id', userId)
-    .maybeSingle()
+  if (ownerId) query = query.eq('user_id', ownerId)
+  const { data: booking, error } = await query.maybeSingle()
   // A query error (e.g. a missing column when a migration wasn't applied)
   // is not "not found" — surface it instead of hiding it.
   if (error) {

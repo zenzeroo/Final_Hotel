@@ -1,12 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition, useMemo } from 'react'
 import { createWalkInBooking } from '@/app/actions/walk-in-booking'
+import { createWalkInCheckoutSessionAction } from '@/app/actions/payment'
 import { calculateNights, calculatePrice, formatTHB } from '@/lib/pricing'
-import { getMinCheckInLocalIso, addDaysLocalIso } from '@/lib/dates'
+import { getMinCheckInLocalIso, addDaysLocalIso, formatDateNumeric } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { DatePickerField } from '@/components/ui/DatePickerField'
 import { useT } from '@/lib/i18n/useT'
 
 interface WalkInFormProps {
@@ -41,13 +42,19 @@ export function WalkInForm({ room }: WalkInFormProps) {
   const initialCheckIn = urlCheckIn && urlCheckIn >= minCheckin ? urlCheckIn : minCheckin
   const initialCheckOut =
     urlCheckOut && urlCheckOut > initialCheckIn ? urlCheckOut : defaultCheckout
-  const initialGuests = Number.isFinite(urlGuestsParsed) && urlGuestsParsed > 0 ? urlGuestsParsed : 1
+  const initialGuests = Number.isFinite(urlGuestsParsed) && urlGuestsParsed > 0
+    ? Math.min(urlGuestsParsed, room.max_guests)
+    : 1
 
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [checkIn, setCheckIn] = useState(initialCheckIn)
-  const [checkOut, setCheckOut] = useState(initialCheckOut)
-  const [guests, setGuests] = useState(initialGuests)
+  // Set when the booking was created but Stripe couldn't open — the form
+  // must not be submitted again (it would create a second booking).
+  const [createdBookingId, setCreatedBookingId] = useState<string | null>(null)
+  // Fixed on this page — see the locked "stay dates" section below.
+  const checkIn = initialCheckIn
+  const checkOut = initialCheckOut
+  const guests = initialGuests
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -88,8 +95,21 @@ export function WalkInForm({ room }: WalkInFormProps) {
         paymentMethod,
       })
 
-      if (result.error) {
-        setError(result.error)
+      if (result.error || !result.bookingId) {
+        setError(result.error ?? t('reception.walkIn.createFailed'))
+        return
+      }
+
+      // Card / PromptPay — open Stripe Checkout for the new booking. The
+      // webhook marks it paid; Stripe returns to the read-only booking page.
+      if (paymentMethod === 'card') {
+        const pay = await createWalkInCheckoutSessionAction({ bookingId: result.bookingId })
+        if (pay.ok && pay.data?.url) {
+          window.location.href = pay.data.url
+          return
+        }
+        setCreatedBookingId(result.bookingId)
+        setError(t('reception.walkIn.stripeFailed', { detail: pay.ok ? 'no URL' : pay.error }))
         return
       }
 
@@ -104,6 +124,14 @@ export function WalkInForm({ room }: WalkInFormProps) {
         {error && (
           <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
             {error}
+            {createdBookingId && (
+              <Link
+                href={`/reception/bookings/${createdBookingId}`}
+                className="block mt-1 font-semibold underline underline-offset-2"
+              >
+                {t('reception.walkIn.openBooking')}
+              </Link>
+            )}
           </div>
         )}
 
@@ -150,41 +178,22 @@ export function WalkInForm({ room }: WalkInFormProps) {
 
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
           <h2 className="font-display text-xl text-primary mb-4">{t('reception.walkIn.stayDates')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label={t('reception.walkIn.checkIn')} required>
-              <DatePickerField
-                value={checkIn}
-                min={minCheckin}
-                onChange={(v) => {
-                  setCheckIn(v)
-                  if (v >= checkOut) {
-                    // Phase 49 — use addDaysLocalIso (Bangkok TZ) instead
-                    // of new Date(v).toISOString().slice(0,10) to avoid
-                    // the UTC off-by-one bug for Bangkok users at
-                    // 00:00-06:59.
-                    setCheckOut(addDaysLocalIso(v, 1))
-                  }
-                }}
-              />
-            </Field>
-            <Field label={t('reception.walkIn.checkOut')} required>
-              <DatePickerField
-                value={checkOut}
-                min={checkIn}
-                onChange={(v) => setCheckOut(v)}
-              />
-            </Field>
-            <Field label={t('reception.walkIn.guests')} required>
-              <input
-                type="number"
-                min={1}
-                max={room.max_guests}
-                value={guests}
-                onChange={(e) => setGuests(parseInt(e.target.value, 10) || 1)}
-                className="input"
-              />
-            </Field>
-          </div>
+          {/* Locked: dates and guests were chosen on the room picker, whose
+              list only shows rooms free for them. Changing them goes back
+              there so availability is checked again. */}
+          <dl className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 rounded-lg bg-surface-container border border-outline-variant">
+            <LockedValue icon="login" label={t('reception.walkIn.checkIn')} value={formatDateNumeric(checkIn)} />
+            <LockedValue icon="logout" label={t('reception.walkIn.checkOut')} value={formatDateNumeric(checkOut)} />
+            <LockedValue icon="group" label={t('reception.walkIn.guests')} value={t('reception.common.guestsN', { count: guests })} />
+            <MaterialIcon name="lock" size={18} className="ml-auto text-on-surface-variant" aria-hidden />
+          </dl>
+          <Link
+            href={`/reception/bookings/new?checkin=${checkIn}&checkout=${checkOut}&guests=${guests}`}
+            className="mt-3 inline-flex items-center gap-1.5 text-caption text-primary hover:underline underline-offset-2"
+          >
+            <MaterialIcon name="edit_calendar" size={16} />
+            {t('reception.walkIn.changeStay')}
+          </Link>
         </div>
 
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
@@ -254,7 +263,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
 
           <button
             type="submit"
-            disabled={isPending || nights === 0 || !fullName || !email || !phone}
+            disabled={isPending || !!createdBookingId || nights === 0 || !fullName || !email || !phone}
             className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60"
           >
             {isPending ? (
@@ -290,6 +299,18 @@ export function WalkInForm({ room }: WalkInFormProps) {
         }
       `}</style>
     </form>
+  )
+}
+
+function LockedValue({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <MaterialIcon name={icon} size={18} className="text-on-surface-variant shrink-0" />
+      <div>
+        <dt className="text-caption text-on-surface-variant">{label}</dt>
+        <dd className="text-body-md font-semibold text-on-surface whitespace-nowrap">{value}</dd>
+      </div>
+    </div>
   )
 }
 

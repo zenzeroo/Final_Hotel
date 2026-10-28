@@ -5,18 +5,19 @@ import { bucketWithGuest, countRoomBuckets, filterToBucket } from '@/components/
 import type { RoomUnitStatus } from '@/lib/data/types'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Reception room board: one row per room with its live `room_units.status`
- * (all 9 statuses) and a dropdown for the cleaning flow. Rooms with a guest
- * staying or closed for maintenance are locked (updateRoomStatus refuses
- * them too). Filters and counts use the shared buckets so they match the
- * reception dashboard.
+ * Reception room board (view only): one row per room with its live
+ * `room_units.status` (all 9 statuses). Reception can't change it — status
+ * follows check-in / check-out and the housekeeping tasks. Filters and
+ * counts use the shared buckets so they match the reception dashboard.
  */
 export default async function RoomsStatusPage(props: PageProps<'/reception/rooms'>) {
-  const t = getT(await getLocale())
+  const locale = await getLocale()
+  const t = getT(locale)
   const searchParams = await props.searchParams
   const filter = typeof searchParams.status === 'string' ? searchParams.status : 'all'
   const bucket = filterToBucket(filter)
@@ -43,6 +44,10 @@ export default async function RoomsStatusPage(props: PageProps<'/reception/rooms
         <p className="text-body-md text-on-surface-variant mt-1">
           {t('reception.roomsPage.subtitle', { rooms: rooms.length, floors: floors.length })}
         </p>
+        <p className="text-caption text-on-surface-variant mt-1 inline-flex items-center gap-1.5">
+          <MaterialIcon name="info" size={14} />
+          {t('reception.roomsPage.statusAutoHint')}
+        </p>
       </div>
 
       <RoomFilterTabs current={filter} counts={counts} />
@@ -58,6 +63,7 @@ export default async function RoomsStatusPage(props: PageProps<'/reception/rooms
             <section key={floor}>
               <h2 className="font-display text-xl text-primary mb-3">{t('reception.roomsPage.floorN', { floor })}</h2>
               <RoomStatusList
+                locale={locale}
                 rooms={filtered.map((r) => ({
                   id: r.id,
                   unit_label: r.unit_label,

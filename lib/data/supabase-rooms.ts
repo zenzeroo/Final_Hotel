@@ -48,6 +48,19 @@ export async function getRoomBySlug(slug: string): Promise<RoomType | null> {
   return (data as RoomType) ?? null
 }
 
+/** Active room numbers (unit labels) of one room type, e.g. ['303']. Public read. */
+export async function getRoomUnitLabels(roomTypeId: string): Promise<string[]> {
+  const supabase = await getClient()
+  const { data, error } = await supabase
+    .from('room_units')
+    .select('unit_label')
+    .eq('room_type_id', roomTypeId)
+    .eq('is_active', true)
+    .order('unit_label')
+  if (error) wrapSupabaseError('', error)
+  return (data ?? []).map((u) => u.unit_label as string)
+}
+
 export async function searchRooms(filters: SearchFilters): Promise<SearchResult> {
   const supabase = await getClient()
   let query = supabase
@@ -121,7 +134,8 @@ async function filterByAvailability(
   // Phase 42 — count live temp_pending bookings (hold_expires_at > now()).
   // Phase 56 — a confirmed+unpaid booking past its payment_due_at no longer
   // holds the room (the per-minute pg_cron job flips it to 'expired').
-  // Same predicate as the create_booking RPC.
+  // Same predicate as the create_booking RPC — including its half-open
+  // [check_in, check_out) overlap: a stay ending on `checkin` doesn't block it.
   const nowIso = new Date().toISOString()
   const [unitsRes, bookingsRes, tempRes] = await Promise.all([
     admin
@@ -133,15 +147,15 @@ async function filterByAvailability(
       .select('room_type_id')
       .in('status', ['confirmed', 'checked_in'])
       .or(`status.eq.checked_in,payment_status.neq.unpaid,payment_due_at.is.null,payment_due_at.gt."${nowIso}"`)
-      .lte('check_in', checkout)
-      .gte('check_out', checkin),
+      .lt('check_in', checkout)
+      .gt('check_out', checkin),
     admin
       .from('bookings')
       .select('room_type_id')
       .eq('status', 'temp_pending')
       .gt('hold_expires_at', nowIso)
-      .lte('check_in', checkout)
-      .gte('check_out', checkin),
+      .lt('check_in', checkout)
+      .gt('check_out', checkin),
   ])
 
   const poolByType = new Map<string, number>()

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useT } from '@/lib/i18n/useT'
+import { formatDate } from '@/lib/dates'
+import type { NotReadyReason } from '@/lib/room-status'
 
 export interface CheckInUnit {
   id: string
@@ -28,12 +30,12 @@ interface CheckInOutActionsProps {
    * a problem ("ห้องมีปัญหา — เลือกห้องอื่น") or isn't ready.
    */
   otherUnits?: CheckInUnit[]
-  /** Check-in only. Booked-type rooms that aren't ready, named in the message. */
-  bookedNotReady?: { unit_label: string; status: string }[]
+  /** Check-in only. Booked-type rooms that aren't ready, each with why (getRoomNotReadyReasons). */
+  bookedNotReady?: { unit_label: string; status: string; reason?: NotReadyReason }[]
 }
 
 const selectClass =
-  'px-2 py-1 rounded-full bg-surface-container-low border border-outline-variant text-caption text-on-surface focus:outline-none focus:border-secondary'
+  'max-w-full px-2 py-1 rounded-full bg-surface-container-low border border-outline-variant text-caption text-on-surface focus:outline-none focus:border-secondary'
 const linkButtonClass = 'text-caption text-primary underline-offset-2 hover:underline disabled:opacity-60'
 
 export function CheckInOutActions({
@@ -101,7 +103,7 @@ export function CheckInOutActions({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {isCheckIn && units.length === 1 && !useOther && (
           // The booked room — a fixed label, nothing to choose.
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-caption font-semibold">
@@ -142,15 +144,19 @@ export function CheckInOutActions({
       {isCheckIn && !noRoomReady && (
         <>
           {bookedUnits.length === 0 && (
-            <p className="text-caption text-error max-w-64 text-right">
-              {bookedNotReady.length > 0
-                ? t('reception.checkInOutPage.bookedRoomNotReadyNamed', {
-                    rooms: bookedNotReady
-                      .map((u) => `${u.unit_label} (${t(`staff.status.${u.status}`)})`)
-                      .join(', '),
-                  })
-                : t('reception.checkInOutPage.bookedRoomNotReady')}
-            </p>
+            <div className="text-caption text-error max-w-64 text-right">
+              <p>{t('reception.checkInOutPage.bookedRoomNotReady')}</p>
+              {bookedNotReady.length > 0 && (
+                <ul className="mt-0.5">
+                  {bookedNotReady.map((u) => (
+                    <li key={u.unit_label}>
+                      <span className="font-semibold">{u.unit_label}</span> ·{' '}
+                      {reasonText(u.reason ?? { kind: 'status', status: u.status }, t)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
           {bookedUnits.length > 0 && !useOther && otherUnits.length > 0 && (
             <button type="button" onClick={() => switchList(true)} disabled={isPending} className={linkButtonClass}>
@@ -177,4 +183,28 @@ export function CheckInOutActions({
       )}
     </div>
   )
+}
+
+/** One readable line for why a room can't take the guest yet. */
+function reasonText(r: NotReadyReason, t: ReturnType<typeof useT>): string {
+  switch (r.kind) {
+    case 'guest':
+      return r.until
+        ? t('reception.checkInOutPage.reasonGuestUntil', { date: formatDate(r.until) })
+        : t('reception.checkInOutPage.reasonGuest')
+    case 'waiting_cleaning':
+      return r.by
+        ? t('reception.checkInOutPage.reasonWaitingCleaningBy', { name: r.by })
+        : t('reception.checkInOutPage.reasonWaitingCleaning')
+    case 'cleaning':
+      return r.by ? t('reception.checkInOutPage.reasonCleaningBy', { name: r.by }) : t('reception.checkInOutPage.reasonCleaning')
+    case 'inspection':
+      return t('reception.checkInOutPage.reasonInspection')
+    case 'repair':
+      return r.detail ? t('reception.checkInOutPage.reasonRepairWith', { detail: r.detail }) : t('reception.checkInOutPage.reasonRepair')
+    case 'damage':
+      return t('reception.checkInOutPage.reasonDamage', { detail: r.detail })
+    case 'status':
+      return t(`staff.status.${r.status}`)
+  }
 }

@@ -21,7 +21,9 @@ export default async function ReceptionLayout({ children }: { children: React.Re
         avatarKey={session.avatarKey}
           userId={session.id}
       />
-      <div className="flex flex-1 min-h-screen">
+      {/* min-w-0: <main> uses overflow-x-clip (not a scroll container), so
+          without it wide content stretches this column past the viewport. */}
+      <div className="flex flex-1 min-w-0 min-h-screen">
         <StaffSidebar
           role="reception"
           userName={session.fullName}

@@ -104,17 +104,40 @@ export async function checkInBookingAction(
       return { ok: false, error: 'ห้องนี้ไม่พร้อมเข้าพักแล้ว — กรุณาเลือกห้องอื่น' }
     }
 
+    // Give the room back so it can be picked again.
+    const releaseRoom = () =>
+      supabase
+        .from('room_units')
+        .update({ status: previousStatus, updated_at: new Date().toISOString() })
+        .eq('id', parsed.data.roomUnitId)
+        .eq('status', 'occupied')
+
+    // A room of another type: the booking takes that type, so capacity
+    // (counted by bookings.room_type_id) follows the room the guest holds.
+    // The RPC refuses a type that is fully booked over the stay.
+    if (roomChanged) {
+      const { error: moveErr } = await supabase.rpc('move_booking_room_type', {
+        p_booking_id: parsed.data.bookingId,
+        p_room_type_id: unit.room_type_id,
+      })
+      if (moveErr) {
+        await releaseRoom()
+        if (moveErr.message.includes('ROOM_TYPE_FULL')) {
+          return { ok: false, error: 'ประเภทห้องนี้ถูกจองเต็มในช่วงวันที่พัก — กรุณาเลือกห้องอื่น' }
+        }
+        throw moveErr
+      }
+    }
+
     const { error: updateErr } = await supabase
       .from('bookings')
       .update({ status: 'checked_in', room_unit_id: parsed.data.roomUnitId })
       .eq('id', parsed.data.bookingId)
     if (updateErr) {
-      // Give the room back so it can be picked again.
-      await supabase
-        .from('room_units')
-        .update({ status: previousStatus, updated_at: new Date().toISOString() })
-        .eq('id', parsed.data.roomUnitId)
-        .eq('status', 'occupied')
+      await releaseRoom()
+      if (roomChanged) {
+        await supabase.from('bookings').update({ room_type_id: booking.room_type_id }).eq('id', parsed.data.bookingId)
+      }
       throw updateErr
     }
 

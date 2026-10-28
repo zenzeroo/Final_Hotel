@@ -17,34 +17,68 @@ export function isCheckInReady(status: string): boolean {
  * the booked room has a problem ("ห้องมีปัญหา — เลือกห้องอื่น").
  * `bookedNotReady` = the booked type's rooms that can't take the guest yet
  * (e.g. still being cleaned / inspected), so reception sees why.
+ * `movableTypeIds` = the types with room for this stay (movable_room_type_ids);
+ * moving takes the room's type, so a fully booked type is never offered.
+ * Omitted = no restriction.
  */
 export function splitCheckInUnits<T extends { roomTypeId: string | null; status: string }>(
   units: readonly T[],
   bookedRoomTypeId: string | null,
+  movableTypeIds?: ReadonlySet<string>,
 ): { booked: T[]; others: T[]; bookedNotReady: T[] } {
   const ofBookedType = (u: T) => u.roomTypeId === bookedRoomTypeId
+  const canMoveTo = (u: T) => !movableTypeIds || (u.roomTypeId !== null && movableTypeIds.has(u.roomTypeId))
   return {
     booked: units.filter((u) => ofBookedType(u) && isCheckInReady(u.status)),
-    others: units.filter((u) => !ofBookedType(u) && isCheckInReady(u.status)),
+    others: units.filter((u) => !ofBookedType(u) && isCheckInReady(u.status) && canMoveTo(u)),
     bookedNotReady: units.filter((u) => ofBookedType(u) && !isCheckInReady(u.status)),
   }
 }
 
 /**
- * Statuses reception may set by hand on /reception/rooms (the cleaning
- * flow). occupied comes from check-in, and maintenance / out_of_order are
- * the manager's (Phase 31).
+ * Why a room of the booked type can't take a check-in yet — shown under the
+ * check-in button so reception knows whether to wait or move the guest.
+ * Built from the room status plus the facts that explain it (who is staying,
+ * who is cleaning, the open repair or damage report).
  */
-export const RECEPTION_SETTABLE_STATUSES = ['waiting_cleaning', 'cleaning', 'ready'] as const
-export type ReceptionSettableStatus = (typeof RECEPTION_SETTABLE_STATUSES)[number]
+export type NotReadyReason =
+  | { kind: 'guest'; until: string | null }
+  | { kind: 'waiting_cleaning'; by: string | null }
+  | { kind: 'cleaning'; by: string | null }
+  | { kind: 'inspection' }
+  | { kind: 'repair'; detail: string | null }
+  | { kind: 'damage'; detail: string }
+  | { kind: 'status'; status: string }
 
-/**
- * Why a room's status can't be changed by hand: a guest is staying (status
- * 'occupied', or a checked-in booking points at it even if the status
- * drifted), or it is closed for maintenance. null = free to change.
- */
-export function roomLockReason(status: string, hasCheckedInBooking: boolean): 'occupied' | 'closed' | null {
-  if (hasCheckedInBooking || status === 'occupied') return 'occupied'
-  if (status === 'maintenance' || status === 'out_of_order') return 'closed'
-  return null
+export interface NotReadyFacts {
+  /** check_out of a checked-in booking on the room, if any. */
+  guestUntil?: string | null
+  /** True when a checked-in booking points at the room. */
+  hasGuest?: boolean
+  /** Housekeeper on the room's open cleaning task. */
+  cleanerName?: string | null
+  /** Title of the newest open / in-progress maintenance report. */
+  repairTitle?: string | null
+  /** Description of the newest unresolved damage report. */
+  damageDescription?: string | null
+}
+
+export function notReadyReason(status: string, facts: NotReadyFacts = {}): NotReadyReason {
+  if (facts.hasGuest || status === 'occupied') return { kind: 'guest', until: facts.guestUntil ?? null }
+  switch (status) {
+    case 'waiting_cleaning':
+    case 'checkout':
+      return { kind: 'waiting_cleaning', by: facts.cleanerName ?? null }
+    case 'cleaning':
+      return { kind: 'cleaning', by: facts.cleanerName ?? null }
+    case 'inspection':
+      return { kind: 'inspection' }
+    case 'maintenance':
+    case 'out_of_order':
+      if (facts.repairTitle) return { kind: 'repair', detail: facts.repairTitle }
+      if (facts.damageDescription) return { kind: 'damage', detail: facts.damageDescription }
+      return { kind: 'repair', detail: null }
+    default:
+      return { kind: 'status', status }
+  }
 }

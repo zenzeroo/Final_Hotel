@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getRoomBySlug } from '@/lib/data/rooms'
+import { getRoomBySlug, getRoomUnitLabels } from '@/lib/data/rooms'
 import { getPricingConstants } from '@/lib/data/manager'
 import { getRefundMinDays } from '@/lib/data/bookings'
 import { getSession } from '@/lib/supabase/getSession'
@@ -55,6 +55,7 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
   if (!room) {
     notFound()
   }
+  const unitLabels = await getRoomUnitLabels(room.id)
 
   return (
     <>
@@ -111,6 +112,12 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
                       {t('roomDetail.view')}:{' '}
                       {/* Phase X — locale-aware view label (TH when available + locale=th) */}
                       {locale === 'th' && room.view_label_th ? room.view_label_th : room.view_label}
+                    </span>
+                  )}
+                  {unitLabels.length > 0 && (
+                    <span className="inline-flex items-center gap-2">
+                      <MaterialIcon name="meeting_room" size={18} />
+                      {t('roomDetail.roomNumber', { rooms: unitLabels.join(', ') })}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-2">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useToast } from '@/components/ui/Toast'
@@ -41,6 +41,7 @@ export function NotificationBell({ userId, align = 'right', tone = 'light' }: No
   const [unread, setUnread] = useState(0)
   const [loadFailed, setLoadFailed] = useState(false)
   const [, startTransition] = useTransition()
+  const instanceId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
@@ -83,7 +84,10 @@ export function NotificationBell({ userId, align = 'right', tone = 'light' }: No
     // every row is filtered out.
     const subscribe = () =>
       supabase
-        .channel(`notifications:${userId}`)
+        // Per-instance name: staff layouts render two bells (sidebar + mobile
+        // header), and supabase.channel() returns the already-subscribed
+        // channel for a repeated name, which throws on .on().
+        .channel(`notifications:${userId}:${instanceId}`)
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
@@ -133,23 +137,47 @@ export function NotificationBell({ userId, align = 'right', tone = 'light' }: No
     }
   }, [open])
 
+  /** Apply the change at once; put the previous state back if the write fails. */
+  function optimistic(apply: () => void, write: () => Promise<{ ok: boolean }>) {
+    const prevItems = items
+    const prevUnread = unread
+    apply()
+    startTransition(async () => {
+      let ok = false
+      try {
+        ok = (await write()).ok
+      } catch {
+        ok = false
+      }
+      if (!ok) {
+        setItems(prevItems)
+        setUnread(prevUnread)
+        toast.error(t('notifications.markReadFailed'))
+      }
+    })
+  }
+
   function markRead(id: string) {
     const target = items.find((i) => i.id === id)
     if (!target || target.read_at) return
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, read_at: new Date().toISOString() } : i)))
-    setUnread((n) => Math.max(0, n - 1))
-    startTransition(() => {
-      void markNotificationReadAction(id)
-    })
+    optimistic(
+      () => {
+        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, read_at: new Date().toISOString() } : i)))
+        setUnread((n) => Math.max(0, n - 1))
+      },
+      () => markNotificationReadAction(id),
+    )
   }
 
   function markAll() {
     const now = new Date().toISOString()
-    setItems((prev) => prev.map((i) => (i.read_at ? i : { ...i, read_at: now })))
-    setUnread(0)
-    startTransition(() => {
-      void markAllNotificationsReadAction()
-    })
+    optimistic(
+      () => {
+        setItems((prev) => prev.map((i) => (i.read_at ? i : { ...i, read_at: now })))
+        setUnread(0)
+      },
+      () => markAllNotificationsReadAction(),
+    )
   }
 
   function onItemClick(n: NotificationRow) {
@@ -212,11 +240,11 @@ export function NotificationBell({ userId, align = 'right', tone = 'light' }: No
           ) : (
             <ul className="max-h-[60vh] overflow-y-auto divide-y divide-outline-variant">
               {items.map((n) => (
-                <li key={n.id}>
+                <li key={n.id} className={`flex items-start ${n.read_at ? '' : 'bg-secondary-container/40'}`}>
                   <button
                     type="button"
                     onClick={() => onItemClick(n)}
-                    className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-container focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${n.read_at ? '' : 'bg-secondary-container/40'}`}
+                    className="flex-1 min-w-0 flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-container focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
                   >
                     <MaterialIcon name={NOTIFICATION_ICON[n.type] ?? 'notifications'} size={20} className="mt-0.5 shrink-0 text-primary" />
                     <span className="flex-1 min-w-0">
@@ -227,8 +255,18 @@ export function NotificationBell({ userId, align = 'right', tone = 'light' }: No
                         {relativeTime(n.created_at, t)}
                       </span>
                     </span>
-                    {!n.read_at && <span aria-hidden="true" className="mt-2 w-2 h-2 rounded-full bg-primary shrink-0" />}
                   </button>
+                  {!n.read_at && (
+                    <button
+                      type="button"
+                      onClick={() => markRead(n.id)}
+                      aria-label={t('notifications.markRead')}
+                      title={t('notifications.markRead')}
+                      className="shrink-0 mt-2.5 mr-3 inline-flex items-center justify-center w-8 h-8 rounded-full text-primary hover:bg-primary-fixed transition-colors focus-visible:outline-2 focus-visible:outline-primary"
+                    >
+                      <MaterialIcon name="done" size={18} />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

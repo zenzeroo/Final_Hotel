@@ -25,8 +25,9 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
   // back to its own (buggy today/tomorrow) defaults. Now card hrefs are
   // stable and always include all 3 params.
   //
-  // The filter behavior is unchanged — only filter when the URL actually
-  // has both dates (else show all active rooms).
+  // Availability always runs on those dates (today → tomorrow by default),
+  // like /rooms — a room type fully booked for the dates on the SearchBar
+  // is never offered.
   const minCheckin = getMinCheckInLocalIso()
   const defaultCheckout = addDaysLocalIso(minCheckin, 1)
 
@@ -44,11 +45,7 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
     return Number.isFinite(n) && n > 0 ? n : 1
   })()
 
-  const hasDateFilter = Boolean(searchParams.checkin && searchParams.checkout)
-  const result = hasDateFilter
-    ? await searchRooms({ checkin, checkout, guests })
-    : await searchRooms({ guests })
-  const rooms = result.rooms
+  const { rooms } = await searchRooms({ checkin, checkout, guests })
 
   // Build the per-card href so WalkInForm pre-fills the same dates/guests
   // the receptionist is currently seeing on the SearchBar. All three
@@ -87,7 +84,7 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
         />
       </div>
 
-      {rooms.length === 0 && hasDateFilter ? (
+      {rooms.length === 0 ? (
         <div className="bg-surface-container-low border border-outline-variant rounded-2xl p-10 text-center">
           <MaterialIcon name="event_busy" size={36} className="text-outline-variant mb-3" />
           <p className="text-body-lg text-on-surface-variant">

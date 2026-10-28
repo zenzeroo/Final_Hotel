@@ -41,7 +41,7 @@ Rules ละเอียดเต็มอยู่ใน `Rule.md` ที่ ro
 
 ## 📊 Current State
 
-**HEAD**: `1428967` on `notmain` (Phase 62 + the /rooms search-bar, multi room-type and /bookings no-show changes uncommitted). All DB migrations through `20261020` are applied live, except `20261007_bkk_today_helper.sql` (staged for review on purpose, nothing calls `bkk_today()`). `booking_holds` table no longer exists (dropped in Phase 42).
+**HEAD**: `1428967` on `notmain` (Phase 62 + the /rooms search-bar, multi room-type and /bookings no-show changes uncommitted). All DB migrations through `20261021` are applied live, except `20261007_bkk_today_helper.sql` (staged for review on purpose, nothing calls `bkk_today()`). `booking_holds` table no longer exists (dropped in Phase 42).
 
 Full phase history (phases 1–62, one row each): `docs/phases-done.md` → section "Status table". Latest phases:
 - **55** — guest refund request (`request_refund`), booking stays confirmed until manager approves; refund-history tab on `/bookings`.
@@ -353,7 +353,7 @@ Full text with symptoms, causes and file references: **`docs/pitfalls.md`** — 
 - Renaming a stored key/path: update every column/array holding a copy (`gallery_keys`, `hero_slides`, …).
 - Consent version: never compare `profiles.terms_version` with `PRIVACY_POLICY_VERSION` directly — use `needsConsent(session, await getCurrentConsentVersion())` (the newest `legal_versions` row wins; the constant is only the empty-table fallback).
 - Check-in rooms: `available` **or** `ready` (`lib/room-status.ts`) — cleaned rooms end at `ready`; check-in flips the room to `occupied`.
-- Capacity predicate (overdue unpaid rows do not occupy) must stay identical in `create_booking`, `create_temp_booking`, `has_capacity_for_booking` and `filterByAvailability`.
+- Capacity predicate (overdue unpaid rows do not occupy) must stay identical in `create_booking`, `create_temp_booking`, `has_capacity_for_booking` and `filterByAvailability`. The predicate is also in `move_booking_room_type` + `movable_room_type_ids` (20261021); a guest moved to another room type must take that type (`room_type_id` = the room's type).
 - `approve_refund` needs a logged-in manager (`decided_by` trigger) — tests sign in a temp manager, not service_role.
 
 ### i18n / UI
@@ -362,7 +362,7 @@ Full text with symptoms, causes and file references: **`docs/pitfalls.md`** — 
 - Zod messages are dictionary keys (`'validation.phone10'`), resolved by `translateZodIssues` / `localizeIssueMessage`.
 - Emails use the recipient's locale: `getRecipientLocale({ userId | bookingId })`.
 - A Tailwind colour token must exist as `--color-<name>` in `@theme`, or it renders no colour.
-- `position: sticky` needs no `overflow-x-auto` ancestor — staff layouts' `<main>` use it (reception switched to `overflow-x-clip`).
+- `position: sticky` needs no `overflow-x-auto` ancestor — staff layouts' `<main>` use it (reception switched to `overflow-x-clip`, which then needs `min-w-0` on both `<main>` and its `flex-1` wrapper).
 - One-line notices: `useToast()`. `AlertModal` only for content the user must read or copy.
 - Dates: compare with `toBangkokIsoDate()` / `bangkokMonthRange()`; import date helpers from `lib/dates.ts`, never local ones.
 
@@ -372,7 +372,7 @@ Full text with symptoms, causes and file references: **`docs/pitfalls.md`** — 
 - Stripe idempotency key must change when any param can change (time fields especially).
 - Server actions accept 1 MB bodies by default — `next.config.ts` sets `serverActions.bodySizeLimit: '5mb'`; keep uploads ≤ 4 MB (Vercel ~4.5 MB cap), check size client-side, and wrap action calls in try/catch/finally.
 - Browser Supabase client reads `process.env.NEXT_PUBLIC_*` by literal name — never via `lib/env.ts` on a client path.
-- Realtime: `await supabase.realtime.setAuth(token)` before `.subscribe()`, or RLS hides every row.
+- Realtime: `await supabase.realtime.setAuth(token)` before `.subscribe()`, or RLS hides every row. Channel names must be unique per mounted component (`useId()`), or the second `.on()` throws.
 - Never `console.log` PII (emails, phones, names, amounts).
 
 ## 🔍 Quick File Pointers

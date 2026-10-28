@@ -257,7 +257,7 @@ export function addDaysIso(iso: string, days: number): string {
 }
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-const isValidIsoDate = (v: string | undefined): v is string =>
+export const isValidIsoDate = (v: string | undefined): v is string =>
   !!v && ISO_DATE_RE.test(v) && addDaysIso(v, 0) === v // rejects 2026-02-30
 
 /** Whole days from `a` to `b` (YYYY-MM-DD), positive when `b` is later. */

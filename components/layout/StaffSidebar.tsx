@@ -7,11 +7,17 @@ import { MaterialIcon } from '../ui/MaterialIcon'
 import { AvatarBadge } from '@/components/account/AvatarBadge'
 import { TruncatedText } from '@/components/ui/TruncatedText'
 import { signOut } from '@/app/actions/auth'
-import { useT } from '@/lib/i18n/useT'
+import { useLocale, useT } from '@/lib/i18n/useT'
+import { LanguageToggle } from './LanguageToggle'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { roleHomePath } from '@/lib/supabase/roles'
 
 export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'
+
+/** Roles that get the TH | EN switch in the sidebar (and the mobile menu). */
+function showsLanguageToggle(role: StaffRole): boolean {
+  return role === 'reception'
+}
 
 /** Reception gets no in-app notifications (nothing is sent to it either). */
 export function showsNotificationBell(role: StaffRole): boolean {
@@ -190,6 +196,7 @@ export function StaffSidebarNav({
 }: StaffSidebarNavProps & { headerAction?: React.ReactNode }) {
   const pathname = usePathname()
   const t = useT()
+  const locale = useLocale()
   const navGroups = NAV_BY_ROLE[role] ?? []
   const isItemActive = (item: NavItem) =>
     !item.disabled &&
@@ -226,6 +233,11 @@ export function StaffSidebarNav({
         <p className="text-caption text-secondary/70 mt-1 uppercase tracking-wider min-h-[1.25rem] leading-tight truncate" title={t(ROLE_LABEL_KEY[role])}>
           {t(ROLE_LABEL_KEY[role])}
         </p>
+        {showsLanguageToggle(role) && (
+          <div className="mt-3">
+            <LanguageToggle currentLocale={locale} tone="dark" />
+          </div>
+        )}
       </div>
 
       {/* Nav */}

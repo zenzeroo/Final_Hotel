@@ -17,6 +17,7 @@ interface BookingRowActionsProps {
   paymentStatus: string
 }
 
+/** Cancel (with the refund preview) — used only on /reception/check-in-out/[id]. */
 export function BookingRowActions({ bookingId, status, paymentStatus }: BookingRowActionsProps) {
   const t = useT()
   const router = useRouter()
@@ -76,14 +77,6 @@ export function BookingRowActions({ bookingId, status, paymentStatus }: BookingR
   return (
     <>
       <div className="inline-flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => router.push(`/reception/bookings/${bookingId}`)}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors"
-          aria-label={t('reception.bookingsPage.viewDetails')}
-        >
-          <MaterialIcon name="visibility" size={18} />
-        </button>
         {!isCancelled && !isCheckedOut && (
           <button
             type="button"

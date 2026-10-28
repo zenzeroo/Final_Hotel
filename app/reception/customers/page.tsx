@@ -44,6 +44,7 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
             <thead className="bg-surface-container">
               <tr>
                 <Th>{t('reception.customersPage.colName')}</Th>
+                <Th>{t('reception.customersPage.colEmail')}</Th>
                 <Th>{t('reception.customersPage.colPhone')}</Th>
                 <Th>{t('reception.customersPage.colJoined')}</Th>
                 <Th align="right">{t('reception.customersPage.colActions')}</Th>
@@ -54,7 +55,9 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
                 <tr key={c.id} className="border-t border-outline-variant hover:bg-primary-fixed transition-colors">
                   <Td>
                     <p className="text-body-md font-medium text-on-surface">{c.full_name ?? '—'}</p>
-                    <p className="text-caption text-on-surface-variant break-all">{c.email ?? '—'}</p>
+                  </Td>
+                  <Td>
+                    <span className="text-body-md text-on-surface break-all">{c.email ?? '—'}</span>
                   </Td>
                   <Td>
                     {/* Masked on the server — the full number never reaches the browser. */}

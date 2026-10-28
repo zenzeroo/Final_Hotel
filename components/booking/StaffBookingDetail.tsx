@@ -10,7 +10,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getBookingEvents } from '@/lib/data/staff'
+import { getBookingEvents, getMovableRoomTypeIds, getRoomNotReadyReasons } from '@/lib/data/staff'
 import { listPaymentsByBooking } from '@/lib/data/supabase-payments'
 import { getAllRoomUnits } from '@/lib/data/supabase-housekeeper'
 import { splitCheckInUnits } from '@/lib/room-status'
@@ -133,8 +133,10 @@ interface StaffBookingDetailProps {
   bookingId: string
   backHref: string
   backLabel: string
-  /** Reception: check-in/out + cancel. Manager: read-only (false). */
+  /** Reception check-in/out page: check-in/out + cancel. Everywhere else: read-only (false). */
   showActions: boolean
+  /** Show a "view only" chip by the title (reception's read-only view). */
+  readOnlyChip?: boolean
   locale: Locale
 }
 
@@ -143,6 +145,7 @@ export async function StaffBookingDetail({
   backHref,
   backLabel,
   showActions,
+  readOnlyChip = false,
   locale,
 }: StaffBookingDetailProps) {
   const t = getT(locale)
@@ -229,6 +232,9 @@ export async function StaffBookingDetail({
   // room is the default; other ready rooms only when reception says the
   // booked one has a problem. Housekeeper helper returns ALL active units
   // with a nested room_type join (no flat room_type_id column).
+  // A move takes the room's type, so only types with room for the stay.
+  const canCheckIn = showActions && isConfirmed && !isCancelled
+  const movableTypeIds = canCheckIn ? await getMovableRoomTypeIds(booking.id) : new Set<string>()
   const { booked: bookedUnits, others: otherUnits, bookedNotReady } = splitCheckInUnits(
     allRoomUnits.map((u) => ({
       id: u.id,
@@ -239,7 +245,10 @@ export async function StaffBookingDetail({
       roomTypeName: u.room_type?.name_th ?? null,
     })),
     roomType?.id ?? null,
+    movableTypeIds,
   )
+  // Why the booked type's rooms aren't ready — only needed for check-in.
+  const notReadyReasons = canCheckIn ? await getRoomNotReadyReasons(bookedNotReady) : {}
 
   const sectionClass =
     'bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant'
@@ -269,6 +278,12 @@ export async function StaffBookingDetail({
         {refund && (
           <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-caption font-semibold ${refund.status === 'approved' ? 'bg-primary/10 text-primary' : refund.status === 'rejected' ? 'bg-error/10 text-error' : 'bg-secondary/20 text-secondary'}`}>
             {t('bookingDetailStaff.refundBadge', { status: t(`bookingDetailStaff.refundState.${refund.status}`) })}
+          </span>
+        )}
+        {readOnlyChip && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-caption font-semibold bg-surface-container text-on-surface-variant">
+            <MaterialIcon name="visibility" size={14} />
+            {t('bookingDetailStaff.viewOnly')}
           </span>
         )}
       </div>
@@ -494,7 +509,7 @@ export async function StaffBookingDetail({
                   label={t('bookingDetailStaff.checkIn')}
                   bookedUnits={bookedUnits}
                   otherUnits={otherUnits}
-                  bookedNotReady={bookedNotReady}
+                  bookedNotReady={bookedNotReady.map((u) => ({ ...u, reason: notReadyReasons[u.id] }))}
                 />
               )}
               {isCheckedIn && (

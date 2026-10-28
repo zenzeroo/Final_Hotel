@@ -204,6 +204,22 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
     return { error: t('actions.common.createBookingFailed', { detail: translateSupabaseError(rpcError?.message, locale) }) }
   }
 
+  // Audit row — /reception/history and the booking timeline read
+  // booking_events; create_booking writes none. Audit-only: a failure is
+  // logged, never fails the booking (same as the payments row below).
+  const logEvent = async (eventType: string, description: string, metadata: Record<string, unknown>) => {
+    const { error: evErr } = await admin.from('booking_events').insert({
+      booking_id: bookingId,
+      actor_id: caller.id,
+      actor_role: callerProfile.role,
+      event_type: eventType,
+      description,
+      metadata,
+    })
+    if (evErr) console.warn('[walk-in] failed to insert booking event:', evErr.message)
+  }
+  await logEvent('created', 'Walk-in booking created', { channel: 'walk_in', payment_method: data.paymentMethod })
+
   // Phase 17 — for cash walk-ins, flip payment_status to 'paid' AND record
   // a payments row so the accounting path is uniform with Stripe-originated
   // payments (manager dashboard sums `payments.amount` regardless of
@@ -237,10 +253,12 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
       if (updateErr) {
         console.warn('[walk-in] failed to flip booking payment_status:', updateErr.message)
       }
+      await logEvent('paid', 'Cash payment received at desk', { amount: price.total, provider: 'cash' })
     }
   }
 
   revalidatePath('/reception/bookings')
+  revalidatePath('/reception/history')
   revalidatePath('/manager')
 
   // Phase 20 #25 — booking_confirmation email for walk-in too. The guest

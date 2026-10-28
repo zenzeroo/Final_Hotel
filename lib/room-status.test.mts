@@ -5,24 +5,11 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isCheckInReady, splitCheckInUnits, roomLockReason, RECEPTION_SETTABLE_STATUSES } from './room-status'
-
-test('roomLockReason: a staying guest locks the room, whatever its status says', () => {
-  assert.equal(roomLockReason('occupied', false), 'occupied')
-  assert.equal(roomLockReason('available', true), 'occupied') // status drifted, booking is checked in
-})
-
-test('roomLockReason: closed rooms are manager-only, the rest are free to change', () => {
-  assert.equal(roomLockReason('maintenance', false), 'closed')
-  assert.equal(roomLockReason('out_of_order', false), 'closed')
-  for (const s of ['available', 'ready', 'waiting_cleaning', 'cleaning', 'inspection', 'checkout']) {
-    assert.equal(roomLockReason(s, false), null, s)
-  }
-})
-
-test('reception can set only the cleaning-flow statuses', () => {
-  assert.deepEqual([...RECEPTION_SETTABLE_STATUSES], ['waiting_cleaning', 'cleaning', 'ready'])
-})
+import {
+  isCheckInReady,
+  splitCheckInUnits,
+  notReadyReason,
+} from './room-status'
 
 test('splitCheckInUnits: booked room type first, other ready rooms as alternatives', () => {
   const units = [
@@ -69,4 +56,40 @@ test('rooms in the cleaning flow, occupied or closed cannot', () => {
   for (const s of ['occupied', 'waiting_cleaning', 'cleaning', 'inspection', 'maintenance', 'out_of_order', 'checkout']) {
     assert.equal(isCheckInReady(s), false, s)
   }
+})
+
+test('notReadyReason: guest staying wins over the status', () => {
+  assert.deepEqual(notReadyReason('occupied', { guestUntil: '2026-10-28' }), { kind: 'guest', until: '2026-10-28' })
+  assert.deepEqual(notReadyReason('cleaning', { hasGuest: true, guestUntil: '2026-10-28' }), {
+    kind: 'guest',
+    until: '2026-10-28',
+  })
+})
+
+test('notReadyReason: cleaning flow names the housekeeper', () => {
+  assert.deepEqual(notReadyReason('waiting_cleaning', { cleanerName: 'Somjit' }), { kind: 'waiting_cleaning', by: 'Somjit' })
+  assert.deepEqual(notReadyReason('cleaning'), { kind: 'cleaning', by: null })
+  assert.deepEqual(notReadyReason('inspection'), { kind: 'inspection' })
+})
+
+test('notReadyReason: closed room prefers the repair title, then damage', () => {
+  assert.deepEqual(notReadyReason('maintenance', { repairTitle: 'ท่อรั่ว', damageDescription: 'กระจกแตก' }), {
+    kind: 'repair',
+    detail: 'ท่อรั่ว',
+  })
+  assert.deepEqual(notReadyReason('out_of_order', { damageDescription: 'กระจกแตก' }), { kind: 'damage', detail: 'กระจกแตก' })
+  assert.deepEqual(notReadyReason('maintenance'), { kind: 'repair', detail: null })
+})
+
+test('splitCheckInUnits: other rooms only of types with room for the stay', () => {
+  const units = [
+    { id: 'a', roomTypeId: 'villa', status: 'occupied' },
+    { id: 'b', roomTypeId: 'king', status: 'ready' },
+    { id: 'c', roomTypeId: 'twin', status: 'available' },
+  ]
+  const all = splitCheckInUnits(units, 'villa')
+  assert.deepEqual(all.others.map((u) => u.id), ['b', 'c'])
+  const limited = splitCheckInUnits(units, 'villa', new Set(['twin']))
+  assert.deepEqual(limited.others.map((u) => u.id), ['c'])
+  assert.deepEqual(limited.bookedNotReady.map((u) => u.id), ['a'])
 })

@@ -86,7 +86,7 @@ export default async function ReceptionDashboard() {
               {recent.map((b) => (
                 <Link
                   key={b.id}
-                  href={`/reception/bookings/${b.id}`}
+                  href={`/reception/bookings/${b.id}?from=dashboard`}
                   className="flex items-center gap-4 py-3 border-b border-outline-variant last:border-0 hover:bg-primary-fixed transition-colors -mx-2 px-2 rounded-lg"
                 >
                   <div className="flex-1 min-w-0">

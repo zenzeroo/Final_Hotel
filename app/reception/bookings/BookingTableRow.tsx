@@ -1,9 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { formatTHB } from '@/lib/pricing'
 import { formatDate } from '@/lib/dates'
-import { BookingRowActions } from './BookingRowActions'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import type { StaffBooking } from '@/lib/data/staff'
 import { useLocale } from '@/lib/i18n/useT'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
@@ -15,13 +16,9 @@ interface BookingTableRowProps {
 
 // Phase 46.1 — entire row clickable: clicking anywhere in cells 1-6
 // (booking code, guest, room, dates, status, total) navigates to the
-// detail page via onClick + router.push. The action column carries a
-// stopPropagation handler so the eye icon, cancel X, and confirm modal
-// backdrop clicks don't bubble up to trigger a redundant navigation.
-//
-// Tradeoff: right-click "Open in new tab" and keyboard Tab + Enter are
-// not supported (no real <a> element). The eye icon button remains the
-// keyboard-accessible entry point for the detail page.
+// read-only detail page via onClick + router.push. The last column holds
+// an eye <Link> — the keyboard / open-in-new-tab entry point — with
+// stopPropagation so it doesn't trigger a second navigation.
 export function BookingTableRow({ booking: b }: BookingTableRowProps) {
   const t = useT()
   const locale = useLocale()
@@ -63,15 +60,18 @@ export function BookingTableRow({ booking: b }: BookingTableRowProps) {
       <Td align="right">
         <span className="text-body-md font-semibold text-primary">{formatTHB(b.total)}</span>
       </Td>
-      {/* Action column — stopPropagation prevents row click when the user
-          hits the eye icon, cancel X, the "รอชำระ" badge area, OR the
-          confirm modal backdrop (which renders inside BookingRowActions). */}
+      {/* View-only: the list never changes a booking. The eye link is the
+          keyboard path to the read-only detail; stopPropagation avoids a
+          second navigation from the row's onClick. */}
       <Td align="right" onClick={(e) => e.stopPropagation()}>
-        <BookingRowActions
-          bookingId={b.id}
-          status={b.status}
-          paymentStatus={b.payment_status}
-        />
+        <Link
+          href={detailUrl}
+          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors"
+          aria-label={t('reception.bookingsPage.viewDetails')}
+          title={t('reception.bookingsPage.viewDetails')}
+        >
+          <MaterialIcon name="visibility" size={18} />
+        </Link>
       </Td>
     </tr>
   )

@@ -21,7 +21,8 @@ import {
 } from './CheckInOutViewTabs'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
-import { splitCheckInUnits } from '@/lib/room-status'
+import { isCheckInReady, splitCheckInUnits } from '@/lib/room-status'
+import { getMovableRoomTypeIds, getRoomNotReadyReasons } from '@/lib/data/staff'
 
 export const dynamic = 'force-dynamic'
 
@@ -196,6 +197,21 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
     roomTypeName: (u.room_type as { name_th?: string } | null)?.name_th ?? null,
   }))
 
+  // Why the booked type's rooms aren't ready (guest staying, cleaning,
+  // repair…) — fetched only on the check-in tab, only for those rooms.
+  const bookedTypeIds = new Set(
+    activeTab === 'checkin' ? list.filter((b) => b.status !== 'checked_in').map((b) => b.room_type_id) : [],
+  )
+  const notReadyReasons = await getRoomNotReadyReasons(
+    allAvailableUnits.filter((u) => u.roomTypeId && bookedTypeIds.has(u.roomTypeId) && !isCheckInReady(u.status)),
+  )
+  // Which types each booking may move into (a move takes the room's type, so
+  // a type fully booked over the stay must not be offered).
+  const checkInIds = activeTab === 'checkin' ? list.filter((b) => b.status === 'confirmed').map((b) => b.id) : []
+  const movableByBooking = new Map(
+    await Promise.all(checkInIds.map(async (id) => [id, await getMovableRoomTypeIds(id)] as const)),
+  )
+
   // Topic-aware upcoming list — drives both the rendered content AND
   // the count badge on the "กำลังจะมา" view-tab pill.
   const upcoming = activeTab === 'checkin' ? upcomingCheckIns : upcomingCheckOuts
@@ -301,7 +317,11 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
                 // The booked room type's ready room is the default; other
                 // ready rooms only if reception says the booked one has a
                 // problem (or it isn't ready).
-                const { booked, others, bookedNotReady } = splitCheckInUnits(allAvailableUnits, b.room_type_id)
+                const { booked, others, bookedNotReady } = splitCheckInUnits(
+                  allAvailableUnits,
+                  b.room_type_id,
+                  movableByBooking.get(b.id) ?? new Set(),
+                )
                 return (
                   <BookingRow
                     locale={locale}
@@ -324,7 +344,11 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
                           label={actionVerb}
                           bookedUnits={activeTab === 'checkin' ? booked : undefined}
                           otherUnits={activeTab === 'checkin' ? others : undefined}
-                          bookedNotReady={activeTab === 'checkin' ? bookedNotReady : undefined}
+                          bookedNotReady={
+                            activeTab === 'checkin'
+                              ? bookedNotReady.map((u) => ({ ...u, reason: notReadyReasons[u.id] }))
+                              : undefined
+                          }
                         />
                       )
                     }
@@ -449,13 +473,15 @@ function BookingRow({
 }) {
   const t = getT(locale)
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-surface-container-low rounded-xl hover:bg-surface-container transition-colors">
+    // flex-wrap: on narrow screens the action (room picker + button + reason)
+    // drops below the guest details instead of running past the card.
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface-container-low rounded-xl hover:bg-surface-container transition-colors">
       <Link
-        href={`/reception/bookings/${booking.id}`}
+        href={`/reception/check-in-out/${booking.id}`}
         // flex-wrap at every width: one line when it fits, otherwise the
         // fixed-width date / nights / total drop to a second line instead
         // of widening the page.
-        className="flex-1 min-w-0 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md focus-visible:outline-2 focus-visible:outline-secondary"
+        className="flex-1 min-w-48 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md focus-visible:outline-2 focus-visible:outline-secondary"
       >
         <span className="w-full md:w-auto md:flex-[3] min-w-0 flex items-baseline gap-2">
           <span className="text-body-md font-semibold text-on-surface truncate">{booking.booker_full_name}</span>
@@ -481,7 +507,7 @@ function BookingRow({
           </span>
         )}
       </Link>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="ml-auto max-w-full">{action}</div>}
     </div>
   )
 }
