@@ -32,6 +32,7 @@ next-env.d.ts
 
 # Dev server logs (untracked, leaked from terminal)
 /.dev-server*.log
+/dev-server*.log
 
 # Supabase CLI local artifacts
 /scripts/.supabase-ca.crt

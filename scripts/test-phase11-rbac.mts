@@ -39,7 +39,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 loadEnv({ path: resolve(__dirname, '..', '.env.local') })
 
 const BASE = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const APP = 'http://localhost:3000'
+const APP = process.env.APP_URL ?? 'http://localhost:3000'
 
 const ROLES = {
   admin: { email: 'admin@zenzero.com', password: process.env.ADMIN_TEST_PASSWORD ?? 'AdminPass123!' },
@@ -168,15 +168,26 @@ await expectRedirect(sessions.admin, '/login', HOME.admin, 'admin cookie → /lo
 // ── 2. Public pages accessible to all signed-in roles ──
 
 await expectOk(sessions.user, '/', 'user → / is 200')
-await expectOk(sessions.reception, '/', 'reception → / is 200 (public)')
-await expectOk(sessions.manager, '/', 'manager → / is 200 (public)')
+// Phase 27 — staff landing on the homepage go to their own dashboard.
+await expectRedirect(sessions.reception, '/', HOME.reception, 'reception → / redirects to /reception')
+await expectRedirect(sessions.manager, '/', HOME.manager, 'manager → / redirects to /manager')
 await expectOk(sessions.user, '/rooms', 'user → /rooms is 200')
 await expectOk(sessions.reception, '/rooms', 'reception → /rooms is 200 (public)')
 await expectOk(sessions.manager, '/rooms', 'manager → /rooms is 200 (public)')
 
 // ── 3. Own-portal sanity (sanity, no redirect) ──
 
-await expectOk(sessions.user, '/bookings', 'user → /bookings is 200')
+// Phase 61 — a customer who has not accepted the current terms is sent to
+// /consent first; the seed user's consent state is left as it is.
+await step('user → /bookings is 200 (or /consent until the current terms are accepted)', async () => {
+  const r = await fetchFinal(sessions.user, '/bookings')
+  if (r.status === 200) return '200 OK'
+  assert(
+    r.status === 307 && (r.location ?? '').startsWith('/consent'),
+    'expected 200 or a redirect to /consent; got ' + r.status + ' (location=' + r.location + ')',
+  )
+  return 'consent gate → ' + r.location
+})
 await expectOk(sessions.reception, '/reception', 'reception → /reception is 200')
 await expectOk(sessions.housekeeper, '/housekeeper', 'housekeeper → /housekeeper is 200')
 await expectOk(sessions.manager, '/manager', 'manager → /manager is 200')
@@ -221,9 +232,9 @@ await expectOk(sessions.admin, '/manager', 'admin → /manager is 200 (superuser
 await expectRedirect(sessions.admin, '/bookings', HOME.admin, 'admin → /bookings redirects to /admin')
 await expectRedirect(sessions.admin, '/bookings/new', HOME.admin, 'admin → /bookings/new redirects to /admin')
 
-// ── 9. Unauthed user → /bookings → /login (proxy protected paths) ──
+// ── 9. Unauthed: /bookings shows a sign-in card (no redirect); /admin → /login ──
 
-await expectRedirect('', '/bookings', '/login', 'unauthed → /bookings redirects to /login')
+await expectOk('', '/bookings', 'unauthed → /bookings is 200 (sign-in placeholder card)')
 await expectRedirect('', '/admin', '/login', 'unauthed → /admin redirects to /login')
 
 console.log('\n' + (failed === 0 ? '✅' : '⚠️') + '  ' + passed + ' passed, ' + failed + ' failed')
