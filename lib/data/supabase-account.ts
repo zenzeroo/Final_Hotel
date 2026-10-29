@@ -194,8 +194,10 @@ export async function checkIdentityLinkSafety(args: {
   existingEmail: string
   newEmailVerified: boolean
 }): Promise<IdentityLinkSafety> {
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('can_link_identity_by_email', {
+  // service_role only since 20261023 (the RPC reveals whether an email has
+  // an account); the identity-link action authenticates the user first.
+  const admin = await createAdminClient()
+  const { data, error } = await admin.rpc('can_link_identity_by_email', {
     p_existing_email: args.existingEmail,
     p_new_email_verified: args.newEmailVerified,
   })

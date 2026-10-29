@@ -15,13 +15,14 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const method = request.method
 
-  // Rate-limit check on sensitive mutation paths (POST/PUT/DELETE).
-  // GET requests aren't throttled at the proxy — they're cheap and
-  // already constrained by the SSR render budget.
+  // Rate-limit check on the sensitive paths listed in lib/rate-limit.ts
+  // (POST/PUT/DELETE/PATCH). Other paths — server actions elsewhere, the
+  // Stripe webhook — get null and pass. GET requests aren't throttled at
+  // the proxy — they're cheap and already constrained by the SSR render budget.
   const isMutation = method === 'POST' || method === 'PUT' || method === 'DELETE' || method === 'PATCH'
   if (isMutation) {
     const limit = checkRateLimit(getClientIp(request), pathname)
-    if (!limit.allowed) {
+    if (limit && !limit.allowed) {
       return new NextResponse(
         JSON.stringify({
           error: 'Too Many Requests',

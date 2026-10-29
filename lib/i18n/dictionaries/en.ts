@@ -2446,6 +2446,7 @@ export const en: Dictionary = {
       googleConnecting: "Connecting to Google…",
       googleCancelled: "Google sign-in was cancelled",
       googleFailed: "Google sign-in failed. Please try again.",
+      accountDeactivated: "This staff account has been deactivated. Please contact an administrator.",
     },
     profile: {
       notFound: "We could not find your profile. Please contact an administrator.",

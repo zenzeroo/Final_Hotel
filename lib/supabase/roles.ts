@@ -21,6 +21,22 @@ export type UserRole = 'user' | 'reception' | 'housekeeper' | 'manager' | 'admin
  * their own dashboard instead. If you add a new role, update this AND
  * add the route to proxy.ts `staffPaths` (or a role-specific layout).
  */
+/**
+ * Why a signed-in account may not use the app, or null. Customers are
+ * suspended (`is_suspended`); staff are deactivated by an admin
+ * (`is_active=false`, which customers never use). The value is also the
+ * `/login?error=` code. Checked by getSession() and by the proxy, which is
+ * the only place that can clear the auth cookies on a page request.
+ */
+export function accessBlock(
+  profile: { role: string; is_suspended?: boolean | null; is_active?: boolean | null } | null,
+): 'suspended' | 'deactivated' | null {
+  if (!profile) return null
+  if (profile.is_suspended) return 'suspended'
+  if (profile.role !== 'user' && profile.is_active === false) return 'deactivated'
+  return null
+}
+
 export function roleHomePath(role: UserRole): string {
   switch (role) {
     case 'admin':

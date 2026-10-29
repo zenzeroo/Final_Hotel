@@ -2449,6 +2449,7 @@ export const th = {
       googleConnecting: "กำลังเชื่อมต่อกับ Google…",
       googleCancelled: "ยกเลิกการเข้าสู่ระบบด้วย Google แล้ว",
       googleFailed: "เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+      accountDeactivated: "บัญชีพนักงานนี้ถูกปิดใช้งานแล้ว กรุณาติดต่อผู้ดูแลระบบ",
     },
     profile: {
       notFound: "ไม่พบข้อมูลโปรไฟล์ของคุณ กรุณาติดต่อผู้ดูแลระบบ",

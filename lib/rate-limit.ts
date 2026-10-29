@@ -5,9 +5,17 @@
  * For multi-instance production, swap `buckets` for Upstash Redis or
  * similar (the `checkRateLimit` API stays the same).
  *
- * Pattern: token bucket per (route, clientIp). Each bucket has a max
- * token count + refill rate. Each request consumes 1 token; empty bucket
- * returns 429 with `Retry-After` (seconds until next token).
+ * Pattern: token bucket per (route, clientIp). Each bucket holds up to
+ * `max` tokens and refills continuously at `max` tokens per `windowMs`.
+ * Each request consumes 1 token; empty bucket returns 429 with
+ * `Retry-After` (seconds until the next whole token).
+ *
+ * Only the routes in ROUTE_CONFIG are limited. Every other path —
+ * server actions on other pages, the Stripe webhook — returns null and
+ * is never throttled here.
+ *
+ * Known limitation: buckets live in this process's memory, so on a
+ * multi-instance host (Vercel) each instance counts on its own.
  *
  * Memory bound: LRU evicts buckets idle for > 1 hour, capped at 10k
  * entries. Stale entries never grow the heap under normal traffic.
@@ -31,11 +39,9 @@ type Bucket = {
 type RouteConfig = {
   /** Max tokens in the bucket (== max burst). */
   max: number
-  /** Refill window in ms — 1 token added per windowMs when below max. */
+  /** Time in ms for an empty bucket to refill completely (`max` tokens). */
   windowMs: number
 }
-
-const DEFAULT_CONFIG: RouteConfig = { max: 60, windowMs: 60_000 } // 60/min default
 
 /**
  * Per-route overrides. Keep this small — proxy runs on every request.
@@ -52,13 +58,13 @@ const ROUTE_CONFIG: Record<string, RouteConfig> = {
   '/reset-password': { max: 10, windowMs: 60_000 }, // 10 password updates/min per IP
 }
 
-function getConfig(route: string): RouteConfig {
+function getConfig(route: string): RouteConfig | null {
   // Exact match first, then prefix match for nested routes.
   if (ROUTE_CONFIG[route]) return ROUTE_CONFIG[route]
   for (const [prefix, config] of Object.entries(ROUTE_CONFIG)) {
-    if (route.startsWith(prefix)) return config
+    if (route.startsWith(prefix + '/')) return config
   }
-  return DEFAULT_CONFIG
+  return null
 }
 
 // LRU-ish: Map preserves insertion order; we re-insert on hit to keep
@@ -86,11 +92,13 @@ export type RateLimitResult =
  * @param ip   - Client IP. Falls back to 'unknown' for missing headers.
  * @param route - Logical route key (use `request.nextUrl.pathname`).
  *
- * Returns `{ allowed: true, remaining, limit }` if the request may proceed,
- * or `{ allowed: false, retryAfterSeconds, limit }` if the bucket is empty.
+ * Returns null for a route that is not rate-limited, `{ allowed: true,
+ * remaining, limit }` if the request may proceed, or `{ allowed: false,
+ * retryAfterSeconds, limit }` if the bucket is empty.
  */
-export function checkRateLimit(ip: string, route: string): RateLimitResult {
+export function checkRateLimit(ip: string, route: string): RateLimitResult | null {
   const config = getConfig(route)
+  if (!config) return null
   const key = `${ip}:${route}`
   const now = Date.now()
   gc(now)
@@ -104,21 +112,16 @@ export function checkRateLimit(ip: string, route: string): RateLimitResult {
     buckets.delete(key)
     buckets.set(key, bucket)
 
-    // Refill: tokens accumulated since lastRefill (capped at config.max).
+    // Continuous refill: max tokens per windowMs, capped at max.
     const elapsed = now - bucket.lastRefill
     if (elapsed > 0) {
-      const refillCount = Math.floor(elapsed / config.windowMs)
-      if (refillCount > 0) {
-        bucket.tokens = Math.min(config.max, bucket.tokens + refillCount)
-        bucket.lastRefill = now
-      }
+      bucket.tokens = Math.min(config.max, bucket.tokens + (elapsed * config.max) / config.windowMs)
+      bucket.lastRefill = now
     }
   }
 
-  if (bucket.tokens <= 0) {
-    // Time until next token = windowMs - (elapsed since last refill).
-    const elapsed = now - bucket.lastRefill
-    const retryAfterMs = Math.max(0, config.windowMs - (elapsed % config.windowMs))
+  if (bucket.tokens < 1) {
+    const retryAfterMs = ((1 - bucket.tokens) * config.windowMs) / config.max
     return {
       allowed: false,
       retryAfterSeconds: Math.ceil(retryAfterMs / 1000),
@@ -129,7 +132,7 @@ export function checkRateLimit(ip: string, route: string): RateLimitResult {
   bucket.tokens -= 1
   return {
     allowed: true,
-    remaining: bucket.tokens,
+    remaining: Math.floor(bucket.tokens),
     limit: config.max,
   }
 }

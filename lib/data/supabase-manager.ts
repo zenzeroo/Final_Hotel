@@ -37,7 +37,6 @@ import type {
   SeasonalRate,
   CancellationPolicy,
   HeroSlide,
-  HeroSlideSourceType,
   OccupancyPoint,
   ReportMetric,
   ReportTrendPoint,
@@ -57,18 +56,6 @@ import { addDaysIso, diffDaysIso, getTodayBangkok, parseReportRange, toBangkokIs
 // =========================================================
 // Phase 9C — Dashboard aggregations
 // =========================================================
-
-type BookingRow = {
-  id: string
-  booking_code: string
-  booker_full_name: string
-  check_in: string
-  check_out: string
-  nights: number
-  total: number
-  status: BookingOversightStatus | string
-  created_at: string
-}
 
 function initials(fullName: string): string {
   const parts = fullName.trim().split(/\s+/)
@@ -1444,7 +1431,7 @@ export async function approveRefund(args: { refundId: string }): Promise<{ id: s
 export async function rejectRefund(args: { refundId: string; reason: string }): Promise<{ id: string }> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('refund_requests')
     .update({
       status: 'rejected',
@@ -1452,7 +1439,11 @@ export async function rejectRefund(args: { refundId: string; reason: string }): 
       decision_note: args.reason,
     })
     .eq('id', args.refundId)
+    .eq('status', 'pending')
+    .select('id')
   if (error) wrapSupabaseError('', error)
+  // Never overwrite an approved (already paid out) request.
+  if (!data || data.length === 0) throw new Error('คำขอคืนเงินนี้ถูกพิจารณาไปแล้ว')
   return { id: args.refundId }
 }
 

@@ -24,6 +24,7 @@ import { actionFail } from '@/lib/errors/supabase'
 import { isUuid } from '@/lib/ids'
 import { sendEmail } from '@/lib/email/resend'
 import { CHECK_IN_READY_STATUSES } from '@/lib/room-status'
+import { getTodayBangkok } from '@/lib/dates'
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
@@ -60,13 +61,21 @@ export async function checkInBookingAction(
   try {
     const { data: booking, error: readErr } = await supabase
       .from('bookings')
-      .select('id, status, room_type_id')
+      .select('id, status, room_type_id, channel, payment_status, check_in')
       .eq('id', parsed.data.bookingId)
       .maybeSingle()
     if (readErr) throw readErr
     if (!booking) return { ok: false, error: 'ไม่พบการจอง' }
     if (booking.status !== 'confirmed') {
       return { ok: false, error: 'สถานะการจองไม่อยู่ในสถานะที่พร้อมเช็คอิน' }
+    }
+    // An unpaid web booking does not hold its room (it expires at
+    // payment_due_at); walk-ins pay at the desk.
+    if (booking.channel === 'web' && booking.payment_status === 'unpaid') {
+      return { ok: false, error: 'การจองนี้ยังไม่ได้ชำระเงิน — ยังเช็คอินไม่ได้' }
+    }
+    if (booking.check_in > getTodayBangkok()) {
+      return { ok: false, error: 'ยังไม่ถึงวันเช็คอินของการจองนี้' }
     }
 
     // Phase 55 — a pending refund request means the manager may still cancel
@@ -129,16 +138,21 @@ export async function checkInBookingAction(
       }
     }
 
-    const { error: updateErr } = await supabase
+    // Conditional on 'confirmed': a booking cancelled / expired since the
+    // read above must not be checked in over the top.
+    const { data: checkedIn, error: updateErr } = await supabase
       .from('bookings')
       .update({ status: 'checked_in', room_unit_id: parsed.data.roomUnitId })
       .eq('id', parsed.data.bookingId)
-    if (updateErr) {
+      .eq('status', 'confirmed')
+      .select('id')
+    if (updateErr || !checkedIn || checkedIn.length === 0) {
       await releaseRoom()
       if (roomChanged) {
         await supabase.from('bookings').update({ room_type_id: booking.room_type_id }).eq('id', parsed.data.bookingId)
       }
-      throw updateErr
+      if (updateErr) throw updateErr
+      return { ok: false, error: 'สถานะการจองไม่อยู่ในสถานะที่พร้อมเช็คอิน' }
     }
 
     // Audit row (the original client-component path skipped this — Phase 25
@@ -196,11 +210,17 @@ export async function checkOutBookingAction(
       return { ok: false, error: 'สถานะการจองไม่อยู่ในสถานะที่พร้อมเช็คเอาท์' }
     }
 
-    const { error: updateErr } = await supabase
+    const { data: checkedOut, error: updateErr } = await supabase
       .from('bookings')
       .update({ status: 'checked_out' })
       .eq('id', parsed.data.bookingId)
+      .eq('status', 'checked_in')
+      .select('id')
     if (updateErr) throw updateErr
+    // Another receptionist checked the guest out first — no second audit row / email.
+    if (!checkedOut || checkedOut.length === 0) {
+      return { ok: false, error: 'สถานะการจองไม่อยู่ในสถานะที่พร้อมเช็คเอาท์' }
+    }
 
     // Audit row + thank-you email. Capture nights_stayed from the booking
     // record for the template body.
@@ -248,7 +268,6 @@ export async function checkOutBookingAction(
         })
       }
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('[checkout_thank_you] email dispatch failed:', e)
     }
 

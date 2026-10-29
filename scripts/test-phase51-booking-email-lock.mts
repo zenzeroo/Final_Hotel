@@ -14,9 +14,11 @@
  * Cases:
  *   1.  Form-level: BookingForm.tsx has readOnly + aria-readonly +
  *       lock icon + helper text; no `bookerEmail` field sent to actions.
- *   2.  create_temp_booking tamper (authenticated): row email = session email.
- *   3.  complete_temp_booking tamper (authenticated): row email = session email.
- *   4.  create_booking tamper (authenticated, web path): row email = session email.
+ *   (20261022: the three RPCs are service_role only — the server actions
+ *   call them; cases 2/3/7 call as service_role, case 4 checks the refusal.)
+ *   2.  create_temp_booking tamper: row email = account email (from p_user_id).
+ *   3.  complete_temp_booking tamper: row email = account email.
+ *   4.  create_booking called directly by an authenticated user: refused.
  *   5.  create_booking walk-in (service_role): row email = typed email (NOT locked).
  *   6.  Google-OAuth user: row email = Google-OAuth auth.users.email.
  *   7.  profiles.email NULL fallback: row email = auth.users.email.
@@ -354,10 +356,13 @@ async function main() {
   usersToCleanup.push(userA.userId)
   const tamperedEmail = 'attacker@evil.com'
   let booking2Id = ''
-  await step('Case 2: create_temp_booking — authenticated user passes tampered email', async () => {
+  // 20261022 — the booking RPCs are service_role only (the server actions
+  // call them); create/complete_temp_booking still derive the email from
+  // p_user_id whatever the caller passes.
+  await step('Case 2: create_temp_booking — tampered email replaced by the account email', async () => {
     booking2Id = await insertBookingViaCreateTemp(
       { userId: userA.userId, roomTypeId, tamperedEmail, nights: 1, startOffsetDays: 30 },
-      userA.client,
+      svc,
     )
     bookingsToCleanup.push(booking2Id)
     const stored = await readBookingEmail(booking2Id)
@@ -371,12 +376,12 @@ async function main() {
   // ============================================================
   // Case 3 — complete_temp_booking tamper (authenticated)
   // ============================================================
-  await step('Case 3: complete_temp_booking — authenticated user passes tampered email', async () => {
+  await step('Case 3: complete_temp_booking — tampered email replaced by the account email', async () => {
     await completeBookingViaCompleteTemp(
       booking2Id,
       userA.userId,
       tamperedEmail,
-      userA.client,
+      svc,
     )
     const stored = await readBookingEmail(booking2Id)
     assertEq(stored, userA.email, 'completed booking booker_email')
@@ -391,17 +396,21 @@ async function main() {
   // ============================================================
   const userB = await createTestUser('case4')
   usersToCleanup.push(userB.userId)
-  let booking4Id = ''
-  await step('Case 4: create_booking — authenticated user passes tampered email', async () => {
-    booking4Id = await insertBookingViaCreateBooking(
-      { userId: userB.userId, roomTypeId, tamperedEmail, nights: 1, startOffsetDays: 60 },
-      userB.client,
-      'web',
-    )
-    bookingsToCleanup.push(booking4Id)
-    const stored = await readBookingEmail(booking4Id)
-    assertEq(stored, userB.email, 'create_booking web booker_email')
-    assert(stored !== tamperedEmail, 'tampered email accepted on create_booking!')
+  // The web path's email now comes from createBooking (auth.getUser()); a
+  // guest calling the RPC directly is refused outright (20261022).
+  await step('Case 4: create_booking — authenticated user calling the RPC directly is refused', async () => {
+    let refused = ''
+    try {
+      const id = await insertBookingViaCreateBooking(
+        { userId: userB.userId, roomTypeId, tamperedEmail, nights: 1, startOffsetDays: 60 },
+        userB.client,
+        'web',
+      )
+      bookingsToCleanup.push(id)
+    } catch (e) {
+      refused = (e as Error).message
+    }
+    assert(/permission denied/i.test(refused), `expected permission denied, got: ${refused || 'booking created'}`)
   })
 
   // ============================================================
@@ -477,7 +486,7 @@ async function main() {
 
       const id = await insertBookingViaCreateTemp(
         { userId: userD.userId, roomTypeId, tamperedEmail, nights: 1, startOffsetDays: 120 },
-        userD.client,
+        svc,
       )
       bookingsToCleanup.push(id)
       const stored = await readBookingEmail(id)

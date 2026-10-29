@@ -87,11 +87,17 @@ export async function approveRefundAction(formData: FormData): Promise<ActionRes
     // 1. Read the refund request to learn its booking + amount.
     const { data: rr, error: rrErr } = await supabase
       .from('refund_requests')
-      .select('id, booking_id, amount')
+      .select('id, booking_id, amount, status')
       .eq('id', refundId)
       .maybeSingle()
     if (rrErr) throw rrErr
     if (!rr) return { ok: false, error: 'ไม่พบคำขอคืนเงิน' }
+    // approve_refund refuses a decided request, but only AFTER Stripe has
+    // already paid out — check first so a rejected / already-approved
+    // request never reaches stripe.refunds.create().
+    if (rr.status !== 'pending') {
+      return { ok: false, error: 'คำขอคืนเงินนี้ถูกพิจารณาไปแล้ว' }
+    }
 
     // 2. Find a Stripe payment for the linked booking (only if it's
     //    succeeded + has a Stripe payment_intent). Cash bookings have

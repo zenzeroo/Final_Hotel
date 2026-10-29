@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { env, hasSupabase } from '../env'
 import { roleHomePath, type UserRole } from './getSession'
+import { accessBlock } from './roles'
 import { consentVersionOf, needsConsent } from '../consent'
 import { fetchCurrentLegalVersion } from '../legal/current'
 
@@ -41,6 +42,15 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // getUser() may have refreshed the session and written new auth cookies
+  // onto `response`; a redirect must carry them, or the browser keeps the
+  // old (now revoked) refresh token and is signed out on its next request.
+  const redirectTo = (url: URL) => {
+    const redirect = NextResponse.redirect(url)
+    response.cookies.getAll().forEach((c) => redirect.cookies.set(c))
+    return redirect
+  }
+
   // Protected routes. /bookings is intentionally NOT here — logged-out
   // visitors see a styled "please sign in" placeholder card on the page
   // itself (app/(booking)/bookings/page.tsx) instead of being auto-
@@ -53,7 +63,7 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('next', request.nextUrl.pathname)
-    return NextResponse.redirect(url)
+    return redirectTo(url)
   }
 
   // Staff-only routes (require reception/housekeeper/manager/admin role).
@@ -79,25 +89,25 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone()
       url.pathname = roleHomePath(role)
       url.search = ''
-      return NextResponse.redirect(url)
+      return redirectTo(url)
     }
     if (isHousekeeperPath && role !== 'housekeeper' && role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = roleHomePath(role)
       url.search = ''
-      return NextResponse.redirect(url)
+      return redirectTo(url)
     }
     if (isManagerPath && role !== 'manager' && role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = roleHomePath(role)
       url.search = ''
-      return NextResponse.redirect(url)
+      return redirectTo(url)
     }
     if (isAdminPath && role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = roleHomePath(role)
       url.search = ''
-      return NextResponse.redirect(url)
+      return redirectTo(url)
     }
   }
 
@@ -116,7 +126,7 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone()
       url.pathname = roleHomePath(role)
       url.search = ''
-      return NextResponse.redirect(url)
+      return redirectTo(url)
     }
   }
 
@@ -145,7 +155,7 @@ export async function updateSession(request: NextRequest) {
       url.pathname = '/consent'
       url.search = ''
       url.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search)
-      return NextResponse.redirect(url)
+      return redirectTo(url)
     }
   }
 
@@ -155,14 +165,31 @@ export async function updateSession(request: NextRequest) {
   if (user && authPages.includes(request.nextUrl.pathname)) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, is_suspended, is_active')
       .eq('id', user.id)
       .maybeSingle()
+
+    // getSession() sends suspended / deactivated accounts here but cannot
+    // clear the cookies from a Server Component; do it on this response,
+    // otherwise /login sees the same user again and redirects to itself.
+    const block = accessBlock(profile)
+    if (block) {
+      await supabase.auth.signOut()
+      if (request.nextUrl.pathname === '/login' && request.nextUrl.searchParams.get('error') === block) {
+        return response
+      }
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.search = ''
+      url.searchParams.set('error', block)
+      return redirectTo(url)
+    }
+
     const role = (profile?.role as UserRole | undefined) ?? 'user'
     const url = request.nextUrl.clone()
     url.pathname = roleHomePath(role)
     url.search = ''
-    return NextResponse.redirect(url)
+    return redirectTo(url)
   }
 
   return response

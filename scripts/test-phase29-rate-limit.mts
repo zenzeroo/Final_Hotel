@@ -11,7 +11,10 @@
  *
  * Not in CI yet — Phase 20 #27 will wire these. Run via `npx tsx`.
  */
-import { checkRateLimit, getClientIp } from '../lib/rate-limit.ts'
+import { checkRateLimit as checkOrNull, getClientIp } from '../lib/rate-limit.ts'
+
+// Every route used below is rate-limited, so the result is never null.
+const checkRateLimit = (ip: string, route: string) => checkOrNull(ip, route)!
 
 const log = (label: string, pass: boolean, detail?: string) => {
   const tag = pass ? '✓' : '✗'
@@ -51,13 +54,12 @@ async function main() {
   const otherRoute = checkRateLimit('1.2.3.4', '/register')
   log('Case 5: different route has fresh bucket', otherRoute.allowed === true && otherRoute.remaining === 4, `got remaining=${'remaining' in otherRoute ? otherRoute.remaining : 'n/a'}`)
 
-  // Case 6: Refill — wait ~1.1s, then call again on a fast-window bucket
-  // (use default 60/min = 1 token/sec) and confirm the blocked bucket recovers.
+  // Case 6: a short wait does not unblock the bucket.
   console.log('\nWaiting 1.5s for refill...')
   await sleep(1500)
   const afterRefill = checkRateLimit('1.2.3.4', '/login')
-  // windowMs=60_000 with max=10, 1.5s elapsed → 0 refill tokens (Math.floor(1500/60000)=0)
-  // So this stays blocked. To verify refill cleanly, lower windowMs.
+  // Continuous refill: 10 tokens / 60s → 1.5s adds 0.25 of a token, so this
+  // stays blocked. Full refill timing is covered by lib/rate-limit.test.mts.
   log('Case 6a: 1.5s wait < 60s window does not refill', !afterRefill.allowed, `got allowed=${afterRefill.allowed}`)
 
   // Case 6b: Drain /register (5/min) and verify the 6th call is blocked.

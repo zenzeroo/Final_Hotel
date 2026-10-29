@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from './server'
-import { roleHomePath, type UserRole } from './roles'
+import { accessBlock, type UserRole } from './roles'
 
 // roleHomePath + UserRole moved to ./roles (re-exported below for
 // back-compat — 20+ server-side consumers import them from this file).
@@ -46,16 +46,20 @@ export const getSession = cache(async (): Promise<SessionUser | null> => {
   // Fetch profile (incl. suspension flag for the app-layer guard below).
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, phone, role, avatar_key, is_suspended, locale, terms_version')
+    .select('full_name, phone, role, avatar_key, is_suspended, is_active, locale, terms_version')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (profile?.is_suspended) {
-    // Sign out so the cookie is cleared — next request can't re-trigger
-    // this branch. Redirect to /login with a query param the login page
-    // can surface as a red banner.
+  // Suspended customers and deactivated staff are signed out and sent to
+  // /login with a banner code. signOut() revokes the session server-side;
+  // a Server Component cannot clear cookies, so the proxy clears them when
+  // the browser lands on /login (or this page would redirect to itself).
+  // The DB side for staff is is_staff() / has_role(), which require
+  // is_active (20261022).
+  const block = accessBlock(profile)
+  if (block) {
     await supabase.auth.signOut()
-    redirect('/login?error=suspended')
+    redirect(`/login?error=${block}`)
   }
 
   return {

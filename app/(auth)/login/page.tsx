@@ -79,6 +79,11 @@ function mapOAuthError(
       return t('customer.login.googleCancelled')
     case 'oauth_failed':
       return t('customer.login.googleFailed')
+    // getSession() signs these accounts out and sends them here.
+    case 'suspended':
+      return t('actions.common.suspended')
+    case 'deactivated':
+      return t('customer.login.accountDeactivated')
     default:
       return undefined
   }

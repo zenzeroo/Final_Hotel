@@ -635,30 +635,12 @@ async function main() {
   })
 
   // Case 17 (updated) — Source: the leave-guard uses a Provider + hook
-  // (not a global custom event). The new architecture exposes
-  // `useLeaveGuard()` and renders the back button as a separate client
-  // component (`LeaveGuardBackButton`) that calls the hook.
-  await step('Case 17: LeaveGuardProvider exposes useLeaveGuard hook + LeaveGuardBackButton uses it', () => {
-    const providerSource = readFileSync(
-      resolve(
-        __dirname,
-        '..',
-        'components',
-        'booking',
-        'LeaveGuardProvider.tsx',
-      ),
-      'utf-8',
-    )
-    const backBtnSource = readFileSync(
-      resolve(
-        __dirname,
-        '..',
-        'components',
-        'booking',
-        'LeaveGuardBackButton.tsx',
-      ),
-      'utf-8',
-    )
+  // (not a global custom event). The standalone back button was removed in
+  // 8b274e2; the booking page's own controls call the hook instead.
+  await step('Case 17: LeaveGuardProvider exposes useLeaveGuard hook + booking page uses it', () => {
+    const read = (...parts: string[]) => readFileSync(resolve(__dirname, '..', ...parts), 'utf-8')
+    const providerSource = read('components', 'booking', 'LeaveGuardProvider.tsx')
+    const actionsSource = read('app', '(booking)', 'bookings', '[id]', 'ConfirmationActions.tsx')
     assert(
       /export function useLeaveGuard/.test(providerSource),
       'LeaveGuardProvider should export useLeaveGuard hook',
@@ -668,17 +650,17 @@ async function main() {
       'LeaveGuardProvider should use a React context for the hook',
     )
     assert(
-      /requestLeave/.test(providerSource) && /requestLeave/.test(backBtnSource),
-      'requestLeave should be defined in the provider + called from the back button',
+      /requestLeave/.test(providerSource) && /allowNavigation/.test(providerSource),
+      'the provider should expose requestLeave + allowNavigation',
+    )
+    assert(
+      /useLeaveGuard()/.test(actionsSource),
+      'ConfirmationActions should read the guard through useLeaveGuard()',
     )
     // Regression: the legacy custom event should be gone.
     assert(
-      !/booking-unpaid:show-leave/.test(providerSource),
-      'LeaveGuardProvider should NOT use the legacy booking-unpaid:show-leave event',
-    )
-    assert(
-      !/booking-unpaid:show-leave/.test(backBtnSource),
-      'LeaveGuardBackButton should NOT use the legacy booking-unpaid:show-leave event',
+      !/booking-unpaid:show-leave/.test(providerSource) && !/booking-unpaid:show-leave/.test(actionsSource),
+      'the legacy booking-unpaid:show-leave event should not be used',
     )
   })
 
@@ -725,7 +707,9 @@ async function main() {
     const checkOut = new Date(checkIn)
     checkOut.setDate(checkOut.getDate() + 1)
     const code = 'ZZR-' + Math.random().toString(36).slice(2, 7).toUpperCase()
-    const { data: tmpId, error: tmpErr } = await u.client.rpc(
+    // Both RPCs are service_role only since 20261022 (the server action
+    // calls them with the admin client too).
+    const { data: tmpId, error: tmpErr } = await svc.rpc(
       'create_temp_booking',
       {
         p_user_id: u.userId,
@@ -745,7 +729,7 @@ async function main() {
     if (tmpErr) throw new Error(`create_temp_booking: ${tmpErr.message}`)
     if (tmpId) bookingsToCleanup.push(tmpId as string)
     // Now complete it
-    const { error: compErr } = await u.client.rpc('complete_temp_booking', {
+    const { error: compErr } = await svc.rpc('complete_temp_booking', {
       p_booking_id: tmpId,
       p_user_id: u.userId,
       p_booker_full_name: 'Phase 52 Test',

@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { accessBlock } from '@/lib/supabase/roles'
 import { sanitizeNext } from '@/lib/auth/sanitize'
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
 import { getT } from '@/lib/i18n/t'
@@ -80,9 +81,20 @@ export async function signIn(prevState: AuthState | null, formData: FormData): P
   if (data.user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, is_suspended, is_active')
       .eq('id', data.user.id)
       .maybeSingle()
+
+    // Suspended / deactivated: sign out here (an action can clear the
+    // cookies) and stay on the form. Redirecting to the dashboard instead
+    // lets getSession() bounce back to /login?error=…, and when that is the
+    // page already open the client router refetches it forever.
+    const block = accessBlock(profile)
+    if (block) {
+      await supabase.auth.signOut()
+      const t = getT(locale)
+      return { error: block === 'suspended' ? t('actions.common.suspended') : t('customer.login.accountDeactivated') }
+    }
 
     const role = profile?.role
     if (role === 'admin') {

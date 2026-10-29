@@ -231,10 +231,12 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   // to the `create_booking` SECURITY DEFINER RPC. The RPC acquires a FOR
   // UPDATE lock on the room_units pool for this room_type_id, counts slot-
   // occupying bookings overlapping the date range, and throws P0001 when the
-  // pool is exhausted. Auth remains the server action's responsibility — the
-  // RPC trusts the caller (GRANT includes authenticated + service_role).
+  // pool is exhausted. The RPC stores the price, channel and user id as
+  // given, so only service_role may call it (20261022): auth + pricing stay
+  // here, and the guest's own JWT cannot reach it through PostgREST.
   const bookingCode = generateBookingCode()
-  const { data: bookingId, error: rpcError } = await supabase.rpc('create_booking', {
+  const admin = await createAdminClient()
+  const { data: bookingId, error: rpcError } = await admin.rpc('create_booking', {
     p_user_id: user.id,
     p_room_type_id: data.roomTypeId,
     p_check_in: data.checkIn,
@@ -316,7 +318,6 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     }
   } catch (e) {
     // Email failure must not break the booking flow.
-    // eslint-disable-next-line no-console
     console.error('[booking_confirmation] email dispatch failed:', e)
   }
 
@@ -455,8 +456,9 @@ export async function createTempBookingAction(
   // Phase 26.1 / 20260913_require_phone.sql.)
   const safeBookerPhone = /^[0-9]{10}$/.test(bookerPhone) ? bookerPhone : '0000000000'
 
-  // Call RPC. hold_minutes defaults to 2.
-  const { data: bookingId, error: rpcError } = await supabase.rpc(
+  // Call RPC — service_role only (20261022), like create_booking.
+  const admin = await createAdminClient()
+  const { data: bookingId, error: rpcError } = await admin.rpc(
     'create_temp_booking',
     {
       p_user_id: user.id,
@@ -663,8 +665,11 @@ export async function completeTempBookingAction(
   )
   if (price.nights === 0) return { error: t('actions.common.nightsPositive') }
 
-  // Call RPC — atomic UPDATE + audit row.
-  const { error: rpcError } = await supabase.rpc('complete_temp_booking', {
+  // Call RPC — atomic UPDATE + audit row. service_role only (20261022): the
+  // price above is the server's, p_user_id is the signed-in user, and the
+  // RPC still checks the booking belongs to p_user_id.
+  const admin = await createAdminClient()
+  const { error: rpcError } = await admin.rpc('complete_temp_booking', {
     p_booking_id: data.bookingId,
     p_user_id: user.id,
     p_booker_full_name: data.bookerFullName,
@@ -742,7 +747,6 @@ export async function completeTempBookingAction(
         })
       }
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('[booking_confirmation] email dispatch failed:', e)
     }
   })
@@ -1232,7 +1236,6 @@ export async function fireCancellationNotice(args: {
   const outcome =
     booking.payment_status !== 'paid' ? 'unpaid' : refundAmount > 0 ? 'refund_requested' : 'too_late'
   const minDays = await getRefundMinDays()
-  const refundRequestId = args.refundRequestId ?? null
   const emailLocale = await getRecipientLocale({ userId: booking.user_id })
   const { CancellationNoticeEmail, cancellationNoticeSubject } = await import(
     '@/lib/email/templates/cancellation-notice'
