@@ -6,12 +6,14 @@ import { SearchBar } from '@/components/search/SearchBar'
 import { formatTHB } from '@/lib/pricing'
 import { getMinCheckInLocalIso, addDaysLocalIso } from '@/lib/dates'
 import { getLocale } from '@/lib/i18n/getLocale'
+import { localizedName } from '@/lib/format/roomType'
 import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
 export default async function WalkInBookingPage(props: PageProps<'/reception/bookings/new'>) {
-  const t = getT(await getLocale())
+  const locale = await getLocale()
+  const t = getT(locale)
   const searchParams = await props.searchParams
 
   // Phase 45 — read dates/guests from URL so the SearchBar at the top can
@@ -60,10 +62,10 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
   }
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-8 lg:p-12 max-w-7xl">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-primary">{t('reception.walkIn.pickerHeading')}</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">
+        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.walkIn.pickerHeading')}</h1>
+        <p className="text-body-lg text-on-surface-variant mt-2">
           {t('reception.walkIn.pickerSubtitle')}
         </p>
       </div>
@@ -85,7 +87,7 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
       </div>
 
       {rooms.length === 0 ? (
-        <div className="bg-surface-container-low border border-outline-variant rounded-2xl p-10 text-center">
+        <div className="bg-surface-container-low rounded-lg p-10 text-center">
           <MaterialIcon name="event_busy" size={36} className="text-outline-variant mb-3" />
           <p className="text-body-lg text-on-surface-variant">
             {t('reception.walkIn.noRooms', { from: checkin, to: checkout })}
@@ -100,7 +102,7 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
             <Link
               key={room.id}
               href={cardHref(room.id)}
-              className="group flex flex-col bg-surface-container-lowest rounded-2xl overflow-hidden shadow-(--shadow-ambient) border border-outline-variant hover:shadow-(--shadow-ambient-md) transition-all"
+              className="group flex flex-col bg-surface-container-lowest rounded-lg overflow-hidden shadow-level-1 hover:bg-primary-fixed transition-colors"
             >
               <div className="relative aspect-[4/3] overflow-hidden">
                 <RoomImage
@@ -115,7 +117,7 @@ export default async function WalkInBookingPage(props: PageProps<'/reception/boo
                 </span>
               </div>
               <div className="p-5 flex flex-col flex-1">
-                <h3 className="font-display text-lg text-primary">{room.name_th}</h3>
+                <h3 className="font-display text-lg text-primary">{localizedName(room, locale)}</h3>
                 <p className="text-caption text-on-surface-variant line-clamp-2 flex-1 mb-0">
                   {room.short_desc}
                 </p>

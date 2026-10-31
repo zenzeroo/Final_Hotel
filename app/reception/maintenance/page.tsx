@@ -44,12 +44,12 @@ export default async function ReceptionMaintenance(props: {
   const reports = filter === 'all' ? allReports : allReports.filter(r => r.status === filter)
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-8 lg:p-12 max-w-7xl">
       <header className="mb-6">
-        <h1 className="font-display text-3xl text-primary mb-2">
+        <h1 className="font-headline-md text-headline-md text-primary mb-2">
           {t('reception.maintenancePage.title')}
         </h1>
-        <p className="text-body-md text-on-surface-variant">
+        <p className="text-body-lg text-on-surface-variant">
           {t('reception.maintenancePage.subtitle')}
         </p>
       </header>

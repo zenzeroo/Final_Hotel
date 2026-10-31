@@ -18,10 +18,10 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
   const customers = result.rows
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-8 lg:p-12 max-w-7xl">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-primary">{t('reception.customersPage.title')}</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">
+        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.customersPage.title')}</h1>
+        <p className="text-body-lg text-on-surface-variant mt-2">
           {t('reception.customersPage.subtitle')}
         </p>
       </div>
@@ -29,14 +29,14 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
       <CustomerSearch initialQuery={q} />
 
       {q && customers.length === 0 && (
-        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-2xl border border-outline-variant">
+        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-lg shadow-level-1">
           <MaterialIcon name="person_off" size={48} className="text-outline-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">{t('reception.customersPage.noMatch', { q })}</p>
         </div>
       )}
 
       {customers.length > 0 && (
-        <div className="mt-6 bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-x-auto overflow-y-hidden">
+        <div className="mt-6 bg-surface-container-lowest rounded-lg shadow-level-1 overflow-x-auto overflow-y-hidden">
           <p className="text-body-md text-on-surface-variant px-4 pt-3 pb-1">
             {t('reception.customersPage.countPeople', { count: result.total })}
           </p>
@@ -85,7 +85,7 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
       )}
 
       {!q && (
-        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-2xl border border-outline-variant">
+        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-lg shadow-level-1">
           <MaterialIcon name="search" size={48} className="text-outline-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">{t('reception.customersPage.typeToSearch')}</p>
         </div>

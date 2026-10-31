@@ -52,6 +52,7 @@ import type {
   HousekeeperWorkload,
 } from './types'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
+import { ilikePattern } from '@/lib/search/ilike'
 import { chartColors } from '@/lib/chart-theme'
 import { addDaysIso, diffDaysIso, getTodayBangkok, parseReportRange, toBangkokIsoDate } from '@/lib/dates'
 
@@ -250,7 +251,7 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
     severity: 'critical',
     count: (urgentDamages ?? []).length,
     rooms: (urgentDamages ?? []).map(roomLabel),
-    href: '/manager/housekeeping',
+    href: '/manager/housekeeping?tab=damage',
   })
   push({
     kind: 'refundsPending',
@@ -272,7 +273,7 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
     rooms: orphanRooms,
     href: '/manager/housekeeping',
   })
-  push({ kind: 'unassignedTasks', severity: 'info', count: unassignedTasks ?? 0, href: '/manager/housekeeping' })
+  push({ kind: 'unassignedTasks', severity: 'info', count: unassignedTasks ?? 0, href: '/manager/housekeeping?tab=tasks' })
   push({ kind: 'reviewsPending', severity: 'info', count: pendingReviews ?? 0, href: '/manager/reviews' })
 
   return {
@@ -896,10 +897,31 @@ export async function getNextCheckInForRooms(
 
 export const BOOKINGS_OVERSIGHT_PAGE_SIZE = 20
 
-export async function getBookingsOversight(page = 1): Promise<BookingsOversightData> {
+/** `search` matches booking code, guest name or email (the bookings tab only). */
+export async function getBookingsOversight(page = 1, search?: string): Promise<BookingsOversightData> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
   const from = (Math.max(1, Math.floor(page)) - 1) * BOOKINGS_OVERSIGHT_PAGE_SIZE
+  const pattern = ilikePattern(search)
+  let bookingsQuery = supabase
+    .from('bookings')
+    .select(
+      `
+      id, booking_code, booker_full_name, booker_email, check_in, check_out, nights, status,
+      room_type:room_types(name),
+      room_unit:room_units(unit_label)
+    `,
+      { count: 'exact' },
+    )
+    // booking_status enum is ('pending','confirmed','checked_in','checked_out','cancelled');
+    // 'refunded' lives on payment_status, not booking_status — including it
+    // raises "invalid input value for enum booking_status".
+    .in('status', ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled'])
+  if (pattern) {
+    bookingsQuery = bookingsQuery.or(
+      `booking_code.ilike.${pattern},booker_full_name.ilike.${pattern},booker_email.ilike.${pattern}`,
+    )
+  }
 
   // Parallel queries: refunds (already wired 9B), one page of bookings,
   // audit log, and active count.
@@ -914,20 +936,7 @@ export async function getBookingsOversight(page = 1): Promise<BookingsOversightD
       .select('id, booking_code, guest_name, reason, amount, created_at, booking:bookings(check_in, check_out, status)')
       .eq('status', 'pending')
       .order('created_at', { ascending: false }),
-    supabase
-      .from('bookings')
-      .select(
-        `
-        id, booking_code, booker_full_name, booker_email, check_in, check_out, nights, status,
-        room_type:room_types(name),
-        room_unit:room_units(unit_label)
-      `,
-        { count: 'exact' },
-      )
-      // booking_status enum is ('pending','confirmed','checked_in','checked_out','cancelled');
-      // 'refunded' lives on payment_status, not booking_status — including it
-      // raises "invalid input value for enum booking_status".
-      .in('status', ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled'])
+    bookingsQuery
       .order('check_in', { ascending: false })
       // Tie-breaker: many bookings share a check-in date, and without a
       // unique key the same row could show on two pages (or none).

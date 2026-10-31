@@ -4,7 +4,7 @@ import { BookingsOversightTabs } from '@/components/manager/BookingsOversightTab
 import { BookingsTable } from '@/components/manager/BookingsTable'
 import { RefundCard } from '@/components/manager/RefundCard'
 import { AuditLogTable } from '@/components/manager/AuditLogTable'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { SearchBox } from '@/components/ui/SearchBox'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 type Tab = 'main' | 'refunds' | 'audit'
 
 export default async function ManagerBookingsPage(props: {
-  searchParams: Promise<{ tab?: string; page?: string }>
+  searchParams: Promise<{ tab?: string; page?: string; q?: string }>
 }) {
   const searchParams = await props.searchParams
   const tab: Tab = (['main', 'refunds', 'audit'] as Tab[]).includes(
@@ -23,14 +23,19 @@ export default async function ManagerBookingsPage(props: {
     : 'main'
   const pageParam = Number(searchParams.page ?? 1)
   const page = Number.isFinite(pageParam) && pageParam >= 1 ? Math.floor(pageParam) : 1
+  const query = typeof searchParams.q === 'string' ? searchParams.q.trim().slice(0, 100) : ''
 
-  const [data, locale] = await Promise.all([getBookingsOversight(page), getLocale()])
+  const [data, locale] = await Promise.all([getBookingsOversight(page, query), getLocale()])
   const t = getT(locale)
 
   // Out-of-range page (e.g. ?page=99, or the last page emptied out) → last real page.
   const totalPages = Math.ceil(data.bookingsTotal / BOOKINGS_OVERSIGHT_PAGE_SIZE)
   if (tab === 'main' && data.bookingsTotal > 0 && page > totalPages) {
-    redirect(totalPages > 1 ? `/manager/bookings?page=${totalPages}` : '/manager/bookings')
+    const qs = new URLSearchParams()
+    if (query) qs.set('q', query)
+    if (totalPages > 1) qs.set('page', String(totalPages))
+    const suffix = qs.toString()
+    redirect(suffix ? `/manager/bookings?${suffix}` : '/manager/bookings')
   }
 
   return (
@@ -43,28 +48,29 @@ export default async function ManagerBookingsPage(props: {
             {t('manager.bookingsPage.subtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="inline-flex items-center gap-2 bg-surface-container-low rounded-full px-3 py-2">
-            <MaterialIcon name="search" size={16} className="text-on-surface-variant" />
-            <input
-              type="search"
-              placeholder={t('manager.bookingsPage.searchPlaceholder')}
-              className="bg-transparent text-body-md outline-none w-48"
-            />
-          </div>
-        </div>
       </header>
 
       <BookingsOversightTabs active={tab} refundCount={data.refundRequests.length} />
 
       {tab === 'main' ? (
-        <BookingsTable
-          bookings={data.bookings}
-          page={page}
-          pageSize={BOOKINGS_OVERSIGHT_PAGE_SIZE}
-          total={data.bookingsTotal}
-          locale={locale}
-        />
+        <>
+          <SearchBox
+            basePath="/manager/bookings"
+            initialQuery={query}
+            placeholder={t('manager.bookingsPage.searchPlaceholder')}
+            buttonLabel={t('manager.bookingsPage.search')}
+            className="mb-6"
+          />
+          <BookingsTable
+            bookings={data.bookings}
+            page={page}
+            pageSize={BOOKINGS_OVERSIGHT_PAGE_SIZE}
+            total={data.bookingsTotal}
+            query={query}
+            emptyTitle={query ? t('manager.bookingsPage.noMatch', { q: query }) : undefined}
+            locale={locale}
+          />
+        </>
       ) : null}
 
       {tab === 'refunds' ? (

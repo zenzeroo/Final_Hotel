@@ -20,6 +20,7 @@ import {
   type CheckInOutView,
 } from './CheckInOutViewTabs'
 import { getLocale } from '@/lib/i18n/getLocale'
+import { localizedName } from '@/lib/format/roomType'
 import { getT } from '@/lib/i18n/t'
 import { isCheckInReady, splitCheckInUnits } from '@/lib/room-status'
 import { getMovableRoomTypeIds, getRoomNotReadyReasons } from '@/lib/data/staff'
@@ -243,9 +244,9 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
   const upcomingEmptyLabel = t('reception.checkInOutPage.upcomingEmpty', { verb: topicVerb })
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-8 lg:p-12 max-w-7xl">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-primary">{t('reception.checkInOutPage.title')}</h1>
+        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.checkInOutPage.title')}</h1>
 
         {/* Phase 48f — Row 1: mode controls (topic toggle + date range).
             Wrapped in a flex container so they sit on one line on
@@ -283,7 +284,7 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
           (listQuery / upcomingCheckInsQuery / upcomingCheckOutsQuery /
           inHouseQuery). */}
       {activeView === 'today' && (
-        <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
+        <section className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
           <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center">
             <div className="flex items-center gap-3">
               <div
@@ -361,7 +362,7 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
       )}
 
       {activeView === 'upcoming' && (
-        <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
+        <section className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
           <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center">
             <div className="flex items-center gap-3">
               <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-secondary/15 text-secondary">
@@ -400,7 +401,7 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
       )}
 
       {activeView === 'inhouse' && (
-        <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
+        <section className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
           <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center">
             <div className="flex items-center gap-3">
               <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary">
@@ -438,7 +439,7 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
 interface GuestCardBooking {
   id: string
   booker_full_name: string
-  room_type: { name_th: string } | null
+  room_type: { name: string; name_th: string | null } | null
   guests: number
   booking_code: string
 }
@@ -488,7 +489,7 @@ function BookingRow({
           <span className="shrink-0 text-caption text-on-surface-variant font-mono">#{booking.booking_code}</span>
         </span>
         <span className="md:flex-[2] min-w-0 text-caption text-on-surface-variant truncate">
-          {booking.room_type?.name_th} · {t('reception.common.guestsN', { count: booking.guests })}
+          {localizedName(booking.room_type, locale)} · {t('reception.common.guestsN', { count: booking.guests })}
         </span>
         {dateLabel && (
           <span className="shrink-0 inline-flex items-center gap-1.5 text-caption text-on-surface-variant">

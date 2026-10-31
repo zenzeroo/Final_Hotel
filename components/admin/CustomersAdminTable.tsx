@@ -41,6 +41,7 @@ export function CustomersAdminTable({
   const updateStatus = useCallback(
     (next: 'all' | 'active' | 'suspended') => {
       const sp = new URLSearchParams(params.toString())
+      sp.delete('page') // a new filter starts on the first page
       if (next === 'all') sp.delete('status')
       else sp.set('status', next)
       router.push(`/admin/customers?${sp.toString()}`)

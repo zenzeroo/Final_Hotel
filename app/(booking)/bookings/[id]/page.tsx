@@ -42,7 +42,7 @@ function StatusBadge({
 }) {
   if (noShow) {
     return (
-      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold uppercase tracking-wider">
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold">
         <MaterialIcon name="event_busy" size={16} />
         {t('bookings.statusNoShow')}
       </span>
@@ -56,7 +56,7 @@ function StatusBadge({
 
   if (isCancelled) {
     return (
-      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold uppercase tracking-wider">
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold">
         <MaterialIcon name="cancel" size={16} />
         {t('bookings.statusCancelled')}
       </span>
@@ -67,7 +67,7 @@ function StatusBadge({
   // BookingHistory.statusLabel).
   if (isPaymentExpired || status === 'expired') {
     return (
-      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold uppercase tracking-wider">
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 text-error text-label-md font-semibold">
         <MaterialIcon name="timer_off" size={16} />
         {isPaymentExpired
           ? t('bookings.statusPaymentExpired')
@@ -83,7 +83,7 @@ function StatusBadge({
   // attention" (a non-urgent call to action — pay before the deadline).
   if (isUnpaid) {
     return (
-      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/15 text-warning text-label-md font-semibold uppercase tracking-wider">
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/15 text-warning text-label-md font-semibold">
         <MaterialIcon name="schedule" size={16} />
         {t('bookings.awaitingPayment')}
       </span>
@@ -91,7 +91,7 @@ function StatusBadge({
   }
   if (isPaid) {
     return (
-      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-label-md font-semibold uppercase tracking-wider">
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-label-md font-semibold">
         <MaterialIcon name="verified" size={16} />
         {t('bookings.statusPaid')}
       </span>
@@ -99,14 +99,14 @@ function StatusBadge({
   }
   if (isCheckedOut) {
     return (
-      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant text-label-md font-semibold uppercase tracking-wider">
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant text-label-md font-semibold">
         <MaterialIcon name="logout" size={16} />
         {t('bookings.statusCheckedOut')}
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/20 text-secondary text-label-md font-semibold uppercase tracking-wider">
+    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/20 text-secondary text-label-md font-semibold">
       <MaterialIcon name="schedule" size={16} />
       {t('bookings.statusPending')}
     </span>
@@ -226,6 +226,18 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
             {t('bookingDetail.bookingCode')}: <span className="font-mono font-semibold">#{booking.booking_code}</span>
           </p>
 
+          {/* Phase 56 — payment deadline + live countdown, right under the
+              title so it is seen before anything else (it used to render
+              below the footer). */}
+          {isUnpaidActive && booking.payment_due_at && (
+            <div role="status" className="mb-6 rounded-lg bg-warning/10 px-4 py-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+              <p className="text-body-md text-on-surface font-semibold">
+                <PaymentCountdown deadlineIso={booking.payment_due_at} />
+              </p>
+              <p className="text-caption text-on-surface-variant">{t('bookings.unpaidDeadlineSubtext')}</p>
+            </div>
+          )}
+
           {cancelledByUser && booking.status !== 'cancelled' && booking.payment_status === 'unpaid' && (
             // Phase 52 — only show the actionable banner when the booking
             // is still unpaid+active. After cancel, the page renders the
@@ -254,20 +266,20 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                     {localizedName(booking.room_type, locale) || t('bookings.roomName')}
                   </h2>
                   {booking.room_type?.type && (
-                    <p className="text-caption text-secondary font-semibold uppercase tracking-wider mt-1">
+                    <p className="text-caption text-secondary font-semibold mt-1">
                       {t('bookingDetail.roomType')}: {roomTypeLabel(booking.room_type.type, locale)}
                     </p>
                   )}
-                  <p className="text-caption text-on-surface-variant uppercase tracking-wider mt-1">
+                  <p className="text-caption text-on-surface-variant mt-1">
                     {t('bookingDetail.nights', { count: booking.nights })} · {t('bookings.guestsCount', { count: booking.guests })}
                   </p>
                   <div className="mt-3 grid grid-cols-2 gap-3 text-body-md">
                     <div>
-                      <p className="text-caption text-on-surface-variant uppercase tracking-wider">{t('bookingDetail.checkInDate')}</p>
+                      <p className="text-caption text-on-surface-variant">{t('bookingDetail.checkInDate')}</p>
                       <p className="font-medium text-on-surface">{formatDate(booking.check_in, localeBcp)}</p>
                     </div>
                     <div>
-                      <p className="text-caption text-on-surface-variant uppercase tracking-wider">{t('bookingDetail.checkOutDate')}</p>
+                      <p className="text-caption text-on-surface-variant">{t('bookingDetail.checkOutDate')}</p>
                       <p className="font-medium text-on-surface">{formatDate(booking.check_out, localeBcp)}</p>
                     </div>
                   </div>
@@ -284,7 +296,7 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
                 </dl>
                 {booking.special_request && (
                   <div className="mt-4 pt-4 border-t border-outline-variant">
-                    <p className="text-caption text-on-surface-variant uppercase tracking-wider mb-1">Special request</p>
+                    <p className="text-caption text-on-surface-variant mb-1">{t('bookingDetailStaff.specialRequest')}</p>
                     <p className="text-body-md text-on-surface">{booking.special_request}</p>
                   </div>
                 )}
@@ -329,7 +341,9 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
             </div>
 
             {/* RIGHT: Price summary + actions */}
-            <div className="lg:sticky lg:top-24 lg:self-start">
+            {/* On a phone the price and the next action (pay / cancel / review)
+                come first; on desktop they sit in the right column. */}
+            <div className="order-first lg:order-none lg:sticky lg:top-24 lg:self-start">
               <div className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient-lg) border border-outline-variant p-6">
                 <h2 className="font-display text-xl text-primary mb-4">{t('bookingDetail.priceBreakdown')}</h2>
 
@@ -364,20 +378,6 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
         </div>
       </main>
       <Footer />
-      {/* Phase 56 — deadline + live countdown (PaymentCountdown). Sits
-          outside <main> so it stays visible as the user scrolls. */}
-      {isUnpaidActive && booking.payment_due_at && (
-        <div className="bg-warning/10 border-t border-warning/30">
-          <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-            <p className="font-caption text-caption text-on-surface font-semibold">
-              <PaymentCountdown deadlineIso={booking.payment_due_at} />
-            </p>
-            <p className="font-caption text-caption text-on-surface-variant">
-              {t('bookings.unpaidDeadlineSubtext')}
-            </p>
-          </div>
-        </div>
-      )}
       {/* Phase 52 follow-up — leave-guard provider is mounted above
           (wraps the main content + the back-button overlay). The
           BookingUnpaidGuard is GONE — its responsibilities are
@@ -390,7 +390,7 @@ export default async function BookingConfirmationPage(props: PageProps<'/booking
 function DataRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-caption text-on-surface-variant uppercase tracking-wider">{label}</dt>
+      <dt className="text-caption text-on-surface-variant">{label}</dt>
       <dd className="text-body-md text-on-surface font-medium mt-1">{value}</dd>
     </div>
   )

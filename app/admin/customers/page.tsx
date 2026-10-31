@@ -1,5 +1,7 @@
+import { redirect } from 'next/navigation'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { listCustomers, getCustomerBookingCount } from '@/lib/data/supabase-account'
+import { Pagination } from '@/components/ui/Pagination'
+import { listCustomers, getCustomerCounts } from '@/lib/data/supabase-account'
 import { CustomersAdminTable } from '@/components/admin/CustomersAdminTable'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
@@ -15,35 +17,38 @@ function normalizeStatus(raw: string | undefined): StatusFilter {
     : 'all'
 }
 
+const PAGE_SIZE = 20
+
 export default async function AdminCustomersPage(props: {
-  searchParams: Promise<{ q?: string; status?: string }>
+  searchParams: Promise<{ q?: string; status?: string; page?: string }>
 }) {
   const t = getT(await getLocale())
   const sp = await props.searchParams
   const q = (sp.q ?? '').trim()
   const status = normalizeStatus(sp.status)
+  const pageParam = Number(sp.page ?? 1)
+  const page = Number.isFinite(pageParam) && pageParam >= 1 ? Math.floor(pageParam) : 1
 
   // Server-side filter (Phase 36 — URL query params pattern).
   const isSuspended =
     status === 'suspended' ? true : status === 'active' ? false : undefined
 
-  const customers = await listCustomers({
-    search: q.length >= 2 ? q : undefined,
-    isSuspended,
-    limit: 200,
-  })
+  // One page of customers (booking counts come in the same query) + the
+  // KPI totals over every customer.
+  const [{ rows: customers, total: matching }, counts] = await Promise.all([
+    listCustomers({ search: q.length >= 2 ? q : undefined, isSuspended, page, pageSize: PAGE_SIZE }),
+    getCustomerCounts(),
+  ])
 
-  // Parallel booking counts per customer (one query per row — fine
-  // up to ~200 customers). Could be optimised to a single GROUP BY
-  // query later if the list ever grows beyond that.
-  const counts = await Promise.all(
-    customers.map((c) => getCustomerBookingCount(c.id)),
-  )
-  const enriched = customers.map((c, i) => ({ ...c, total_bookings: counts[i] }))
-
-  const total = enriched.length
-  const active = enriched.filter((c) => !c.is_suspended).length
-  const suspended = enriched.filter((c) => c.is_suspended).length
+  const totalPages = Math.ceil(matching / PAGE_SIZE)
+  const keep = { q: q || undefined, status: status === 'all' ? undefined : status }
+  if (matching > 0 && page > totalPages) {
+    const qs = new URLSearchParams(Object.entries(keep).filter((e): e is [string, string] => !!e[1]))
+    if (totalPages > 1) qs.set('page', String(totalPages))
+    const suffix = qs.toString()
+    redirect(suffix ? `/admin/customers?${suffix}` : '/admin/customers')
+  }
+  const { all: total, active, suspended } = counts
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl">
@@ -86,14 +91,26 @@ export default async function AdminCustomersPage(props: {
       </section>
 
       <section>
-        <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          {t('admin.customersPage.listHeading')}
-        </h2>
+        <div className="flex items-baseline justify-between gap-3 flex-wrap mb-4">
+          <h2 className="font-headline-sm text-headline-sm text-primary">
+            {t('admin.customersPage.listHeading')}
+          </h2>
+          {customers.length > 0 && (
+            <span className="text-caption text-on-surface-variant">
+              {t('manager.bookingsTable.showing', {
+                from: (page - 1) * PAGE_SIZE + 1,
+                to: (page - 1) * PAGE_SIZE + customers.length,
+                total: matching,
+              })}
+            </span>
+          )}
+        </div>
         <CustomersAdminTable
-          customers={enriched}
+          customers={customers}
           currentQuery={q}
           currentStatus={status}
         />
+        <Pagination currentPage={page} totalPages={totalPages} basePath="/admin/customers" extraParams={keep} />
       </section>
     </div>
   )

@@ -17,6 +17,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ilikePattern } from '@/lib/search/ilike'
 import type { AccountProfile, Customer, LinkedIdentity, IdentityLinkSafety } from './types'
 
 export async function getOwnProfile(): Promise<AccountProfile | null> {
@@ -332,45 +333,60 @@ export interface ListCustomersOptions {
    *   - false     → only active
    */
   isSuspended?: boolean
-  /** Cap on returned rows (default 200 to keep list snappy). */
-  limit?: number
+  /** 1-indexed page of `pageSize` rows. */
+  page?: number
+  pageSize?: number
 }
 
 /**
- * List customers (profiles with role='user') with optional search/filter.
- * Service-role client — admin-only callers enforced at the server action
- * layer (`app/actions/admin/customers.ts`).
- *
- * Booking count is NOT joined here to avoid N+1 fan-out for the rare
- * use case of "list every customer with count". The detail page computes
- * the count separately via `getCustomerBookingCount`.
+ * One page of customers (profiles with role='user') with optional
+ * search/filter, plus the filtered total. Each row carries
+ * `total_bookings`, counted in the same query (PostgREST embedded count),
+ * so the list costs one round trip however many rows it shows.
+ * Service-role client — admin-only callers enforced at the page/action layer.
  */
 export async function listCustomers(
   opts: ListCustomersOptions = {},
-): Promise<Customer[]> {
+): Promise<{ rows: (Customer & { total_bookings: number })[]; total: number }> {
   const admin = await createAdminClient()
+  const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100)
+  const from = (Math.max(1, Math.floor(opts.page ?? 1)) - 1) * pageSize
   let q = admin
     .from('profiles')
     .select(
-      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason',
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason, bookings!bookings_user_id_fkey(count)',
+      { count: 'exact' },
     )
     .eq('role', 'user')
     .order('created_at', { ascending: false })
+    .order('id')
 
-  if (opts.search && opts.search.trim().length >= 2) {
-    // ILIKE on full_name OR email OR phone. Wrap in %...% for contains-match.
-    const term = `%${opts.search.trim()}%`
+  const term = ilikePattern(opts.search)
+  if (term && term.length >= 4) {
+    // ILIKE on full_name OR email OR phone (at least 2 characters).
     q = q.or(`full_name.ilike.${term},email.ilike.${term},phone.ilike.${term}`)
   }
 
   if (opts.isSuspended === true) q = q.eq('is_suspended', true)
   if (opts.isSuspended === false) q = q.eq('is_suspended', false)
 
-  if (opts.limit && opts.limit > 0) q = q.limit(opts.limit)
-
-  const { data, error } = await q
+  const { data, count, error } = await q.range(from, from + pageSize - 1)
   if (error) wrapSupabaseError('listCustomers', error)
-  return (data ?? []) as Customer[]
+  const rows = (data ?? []).map(({ bookings, ...c }) => ({
+    ...(c as Omit<Customer, 'total_bookings'>),
+    total_bookings: (bookings as unknown as { count: number }[] | null)?.[0]?.count ?? 0,
+  }))
+  return { rows, total: count ?? 0 }
+}
+
+/** Customer totals for the KPI tiles — every customer, not just the filtered list. */
+export async function getCustomerCounts(): Promise<{ all: number; active: number; suspended: number }> {
+  const admin = await createAdminClient()
+  const base = () => admin.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'user')
+  const [all, suspended] = await Promise.all([base(), base().eq('is_suspended', true)])
+  if (all.error) wrapSupabaseError('getCustomerCounts', all.error)
+  if (suspended.error) wrapSupabaseError('getCustomerCounts', suspended.error)
+  return { all: all.count ?? 0, active: (all.count ?? 0) - (suspended.count ?? 0), suspended: suspended.count ?? 0 }
 }
 
 /** Fetch a single customer by id. Service-role. Returns null if not found. */
@@ -386,17 +402,6 @@ export async function getCustomerById(id: string): Promise<Customer | null> {
     .maybeSingle()
   if (error) wrapSupabaseError('getCustomerById', error)
   return (data as Customer | null) ?? null
-}
-
-/** Count bookings for one customer. Service-role bypasses booking RLS. */
-export async function getCustomerBookingCount(customerId: string): Promise<number> {
-  const admin = await createAdminClient()
-  const { count, error } = await admin
-    .from('bookings')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', customerId)
-  if (error) wrapSupabaseError('getCustomerBookingCount', error)
-  return count ?? 0
 }
 
 /**

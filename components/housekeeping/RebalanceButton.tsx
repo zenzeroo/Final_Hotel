@@ -105,7 +105,9 @@ export function RebalanceButton({ unassignedCount, availableHousekeepers }: Reba
                   .map(([reason, count]) => `${reason}: ${count}`)
                   .join('\n• ')}`
               : '') +
-            (successSummary.warnings.length > 0 ? `\n\n⚠️ ${successSummary.warnings.join('\n')}` : '')
+            (successSummary.warnings.length > 0
+              ? `\n\n${t('manager.housekeepingPage.autoAllocateWarnings')}\n• ${successSummary.warnings.join('\n• ')}`
+              : '')
           }
         />
       )}

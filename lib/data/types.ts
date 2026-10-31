@@ -695,7 +695,7 @@ export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'
 /**
  * Phase 36 — public-facing customer record (subset of profiles where
  * role='user'). Derived fields like `total_bookings` are optional
- * (populated by `listCustomers()` via parallel count query).
+ * (populated by `listCustomers()` from an embedded count).
  */
 export interface Customer {
   id: string

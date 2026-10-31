@@ -7,6 +7,7 @@ import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
 import { formatDate } from '@/lib/dates'
+import { localizedName } from '@/lib/format/roomType'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,51 +22,33 @@ export default async function ReceptionDashboard() {
   ])
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="mb-8">
-        <h1 className="font-display text-3xl text-primary">{t('reception.title')}</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">
-          {t('reception.subtitle')}
-        </p>
-      </div>
+    <div className="p-8 lg:p-12 max-w-7xl">
+      <header className="mb-8">
+        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.title')}</h1>
+        <p className="text-body-lg text-on-surface-variant mt-2">{t('reception.subtitle')}</p>
+      </header>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard
-          label={t('reception.todayCheckIns')}
-          value={stats.todayCheckIns}
-          icon="login"
-          color="primary"
-        />
+      {/* Each figure opens the list it counts. */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard label={t('reception.todayCheckIns')} value={stats.todayCheckIns} href="/reception/check-in-out" />
         <StatCard
           label={t('reception.todayCheckOuts')}
           value={stats.todayCheckOuts}
-          icon="logout"
-          color="secondary"
+          href="/reception/check-in-out?tab=checkout"
         />
-        <StatCard
-          label={t('reception.inHouse')}
-          value={stats.inHouse}
-          icon="group"
-          color="primary"
-        />
-        <StatCard
-          label={t('reception.pendingPayment')}
-          value={stats.pendingPayment}
-          icon="credit_card"
-          color="error"
-        />
-      </div>
+        <StatCard label={t('reception.inHouse')} value={stats.inHouse} href="/reception/check-in-out?view=inhouse" />
+        <StatCard label={t('reception.pendingPayment')} value={stats.pendingPayment} tone="text-error" />
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Bookings */}
-        <section className="lg:col-span-2 bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-xl text-primary">{t('reception.bookingsPage.title')}</h2>
+        <section className="lg:col-span-2 bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 className="font-headline-sm text-headline-sm text-primary">{t('reception.bookingsPage.title')}</h2>
             <Link
-              href="/reception/bookings"
-              className="text-label-md text-primary px-2 py-1 rounded font-semibold uppercase tracking-wider hover:bg-primary-fixed hover:text-primary"
+              href="/reception/bookings/new"
+              className="inline-flex items-center gap-1 text-body-md font-semibold text-primary px-2 py-1 rounded hover:bg-primary-fixed"
             >
+              <MaterialIcon name="add" size={18} />
               {t('reception.bookingsPage.addBooking')}
             </Link>
           </div>
@@ -73,37 +56,36 @@ export default async function ReceptionDashboard() {
             <p className="text-body-md text-on-surface-variant text-center py-8">{t('bookings.noBookings')}</p>
           ) : (
             <div className="flex flex-col">
-              {recent.map((b) => (
-                <Link
-                  key={b.id}
-                  href={`/reception/bookings/${b.id}?from=dashboard`}
-                  className="flex items-center gap-4 py-3 border-b border-outline-variant last:border-0 hover:bg-primary-fixed transition-colors -mx-2 px-2 rounded-lg"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-body-md font-semibold text-on-surface truncate">
-                      {b.booker_full_name}
-                    </p>
-                    <p className="text-caption text-on-surface-variant">
-                      {b.room_type?.name_th} · {formatDate(b.check_in, localeBcp)} – {formatDate(b.check_out, localeBcp)}
-                    </p>
-                  </div>
-                  <span
-                    className={`shrink-0 px-2.5 py-1 rounded-full text-caption font-semibold ${statusClass(b.status, b.payment_status)}`}
+              {recent.map((b) => {
+                const status = bookingStatus(b.status, b.payment_status)
+                return (
+                  <Link
+                    key={b.id}
+                    href={`/reception/bookings/${b.id}?from=dashboard`}
+                    className="flex items-center gap-4 py-3 border-b border-outline-variant last:border-0 hover:bg-primary-fixed transition-colors -mx-2 px-2 rounded-lg"
                   >
-                    {statusLabel(b.status, b.payment_status)}
-                  </span>
-                  <span className="shrink-0 text-body-md font-semibold text-primary">
-                    {formatTHB(b.total, localeBcp)}
-                  </span>
-                </Link>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-body-md font-semibold text-on-surface truncate">{b.booker_full_name}</p>
+                      <p className="text-caption text-on-surface-variant">
+                        {localizedName(b.room_type, locale)} · {formatDate(b.check_in, localeBcp)} –{' '}
+                        {formatDate(b.check_out, localeBcp)}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 px-2.5 py-1 rounded-full text-caption font-semibold ${status.cls}`}>
+                      {t(status.key)}
+                    </span>
+                    <span className="shrink-0 text-body-md font-semibold text-primary">
+                      {formatTHB(b.total, localeBcp)}
+                    </span>
+                  </Link>
+                )
+              })}
             </div>
           )}
         </section>
 
-        {/* Room Status */}
-        <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <h2 className="font-display text-xl text-primary mb-4">{t('reception.roomsPage.title')}</h2>
+        <section className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
+          <h2 className="font-headline-sm text-headline-sm text-primary mb-4">{t('reception.roomsPage.title')}</h2>
           <RoomStatusSummary rooms={rooms} locale={locale} href="/reception/rooms" />
         </section>
       </div>
@@ -111,49 +93,42 @@ export default async function ReceptionDashboard() {
   )
 }
 
+/** A label and a number; with `href` the whole card opens that list. */
 function StatCard({
   label,
   value,
-  icon,
-  color,
+  href,
+  tone = 'text-primary',
 }: {
   label: string
   value: number
-  icon: string
-  color: 'primary' | 'secondary' | 'error'
+  href?: string
+  tone?: string
 }) {
-  const colorClass =
-    color === 'primary'
-      ? 'bg-primary/10 text-primary'
-      : color === 'secondary'
-      ? 'bg-secondary/20 text-secondary'
-      : 'bg-error/10 text-error'
-  return (
-    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-(--shadow-ambient) border border-outline-variant transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-caption text-on-surface-variant uppercase tracking-wider">{label}</span>
-        <div className={`inline-flex items-center justify-center w-10 h-10 rounded-full ${colorClass}`}>
-          <MaterialIcon name={icon} size={20} />
-        </div>
-      </div>
-      <p className="font-display text-4xl font-bold text-primary">{value}</p>
-    </div>
+  const body = (
+    <>
+      <p className="text-body-md text-on-surface-variant mb-2">{label}</p>
+      <p className={`font-display-lg text-display-lg-mobile ${tone}`}>{value}</p>
+    </>
+  )
+  const card = 'block bg-surface-container-lowest rounded-lg shadow-level-1 p-5'
+  return href ? (
+    <Link href={href} className={`${card} hover:bg-primary-fixed transition-colors`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={card}>{body}</div>
   )
 }
 
-function statusLabel(status: string, paymentStatus: string) {
-  if (status === 'cancelled') return 'Cancelled'
-  if (status === 'checked_in') return 'Checked in'
-  if (status === 'checked_out') return 'Checked out'
-  if (paymentStatus === 'paid') return 'Paid'
-  if (status === 'confirmed') return 'Pending payment'
-  return 'Pending'
-}
-
-function statusClass(status: string, paymentStatus: string) {
-  if (status === 'cancelled') return 'bg-error/10 text-error'
-  if (status === 'checked_in') return 'bg-primary/10 text-primary'
-  if (status === 'checked_out') return 'bg-surface-container text-on-surface-variant'
-  if (paymentStatus === 'paid') return 'bg-primary/10 text-primary'
-  return 'bg-secondary/20 text-secondary'
+/** Same wording as the guest's booking history (`bookings.status*`). */
+function bookingStatus(status: string, paymentStatus: string): { key: string; cls: string } {
+  if (status === 'cancelled') return { key: 'bookings.statusCancelled', cls: 'bg-error/10 text-error' }
+  if (status === 'checked_in') return { key: 'bookings.statusCheckedIn', cls: 'bg-primary/10 text-primary' }
+  if (status === 'checked_out') {
+    return { key: 'bookings.statusCheckedOut', cls: 'bg-surface-container text-on-surface-variant' }
+  }
+  if (paymentStatus === 'paid') return { key: 'bookings.statusPaid', cls: 'bg-primary/10 text-primary' }
+  if (status === 'confirmed') return { key: 'bookings.awaitingPayment', cls: 'bg-secondary/20 text-secondary' }
+  return { key: 'bookings.statusPending', cls: 'bg-secondary/20 text-secondary' }
 }

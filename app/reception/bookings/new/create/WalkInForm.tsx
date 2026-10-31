@@ -8,7 +8,8 @@ import { createWalkInCheckoutSessionAction } from '@/app/actions/payment'
 import { calculateNights, calculatePrice, formatTHB } from '@/lib/pricing'
 import { getMinCheckInLocalIso, addDaysLocalIso, formatDateNumeric } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { useT } from '@/lib/i18n/useT'
+import { useLocale, useT } from '@/lib/i18n/useT'
+import { localizedName } from '@/lib/format/roomType'
 
 interface WalkInFormProps {
   room: {
@@ -24,6 +25,7 @@ interface WalkInFormProps {
 
 export function WalkInForm({ room }: WalkInFormProps) {
   const t = useT()
+  const locale = useLocale()
   const router = useRouter()
   const urlParams = useSearchParams()
   // Phase 45 — pre-fill dates/guests from URL params when the receptionist
@@ -135,7 +137,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
           </div>
         )}
 
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
+        <div className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
           <h2 className="font-display text-xl text-primary mb-4">{t('reception.walkIn.guestInfo')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label={t('reception.walkIn.fullName')} required>
@@ -176,7 +178,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
           </div>
         </div>
 
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
+        <div className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
           <h2 className="font-display text-xl text-primary mb-4">{t('reception.walkIn.stayDates')}</h2>
           {/* Locked: dates and guests were chosen on the room picker, whose
               list only shows rooms free for them. Changing them goes back
@@ -196,7 +198,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
           </Link>
         </div>
 
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
+        <div className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
           <h2 className="font-display text-xl text-primary mb-4">{t('reception.walkIn.specialRequests')}</h2>
           <textarea
             value={specialRequest}
@@ -239,8 +241,8 @@ export function WalkInForm({ room }: WalkInFormProps) {
 
       {/* RIGHT: summary */}
       <div className="lg:sticky lg:top-6 lg:self-start">
-        <div className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient-lg) border border-outline-variant p-6">
-          <h2 className="font-display text-lg text-primary mb-3">{room.name_th}</h2>
+        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
+          <h2 className="font-display text-lg text-primary mb-3">{localizedName(room, locale)}</h2>
           <div className="space-y-2 text-body-md">
             <div className="flex justify-between">
               <span className="text-on-surface-variant">{t('reception.walkIn.priceXNights', { price: formatTHB(room.base_price), count: nights })}</span>

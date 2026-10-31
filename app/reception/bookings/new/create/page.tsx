@@ -23,10 +23,10 @@ export default async function CreateWalkInBookingPage(props: PageProps<'/recepti
   if (error || !room) notFound()
 
   return (
-    <div className="p-6 md:p-8 max-w-4xl">
+    <div className="p-8 lg:p-12 max-w-4xl">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-primary">{t('reception.walkIn.createHeading')}</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">
+        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.walkIn.createHeading')}</h1>
+        <p className="text-body-lg text-on-surface-variant mt-2">
           {t('reception.walkIn.createSubtitle')}
         </p>
       </div>

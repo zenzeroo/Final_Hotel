@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import type { StaffBooking } from '@/lib/data/staff'
 import { useLocale } from '@/lib/i18n/useT'
+import { localizedName } from '@/lib/format/roomType'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
 import { useT } from '@/lib/i18n/useT'
 
@@ -38,7 +39,7 @@ export function BookingTableRow({ booking: b }: BookingTableRowProps) {
         <p className="text-caption text-on-surface-variant">{b.booker_email}</p>
       </Td>
       <Td>
-        <p className="text-body-md text-on-surface">{b.room_type?.name_th}</p>
+        <p className="text-body-md text-on-surface">{localizedName(b.room_type, locale)}</p>
         <p className="text-caption text-on-surface-variant">
           {t('reception.bookingsPage.guestsNights', { guests: b.guests, nights: b.nights })}
         </p>

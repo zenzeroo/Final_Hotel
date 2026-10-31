@@ -12,10 +12,14 @@ interface BookingsTableProps {
   pageSize: number
   /** Rows across every page. */
   total: number
+  /** Current search (`?q=`), kept by the pager. */
+  query?: string
+  /** Empty-state title when a search found nothing. */
+  emptyTitle?: string
   locale: Locale
 }
 
-export function BookingsTable({ bookings, page, pageSize, total, locale }: BookingsTableProps) {
+export function BookingsTable({ bookings, page, pageSize, total, query, emptyTitle, locale }: BookingsTableProps) {
   const t = getT(locale)
   const first = (page - 1) * pageSize + 1
   return (
@@ -32,9 +36,9 @@ export function BookingsTable({ bookings, page, pageSize, total, locale }: Booki
           Previously rendered <table> with header + empty <tbody>. */}
       {bookings.length === 0 ? (
         <EmptyState
-          icon="event_busy"
-          title={t('manager.bookingsTable.emptyTitle')}
-          description={t('manager.bookingsTable.emptyBody')}
+          icon={emptyTitle ? 'search_off' : 'event_busy'}
+          title={emptyTitle ?? t('manager.bookingsTable.emptyTitle')}
+          description={emptyTitle ? '' : t('manager.bookingsTable.emptyBody')}
         />
       ) : (
         <div className="overflow-x-auto">
@@ -64,8 +68,8 @@ export function BookingsTable({ bookings, page, pageSize, total, locale }: Booki
         currentPage={page}
         totalPages={Math.ceil(total / pageSize)}
         basePath="/manager/bookings"
+        extraParams={{ q: query || undefined }}
       />
-
     </div>
   )
 }

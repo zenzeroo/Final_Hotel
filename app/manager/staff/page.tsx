@@ -5,7 +5,7 @@ import { ShiftSchedule } from '@/components/manager/ShiftSchedule'
 import { StaffTabs } from '@/components/manager/StaffTabs'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ShiftWeekNav } from '@/components/manager/ShiftWeekNav'
-import { StaffSearch } from '@/components/manager/StaffSearch'
+import { SearchBox } from '@/components/ui/SearchBox'
 import { addDaysIso, getTodayBangkok, startOfWeekMondayIso } from '@/lib/dates'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
@@ -104,7 +104,13 @@ export default async function ManagerStaffPage(props: {
 
       <StaffTabs active={tab} locale={locale} />
 
-      <StaffSearch initialQuery={query} />
+      <SearchBox
+        basePath="/manager/staff"
+        initialQuery={query}
+        placeholder={t('manager.staffPage.searchPlaceholder')}
+        buttonLabel={t('manager.staffPage.search')}
+        className="mb-6"
+      />
 
       <section className="mb-12">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-4">

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { Booking } from './bookings'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
 import { addDaysIso } from '@/lib/dates'
+import { ilikePattern } from '@/lib/search/ilike'
 import { notReadyReason, type NotReadyReason } from '@/lib/room-status'
 
 /**
@@ -72,11 +73,11 @@ export async function getAllBookings(filters?: {
   if (filters?.endDate) {
     dataQuery = dataQuery.lte('check_in', filters.endDate)
   }
-  if (filters?.search) {
-    dataQuery = dataQuery.or(
-      `booking_code.ilike.%${filters.search}%,booker_full_name.ilike.%${filters.search}%,booker_email.ilike.%${filters.search}%`,
-    )
-  }
+  const pattern = ilikePattern(filters?.search)
+  const searchFilter = pattern
+    ? `booking_code.ilike.${pattern},booker_full_name.ilike.${pattern},booker_email.ilike.${pattern}`
+    : null
+  if (searchFilter) dataQuery = dataQuery.or(searchFilter)
 
   // Count query (only when paginated) — mirrors the data query filters
   // so `total` matches the visible row count. head:true avoids fetching
@@ -95,11 +96,7 @@ export async function getAllBookings(filters?: {
     if (filters?.endDate) {
       q = q.lte('check_in', filters.endDate)
     }
-    if (filters?.search) {
-      q = q.or(
-        `booking_code.ilike.%${filters.search}%,booker_full_name.ilike.%${filters.search}%,booker_email.ilike.%${filters.search}%`,
-      )
-    }
+    if (searchFilter) q = q.or(searchFilter)
     countPromise = q as unknown as Promise<{ count: number | null; error: unknown }>
   }
 
@@ -226,8 +223,8 @@ export async function listAllCustomers(
   opts: { search?: string } = {},
 ): Promise<CustomerListPage> {
   const supabase = await createClient()
-  const hasSearch = !!opts.search && opts.search.trim().length >= 2
-  const term = hasSearch ? `%${opts.search!.trim()}%` : null
+  const pattern = ilikePattern(opts.search)
+  const term = pattern && pattern.length >= 4 ? pattern : null // at least 2 characters
 
   // Data query — role='user' filter is critical: reception session can
   // read all profiles via RLS, but we don't want staff (themselves +
@@ -284,9 +281,8 @@ export async function getRecentEvents(opts: {
   to?: string
 } = {}): Promise<RecentEvent[]> {
   const supabase = await createClient()
-  // Characters that would break the PostgREST `or=(…)` filter syntax.
-  const term = (opts.search ?? '').replace(/[,()]/g, ' ').trim()
-  const hasSearch = term.length >= 2
+  const pattern = ilikePattern(opts.search)
+  const hasSearch = !!pattern && pattern.length >= 4 // at least 2 characters
   // !inner turns the embed into a join, so the filter drops non-matching events.
   const bookingEmbed = hasSearch
     ? 'booking:bookings!inner(booking_code, booker_full_name)'
@@ -307,7 +303,7 @@ export async function getRecentEvents(opts: {
   if (opts.from) query = query.gte('created_at', `${opts.from}T00:00:00+07:00`)
   if (opts.to) query = query.lt('created_at', `${addDaysIso(opts.to, 1)}T00:00:00+07:00`)
   if (hasSearch) {
-    query = query.or(`booker_full_name.ilike.%${term}%,booking_code.ilike.%${term}%`, {
+    query = query.or(`booker_full_name.ilike.${pattern},booking_code.ilike.${pattern}`, {
       referencedTable: 'bookings',
     })
   }

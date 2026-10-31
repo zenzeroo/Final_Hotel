@@ -3,14 +3,22 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
-import { useT } from '@/lib/i18n/useT'
+
+interface SearchBoxProps {
+  /** Page the search stays on, e.g. "/manager/staff". */
+  basePath: string
+  /** The current `?q=` value. */
+  initialQuery: string
+  placeholder: string
+  buttonLabel: string
+  className?: string
+}
 
 /**
- * Name / email search for /manager/staff (`?q=`). Keeps the role tab and the
- * shift week; the staff list and the shift grid both follow it.
+ * URL-driven search box (`?q=`). Keeps every other query param (tab, week …)
+ * and drops `page`, so a new search starts on the first page.
  */
-export function StaffSearch({ initialQuery }: { initialQuery: string }) {
-  const t = useT()
+export function SearchBox({ basePath, initialQuery, placeholder, buttonLabel, className = '' }: SearchBoxProps) {
   const router = useRouter()
   const params = useSearchParams()
   const [q, setQ] = useState(initialQuery)
@@ -23,12 +31,12 @@ export function StaffSearch({ initialQuery }: { initialQuery: string }) {
 
   const go = (value: string) => {
     const next = new URLSearchParams(params.toString())
-    next.delete('page') // a new search starts at the first page
+    next.delete('page')
     const trimmed = value.trim()
     if (trimmed) next.set('q', trimmed)
     else next.delete('q')
     const qs = next.toString()
-    router.replace(`/manager/staff${qs ? `?${qs}` : ''}`, { scroll: false })
+    router.replace(`${basePath}${qs ? `?${qs}` : ''}`, { scroll: false })
   }
 
   return (
@@ -38,7 +46,7 @@ export function StaffSearch({ initialQuery }: { initialQuery: string }) {
         e.preventDefault()
         go(q)
       }}
-      className="flex items-center gap-2 max-w-2xl mb-6"
+      className={`flex items-center gap-2 max-w-2xl ${className}`}
     >
       <div className="relative flex-1">
         <MaterialIcon
@@ -51,20 +59,20 @@ export function StaffSearch({ initialQuery }: { initialQuery: string }) {
           value={q}
           onChange={(e) => {
             setQ(e.target.value)
-            // The input's own clear (×) empties it — show everyone again.
+            // The input's own clear (×) empties it — show everything again.
             if (e.target.value === '' && initialQuery) go('')
           }}
-          placeholder={t('manager.staffPage.searchPlaceholder')}
-          aria-label={t('manager.staffPage.searchPlaceholder')}
+          placeholder={placeholder}
+          aria-label={placeholder}
           maxLength={100}
           className="w-full bg-surface-container-lowest border border-outline-variant rounded-full pl-12 pr-4 py-3 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
         />
       </div>
       <button
         type="submit"
-        className="px-6 py-3 bg-primary text-secondary rounded-full font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+        className="px-6 py-3 bg-primary text-secondary rounded-full font-semibold text-body-md hover:bg-primary-container transition-colors"
       >
-        {t('manager.staffPage.search')}
+        {buttonLabel}
       </button>
     </form>
   )

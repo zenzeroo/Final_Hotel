@@ -49,11 +49,11 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
   const { rows: bookings, total, totalPages } = result
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-8 lg:p-12 max-w-7xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display text-3xl text-primary">{t('reception.bookingsPage.heading')}</h1>
-          <p className="text-body-md text-on-surface-variant mt-1">
+          <h1 className="font-headline-md text-headline-md text-primary">{t('reception.bookingsPage.heading')}</h1>
+          <p className="text-body-lg text-on-surface-variant mt-2">
             {total > 0
               ? t('reception.bookingsPage.countPaged', { total, page, pages: totalPages })
               : t('reception.bookingsPage.countZero')}
@@ -71,13 +71,13 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
       <BookingFilters initialStatus={statusFilter} initialSearch={search} />
 
       {bookings.length === 0 ? (
-        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-2xl border border-outline-variant">
+        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-lg shadow-level-1">
           <MaterialIcon name="search_off" size={48} className="text-outline-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">{t('reception.bookingsPage.empty')}</p>
         </div>
       ) : (
         <>
-          <div className="mt-6 bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant overflow-x-auto overflow-y-hidden">
+          <div className="mt-6 bg-surface-container-lowest rounded-lg shadow-level-1 overflow-x-auto overflow-y-hidden">
             <table className="w-full">
               <thead className="bg-surface-container">
                 <tr>

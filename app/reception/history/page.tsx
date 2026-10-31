@@ -89,10 +89,10 @@ export default async function ActionHistoryPage(props: PageProps<'/reception/his
   })
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-8 lg:p-12 max-w-7xl">
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-primary">{t('reception.historyPage.heading')}</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">
+        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.historyPage.heading')}</h1>
+        <p className="text-body-lg text-on-surface-variant mt-2">
           {t('reception.historyPage.subtitle', { count: events.length })}
         </p>
       </div>
@@ -108,12 +108,12 @@ export default async function ActionHistoryPage(props: PageProps<'/reception/his
       </div>
 
       {events.length === 0 && filtered ? (
-        <div className="text-center py-16 bg-surface-container-lowest rounded-2xl border border-outline-variant">
+        <div className="text-center py-16 bg-surface-container-lowest rounded-lg shadow-level-1">
           <MaterialIcon name="search_off" size={48} className="text-outline-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">{t('reception.historyPage.noMatch')}</p>
         </div>
       ) : events.length === 0 ? (
-        <div className="text-center py-16 bg-surface-container-lowest rounded-2xl border border-outline-variant">
+        <div className="text-center py-16 bg-surface-container-lowest rounded-lg shadow-level-1">
           <MaterialIcon name="history" size={48} className="text-outline-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">{t('reception.historyPage.empty')}</p>
           <p className="text-caption text-on-surface-variant mt-1">
