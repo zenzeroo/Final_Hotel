@@ -19,9 +19,12 @@ function showsLanguageToggle(role: StaffRole): boolean {
   return role === 'reception'
 }
 
-/** Reception gets no in-app notifications (nothing is sent to it either). */
+/**
+ * Reception and manager get no in-app notifications (nothing is sent to them
+ * either); the manager dashboard's Alerts panel covers what needs action.
+ */
 export function showsNotificationBell(role: StaffRole): boolean {
-  return role !== 'reception'
+  return role !== 'reception' && role !== 'manager'
 }
 
 interface StaffSidebarProps {
@@ -109,7 +112,7 @@ const NAV_BY_ROLE: Record<StaffRole, NavGroup[]> = {
       key: 'salesBookings',
       items: [
         { key: 'bookings', href: '/manager/bookings', icon: 'calendar_month' },
-        { key: 'rates', href: '/manager/rates', icon: 'bed' },
+        { key: 'rooms', href: '/manager/rooms', icon: 'bed' },
         { key: 'promotions', href: '/manager/promotions', icon: 'sell' },
         { key: 'reviews', href: '/manager/reviews', icon: 'reviews' },
       ],

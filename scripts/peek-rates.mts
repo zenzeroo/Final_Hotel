@@ -20,7 +20,7 @@ const supabase = createServerClient(
 await supabase.auth.signInWithPassword({ email: 'manager@zenzero.com', password: 'ManagerPass123!' })
 const cookieHeader = cookies.map((c) => c.name + '=' + c.value).join('; ')
 
-const res = await fetch('http://localhost:3000/manager/rates', { headers: { Cookie: cookieHeader }, redirect: 'manual' })
+const res = await fetch('http://localhost:3000/manager/rooms', { headers: { Cookie: cookieHeader }, redirect: 'manual' })
 const html = await res.text()
 console.log('Status:', res.status)
 

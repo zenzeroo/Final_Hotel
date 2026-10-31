@@ -19,12 +19,16 @@ interface ShiftWeekNavProps {
   isCurrentWeek: boolean
   /** Preserves the staff-list tab when changing weeks. */
   tab: string
+  /** Preserves the name/email search when changing weeks. */
+  query: string
+  /** Preserves the staff-list page when changing weeks. */
+  staffPage: number
 }
 
 const LINK_CLASS =
   'inline-flex items-center gap-1 px-3 py-2 rounded-md text-caption text-on-surface-variant hover:bg-primary-fixed hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary'
 
-export function ShiftWeekNav({ weekStart, prevWeek, nextWeek, isCurrentWeek, tab }: ShiftWeekNavProps) {
+export function ShiftWeekNav({ weekStart, prevWeek, nextWeek, isCurrentWeek, tab, query, staffPage }: ShiftWeekNavProps) {
   const t = useT()
   const [isPending, startTransition] = useTransition()
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -34,6 +38,8 @@ export function ShiftWeekNav({ weekStart, prevWeek, nextWeek, isCurrentWeek, tab
     const params = new URLSearchParams()
     if (tab !== 'all') params.set('tab', tab)
     if (week) params.set('week', week)
+    if (query) params.set('q', query)
+    if (staffPage > 1) params.set('page', String(staffPage))
     const qs = params.toString()
     return `/manager/staff${qs ? `?${qs}` : ''}#shifts`
   }
@@ -55,11 +61,15 @@ export function ShiftWeekNav({ weekStart, prevWeek, nextWeek, isCurrentWeek, tab
           <MaterialIcon name="chevron_left" size={18} />
           {t('manager.staffPage.prevWeek')}
         </Link>
-        {!isCurrentWeek && (
-          <Link href={href()} className={LINK_CLASS} scroll={false}>
-            {t('manager.staffPage.thisWeek')}
-          </Link>
-        )}
+        {/* Always shown; highlighted when this week is the one on screen. */}
+        <Link
+          href={href()}
+          scroll={false}
+          aria-current={isCurrentWeek ? 'page' : undefined}
+          className={isCurrentWeek ? `${LINK_CLASS} bg-primary-fixed text-primary font-semibold` : LINK_CLASS}
+        >
+          {t('manager.staffPage.thisWeek')}
+        </Link>
         <Link href={href(nextWeek)} className={LINK_CLASS} scroll={false}>
           {t('manager.staffPage.nextWeek')}
           <MaterialIcon name="chevron_right" size={18} />

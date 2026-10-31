@@ -201,9 +201,9 @@ const mgrCookie = mgr.cookieHeader()
 
 // Precompile new routes so manifests exist before discovery.
 // Next.js dev mode compiles lazily on first request.
-await step('Precompile /manager/promotions and /manager/rates', async () => {
+await step('Precompile /manager/promotions and /manager/rooms', async () => {
   const r1 = await fetch(APP + '/manager/promotions', { headers: { Cookie: mgrCookie } })
-  const r2 = await fetch(APP + '/manager/rates', { headers: { Cookie: mgrCookie } })
+  const r2 = await fetch(APP + '/manager/rooms', { headers: { Cookie: mgrCookie } })
   return 'promotions=' + r1.status + ', rates=' + r2.status
 })
 
@@ -297,19 +297,19 @@ await step('Test 3: Validation — empty promotionId (action returns ok:false)',
 // ── Test 4: close room u-102 (currently available → maintenance) ────────────
 
 await step('Test 4: Close room u-102 (available → maintenance)', async () => {
-  const before = await fetchHtml('/manager/rates', mgrCookie)
+  const before = await fetchHtml('/manager/rooms', mgrCookie)
   const beforeStatus = findUnitStatus(before, '102')
   assert(beforeStatus !== null, 'room 102 row not found')
   if (beforeStatus !== 'ว่าง') {
     return 'room 102 not available (already ' + beforeStatus + ') — skipped (mock state persists)'
   }
 
-  const res = await postAction(mgrCookie, '/manager/rates', CLOSE_ROOM_ID, {
+  const res = await postAction(mgrCookie, '/manager/rooms', CLOSE_ROOM_ID, {
     unitId: 'u-102',
   })
   if (res.status >= 400) throw new Error('HTTP ' + res.status + ': ' + res.body.slice(0, 200))
 
-  const after = await fetchHtml('/manager/rates', mgrCookie)
+  const after = await fetchHtml('/manager/rooms', mgrCookie)
   const afterStatus = findUnitStatus(after, '102')
   assert(
     afterStatus === 'ปิดซ่อมบำรุง',
@@ -321,19 +321,19 @@ await step('Test 4: Close room u-102 (available → maintenance)', async () => {
 // ── Test 5: reopen room u-104 (currently maintenance → available) ───────────
 
 await step('Test 5: Reopen room u-104 (maintenance → available)', async () => {
-  const before = await fetchHtml('/manager/rates', mgrCookie)
+  const before = await fetchHtml('/manager/rooms', mgrCookie)
   const beforeStatus = findUnitStatus(before, '104')
   assert(beforeStatus !== null, 'room 104 row not found')
   if (beforeStatus !== 'ปิดซ่อมบำรุง') {
     return 'room 104 not maintenance (already ' + beforeStatus + ') — skipped (mock state persists)'
   }
 
-  const res = await postAction(mgrCookie, '/manager/rates', REOPEN_ROOM_ID, {
+  const res = await postAction(mgrCookie, '/manager/rooms', REOPEN_ROOM_ID, {
     unitId: 'u-104',
   })
   if (res.status >= 400) throw new Error('HTTP ' + res.status + ': ' + res.body.slice(0, 200))
 
-  const after = await fetchHtml('/manager/rates', mgrCookie)
+  const after = await fetchHtml('/manager/rooms', mgrCookie)
   const afterStatus = findUnitStatus(after, '104')
   assert(
     afterStatus === 'ว่าง',
@@ -386,16 +386,16 @@ await step('Test 7: Auth guard — housekeeper cannot close room', async () => {
   if (error) throw new Error(error.message)
 
   // Snapshot u-103 (Botanic King, currently cleaning) — close as housekeeper
-  const before = await fetchHtml('/manager/rates', mgrCookie)
+  const before = await fetchHtml('/manager/rooms', mgrCookie)
   const beforeStatus = findUnitStatus(before, '103')
   assert(beforeStatus !== null, 'room 103 row missing')
 
-  const res = await postAction(hk.cookieHeader(), '/manager/rates', CLOSE_ROOM_ID, {
+  const res = await postAction(hk.cookieHeader(), '/manager/rooms', CLOSE_ROOM_ID, {
     unitId: 'u-103',
   })
   if (res.status >= 500) throw new Error('server crashed: ' + res.status)
 
-  const after = await fetchHtml('/manager/rates', mgrCookie)
+  const after = await fetchHtml('/manager/rooms', mgrCookie)
   const afterStatus = findUnitStatus(after, '103')
   assert(
     afterStatus === beforeStatus,

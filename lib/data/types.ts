@@ -275,8 +275,6 @@ export interface ManagerDashboardStats {
   newBookingsToday: number
   webBookings: number
   walkInBookings: number
-  revenue7d: RevenueBarPoint[]
-  revenue30d: RevenueBarPoint[]
   alerts: DashboardAlert[]
 }
 
@@ -348,6 +346,8 @@ export interface HousekeeperDetailTask {
   priority: HousekeepingTaskPriority
   status: HousekeepingTaskStatus
   createdAt: string
+  /** When the current housekeeper got the task; null for tasks assigned before this was recorded. */
+  assignedAt: string | null
   startedAt: string | null
   completedAt: string | null
   estimatedMinutes: number | null
@@ -445,12 +445,16 @@ export interface BookingOversightRow {
   id: string
   code: string
   guestName: string
+  guestEmail: string
   guestInitials: string
   avatarBgClass: string
   roomNumber: string
   roomType: string
   checkIn: string
   checkOut: string
+  /** When reception actually checked the guest in / out (`booking_events`); null until it happens. */
+  checkedInAt: string | null
+  checkedOutAt: string | null
   nights: number
   status: BookingOversightStatus
 }
@@ -489,7 +493,10 @@ export interface AuditLogEntry {
 
 export interface BookingsOversightData {
   activeCount: number
+  /** One page of bookings (newest check-in first). */
   bookings: BookingOversightRow[]
+  /** All bookings across every page, for the pager. */
+  bookingsTotal: number
   refundRequests: RefundRequest[]
   auditLog: AuditLogEntry[]
 }
@@ -762,6 +769,31 @@ export interface RoomUnitWithType {
     base_price: number
     hero_image_key: string | null
   }
+}
+
+/** One booking on the /manager/rooms/[id] calendar + lists. */
+export interface RoomBookingRow {
+  id: string
+  code: string
+  guestName: string
+  guestEmail: string
+  checkIn: string // YYYY-MM-DD
+  checkOut: string // YYYY-MM-DD
+  nights: number
+  status: string // booking_status
+  paymentStatus: string
+}
+
+export interface RoomUnitDetail {
+  unit: RoomUnitWithType
+  /** Bookings assigned to this room that overlap the shown month. */
+  monthBookings: RoomBookingRow[]
+  /** Upcoming bookings of this room's type, no room yet, overlapping the shown month. */
+  monthUnassigned: RoomBookingRow[]
+  /** Bookings assigned to this room (a room is assigned at check-in), newest first. */
+  assigned: RoomBookingRow[]
+  /** Upcoming bookings of this room's type that have no room yet. */
+  upcomingUnassigned: RoomBookingRow[]
 }
 
 export interface SeasonalRate {

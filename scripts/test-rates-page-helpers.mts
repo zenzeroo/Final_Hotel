@@ -1,5 +1,5 @@
 /**
- * Pure helpers behind /manager/rates — status buckets, multiplier text,
+ * Pure helpers behind /manager/rooms — status buckets, multiplier text,
  * rate state badges, today's price. No DB.
  *
  *   npx tsx scripts/test-rates-page-helpers.mts

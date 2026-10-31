@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getTodayStats, getRecentBookings, getRoomsStatus } from '@/lib/data/staff'
-import { countRoomBuckets } from '@/components/manager/roomStatusBuckets'
+import { RoomStatusSummary } from '@/components/manager/RoomStatusSummary'
 import { formatTHB } from '@/lib/pricing'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
@@ -19,16 +19,6 @@ export default async function ReceptionDashboard() {
     getRecentBookings(5),
     getRoomsStatus(),
   ])
-
-  // Same buckets as /reception/rooms: ready counts as available, the whole
-  // cleaning flow as cleaning, a checked-in booking as occupied.
-  const buckets = countRoomBuckets(rooms)
-  const roomStats = {
-    available: buckets.available,
-    occupied: buckets.occupied,
-    cleaning: buckets.cleaning,
-    maintenance: buckets.closed,
-  }
 
   return (
     <div className="p-6 md:p-8">
@@ -114,19 +104,7 @@ export default async function ReceptionDashboard() {
         {/* Room Status */}
         <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
           <h2 className="font-display text-xl text-primary mb-4">{t('reception.roomsPage.title')}</h2>
-          <div className="flex flex-col gap-3">
-            <RoomStat label={t('reception.available')} value={roomStats.available} total={rooms.length} color="primary" />
-            <RoomStat label={t('reception.occupied')} value={roomStats.occupied} total={rooms.length} color="secondary" />
-            <RoomStat label={t('reception.cleaning')} value={roomStats.cleaning} total={rooms.length} color="tertiary" />
-            <RoomStat label={t('reception.maintenance')} value={roomStats.maintenance} total={rooms.length} color="error" />
-          </div>
-          <Link
-            href="/reception/rooms"
-            className="mt-4 inline-flex items-center gap-2 text-label-md text-primary px-2 py-1 rounded font-semibold uppercase tracking-wider hover:bg-primary-fixed hover:text-primary"
-          >
-            {t('reception.roomsPage.byFloor')}
-            <MaterialIcon name="arrow_forward" size={16} />
-          </Link>
+          <RoomStatusSummary rooms={rooms} locale={locale} href="/reception/rooms" />
         </section>
       </div>
     </div>
@@ -159,41 +137,6 @@ function StatCard({
         </div>
       </div>
       <p className="font-display text-4xl font-bold text-primary">{value}</p>
-    </div>
-  )
-}
-
-function RoomStat({
-  label,
-  value,
-  total,
-  color,
-}: {
-  label: string
-  value: number
-  total: number
-  color: 'primary' | 'secondary' | 'tertiary' | 'error'
-}) {
-  const colorClass =
-    color === 'primary'
-      ? 'bg-primary'
-      : color === 'secondary'
-      ? 'bg-secondary'
-      : color === 'tertiary'
-      ? 'bg-tertiary'
-      : 'bg-error'
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-body-md text-on-surface">{label}</span>
-        <span className="text-body-md font-semibold text-on-surface">
-          {value}/{total}
-        </span>
-      </div>
-      <div className="h-2 bg-surface-container rounded-full overflow-hidden">
-        <div className={`h-full ${colorClass} transition-all`} style={{ width: `${pct}%` }} />
-      </div>
     </div>
   )
 }

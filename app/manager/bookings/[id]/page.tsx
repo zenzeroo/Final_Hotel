@@ -14,13 +14,16 @@ export const dynamic = 'force-dynamic'
 export default async function ManagerBookingDetailPage(props: PageProps<'/manager/bookings/[id]'>) {
   const { id } = await props.params
   if (!isUuid(id)) notFound()
+  // Opened from a room page (/manager/rooms/[id]) → back goes to that room.
+  const room = (await props.searchParams).room
+  const fromRoom = typeof room === 'string' && isUuid(room) ? room : null
   const locale = await getLocale()
   const t = getT(locale)
   return (
     <StaffBookingDetail
       bookingId={id}
-      backHref="/manager/bookings"
-      backLabel={t('bookingDetailStaff.backManager')}
+      backHref={fromRoom ? `/manager/rooms/${fromRoom}` : '/manager/bookings'}
+      backLabel={t(fromRoom ? 'manager.roomDetail.backToRoom' : 'bookingDetailStaff.backManager')}
       showActions={false}
       locale={locale}
     />

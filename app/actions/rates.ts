@@ -12,16 +12,17 @@ export type ActionResult<T = void> =
 
 const unitIdSchema = z.string().min(1).max(80)
 
-// Closing/reopening changes the room grid, the cleaning queue and the maintenance list.
+// Closing/reopening changes the room grid (+ each room's detail page), the
+// cleaning queue and the maintenance list.
 function revalidateRoomPages() {
-  revalidatePath('/manager/rates')
+  revalidatePath('/manager/rooms', 'layout')
   revalidatePath('/manager/housekeeping')
   revalidatePath('/manager/maintenance')
   revalidatePath('/housekeeper/rooms')
 }
 
 export async function closeRoomAction(formData: FormData): Promise<ActionResult> {
-  await requireRole(['manager', 'admin'], '/manager/rates')
+  await requireRole(['manager', 'admin'], '/manager/rooms')
   const rawId = String(formData.get('unitId') ?? '').trim()
   const parsed = unitIdSchema.safeParse(rawId)
   if (!parsed.success) return { ok: false, error: 'Missing or invalid room unit id' }
@@ -35,7 +36,7 @@ export async function closeRoomAction(formData: FormData): Promise<ActionResult>
 }
 
 export async function reopenRoomAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireRole(['manager', 'admin'], '/manager/rates')
+  const session = await requireRole(['manager', 'admin'], '/manager/rooms')
   const rawId = String(formData.get('unitId') ?? '').trim()
   const parsed = unitIdSchema.safeParse(rawId)
   if (!parsed.success) return { ok: false, error: 'Missing or invalid room unit id' }

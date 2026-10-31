@@ -1,7 +1,8 @@
 import { getSession } from '@/lib/supabase/getSession'
 import { getManagerDashboardStats } from '@/lib/data/manager'
+import { getRoomsStatus } from '@/lib/data/staff'
 import { KpiCard } from '@/components/manager/KpiCard'
-import { RevenueBarChart } from '@/components/manager/RevenueBarChart'
+import { RoomStatusSummary } from '@/components/manager/RoomStatusSummary'
 import { AlertsPanel } from '@/components/manager/AlertsPanel'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { formatTHB } from '@/lib/pricing'
@@ -34,7 +35,11 @@ export default async function ManagerDashboard() {
   const locale = await getLocale()
   const t = getT(locale)
   const localeBcp = LOCALE_BCP47[locale] ?? 'th-TH'
-  const [session, stats] = await Promise.all([getSession(), getManagerDashboardStats()])
+  const [session, stats, rooms] = await Promise.all([
+    getSession(),
+    getManagerDashboardStats(),
+    getRoomsStatus(),
+  ])
   const name = session?.fullName ?? t('nav.greeting')
   const trend = stats.revenueTrendPct
 
@@ -126,8 +131,15 @@ export default async function ManagerDashboard() {
         </KpiCard>
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <RevenueBarChart data7d={stats.revenue7d} data30d={stats.revenue30d} className="lg:col-span-2" />
+      {/* Revenue history lives on /manager/reports; the dashboard is "right
+          now": live room status next to what needs action. */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
+          <h3 className="font-headline-sm text-headline-sm text-primary mb-4">
+            {t('reception.roomsPage.title')}
+          </h3>
+          <RoomStatusSummary rooms={rooms} locale={locale} href="/manager/housekeeping" />
+        </div>
         <AlertsPanel alerts={stats.alerts} locale={locale} />
       </section>
     </div>

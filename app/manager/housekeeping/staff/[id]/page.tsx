@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getHousekeeperDetail, listHousekeepers } from '@/lib/data/manager'
 import { isUuid } from '@/lib/ids'
-import { formatBangkokTime } from '@/lib/dates'
+import { formatBangkokDate, formatBangkokTime } from '@/lib/dates'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
@@ -18,6 +18,11 @@ import type { HousekeeperDetailTask } from '@/lib/data/types'
 export const dynamic = 'force-dynamic'
 
 const CAPACITY_MINUTES = 480
+
+// Same card + header look as the other manager tables (e.g. MaintenanceReportTable).
+const TABLE_CARD = 'bg-surface-container-lowest rounded-lg shadow-level-1 overflow-x-auto'
+const TABLE_HEAD =
+  'text-label-md uppercase tracking-wider text-on-surface-variant border-b border-outline-variant whitespace-nowrap'
 
 /**
  * Phase 54 — per-housekeeper detail for managers: every task they still
@@ -39,7 +44,7 @@ export default async function HousekeeperDetailPage(props: PageProps<'/manager/h
   const inProgress = detail.openTasks.filter((task) => task.status === 'in_progress').length
 
   return (
-    <div className="p-8 lg:p-12 max-w-5xl">
+    <div className="p-8 lg:p-12 max-w-7xl">
       <Link
         href="/manager/housekeeping"
         className="inline-flex items-center gap-1 text-caption text-on-surface-variant hover:text-primary transition-colors duration-200 mb-4"
@@ -107,54 +112,79 @@ export default async function HousekeeperDetailPage(props: PageProps<'/manager/h
             </p>
           </div>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {detail.openTasks.map((task) => (
-              <li
-                key={task.id}
-                className={`bg-surface-container-lowest rounded-lg shadow-level-1 p-5 flex items-start gap-4 border-l-4 ${
-                  task.status === 'in_progress' ? 'border-secondary' : 'border-transparent'
-                }`}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-headline-sm text-headline-sm text-primary leading-none">
-                      {task.roomNumber}
-                    </span>
-                    <PriorityBadge priority={task.priority} />
-                    <StatusBadge status={task.status} />
-                  </div>
-                  <p className="text-body-md text-on-surface mt-2">
-                    {t(TASK_TYPE_KEY[task.taskType])} · {roomType(task)} ·{' '}
-                    {t('manager.housekeepingPage.floorN', { floor: task.floor })}
-                  </p>
-                  <div className="flex items-center gap-3 flex-wrap mt-2">
-                    <TaskETA
-                      estimatedMinutes={task.estimatedMinutes}
-                      nextCheckIn={task.nextCheckIn}
-                      localeBcp={localeBcp}
-                    />
-                    {task.startedAt && (
-                      <span className="text-caption text-on-surface-variant">
-                        {t('manager.housekeepingPage.startedAt', {
-                          time: formatBangkokTime(task.startedAt, localeBcp),
-                        })}
+          <div className={TABLE_CARD}>
+            <table className="w-full text-left text-body-md">
+              <thead className={TABLE_HEAD}>
+                <tr>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colRoom')}</th>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colTask')}</th>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colPriority')}</th>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colStatus')}</th>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colAssigned')}</th>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colTime')}</th>
+                  <th className="py-3 px-4 text-right">{t('manager.housekeepingPage.colAction')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.openTasks.map((task) => (
+                  <tr key={task.id} className="border-b border-outline-variant last:border-b-0 align-top">
+                    {/* Left accent marks the task being worked on right now. */}
+                    <td
+                      className={`py-3 px-4 border-l-4 whitespace-nowrap ${
+                        task.status === 'in_progress' ? 'border-secondary' : 'border-transparent'
+                      }`}
+                    >
+                      <span className="font-mono font-bold text-primary">{task.roomNumber}</span>
+                      <span className="block text-caption text-on-surface-variant">
+                        {t('manager.housekeepingPage.floorN', { floor: task.floor })}
                       </span>
-                    )}
-                  </div>
-                  {task.notes && (
-                    <p className="text-caption text-on-surface-variant mt-2 italic">{task.notes}</p>
-                  )}
-                </div>
-                {task.status === 'assigned' && (
-                  <ReassignTaskButton
-                    taskId={task.id}
-                    housekeepers={housekeepers}
-                    currentAssigneeId={detail.id}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
+                    </td>
+                    <td className="py-3 px-4 min-w-48">
+                      <p className="font-semibold text-on-surface">{t(TASK_TYPE_KEY[task.taskType])}</p>
+                      <p className="text-caption text-on-surface-variant">{roomType(task)}</p>
+                      {task.notes && (
+                        <p className="text-caption text-on-surface-variant italic mt-1">{task.notes}</p>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <PriorityBadge priority={task.priority} />
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <StatusBadge status={task.status} />
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <AssignedAt at={task.assignedAt} localeBcp={localeBcp} />
+                    </td>
+                    <td className="py-3 px-4">
+                      <TaskETA
+                        estimatedMinutes={task.estimatedMinutes}
+                        nextCheckIn={task.nextCheckIn}
+                        localeBcp={localeBcp}
+                      />
+                      {task.startedAt && (
+                        <span className="block text-caption text-on-surface-variant mt-1">
+                          {t('manager.housekeepingPage.startedAt', {
+                            time: formatBangkokTime(task.startedAt, localeBcp),
+                          })}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      {task.status === 'assigned' ? (
+                        <ReassignTaskButton
+                          taskId={task.id}
+                          housekeepers={housekeepers}
+                          currentAssigneeId={detail.id}
+                        />
+                      ) : (
+                        <span className="text-on-surface-variant">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
@@ -169,34 +199,67 @@ export default async function HousekeeperDetailPage(props: PageProps<'/manager/h
             </p>
           </div>
         ) : (
-          <ul className="bg-surface-container-lowest rounded-lg shadow-level-1 divide-y divide-outline-variant">
-            {detail.completedToday.map((task) => {
-              const start = task.startedAt ?? task.createdAt
-              const minutes = task.completedAt
-                ? Math.max(0, Math.round((new Date(task.completedAt).getTime() - new Date(start).getTime()) / 60000))
-                : 0
-              return (
-                <li key={task.id} className="flex items-center gap-4 px-5 py-3">
-                  <MaterialIcon name="task_alt" size={20} className="text-secondary shrink-0" />
-                  <span className="font-body-md font-semibold text-primary w-16 shrink-0">{task.roomNumber}</span>
-                  <span className="flex-1 min-w-0 text-body-md text-on-surface truncate">
-                    {t(TASK_TYPE_KEY[task.taskType])} · {roomType(task)}
-                  </span>
-                  {task.completedAt && (
-                    <span className="text-caption text-on-surface-variant whitespace-nowrap">
-                      {t('manager.housekeepingPage.timeRange', {
-                        start: formatBangkokTime(start, localeBcp),
-                        end: formatBangkokTime(task.completedAt, localeBcp),
-                        minutes,
-                      })}
-                    </span>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+          <div className={TABLE_CARD}>
+            <table className="w-full text-left text-body-md">
+              <thead className={TABLE_HEAD}>
+                <tr>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colRoom')}</th>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colTask')}</th>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colAssigned')}</th>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colStarted')}</th>
+                  <th className="py-3 px-4">{t('manager.housekeepingPage.colFinished')}</th>
+                  <th className="py-3 px-4 text-right">{t('manager.housekeepingPage.colDuration')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.completedToday.map((task) => {
+                  const start = task.startedAt ?? task.createdAt
+                  const minutes = task.completedAt
+                    ? Math.max(0, Math.round((new Date(task.completedAt).getTime() - new Date(start).getTime()) / 60000))
+                    : null
+                  return (
+                    <tr key={task.id} className="border-b border-outline-variant last:border-b-0 align-top">
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-2 font-mono font-bold text-primary">
+                          <MaterialIcon name="task_alt" size={18} className="text-secondary" />
+                          {task.roomNumber}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 min-w-48">
+                        <p className="font-semibold text-on-surface">{t(TASK_TYPE_KEY[task.taskType])}</p>
+                        <p className="text-caption text-on-surface-variant">{roomType(task)}</p>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <AssignedAt at={task.assignedAt} localeBcp={localeBcp} />
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap text-on-surface">
+                        {formatBangkokTime(start, localeBcp)}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap text-on-surface">
+                        {task.completedAt ? formatBangkokTime(task.completedAt, localeBcp) : '—'}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap text-right font-semibold text-on-surface">
+                        {minutes === null ? '—' : t('manager.housekeepingPage.minutesN', { count: minutes })}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>
+  )
+}
+
+/** Date over time (Bangkok). "—" for tasks assigned before assigned_at was recorded. */
+function AssignedAt({ at, localeBcp }: { at: string | null; localeBcp: 'th-TH' | 'en-GB' }) {
+  if (!at) return <span className="text-on-surface-variant">—</span>
+  return (
+    <span className="text-on-surface">
+      {formatBangkokDate(at, localeBcp)}
+      <span className="block font-semibold">{formatBangkokTime(at, localeBcp)}</span>
+    </span>
   )
 }

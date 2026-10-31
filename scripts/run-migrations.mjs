@@ -102,6 +102,7 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 // 20261022 = security — booking RPCs + get_session_email_for_user server-only; is_staff()/has_role() require profiles.is_active.
 // 20261023 = security — hero carousel RPCs admin-only; cancel_temp_booking owner = auth.uid(); can_link_identity_by_email, cleanup_*, recompute_all_room_ratings, has_capacity_for_booking service_role only; expire_* no anon.
 // 20261024 = security — reviews INSERT requires own checked-out booking of the same room type + status pending, no moderation fields.
+// 20261025 = housekeeping_tasks.assigned_at + trigger that stamps it whenever assigned_to changes.
 // NOTE: alternation MUST include every migration number — missing numbers are silently skipped.
 // 20260826 = manager RLS fix-up (housekeeping_tasks INSERT widened to include 'manager')
 // 20260828 = Phase 7 admin foundation + recursion fix
@@ -136,7 +137,7 @@ const migrationsDir = resolve(__dirname, '..', 'supabase', 'migrations')
 //   and adds max-1 enforcement (a new booking cancels any prior active hold for the
 //   same user, with audit row).
 const allFiles = readdirSync(migrationsDir)
-  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)|202610(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24)_.*.sql$/.test(f))
+  .filter((f) => /202608(26|27|28|29|30|31|32|33|34)|202609(02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)|202610(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25)_.*.sql$/.test(f))
   .sort()
 const targets = only ? allFiles.filter((f) => f.includes(only)) : allFiles
 

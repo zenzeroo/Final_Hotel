@@ -1,6 +1,6 @@
 import type { RoomUnitStatus } from '@/lib/data/types'
 
-/** The four KPI buckets on /manager/rates — every one of the 9 statuses lands in exactly one. */
+/** The four KPI buckets on /manager/rooms — every one of the 9 statuses lands in exactly one. */
 export type RoomBucket = 'available' | 'occupied' | 'cleaning' | 'closed'
 
 const BUCKET: Record<RoomUnitStatus, RoomBucket> = {

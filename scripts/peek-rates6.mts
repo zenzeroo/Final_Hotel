@@ -20,7 +20,7 @@ const supabase = createServerClient(
 await supabase.auth.signInWithPassword({ email: 'manager@zenzero.com', password: 'ManagerPass123!' })
 const cookieHeader = cookies.map((c) => c.name + '=' + c.value).join('; ')
 
-const res = await fetch('http://localhost:3000/manager/rates', { headers: { Cookie: cookieHeader } })
+const res = await fetch('http://localhost:3000/manager/rooms', { headers: { Cookie: cookieHeader } })
 const html = await res.text()
 
 // Find ALL unit_id references — RSC payload contains JSON-encoded props

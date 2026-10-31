@@ -1,5 +1,5 @@
 /**
- * /manager/rates close/reopen — live DB integration test.
+ * /manager/rooms close/reopen — live DB integration test.
  *
  * Exercises closeRoomForMaintenance + reopenRoomForCleaning
  * (lib/data/supabase-manager.ts) with a service client against one real

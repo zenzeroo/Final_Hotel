@@ -48,6 +48,11 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '5mb',
     },
   },
+  // The manager room inventory moved from /manager/rates to /manager/rooms;
+  // keep old bookmarks working.
+  async redirects() {
+    return [{ source: '/manager/rates', destination: '/manager/rooms', permanent: true }]
+  },
 };
 
 // `silent: !process.env.CI` — don't print Sentry messages on local builds

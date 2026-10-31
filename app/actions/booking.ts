@@ -1183,7 +1183,7 @@ async function notifyBookingEvent(
       .single()
     if (!booking) return
     if (opts.refundRequestId) {
-      await notifyRoles(['manager', 'admin'], {
+      await notifyRoles(['admin'], {
         type: 'refund_requested_new',
         params: { code: booking.booking_code, amount: opts.refundAmount },
         link: '/manager/bookings?tab=refunds',

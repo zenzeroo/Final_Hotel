@@ -34,7 +34,7 @@ type Role = keyof typeof ROLES
 
 const ROUTES: Record<Role, string[]> = {
   admin: ['/admin', '/admin/customers', '/admin/promotions', '/admin/promotions/new', '/admin/promotions/new?tab=dates', '/admin/rates/room-types', '/admin/rates/room-types?tab=deleted', '/admin/rates/room-types/new', '/admin/settings', '/admin/staff', '/admin/hero-carousel', '/admin/profile'],
-  manager: ['/manager', '/manager/bookings', '/manager/bookings?tab=refunds', '/manager/bookings?tab=audit', '/manager/housekeeping', '/manager/maintenance', '/manager/promotions', '/manager/rates', '/manager/reports', '/manager/reviews', '/manager/reviews?tab=hidden', '/manager/settings', '/manager/staff', '/manager/profile'],
+  manager: ['/manager', '/manager/bookings', '/manager/bookings?tab=refunds', '/manager/bookings?tab=audit', '/manager/housekeeping', '/manager/maintenance', '/manager/promotions', '/manager/rooms', '/manager/reports', '/manager/reviews', '/manager/reviews?tab=hidden', '/manager/settings', '/manager/staff', '/manager/profile'],
   reception: ['/reception', '/reception/bookings', '/reception/bookings/new', '/reception/check-in-out', '/reception/check-in-out?view=upcoming', '/reception/check-in-out?view=inhouse', '/reception/customers', '/reception/customers?q=a', '/reception/history', '/reception/maintenance', '/reception/requests', '/reception/rooms', '/reception/profile'],
   housekeeper: ['/housekeeper', '/housekeeper/tasks', '/housekeeper/tasks?tab=unassigned', '/housekeeper/history', '/housekeeper/maintenance', '/housekeeper/rooms', '/housekeeper/profile'],
 }

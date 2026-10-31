@@ -68,7 +68,7 @@ export async function confirmMaintenanceRoomClosure(
   revalidatePath('/housekeeper/maintenance')
   revalidatePath('/housekeeper/rooms')
   revalidatePath('/manager/housekeeping')
-  revalidatePath('/manager/rates')
+  revalidatePath('/manager/rooms')
   return { ok: true }
 }
 
@@ -119,7 +119,7 @@ export async function resolveMaintenanceReport(
 
   if (updateReportErr) return actionFail(updateReportErr, 'Could not resolve report')
 
-  // Same reopen path as /manager/rates: room → waiting_cleaning + a cleaning task.
+  // Same reopen path as /manager/rooms: room → waiting_cleaning + a cleaning task.
   try {
     await reopenRoomForCleaning(supabase, { unitId: report.room_unit_id, actorId: session.id })
   } catch (e) {
@@ -131,6 +131,6 @@ export async function resolveMaintenanceReport(
   revalidatePath('/housekeeper/maintenance')
   revalidatePath('/housekeeper/rooms')
   revalidatePath('/manager/housekeeping')
-  revalidatePath('/manager/rates')
+  revalidatePath('/manager/rooms')
   return { ok: true }
 }

@@ -18,6 +18,8 @@ import type {
   AuditLogEntry,
   ReportsData,
   RevenueBarPoint,
+  RoomBookingRow,
+  RoomUnitDetail,
   DashboardAlert,
   DamageReport,
   DamageSeverity,
@@ -103,7 +105,9 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
   const dayStart = (d: string) => `${d}T00:00:00+07:00`
   const todayStart = dayStart(today)
   const tomorrowStart = dayStart(addDaysIso(today, 1))
-  const windowStart = dayStart(addDaysIso(today, -29)) // 30 daily buckets
+  // Revenue is only needed for today + yesterday (KPI and its trend); the
+  // longer history is on /manager/reports.
+  const windowStart = dayStart(yesterday)
 
   // Parallel queries — JS client multiplexes over a single HTTP/2 connection.
   const [
@@ -200,7 +204,7 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
     if (e) wrapSupabaseError(label, e)
   }
 
-  // Revenue per Bangkok day across the 30-day window.
+  // Revenue per Bangkok day (yesterday + today).
   const revenueByDay = new Map<string, number>()
   for (const r of paidRows ?? []) {
     const day = toBangkokIsoDate(r.created_at)
@@ -210,11 +214,6 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
   const revenueYesterday = revenueByDay.get(yesterday) ?? 0
   const revenueTrendPct =
     revenueYesterday === 0 ? null : ((revenueToday - revenueYesterday) / revenueYesterday) * 100
-  const buckets = (days: number): RevenueBarPoint[] =>
-    Array.from({ length: days }, (_, i) => {
-      const date = addDaysIso(today, i - (days - 1))
-      return { date, revenue: revenueByDay.get(date) ?? 0 }
-    })
 
   const newToday = newTodayRows ?? []
   const totalActiveRooms = (activeRooms ?? []).length
@@ -286,8 +285,6 @@ export async function getManagerDashboardStats(): Promise<ManagerDashboardStats>
     // Phase 12: real channel split from bookings.channel column.
     webBookings: newToday.filter((b) => b.channel === 'web').length,
     walkInBookings: newToday.filter((b) => b.channel === 'walk_in').length,
-    revenue7d: buckets(7),
-    revenue30d: buckets(30),
     alerts,
   }
 }
@@ -767,7 +764,7 @@ export async function getHousekeeperWorkloads(): Promise<HousekeeperWorkload[]> 
 }
 
 const DETAIL_TASK_SELECT = `
-  id, task_type, priority, status, created_at, started_at, completed_at, notes,
+  id, task_type, priority, status, created_at, assigned_at, started_at, completed_at, notes,
   estimated_minutes, room_unit_id,
   room_unit:room_units!inner(unit_label, floor, room_type:room_types(name, name_th))
 `
@@ -778,6 +775,7 @@ type DetailTaskRow = {
   priority: HousekeepingTaskPriority
   status: HousekeepingTaskStatus
   created_at: string
+  assigned_at: string | null
   started_at: string | null
   completed_at: string | null
   notes: string | null
@@ -848,6 +846,7 @@ export async function getHousekeeperDetail(id: string): Promise<HousekeeperDetai
       priority: t.priority,
       status: t.status,
       createdAt: t.created_at,
+      assignedAt: t.assigned_at,
       startedAt: t.started_at,
       completedAt: t.completed_at,
       estimatedMinutes: t.estimated_minutes,
@@ -895,15 +894,18 @@ export async function getNextCheckInForRooms(
   return new Map(checkinRows.map((r) => [r.room_unit_id, r.next_check_in]))
 }
 
-export async function getBookingsOversight(): Promise<BookingsOversightData> {
+export const BOOKINGS_OVERSIGHT_PAGE_SIZE = 20
+
+export async function getBookingsOversight(page = 1): Promise<BookingsOversightData> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
+  const from = (Math.max(1, Math.floor(page)) - 1) * BOOKINGS_OVERSIGHT_PAGE_SIZE
 
-  // Parallel queries: refunds (already wired 9B), active bookings, audit log,
-  // and active count.
+  // Parallel queries: refunds (already wired 9B), one page of bookings,
+  // audit log, and active count.
   const [
     { data: refundRows, error: e1 },
-    { data: bookingRows, error: e2 },
+    { data: bookingRows, count: bookingsTotal, error: e2 },
     { data: auditRows, error: e3 },
     { count: activeCount, error: e4 },
   ] = await Promise.all([
@@ -916,17 +918,21 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
       .from('bookings')
       .select(
         `
-        id, booking_code, booker_full_name, check_in, check_out, nights, status,
+        id, booking_code, booker_full_name, booker_email, check_in, check_out, nights, status,
         room_type:room_types(name),
         room_unit:room_units(unit_label)
       `,
+        { count: 'exact' },
       )
       // booking_status enum is ('pending','confirmed','checked_in','checked_out','cancelled');
       // 'refunded' lives on payment_status, not booking_status — including it
       // raises "invalid input value for enum booking_status".
       .in('status', ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled'])
       .order('check_in', { ascending: false })
-      .limit(50),
+      // Tie-breaker: many bookings share a check-in date, and without a
+      // unique key the same row could show on two pages (or none).
+      .order('id')
+      .range(from, from + BOOKINGS_OVERSIGHT_PAGE_SIZE - 1),
     supabase
       .from('booking_events')
       .select(
@@ -953,6 +959,27 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
     if (e) wrapSupabaseError(label, e)
   }
 
+  // Actual check-in / check-out times live only on the booking timeline
+  // (written by app/actions/check-in-out.ts). Ascending order, so the latest
+  // event wins if a booking was checked in more than once.
+  const stayTimes = new Map<string, { checkedInAt?: string; checkedOutAt?: string }>()
+  const bookingIds = (bookingRows ?? []).map((b) => b.id)
+  if (bookingIds.length > 0) {
+    const { data: stayEvents, error } = await supabase
+      .from('booking_events')
+      .select('booking_id, event_type, created_at')
+      .in('booking_id', bookingIds)
+      .in('event_type', ['checked_in', 'checked_out'])
+      .order('created_at')
+    if (error) wrapSupabaseError('stayEvents', error)
+    for (const ev of stayEvents ?? []) {
+      const entry = stayTimes.get(ev.booking_id) ?? {}
+      if (ev.event_type === 'checked_in') entry.checkedInAt = ev.created_at
+      else entry.checkedOutAt = ev.created_at
+      stayTimes.set(ev.booking_id, entry)
+    }
+  }
+
   const refundRequests: RefundRequest[] = (refundRows ?? []).map((r) => ({
     id: r.id,
     bookingCode: r.booking_code,
@@ -976,12 +1003,15 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
       id: row.id,
       code: row.booking_code,
       guestName: row.booker_full_name,
+      guestEmail: row.booker_email,
       guestInitials: initials(row.booker_full_name),
       avatarBgClass: avatarBgClass(row.id),
       roomNumber,
       roomType: roomType?.name ?? '—',
       checkIn: row.check_in,
       checkOut: row.check_out,
+      checkedInAt: stayTimes.get(row.id)?.checkedInAt ?? null,
+      checkedOutAt: stayTimes.get(row.id)?.checkedOutAt ?? null,
       nights: row.nights,
       status: normalizeStatus(row.status),
     }
@@ -1054,6 +1084,7 @@ export async function getBookingsOversight(): Promise<BookingsOversightData> {
   return {
     activeCount: activeCount ?? 0,
     bookings,
+    bookingsTotal: bookingsTotal ?? 0,
     refundRequests,
     auditLog,
   }
@@ -1581,6 +1612,95 @@ export async function listRoomUnits(): Promise<RoomUnitWithType[]> {
   return (data ?? []) as unknown as RoomUnitWithType[]
 }
 
+/**
+ * /manager/rooms/[id] — one room and its bookings. A booking gets a room
+ * (`room_unit_id`) only at check-in, so upcoming bookings are listed per
+ * room type instead. `month` is YYYY-MM; null when the room doesn't exist.
+ */
+export async function getRoomUnitDetail(unitId: string, month: string): Promise<RoomUnitDetail | null> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+
+  const { data: unit, error: unitErr } = await supabase
+    .from('room_units')
+    .select(`
+      id, floor, unit_label, view_label, status,
+      room_type:room_types(id, slug, name, name_th, base_price, hero_image_key)
+    `)
+    .eq('id', unitId)
+    .maybeSingle()
+  if (unitErr) wrapSupabaseError('roomUnit', unitErr)
+  if (!unit) return null
+  const roomUnit = unit as unknown as RoomUnitWithType
+
+  const monthStart = `${month}-01`
+  const [y, m] = month.split('-').map(Number)
+  const monthEnd = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+  const columns = 'id, booking_code, booker_full_name, booker_email, check_in, check_out, nights, status, payment_status'
+  const stayStatuses = ['confirmed', 'checked_in', 'checked_out']
+  const today = getTodayBangkok()
+  // Upcoming bookings of this type that get a room only at check-in.
+  const unassignedOfType = () =>
+    supabase
+      .from('bookings')
+      .select(columns)
+      .eq('room_type_id', roomUnit.room_type.id)
+      .is('room_unit_id', null)
+      .in('status', ['pending', 'confirmed'])
+      .gt('check_out', today)
+
+  const [
+    { data: monthRows, error: e1 },
+    { data: assignedRows, error: e2 },
+    { data: upcomingRows, error: e3 },
+    { data: monthUnassignedRows, error: e4 },
+  ] = await Promise.all([
+    supabase
+      .from('bookings')
+      .select(columns)
+      .eq('room_unit_id', unitId)
+      .in('status', stayStatuses)
+      .lt('check_in', monthEnd)
+      .gt('check_out', monthStart),
+    supabase
+      .from('bookings')
+      .select(columns)
+      .eq('room_unit_id', unitId)
+      .in('status', stayStatuses)
+      .order('check_in', { ascending: false })
+      .limit(50),
+    unassignedOfType().order('check_in', { ascending: true }).limit(50),
+    unassignedOfType().lt('check_in', monthEnd).gt('check_out', monthStart),
+  ])
+  for (const [label, e] of [
+    ['monthBookings', e1],
+    ['assignedBookings', e2],
+    ['upcomingUnassigned', e3],
+    ['monthUnassigned', e4],
+  ] as const) {
+    if (e) wrapSupabaseError(label, e)
+  }
+
+  const toRow = (r: NonNullable<typeof monthRows>[number]): RoomBookingRow => ({
+    id: r.id,
+    code: r.booking_code,
+    guestName: r.booker_full_name,
+    guestEmail: r.booker_email,
+    checkIn: r.check_in,
+    checkOut: r.check_out,
+    nights: r.nights,
+    status: r.status,
+    paymentStatus: r.payment_status,
+  })
+  return {
+    unit: roomUnit,
+    monthBookings: (monthRows ?? []).map(toRow),
+    monthUnassigned: (monthUnassignedRows ?? []).map(toRow),
+    assigned: (assignedRows ?? []).map(toRow),
+    upcomingUnassigned: (upcomingRows ?? []).map(toRow),
+  }
+}
+
 export async function listSeasonalRates(): Promise<SeasonalRate[]> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
@@ -1883,7 +2003,7 @@ export async function closeRoomForMaintenance(
 /**
  * Reopen a closed room. It goes to waiting_cleaning (not straight to
  * available) with one cleaning task, and any maintenance report still
- * in_progress for the room is resolved. Shared by the /manager/rates
+ * in_progress for the room is resolved. Shared by the /manager/rooms
  * reopen button and resolveMaintenanceReport so both paths behave the same.
  *
  * Order matters: the room leaves `maintenance` before the task is inserted,

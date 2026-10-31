@@ -1,6 +1,6 @@
+import Link from 'next/link'
 import type { RoomUnitWithType, RoomUnitStatus, SeasonalRate } from '@/lib/data/types'
 import { formatTHB } from '@/lib/pricing'
-import { CloseRoomButton } from './CloseRoomButton'
 import { todayPrice } from './ratePrice'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { EmptyState } from '@/components/feedback/EmptyState'
@@ -17,8 +17,8 @@ interface RoomInventoryTableProps {
   locale: Locale
 }
 
-// Labels: ROOM_STATUS_KEY (staff.status.*).
-const STATUS_LABEL: Record<RoomUnitStatus, { icon: string; chip: string; dot: string }> = {
+// Labels: ROOM_STATUS_KEY (staff.status.*). Also used by /manager/rooms/[id].
+export const STATUS_LABEL: Record<RoomUnitStatus, { icon: string; chip: string; dot: string }> = {
   available: {
     icon: 'check_circle',
     chip: 'bg-primary-container text-on-primary-container',
@@ -155,8 +155,15 @@ export function RoomInventoryTable({ units, rates, today, locale }: RoomInventor
                           {t(ROOM_STATUS_KEY[unit.status])}
                         </span>
                       </td>
+                      {/* The only way into a room's page; close/reopen lives there. */}
                       <td className="px-4 py-4 text-right">
-                        <CloseRoomButton unitId={unit.id} status={unit.status} />
+                        <Link
+                          href={`/manager/rooms/${unit.id}`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-outline-variant text-caption font-semibold text-primary hover:bg-primary hover:text-on-primary transition-colors whitespace-nowrap"
+                        >
+                          <MaterialIcon name="visibility" size={16} />
+                          {t('manager.roomsTable.viewDetails')}
+                        </Link>
                       </td>
                     </tr>
                   )

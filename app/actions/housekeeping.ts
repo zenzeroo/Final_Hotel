@@ -6,7 +6,7 @@ import { requireRole } from '@/lib/auth/require'
 import { actionFail, wrapSupabaseError } from '@/lib/errors/supabase'
 import { isUuid } from '@/lib/ids'
 import { getTodayBangkok } from '@/lib/dates'
-import { notifyRoles, notifyUser } from '@/lib/notifications/notify'
+import { notifyUser } from '@/lib/notifications/notify'
 import type {
   HousekeepingTaskPriority,
   HousekeepingTaskType,
@@ -148,7 +148,7 @@ export async function reportMaintenance(input: {
   // Verify room exists and is active before allowing report
   const { data: room, error: roomErr } = await supabase
     .from('room_units')
-    .select('id, unit_label')
+    .select('id')
     .eq('id', input.room_unit_id)
     .eq('is_active', true)
     .maybeSingle()
@@ -156,24 +156,16 @@ export async function reportMaintenance(input: {
   if (roomErr) return { ok: false, error: roomErr.message }
   if (!room) return { ok: false, error: 'Room not found or inactive' }
 
-  const { data: report, error } = await supabase.from('maintenance_reports').insert({
+  const { error } = await supabase.from('maintenance_reports').insert({
     room_unit_id: input.room_unit_id,
     issue_type: input.issue_type,
     severity: input.severity,
     title: input.title.trim(),
     description: input.description?.trim() || null,
     reported_by: session.id,
-  }).select('id').single()
+  })
 
   if (error) return actionFail(error, 'Could not report maintenance')
-
-  // Reception gets no in-app notifications; managers decide on room closure.
-  await notifyRoles(['manager'], {
-    type: 'maintenance_reported',
-    params: { room: room.unit_label, severity: input.severity },
-    link: '/manager/maintenance',
-    eventKey: `maintenance_reported:${report.id}`,
-  })
 
   revalidatePath('/housekeeper')
   revalidatePath('/housekeeper/maintenance')

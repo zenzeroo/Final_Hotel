@@ -1,4 +1,5 @@
-import { getBookingsOversight } from '@/lib/data/manager'
+import { redirect } from 'next/navigation'
+import { BOOKINGS_OVERSIGHT_PAGE_SIZE, getBookingsOversight } from '@/lib/data/manager'
 import { BookingsOversightTabs } from '@/components/manager/BookingsOversightTabs'
 import { BookingsTable } from '@/components/manager/BookingsTable'
 import { RefundCard } from '@/components/manager/RefundCard'
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic'
 type Tab = 'main' | 'refunds' | 'audit'
 
 export default async function ManagerBookingsPage(props: {
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; page?: string }>
 }) {
   const searchParams = await props.searchParams
   const tab: Tab = (['main', 'refunds', 'audit'] as Tab[]).includes(
@@ -20,12 +21,21 @@ export default async function ManagerBookingsPage(props: {
   )
     ? ((searchParams.tab as Tab) ?? 'main')
     : 'main'
+  const pageParam = Number(searchParams.page ?? 1)
+  const page = Number.isFinite(pageParam) && pageParam >= 1 ? Math.floor(pageParam) : 1
 
-  const [data, locale] = await Promise.all([getBookingsOversight(), getLocale()])
+  const [data, locale] = await Promise.all([getBookingsOversight(page), getLocale()])
   const t = getT(locale)
 
+  // Out-of-range page (e.g. ?page=99, or the last page emptied out) → last real page.
+  const totalPages = Math.ceil(data.bookingsTotal / BOOKINGS_OVERSIGHT_PAGE_SIZE)
+  if (tab === 'main' && data.bookingsTotal > 0 && page > totalPages) {
+    redirect(totalPages > 1 ? `/manager/bookings?page=${totalPages}` : '/manager/bookings')
+  }
+
   return (
-    <div className="p-8 lg:p-12 max-w-7xl">
+    // Full width (no max-w-7xl) so the bookings table reaches the right edge.
+    <div className="p-8 lg:p-12">
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline-md text-headline-md text-primary">{t('manager.bookingsPage.heading')}</h1>
@@ -48,7 +58,13 @@ export default async function ManagerBookingsPage(props: {
       <BookingsOversightTabs active={tab} refundCount={data.refundRequests.length} />
 
       {tab === 'main' ? (
-        <BookingsTable bookings={data.bookings} activeCount={data.activeCount} locale={locale} />
+        <BookingsTable
+          bookings={data.bookings}
+          page={page}
+          pageSize={BOOKINGS_OVERSIGHT_PAGE_SIZE}
+          total={data.bookingsTotal}
+          locale={locale}
+        />
       ) : null}
 
       {tab === 'refunds' ? (

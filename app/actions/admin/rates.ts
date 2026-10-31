@@ -147,7 +147,7 @@ export async function createRoomTypeAction(
 
   revalidatePath('/admin/rates')
   revalidatePath('/admin/rates/room-types')
-  revalidatePath('/manager/rates')
+  revalidatePath('/manager/rooms')
   revalidatePath('/rooms')
   return { ok: true, data: { id: created.id } }
 }
@@ -315,7 +315,7 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
   revalidatePath('/admin/rates/room-types')
   revalidatePath(`/admin/rates/room-types/${id}/edit`)
   revalidatePath('/admin/rates')
-  revalidatePath('/manager/rates')
+  revalidatePath('/manager/rooms')
   revalidatePath('/rooms')
   return { ok: true }
 }
@@ -365,7 +365,7 @@ export async function setRoomTypeActiveAction(formData: FormData): Promise<Actio
   revalidatePath('/admin/rates/room-types')
   revalidatePath(`/admin/rates/room-types/${id}/edit`)
   revalidatePath('/admin/rates')
-  revalidatePath('/manager/rates')
+  revalidatePath('/manager/rooms')
   revalidatePath('/rooms')
   return { ok: true }
 }
@@ -391,7 +391,7 @@ export async function restoreRoomTypeAction(formData: FormData): Promise<ActionR
   revalidatePath('/admin/rates/room-types')
   revalidatePath(`/admin/rates/room-types/${id}/edit`)
   revalidatePath('/admin/rates')
-  revalidatePath('/manager/rates')
+  revalidatePath('/manager/rooms')
   revalidatePath('/rooms')
   return { ok: true }
 }
@@ -457,7 +457,7 @@ export async function permanentlyDeleteRoomTypeAction(
 
   revalidatePath('/admin/rates/room-types')
   revalidatePath('/admin/rates')
-  revalidatePath('/manager/rates')
+  revalidatePath('/manager/rooms')
   revalidatePath('/rooms')
   return { ok: true }
 }
@@ -481,7 +481,7 @@ const roomUnitSchema = z.object({
 function revalidateUnitPages(roomTypeId: string) {
   revalidatePath('/admin/rates/room-types')
   revalidatePath(`/admin/rates/room-types/${roomTypeId}/edit`)
-  revalidatePath('/manager/rates')
+  revalidatePath('/manager/rooms')
   revalidatePath('/manager/housekeeping')
   revalidatePath('/reception/rooms')
   revalidatePath('/rooms')
@@ -587,6 +587,6 @@ export async function createSeasonalRateAction(formData: FormData): Promise<Acti
   }
 
   revalidatePath('/admin/promotions')
-  revalidatePath('/manager/rates')
+  revalidatePath('/manager/rooms')
   return { ok: true }
 }

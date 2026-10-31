@@ -201,11 +201,11 @@ const mgrCookie = mgr.cookieHeader()
 
 // ── Precompile pages so manifests exist before discovery ──────────────────
 
-await step('Precompile /admin/settings, /manager/promotions, /manager/rates', async () => {
+await step('Precompile /admin/settings, /manager/promotions, /manager/rooms', async () => {
   const r1 = await fetch(APP + '/admin/settings', { headers: { Cookie: adminCookie } })
   const r2 = await fetch(APP + '/manager/promotions', { headers: { Cookie: mgrCookie } })
-  const r3 = await fetch(APP + '/manager/rates', { headers: { Cookie: mgrCookie } })
-  return '/admin/settings=' + r1.status + ', /manager/promotions=' + r2.status + ', /manager/rates=' + r3.status
+  const r3 = await fetch(APP + '/manager/rooms', { headers: { Cookie: mgrCookie } })
+  return '/admin/settings=' + r1.status + ', /manager/promotions=' + r2.status + ', /manager/rooms=' + r3.status
 })
 
 // ── Discover action IDs ────────────────────────────────────────────────────
@@ -392,7 +392,7 @@ await step('Test 5: Manager toggles first active promotion (regression for 9A mi
 
 // ── Test 6: Manager closes and reopens a room unit (round-trip) ───────────
 //
-// Note: /manager/rates wires close/reopen via a client component (CloseRoomButton)
+// Note: /manager/rooms wires close/reopen via a client component (CloseRoomButton)
 // that uses useTransition + FormData — NOT a server-rendered <form> with hidden
 // inputs. So we cannot sniff unitId out of the HTML; instead we resolve it via
 // a direct PostgREST query (RLS lets managers see all units) and then POST the
@@ -411,7 +411,7 @@ await step('Test 6: Manager close/reopen round-trip on first room unit', async (
   const unitId = (rows![0] as { id: string }).id
 
   // Close it.
-  const closeRes = await postAction(mgrCookie, '/manager/rates', CLOSE_ROOM_ID, {
+  const closeRes = await postAction(mgrCookie, '/manager/rooms', CLOSE_ROOM_ID, {
     unitId,
   })
   if (closeRes.status >= 400) throw new Error('close HTTP ' + closeRes.status)
@@ -427,7 +427,7 @@ await step('Test 6: Manager close/reopen round-trip on first room unit', async (
   )
 
   // Reopen it.
-  const reopenRes = await postAction(mgrCookie, '/manager/rates', REOPEN_ROOM_ID, {
+  const reopenRes = await postAction(mgrCookie, '/manager/rooms', REOPEN_ROOM_ID, {
     unitId,
   })
   if (reopenRes.status >= 400) throw new Error('reopen HTTP ' + reopenRes.status)

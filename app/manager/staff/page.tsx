@@ -1,9 +1,11 @@
 import { listStaff, listShifts } from '@/lib/data/manager'
-import { StaffTable } from '@/components/manager/StaffTable'
+import { STAFF_PAGE_SIZE, StaffTable } from '@/components/manager/StaffTable'
+import { Pagination } from '@/components/ui/Pagination'
 import { ShiftSchedule } from '@/components/manager/ShiftSchedule'
 import { StaffTabs } from '@/components/manager/StaffTabs'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ShiftWeekNav } from '@/components/manager/ShiftWeekNav'
+import { StaffSearch } from '@/components/manager/StaffSearch'
 import { addDaysIso, getTodayBangkok, startOfWeekMondayIso } from '@/lib/dates'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
@@ -13,7 +15,7 @@ export const dynamic = 'force-dynamic'
 type Tab = 'all' | 'manager' | 'reception' | 'housekeeper'
 
 export default async function ManagerStaffPage(props: {
-  searchParams: Promise<{ tab?: string; week?: string }>
+  searchParams: Promise<{ tab?: string; week?: string; q?: string; page?: string }>
 }) {
   const searchParams = await props.searchParams
   const allowed: Tab[] = ['all', 'manager', 'reception', 'housekeeper']
@@ -51,6 +53,24 @@ export default async function ManagerStaffPage(props: {
   ).length
   const tabSuffix = tab === 'all' ? '' : ` — ${t(TAB_LABEL_KEY[tab])}`
 
+  // ?q= narrows the staff list and the shift grid by name or email. The KPIs
+  // above keep counting the whole role tab.
+  const query = typeof searchParams.q === 'string' ? searchParams.q.trim().slice(0, 100) : ''
+  const needle = query.toLocaleLowerCase()
+  const shownStaff = needle
+    ? filteredStaff.filter(
+        (s) => s.full_name.toLocaleLowerCase().includes(needle) || s.email.toLocaleLowerCase().includes(needle),
+      )
+    : filteredStaff
+  const noMatch = needle !== '' && shownStaff.length === 0
+
+  // ?page= pages the staff list only; the shift grid keeps every matching row.
+  const totalPages = Math.max(1, Math.ceil(shownStaff.length / STAFF_PAGE_SIZE))
+  const pageParam = Number(searchParams.page ?? 1)
+  const page = Number.isFinite(pageParam) && pageParam >= 1 ? Math.min(Math.floor(pageParam), totalPages) : 1
+  const firstRow = (page - 1) * STAFF_PAGE_SIZE
+  const pageStaff = shownStaff.slice(firstRow, firstRow + STAFF_PAGE_SIZE)
+
   return (
     <div className="p-8 lg:p-12">
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
@@ -84,11 +104,42 @@ export default async function ManagerStaffPage(props: {
 
       <StaffTabs active={tab} locale={locale} />
 
+      <StaffSearch initialQuery={query} />
+
       <section className="mb-12">
-        <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          {t('manager.staffPage.staffList')}{tabSuffix}
-        </h2>
-        <StaffTable staff={filteredStaff} locale={locale} />
+        <div className="flex items-baseline justify-between gap-3 flex-wrap mb-4">
+          <h2 className="font-headline-sm text-headline-sm text-primary">
+            {t('manager.staffPage.staffList')}{tabSuffix}
+          </h2>
+          {pageStaff.length > 0 && (
+            <span className="text-caption text-on-surface-variant">
+              {t('manager.bookingsTable.showing', {
+                from: firstRow + 1,
+                to: firstRow + pageStaff.length,
+                total: shownStaff.length,
+              })}
+            </span>
+          )}
+        </div>
+        <StaffTable
+          staff={pageStaff}
+          emptyText={noMatch ? t('manager.staffPage.noMatch', { q: query }) : t('manager.staffPage.emptyGroup')}
+          locale={locale}
+        />
+        {/* Fixed-height slot: the pager hides itself on a single page, but its
+            space stays so the shift grid below never jumps. */}
+        <div className="h-16">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            basePath="/manager/staff"
+            extraParams={{
+              tab: tab === 'all' ? undefined : tab,
+              week: weekStart === currentWeekStart ? undefined : weekStart,
+              q: query || undefined,
+            }}
+          />
+        </div>
       </section>
 
       <section id="shifts" className="scroll-mt-8">
@@ -103,8 +154,14 @@ export default async function ManagerStaffPage(props: {
           nextWeek={addDaysIso(weekStart, 7)}
           isCurrentWeek={weekStart === currentWeekStart}
           tab={tab}
+          query={query}
+          staffPage={page}
         />
-        <ShiftSchedule staff={filteredStaff} week={week} today={today} locale={locale} />
+        {noMatch ? (
+          <NoMatch text={t('manager.staffPage.noMatch', { q: query })} />
+        ) : (
+          <ShiftSchedule staff={shownStaff} week={week} today={today} locale={locale} />
+        )}
       </section>
     </div>
   )
@@ -115,6 +172,15 @@ const TAB_LABEL_KEY: Record<Tab, string> = {
   manager: 'manager.staffPage.tabManager',
   reception: 'manager.staffPage.tabReception',
   housekeeper: 'manager.staffPage.tabHousekeeper',
+}
+
+function NoMatch({ text }: { text: string }) {
+  return (
+    <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-8 text-center">
+      <MaterialIcon name="person_search" size={40} className="text-on-surface-variant mb-2" />
+      <p className="text-body-md text-on-surface-variant">{text}</p>
+    </div>
+  )
 }
 
 function KpiTile({ label, value, tone = 'text-primary' }: { label: string; value: number | string; tone?: string }) {

@@ -9,7 +9,7 @@ import { getT } from '@/lib/i18n/t'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ManagerRatesPage() {
+export default async function ManagerRoomsPage() {
   const locale = await getLocale()
   const t = getT(locale)
   const [units, seasonalRates] = await Promise.all([
