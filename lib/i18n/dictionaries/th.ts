@@ -30,16 +30,22 @@ export const th = {
       website: 'หน้าเว็บไซต์',
     },
     notification: 'การแจ้งเตือน',
-    greeting: 'สวัสดี',
   },
 
   // Footer
   footer: {
-    privacy: 'Privacy Policy',
-    terms: 'Terms of Service',
-    contact: 'Contact Us',
-    careers: 'Careers',
+    credits: 'ภาพประกอบจากคลังภาพเสรี:',
+    privacy: 'นโยบายความเป็นส่วนตัว',
+    terms: 'เงื่อนไขการให้บริการ',
+    contact: 'ติดต่อเรา',
+    careers: 'ร่วมงานกับเรา',
     copyright: '© 2024 Zenzero Hotel. สงวนลิขสิทธิ์',
+  },
+
+  // Shared customer copy: the name's meaning and the street photo caption (about, contact)
+  landing: {
+    meaning: 'Zenzero แปลว่า “ขิง” ในภาษาอิตาลี',
+    whereCaption: 'ถนนสุขุมวิทยามค่ำใต้รางรถไฟฟ้า BTS ซอย 11 อยู่ใกล้สถานีนานา',
   },
 
   // Homepage
@@ -1059,6 +1065,7 @@ export const th = {
     requests: 'คำขอ',
     history: 'ประวัติ',
     sidebar: {
+      walkIn: 'จอง Walk-in',
       dashboard: 'แดชบอร์ด',
       checkInOut: 'เช็คอิน / เช็คเอาท์',
       bookings: 'การจอง',
@@ -1078,6 +1085,16 @@ export const th = {
       filterAll: 'ทั้งหมด',
     },
     checkInOutPage: {
+      colName: 'ชื่อ-นามสกุล',
+      colEmail: 'อีเมล',
+      colRoom: 'ห้อง',
+      colCheckIn: 'เช็คอิน',
+      colCheckOut: 'เช็คเอาท์',
+      colRoomStatus: 'สถานะห้อง',
+      roomReady: 'ห้องว่าง พร้อมเข้าพัก',
+      noRoomLeft: 'ห้องประเภทนี้ที่ว่างถูกจัดให้รายการก่อนหน้าแล้ว',
+      inHouseUntil: 'พักอยู่ — เช็คเอาท์ {date}',
+      open: 'เปิดการจอง',
       title: 'เช็คอิน / เช็คเอาท์',
       todayArrivals: 'ผู้ที่จะมาถึงวันนี้',
       todayDepartures: 'ผู้ที่จะออกวันนี้',
@@ -1098,15 +1115,12 @@ export const th = {
       emptyRange: 'ไม่มี{verb} {range}',
       upcomingTitle: '{verb}ที่กำลังจะมา',
       upcomingEmpty: 'ไม่มี{verb}ในช่วง 3 วันข้างหน้า',
-      alreadyCheckedIn: 'เข้าพักแล้ว',
       inHouseTitle: 'แขกที่พักอยู่ในขณะนี้',
       noInHouseGuests: 'ไม่มีแขกที่เข้าพักอยู่',
-      checkoutOn: 'เช็คเอาท์ {date}',
-      eventOn: '{verb} {date}',
       backToToday: 'กลับวันนี้',
       today: 'วันนี้',
-      tabUpcoming: 'กำลังจะมา ({count})',
-      tabInHouse: 'พักอยู่ในขณะนี้ ({count})',
+      tabUpcoming: 'กำลังจะมา',
+      tabInHouse: 'พักอยู่ตอนนี้',
       selectRoomFirst: 'กรุณาเลือกห้องก่อนเช็คอิน',
       noRoomReady: 'ไม่มีห้องที่พร้อมเข้าพัก — ตรวจสถานะห้องที่หน้า "ห้องพัก"',
       roomProblem: 'ห้องมีปัญหา? เลือกห้องอื่น',
@@ -1268,7 +1282,7 @@ export const th = {
       from: 'เริ่มต้น',
       maxGuests: 'สูงสุด {count} ท่าน',
       createHeading: 'สร้างการจอง Walk-in',
-      createSubtitle: 'กรอกข้อมูลลูกค้าและวันที่เข้าพัก',
+      createSubtitle: 'กรอกข้อมูลลูกค้าและเลือกวิธีชำระเงิน',
       guestInfo: 'ข้อมูลลูกค้า',
       fullName: 'ชื่อ-นามสกุล',
       email: 'อีเมล',
@@ -1297,6 +1311,8 @@ export const th = {
       grandTotal: 'รวมทั้งสิ้น',
       creating: 'กำลังสร้าง…',
       confirm: 'ยืนยันการจอง',
+      summary: 'สรุปการจอง',
+      change: 'เปลี่ยนวันที่ / จำนวนผู้เข้าพัก',
     },
     common: {
       updateFailed: 'ไม่สามารถอัปเดต: {detail}',
@@ -1314,16 +1330,23 @@ export const th = {
   // Housekeeper
   housekeeper: {
     title: 'แดชบอร์ดแม่บ้าน',
+    dashboard: {
+      nextTask: 'งานถัดไป',
+      inProgress: 'กำลังทำอยู่',
+      noNextTask: 'ตอนนี้ไม่มีงานที่มอบหมายให้คุณ',
+      noNextTaskBody: 'ดูงานที่ยังไม่มีคนรับ แล้วกดรับงานได้ที่หน้างานของฉัน',
+      openTasks: 'ไปที่งานของฉัน',
+      today: 'วันนี้',
+      urgentWaiting: 'งานด่วนที่รออยู่',
+      otherTasks: 'งานอื่นของฉัน',
+      seeAll: 'ดูงานทั้งหมด',
+    },
     myTasks: 'งานของฉัน',
     unassigned: 'งานที่ยังไม่ได้มอบหมาย',
     roomsToClean: 'ห้องที่ต้องทำความสะอาด',
     pendingMaintenance: 'งานซ่อมบำรุงที่ค้าง',
     shiftProgress: 'ความคืบหน้ากะ',
     myBookings: 'การจองที่กำลังจะมาถึง',
-    tabs: {
-      emptyUrgent: 'ไม่มีงานเร่งด่วน',
-      emptyAssigned: 'ไม่มีงานที่ได้รับมอบหมาย',
-    },
     sidebar: {
       dashboard: 'แดชบอร์ด',
       tasks: 'งาน',
@@ -1346,7 +1369,7 @@ export const th = {
       heading: 'งานของฉัน',
       subtitle: 'งานที่มอบหมายให้คุณและกลุ่มงานที่ยังไม่มีคนรับ',
       tabMine: 'งานของฉัน',
-      tabPool: 'กลุ่มงานที่ยังไม่มีคนรับ',
+      tabPool: 'งานรอคนรับ',
       mineHeading: 'งานของฉัน ({count})',
       poolHeading: 'กลุ่มงานที่ยังไม่มีคนรับ ({count})',
       mineEmpty: 'ตอนนี้คุณยังไม่มีงานที่ได้รับมอบหมาย',
@@ -1363,9 +1386,10 @@ export const th = {
       underMaintenance: 'ปิดซ่อมบำรุง',
       outOfOrder: 'ปิดใช้งาน',
       heading: 'ภาพรวมสถานะห้อง',
-      subtitle: 'ห้องพักทุกห้องและสถานะปัจจุบัน',
+      subtitle: '{rooms} ห้อง · {floors} ชั้น · ดูอย่างเดียว สถานะเปลี่ยนเองเมื่อแขกเช็คอิน/เอาท์ และเมื่องานเสร็จ',
       noMatchingRooms: 'ไม่มีห้องที่ตรงกับตัวกรองนี้',
-      readOnly: 'อ่านอย่างเดียว (พนักงานต้อนรับควบคุม)',
+      roomCount: '{count} ห้อง',
+      filterLabel: 'กรองตามสถานะ',
     },
     maintenancePage: {
       title: 'แจ้งซ่อมบำรุง',
@@ -1390,25 +1414,32 @@ export const th = {
       typeOther: 'อื่นๆ',
       heading: 'รายงานการซ่อมบำรุงและความเสียหาย',
       subtitle: 'ติดตามปัญหาที่แจ้งเข้ามาทั้งโรงแรม',
+      colRoom: 'ห้อง',
+      colIssue: 'ปัญหา',
+      colSeverity: 'ความรุนแรง',
+      colStatus: 'สถานะ',
+      colReporter: 'ผู้แจ้ง',
+      colReportedAt: 'วันที่แจ้ง',
       managerNote: 'หมายเหตุ: การยืนยันปิดห้องและการปิดรายงานทำโดยผู้จัดการ',
     },
     historyPage: {
       // Phase 53 — full i18n set (was 4 keys, all orphans; replaced
       // with the actual page labels).
       // Phase 53b — `tabMy` + `tabAll` removed (single-user view).
-      pageTitle: 'วิเคราะห์ประวัติการทำงาน',
-      pageSubtitle: 'ติดตามผลงานกะของคุณตลอดช่วงเวลาที่ผ่านมา',
-      roomsCleaned: 'ห้องที่ทำความสะอาดแล้ว',
+      pageTitle: 'ประวัติการทำงาน',
+      pageSubtitle: 'งานที่คุณทำเสร็จ แยกตามวัน',
+      roomsCleaned: 'เสร็จในเดือนนี้',
       tasksToday: 'วันนี้',
-      tasksThisWeek: 'สัปดาห์นี้',
-      recentLogTitle: 'บันทึกงานล่าสุด',
-      noLog: 'ยังไม่มีงานที่เสร็จสิ้น',
-      started: 'เริ่ม',
-      finished: 'เสร็จ',
-      // Phase 53b — month picker controls.
-      monthPickerLabel: 'เลือกเดือน',
-      monthPickerApply: 'ดู',
-      monthPickerClear: 'ดูทั้งหมด',
+      tasksThisWeek: '7 วันล่าสุด',
+      yesterday: 'เมื่อวาน',
+      dayCount: '{count} งาน',
+      minutes: '{n} นาที',
+      hoursMinutes: '{h} ชม. {m} นาที',
+      shownOf: 'แสดง {shown} จาก {total} งาน',
+      monthNav: 'เลือกเดือน',
+      prevMonth: 'เดือนก่อน',
+      nextMonth: 'เดือนถัดไป',
+      thisMonth: 'กลับไปเดือนนี้',
       emptyMonth: 'ไม่มีงานที่เสร็จสิ้นในเดือนนี้',
     },
     // Phase 53 — labels threaded to TaskCard's started/finished prefix
@@ -1418,14 +1449,17 @@ export const th = {
       finished: 'เสร็จ',
     },
     dashboardTabs: {
-      urgent: 'เร่งด่วน',
-      assigned: 'มอบหมายให้ฉัน',
       shiftTarget: 'เป้าหมาย: 12 ห้อง',
     },
   },
 
   // Admin
   admin: {
+    recentActivity: 'กิจกรรมล่าสุด',
+    colWhen: 'เวลา',
+    colStaff: 'ผู้ดำเนินการ',
+    colAction: 'การดำเนินการ',
+    system: 'ระบบ',
     title: 'แดชบอร์ดแอดมิน',
     sidebar: {
       dashboard: 'แดชบอร์ด',
@@ -2055,6 +2089,12 @@ export const th = {
 
   // Phase 27.E — labels shared by every staff portal (badges, cards, chrome)
   staff: {
+    roleName: {
+      reception: 'พนักงานต้อนรับ',
+      housekeeper: 'แม่บ้าน',
+      manager: 'ผู้จัดการ',
+      admin: 'ผู้ดูแลระบบ',
+    },
     status: {
       unassigned: 'ยังไม่ได้มอบหมาย',
       assigned: 'มอบหมายแล้ว',
@@ -2396,8 +2436,10 @@ export const th = {
       executive: "· ชั้นผู้บริหาร",
       seaView: "· วิวทะเล",
       roomCount: "{count} ห้อง",
-      emptyTitle: "ไม่พบห้องพัก",
-      emptyBody: "ลองปรับตัวกรองหรือเลือกชั้นอื่นเพื่อดูตัวเลือกเพิ่มเติม",
+      emptyTitle: "วันที่เลือกไม่มีห้องว่าง",
+      emptyBody: "ห้องที่ตรงกับตัวกรองถูกจองเต็มแล้วในช่วงนี้ ลองเลื่อนวัน หรือล้างตัวกรองเพื่อดูห้องอื่น",
+      tryLater: "ดูวันถัดไป 1 วัน",
+      clearFilters: "ล้างตัวกรอง",
     },
     filters: {
       type: "ประเภท: {value}",
@@ -2536,7 +2578,7 @@ export const th = {
       frontDesk: "แผนกต้อนรับ 24 ชั่วโมง",
       bookingTitle: "การจอง",
       booking: "จองห้องพักได้ง่ายๆ ผ่านเว็บไซต์ รองรับการชำระเงินหลายช่องทาง และยกเลิกได้ตามนโยบายที่เลือก",
-      seeRooms: "ดูห้องพักทั้งหมด →",
+      seeRooms: "ดูห้องพักทั้งหมด",
     },
     pagination: {
       prev: "ก่อนหน้า",
@@ -2593,8 +2635,10 @@ export const th = {
     openPdf: 'เปิดไฟล์ PDF',
     viewerFailed: 'แสดงเอกสารในหน้านี้ไม่ได้',
     updatedAt: 'อัปเดตล่าสุด {date}',
-    termsEyebrow: 'ข้อกำหนด',
     termsTitle: 'เงื่อนไขการให้บริการ',
+    onThisPage: 'ในหน้านี้',
+    related: 'เอกสารที่เกี่ยวข้อง',
+    questions: 'มีคำถาม? ติดต่อเรา',
   },
 
   consent: {
@@ -2624,7 +2668,6 @@ export const th = {
   privacyPage: {
     metaTitle: 'นโยบายความเป็นส่วนตัว — Zenzero Hotel',
     metaDescription: 'นโยบายความเป็นส่วนตัวและการคุ้มครองข้อมูลส่วนบุคคลของ Zenzero Hotel',
-    eyebrow: 'นโยบาย',
     title: 'นโยบายความเป็นส่วนตัว',
     intro:
       'Zenzero Hotel เคารพสิทธิ์ความเป็นส่วนตัวของผู้เข้าพักและผู้ใช้บริการทุกท่าน เราจัดเก็บและใช้ข้อมูลส่วนบุคคลของท่านตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) และกฎหมายที่เกี่ยวข้อง',

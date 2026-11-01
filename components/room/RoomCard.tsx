@@ -11,7 +11,6 @@ import { localizedName } from '@/lib/format/roomType'
 interface RoomCardProps {
   room: RoomType
   locale: Locale
-  variant?: 'default' | 'featured'
   /** Pre-localised room-type label (e.g. 'ดีลักซ์' / 'Deluxe'). Passed from parent to keep this a Server Component. */
   typeLabel: string
   /** Pre-localised max-occupancy label (e.g. 'สูงสุด 4 ท่าน'). Passed from parent. */
@@ -24,65 +23,43 @@ interface RoomCardProps {
   searchParams?: Record<string, string | string[] | undefined>
 }
 
-export function RoomCard({ room, locale, variant = 'default', typeLabel, maxGuestsLabel, searchParams }: RoomCardProps) {
+export function RoomCard({ room, locale, typeLabel, maxGuestsLabel, searchParams }: RoomCardProps) {
   const t = getT(locale)
-  const isFeatured = variant === 'featured'
   const href = buildRoomHref(room.slug, searchParams)
+  const desc = (locale === 'th' && room.short_desc_th) || room.short_desc
 
   return (
     <Link
       href={href}
-      className="group flex flex-col bg-surface-container-lowest rounded-2xl overflow-hidden shadow-(--shadow-ambient) transition-all duration-300 hover:shadow-(--shadow-ambient-md) hover:-translate-y-1"
+      className="group flex flex-col bg-surface-container-lowest rounded-2xl overflow-hidden transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
     >
-      {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <RoomImage
           imageKey={room.hero_image_key}
-          alt={room.name}
+          alt={localizedName(room, locale)}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
           className="object-cover transition-transform duration-700 group-hover:scale-105"
         />
-        {isFeatured && room.rating_avg >= 4.8 && (
-          <span className="absolute top-4 left-4 inline-flex items-center gap-1 px-3 py-1.5 bg-secondary text-on-secondary rounded-full text-caption font-semibold uppercase tracking-wider">
-            <MaterialIcon name="local_fire_department" size={14} filled />
-            {t('customer.roomCard.featured')}
-          </span>
-        )}
       </div>
 
-      {/* Content */}
       <div className="p-6 flex flex-col gap-3 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-display text-xl text-primary font-semibold">{localizedName(room, locale)}</h3>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-on-surface-variant">
-          <span className="inline-flex items-center gap-1.5">
-            <MaterialIcon name="hotel" size={14} />
-            {typeLabel}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <MaterialIcon name="group" size={14} />
-            {maxGuestsLabel}
-          </span>
-        </div>
-
-        <p className="text-body-md text-on-surface-variant line-clamp-2 flex-1 mb-0">{room.short_desc}</p>
-
-        <div className="flex items-center justify-between mt-2">
-          <RatingStars value={room.rating_avg} count={room.rating_count} size={16} />
-        </div>
+        <h3 className="font-display text-xl text-primary font-semibold">{localizedName(room, locale)}</h3>
+        <p className="text-[14px] text-on-surface-variant">
+          {typeLabel} · {maxGuestsLabel}
+        </p>
+        {desc && <p className="text-body-md text-on-surface-variant line-clamp-2 flex-1">{desc}</p>}
+        {room.rating_count > 0 && <RatingStars value={room.rating_avg} count={room.rating_count} size={16} />}
 
         <div className="flex items-center justify-between mt-2 pt-4 border-t border-outline-variant gap-3">
           <div className="min-w-0">
-            <span className="text-caption text-on-surface-variant block">{t('customer.roomCard.from')}</span>
+            <span className="text-[14px] text-on-surface-variant block">{t('customer.roomCard.from')}</span>
             <span className="text-2xl font-display font-bold text-primary whitespace-nowrap">{formatTHB(room.base_price)}</span>
             <span className="text-body-md text-on-surface-variant whitespace-nowrap"> {t('customer.roomCard.perNight')}</span>
           </div>
           <span
-            className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary transition-transform duration-300 group-hover:translate-x-1"
-            aria-label={t('customer.roomCard.viewDetails')}
+            className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-on-primary transition-transform duration-300 group-hover:translate-x-1"
+            aria-hidden
           >
             <MaterialIcon name="arrow_forward" size={20} />
           </span>

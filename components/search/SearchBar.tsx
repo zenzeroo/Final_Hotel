@@ -105,7 +105,7 @@ export function SearchBar({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col md:flex-row items-stretch gap-3 md:gap-2 bg-surface-container-lowest p-4 md:p-3 rounded-2xl shadow-(--shadow-ambient-lg) md:rounded-full"
+      className="flex flex-col lg:flex-row items-stretch gap-px bg-surface-container"
     >
       {/* Check-in */}
       <DateField
@@ -124,13 +124,13 @@ export function SearchBar({
       />
 
       {/* Guests */}
-      <div className="flex-1 flex items-center gap-3 px-4 md:py-2 md:border-l md:border-outline-variant">
-        <span className="text-label-md text-on-surface-variant shrink-0">{t('roomsList.searchBar.guests')}</span>
+      <div className="flex-1 flex items-center gap-3 px-4 py-3 bg-surface-container-lowest">
+        <span className="text-body-md text-on-surface shrink-0">{t('roomsList.searchBar.guests')}</span>
         <div className="flex items-center gap-3 ml-auto">
           <button
             type="button"
             onClick={() => handleGuestsChange(-1)}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
+            className="inline-flex items-center justify-center w-11 h-11 bg-surface-container text-primary hover:bg-primary hover:text-on-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
             aria-label={t('roomsList.searchBar.decGuests')}
           >
             <MaterialIcon name="remove" size={16} />
@@ -139,7 +139,7 @@ export function SearchBar({
           <button
             type="button"
             onClick={() => handleGuestsChange(+1)}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
+            className="inline-flex items-center justify-center w-11 h-11 bg-surface-container text-primary hover:bg-primary hover:text-on-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
             aria-label={t('roomsList.searchBar.incGuests')}
           >
             <MaterialIcon name="add" size={16} />
@@ -152,7 +152,7 @@ export function SearchBar({
         <button
           type="button"
           onClick={handleReset}
-          className="inline-flex items-center justify-center gap-1 md:rounded-full px-5 py-3 md:py-2 rounded-xl border border-primary text-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:border-primary-fixed transition-colors"
+          className="inline-flex items-center justify-center gap-1 px-5 py-3 bg-surface-container-lowest text-primary font-semibold text-body-md hover:bg-primary-fixed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
         >
           <MaterialIcon name="restart_alt" size={20} />
           <span>{t('roomsList.searchBar.reset')}</span>
@@ -160,7 +160,7 @@ export function SearchBar({
       )}
       <button
         type="submit"
-        className="inline-flex items-center justify-center gap-1 md:rounded-full bg-primary text-on-primary px-6 py-3 md:py-2 rounded-xl font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors"
+        className="inline-flex items-center justify-center gap-1 bg-primary text-on-primary px-6 py-3 font-semibold text-body-md hover:bg-primary-container active:translate-y-px transition-[background-color,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         <MaterialIcon name="search" size={20} />
         <span>{t('roomsList.searchBar.search')}</span>
@@ -181,14 +181,14 @@ function DateField({
   onChange: (v: string) => void
 }) {
   return (
-    <label className="flex-1 flex items-center gap-3 px-4 py-3">
+    <label className="flex-1 flex items-center gap-3 px-4 py-3 bg-surface-container-lowest">
       <MaterialIcon
         name="calendar_today"
         size={20}
         className="text-on-surface-variant shrink-0"
       />
       <div className="flex flex-col">
-        <span className="text-caption text-on-surface-variant font-semibold uppercase tracking-wider">
+        <span className="text-[14px] text-on-surface-variant">
           {label}
         </span>
         <input

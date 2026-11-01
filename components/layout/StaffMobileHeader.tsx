@@ -31,21 +31,21 @@ export function StaffMobileHeader({ role, userName, avatarKey, userId }: StaffMo
 
   return (
     <>
-      <header className="md:hidden sticky top-0 z-30 bg-primary text-secondary shadow-(--shadow-level-1)">
+      <header className="md:hidden sticky top-0 z-30 bg-primary text-on-primary">
         <div className="flex items-center gap-3 h-14 px-4">
           <button
             type="button"
             onClick={() => setOpen(true)}
             aria-label={t('staff.openMenu')}
-            className="inline-flex items-center justify-center w-10 h-10 -ml-2 rounded-full hover:bg-primary-fixed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+            className="inline-flex items-center justify-center w-11 h-11 -ml-2 rounded-full hover:bg-on-primary/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-container"
           >
             <MaterialIcon name="menu" size={24} />
           </button>
-          <span className="font-display text-lg font-bold tracking-tight">
+          <span className="font-wordmark text-lg font-bold text-secondary-container">
             Zenzero Hotel
           </span>
           {userName && (
-            <span className="ml-auto text-caption text-secondary/70 uppercase tracking-wider truncate max-w-[40%]">
+            <span className="ml-auto text-[14px] text-on-primary/70 truncate max-w-[40%]">
               {userName}
             </span>
           )}
@@ -61,9 +61,9 @@ export function StaffMobileHeader({ role, userName, avatarKey, userId }: StaffMo
         open={open}
         onClose={() => setOpen(false)}
         title={t('staff.menu')}
-        panelClassName="bg-primary text-secondary"
+        panelClassName="bg-primary text-on-primary"
       >
-        <div className="bg-primary text-secondary h-full">
+        <div className="bg-primary text-on-primary h-full">
           {/* StaffSidebarNav already styled for primary background. We swap the
               body background via the panelClassName above; the nav itself uses
               its own bg-primary tokens. The wrapping div ensures the scroll region

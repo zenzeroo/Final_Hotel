@@ -46,7 +46,7 @@ export function RoomGallery({ room }: RoomGalleryProps) {
         type="button"
         onClick={() => setViewer(i)}
         aria-label={t('customer.gallery.viewImage', { n: i + 1 })}
-        className={`group relative rounded-2xl overflow-hidden bg-surface-container cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${isHero ? '' : 'hidden md:block'} ${className}`}
+        className={`group relative overflow-hidden bg-surface-container cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${isHero ? '' : 'hidden md:block'} ${className}`}
       >
         <RoomImage
           imageKey={key}
@@ -59,13 +59,8 @@ export function RoomGallery({ room }: RoomGalleryProps) {
           onError={isHero || !key ? undefined : () => markFailed(key)}
         />
         {isHero && count > 1 && (
-          <span className="md:hidden absolute bottom-3 right-3 px-3 py-1.5 rounded-full bg-black/60 text-white text-label-md font-semibold">
+          <span className="md:hidden absolute bottom-3 right-3 px-3 py-1.5 bg-black/70 text-white text-[14px] font-semibold">
             {t('customer.gallery.moreCount', { count: count - 1 })}
-          </span>
-        )}
-        {isHero && (
-          <span className="absolute top-4 left-4 px-4 py-2 bg-secondary text-on-secondary rounded-full text-label-md font-semibold uppercase tracking-wider">
-            {t('customer.gallery.collection')}
           </span>
         )}
         {showMore && (
@@ -82,14 +77,14 @@ export function RoomGallery({ room }: RoomGalleryProps) {
     grid = <div className="grid grid-cols-1">{tile(0, 'h-[300px] md:h-[480px]', '(max-width: 768px) 100vw, 66vw')}</div>
   } else if (count === 2) {
     grid = (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:h-[480px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:h-[480px]">
         {tile(0, 'min-h-[300px] md:min-h-0', '(max-width: 768px) 100vw, 33vw')}
         {tile(1, 'min-h-[200px] md:min-h-0', '(max-width: 768px) 100vw, 33vw')}
       </div>
     )
   } else {
     grid = (
-      <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-3 md:h-[600px]">
+      <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-2 md:h-[600px]">
         {tile(0, 'md:col-span-2 md:row-span-2 min-h-[300px] md:min-h-0', '(max-width: 768px) 100vw, 33vw')}
         {count === 3 ? (
           <>

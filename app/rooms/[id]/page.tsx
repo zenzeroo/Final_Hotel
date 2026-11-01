@@ -11,7 +11,6 @@ import { RoomGallery } from '@/components/room/RoomGallery'
 import { RatingStars } from '@/components/room/RatingStars'
 import { BookingWidget } from '@/components/room/BookingWidget'
 import { ReviewList } from '@/components/room/ReviewList'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
@@ -61,76 +60,50 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
     <>
       <TopNavBar />
       <main className="flex-1 bg-background">
-        <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-10">
+        <div className="page-x pt-10 md:pt-16 pb-24 md:pb-40">
           {holdError && (
             <div
               role="alert"
-              className="mb-6 px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error"
+              className="mb-6 px-4 py-3 bg-error-container text-body-md text-on-error-container"
             >
               {isEn
                 ? 'This room was just reserved by another guest. Please try again in a few minutes — the hold expires automatically.'
                 : 'ห้องนี้เพิ่งถูกจองหรือถูกระงับชั่วคราวโดยผู้ใช้อื่น กรุณาลองใหม่ในอีกสักครู่ (การถือครองจะหมดอายุภายใน 10 นาที)'}
             </div>
           )}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-10">
+          <header className="mb-8 md:mb-10">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+              <h1 className="font-display text-[clamp(40px,5vw,72px)] leading-[1.02] tracking-[-0.02em] text-primary">
+                {locale === 'th' && room.name_th ? room.name_th : room.name}
+              </h1>
+              {room.rating_count > 0 && <RatingStars value={room.rating_avg} count={room.rating_count} size={20} />}
+            </div>
+            <p className="mt-4 text-body-lg text-on-surface">
+              {[
+                roomTypeLabel(room.type, locale),
+                room.size_sqm ? `${room.size_sqm} ${t('roomDetail.size')}` : null,
+                t('roomDetail.maxGuests', { count: room.max_guests }),
+                bedTypeLabel(room.bed_type, locale),
+                room.view_label
+                  ? `${t('roomDetail.view')}: ${locale === 'th' && room.view_label_th ? room.view_label_th : room.view_label}`
+                  : null,
+                unitLabels.length > 0 ? t('roomDetail.roomNumber', { rooms: unitLabels.join(', ') }) : null,
+                `${t('roomDetail.floor')} ${room.floor}`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          </header>
+          <div className="mb-12 md:mb-16">
+            <RoomGallery room={room} />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12 lg:gap-16">
             {/* Main content */}
             <article className="flex flex-col gap-12">
-              {/* Gallery */}
-              <RoomGallery room={room} />
-
-              {/* Title block */}
-              <div>
-                <div className="flex items-start justify-between gap-4 mb-3">
-                  <h1 className="font-display text-3xl md:text-4xl text-primary">
-                    {/* Phase X — locale-aware title (TH when available + locale=th) */}
-                    {locale === 'th' && room.name_th ? room.name_th : room.name}
-                  </h1>
-                  <RatingStars value={room.rating_avg} count={room.rating_count} size={20} />
-                </div>
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-body-md text-on-surface-variant">
-                  <span className="inline-flex items-center gap-2">
-                    <MaterialIcon name="hotel" size={18} />
-                    {roomTypeLabel(room.type, locale)}
-                  </span>
-                  {room.size_sqm && (
-                    <span className="inline-flex items-center gap-2">
-                      <MaterialIcon name="square_foot" size={18} />
-                      {room.size_sqm} {t('roomDetail.size')}
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-2">
-                    <MaterialIcon name="group" size={18} />
-                    {t('roomDetail.maxGuests', { count: room.max_guests })}
-                  </span>
-                  <span className="inline-flex items-center gap-2">
-                    <MaterialIcon name="bed" size={18} />
-                    {bedTypeLabel(room.bed_type, locale)}
-                  </span>
-                  {room.view_label && (
-                    <span className="inline-flex items-center gap-2">
-                      <MaterialIcon name="landscape" size={18} />
-                      {t('roomDetail.view')}:{' '}
-                      {/* Phase X — locale-aware view label (TH when available + locale=th) */}
-                      {locale === 'th' && room.view_label_th ? room.view_label_th : room.view_label}
-                    </span>
-                  )}
-                  {unitLabels.length > 0 && (
-                    <span className="inline-flex items-center gap-2">
-                      <MaterialIcon name="meeting_room" size={18} />
-                      {t('roomDetail.roomNumber', { rooms: unitLabels.join(', ') })}
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-2">
-                    <MaterialIcon name="stairs" size={18} />
-                    {t('roomDetail.floor')} {room.floor}
-                  </span>
-                </div>
-              </div>
-
               {/* Description */}
               <section>
-                <h2 className="font-display text-2xl text-primary mb-4">{t('roomDetail.description')}</h2>
-                <p className="text-body-lg text-on-surface leading-relaxed">
+                <h2 className="font-display text-[28px] leading-[1.15] text-primary mb-4">{t('roomDetail.description')}</h2>
+                <p className="text-body-lg text-on-surface leading-relaxed max-w-[65ch]">
                   {/* Phase X — locale-aware description (TH when available + locale=th) */}
                   {locale === 'th' && room.description_th ? room.description_th : room.description}
                 </p>
@@ -139,10 +112,10 @@ export default async function RoomDetailPage(props: PageProps<'/rooms/[id]'>) {
               {/* Reviews */}
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-display text-2xl text-primary">{t('roomDetail.reviews')}</h2>
+                  <h2 className="font-display text-[28px] leading-[1.15] text-primary">{t('roomDetail.reviews')}</h2>
                   <span className="inline-flex items-center gap-2 text-body-md text-on-surface-variant">
                     <RatingStars value={room.rating_avg} size={16} showValue={true} />
-                    <span className="text-caption">({t('roomDetail.reviewCount', { count: room.rating_count })})</span>
+                    <span className="text-[14px]">({t('roomDetail.reviewCount', { count: room.rating_count })})</span>
                   </span>
                 </div>
                 <ReviewList roomTypeId={room.id} />

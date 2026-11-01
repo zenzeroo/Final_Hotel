@@ -8,8 +8,8 @@
  * profile.locale write + revalidatePath). The active locale is rendered
  * with `aria-pressed` + bolder weight.
  *
- * `tone="light"` (default, TopNavBar) is hidden on mobile
- * (`hidden md:inline-flex`); `tone="dark"` is for the dark staff sidebar,
+ * `tone="light"` (default, TopNavBar) is hidden below lg
+ * (`hidden lg:inline-flex`); `tone="dark"` is for the dark staff sidebar,
  * which is also the mobile menu, so it is always shown.
  */
 import { useFormStatus } from 'react-dom'
@@ -25,8 +25,8 @@ interface LanguageToggleProps {
 
 const BUTTON_TONE: Record<Tone, { active: string; inactive: string }> = {
   light: {
-    active: 'bg-primary text-on-primary font-semibold',
-    inactive: 'text-on-surface-variant hover:bg-primary-fixed hover:text-primary disabled:opacity-100',
+    active: 'text-primary font-semibold',
+    inactive: 'text-on-surface-variant hover:text-primary disabled:opacity-100',
   },
   dark: {
     active: 'bg-secondary text-primary font-semibold',
@@ -37,7 +37,7 @@ const BUTTON_TONE: Record<Tone, { active: string; inactive: string }> = {
 export function LanguageToggle({ currentLocale, tone = 'light' }: LanguageToggleProps) {
   return (
     <div
-      className={`${tone === 'light' ? 'hidden md:inline-flex' : 'inline-flex'} items-center gap-1 text-label-md`}
+      className={`${tone === 'light' ? 'hidden lg:inline-flex' : 'inline-flex'} items-center gap-1 text-label-md`}
     >
       <LocaleButton active={currentLocale === 'th'} locale="th" label="TH" tone={tone} />
       <span className={tone === 'light' ? 'text-outline-variant' : 'text-secondary/40'} aria-hidden>

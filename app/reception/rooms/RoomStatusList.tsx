@@ -34,25 +34,25 @@ export function RoomStatusList({ rooms, locale }: { rooms: RoomRow[]; locale: Lo
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="bg-surface-container-lowest rounded-2xl">
       {rooms.map((room) => {
         const style = BUCKET_STYLE[bucketWithGuest(room.status as RoomUnitStatus, !!room.staying)]
         return (
           <div
             key={room.id}
-            className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 bg-surface-container-low rounded-xl"
+            className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5 border-t border-surface-container first:border-t-0"
           >
-            <span className="font-mono text-body-md font-bold text-on-surface w-14 shrink-0">{room.unit_label}</span>
+            <span className="text-body-lg font-semibold text-primary w-14 shrink-0">{room.unit_label}</span>
             <span className="flex-[2] min-w-40 text-body-md text-on-surface truncate">
               {room.roomTypeName ?? t('reception.common.roomFallback')}
-              {room.view_label && <span className="text-caption text-on-surface-variant"> · {room.view_label}</span>}
+              {room.view_label && <span className="text-[14px] text-on-surface-variant"> · {room.view_label}</span>}
             </span>
-            <span className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-caption font-semibold ${style.badge}`}>
+            <span className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-medium whitespace-nowrap ${style.badge}`}>
               <MaterialIcon name={style.icon} size={14} />
               {room.staying && room.status !== 'occupied' ? t('staff.status.occupied') : statusLabel(room.status)}
             </span>
             {room.staying && (
-              <span className="ml-auto inline-flex items-center gap-1.5 text-caption text-on-surface-variant max-w-72 truncate">
+              <span className="ml-auto inline-flex items-center gap-1.5 text-[14px] text-on-surface-variant max-w-72 truncate">
                 <MaterialIcon name="person" size={14} />
                 {t('reception.roomsPage.guestStaying', { name: room.staying.name, code: room.staying.code })}
               </span>

@@ -58,7 +58,7 @@ export function PdfViewer({ src, downloadName }: PdfViewerProps) {
         <a
           href={src}
           download={`${downloadName}.pdf`}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-label-md text-primary hover:bg-primary-fixed transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary-fixed text-body-md font-semibold text-primary hover:bg-primary hover:text-on-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
         >
           <MaterialIcon name="download" size={16} />
           {t('legal.download')}
@@ -66,7 +66,7 @@ export function PdfViewer({ src, downloadName }: PdfViewerProps) {
       </div>
       <div ref={boxRef} className="w-full">
         {failed ? (
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low p-8 text-center text-body-md text-on-surface-variant">
+          <div className="flex flex-col items-center gap-2 rounded-xl bg-surface-container-low p-8 text-center text-body-md text-on-surface">
             <p>{t('legal.viewerFailed')}</p>
             {openLink}
           </div>
@@ -75,7 +75,7 @@ export function PdfViewer({ src, downloadName }: PdfViewerProps) {
             file={src}
             onLoadSuccess={({ numPages }) => setPages(numPages)}
             onLoadError={() => setFailed(true)}
-            loading={<div className="h-[60vh] w-full animate-pulse rounded-xl bg-surface-container" />}
+            loading={<div className="h-[60vh] w-full bg-surface-container" />}
             error={null}
             className="flex flex-col gap-4"
           >

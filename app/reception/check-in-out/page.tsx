@@ -1,31 +1,30 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { formatTHB } from '@/lib/pricing'
 import {
   addDaysLocalIso,
   formatDate,
+  formatDateRangeCompact,
   getTodayBangkok,
 } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
-import { CheckInOutActions } from './CheckInOutActions'
+import { reasonText } from './reasonText'
 import { CheckInOutDateRange } from './CheckInOutDateRange'
 import { CheckInOutListSearch } from './CheckInOutListSearch'
 import {
   CheckInOutTopicTabs,
   type CheckInOutTopic,
 } from './CheckInOutTopicTabs'
-import {
-  CheckInOutViewTabs,
-  type CheckInOutView,
-} from './CheckInOutViewTabs'
+import { Tabs } from '@/components/ui/Tabs'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { localizedName } from '@/lib/format/roomType'
 import { getT } from '@/lib/i18n/t'
 import { isCheckInReady, splitCheckInUnits } from '@/lib/room-status'
-import { getMovableRoomTypeIds, getRoomNotReadyReasons } from '@/lib/data/staff'
+import { getRoomNotReadyReasons } from '@/lib/data/staff'
 
 export const dynamic = 'force-dynamic'
+
+type CheckInOutView = 'today' | 'upcoming' | 'inhouse'
 
 export default async function CheckInOutPage(props: PageProps<'/reception/check-in-out'>) {
   const locale = await getLocale()
@@ -82,7 +81,8 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
           .from('bookings')
           .select(`
             *,
-            room_type:room_types(id, name, name_th, hero_image_key)
+            room_type:room_types(id, name, name_th, hero_image_key),
+            room_unit:room_units(unit_label)
           `)
           .gte('check_in', checkin)
           .lte('check_in', checkout)
@@ -92,7 +92,8 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
           .from('bookings')
           .select(`
             *,
-            room_type:room_types(id, name, name_th, hero_image_key)
+            room_type:room_types(id, name, name_th, hero_image_key),
+            room_unit:room_units(unit_label)
           `)
           .gte('check_out', checkin)
           .lte('check_out', checkout)
@@ -113,7 +114,8 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
     .from('bookings')
     .select(`
       *,
-      room_type:room_types(id, name, name_th, hero_image_key)
+      room_type:room_types(id, name, name_th, hero_image_key),
+      room_unit:room_units(unit_label)
     `)
     .gte('check_in', upcomingFrom)
     .lte('check_in', upcomingTo)
@@ -135,7 +137,8 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
     .from('bookings')
     .select(`
       *,
-      room_type:room_types(id, name, name_th, hero_image_key)
+      room_type:room_types(id, name, name_th, hero_image_key),
+      room_unit:room_units(unit_label)
     `)
     .gte('check_out', upcomingFrom)
     .lte('check_out', upcomingTo)
@@ -155,7 +158,8 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
     .from('bookings')
     .select(`
       *,
-      room_type:room_types(id, name, name_th, hero_image_key)
+      room_type:room_types(id, name, name_th, hero_image_key),
+      room_unit:room_units(unit_label)
     `)
     .eq('status', 'checked_in')
     .order('check_out')
@@ -184,10 +188,10 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
         .order('unit_label'),
     ])
 
-  const list = listRes.data ?? []
-  const upcomingCheckIns = upcomingCheckInsRes.data ?? []
-  const upcomingCheckOuts = upcomingCheckOutsRes.data ?? []
-  const inHouse = inHouseRes.data ?? []
+  const list = (listRes.data ?? []) as ListBooking[]
+  const upcomingCheckIns = (upcomingCheckInsRes.data ?? []) as ListBooking[]
+  const upcomingCheckOuts = (upcomingCheckOutsRes.data ?? []) as ListBooking[]
+  const inHouse = (inHouseRes.data ?? []) as ListBooking[]
   // availableUnits may be undefined if RLS blocks; treat as empty.
   const allAvailableUnits = (availableUnitsRes.data ?? []).map((u) => ({
     id: u.id as string,
@@ -199,19 +203,52 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
   }))
 
   // Why the booked type's rooms aren't ready (guest staying, cleaning,
-  // repair…) — fetched only on the check-in tab, only for those rooms.
-  const bookedTypeIds = new Set(
-    activeTab === 'checkin' ? list.filter((b) => b.status !== 'checked_in').map((b) => b.room_type_id) : [],
+  // repair…) — only for rooms of types that confirmed bookings here await.
+  const pendingTypeIds = new Set(
+    [...list, ...upcomingCheckIns, ...upcomingCheckOuts]
+      .filter((b) => b.status === 'confirmed')
+      .map((b) => b.room_type_id as string),
   )
   const notReadyReasons = await getRoomNotReadyReasons(
-    allAvailableUnits.filter((u) => u.roomTypeId && bookedTypeIds.has(u.roomTypeId) && !isCheckInReady(u.status)),
+    allAvailableUnits.filter((u) => u.roomTypeId && pendingTypeIds.has(u.roomTypeId) && !isCheckInReady(u.status)),
   )
-  // Which types each booking may move into (a move takes the room's type, so
-  // a type fully booked over the stay must not be offered).
-  const checkInIds = activeTab === 'checkin' ? list.filter((b) => b.status === 'confirmed').map((b) => b.id) : []
-  const movableByBooking = new Map(
-    await Promise.all(checkInIds.map(async (id) => [id, await getMovableRoomTypeIds(id)] as const)),
-  )
+
+  /**
+   * Room column + room status per booking, in list order. A booking gets
+   * its room only at check-in, so before that the row shows the ready room
+   * of the booked type the check-in would most likely use — each ready room
+   * once per list — or, when none is left, why the type's room can't take
+   * the guest yet. The check-in itself (room choice, moves) is on [id].
+   */
+  const roomInfos = (bookings: ListBooking[]): Map<string, RoomInfo> => {
+    const taken = new Set<string>()
+    return new Map(
+      bookings.map((b): [string, RoomInfo] => {
+        if (b.status === 'checked_in') {
+          return [b.id, {
+            room: b.room_unit?.unit_label ?? '—',
+            note: t('reception.checkInOutPage.inHouseUntil', { date: formatDate(b.check_out, LOCALE_BCP47[locale]) }),
+            tone: 'stay',
+          }]
+        }
+        const { booked, bookedNotReady } = splitCheckInUnits(allAvailableUnits, b.room_type_id)
+        const free = booked.find((u) => !taken.has(u.id))
+        if (free) {
+          taken.add(free.id)
+          return [b.id, { room: free.unit_label, note: t('reception.checkInOutPage.roomReady'), tone: 'ready' }]
+        }
+        const blocked = bookedNotReady[0]
+        if (blocked) {
+          return [b.id, {
+            room: blocked.unit_label,
+            note: reasonText(notReadyReasons[blocked.id] ?? { kind: 'status', status: blocked.status }, t),
+            tone: 'problem',
+          }]
+        }
+        return [b.id, { room: '—', note: t('reception.checkInOutPage.noRoomLeft'), tone: 'problem' }]
+      }),
+    )
+  }
 
   // Topic-aware upcoming list — drives both the rendered content AND
   // the count badge on the "กำลังจะมา" view-tab pill.
@@ -239,276 +276,218 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
   const emptyLabel = isTodayRange
     ? t('reception.checkInOutPage.emptyToday', { verb: topicVerb })
     : t('reception.checkInOutPage.emptyRange', { verb: topicVerb, range: rangeLabel })
-  const actionVerb = t(activeTab === 'checkin' ? 'reception.checkInOutPage.checkIn' : 'reception.checkInOutPage.checkOut')
   const upcomingTitle = t('reception.checkInOutPage.upcomingTitle', { verb: topicVerb })
   const upcomingEmptyLabel = t('reception.checkInOutPage.upcomingEmpty', { verb: topicVerb })
 
+  // View tabs keep the topic, the date range and the search. Defaults
+  // (checkin topic, today range, today view) stay out of the URL.
+  const viewHref = (view: CheckInOutView) => {
+    const qs = new URLSearchParams()
+    if (activeTab === 'checkout') qs.set('tab', 'checkout')
+    if (checkin !== today) qs.set('checkin', checkin)
+    if (checkout !== today) qs.set('checkout', checkout)
+    if (view !== 'today') qs.set('view', view)
+    if (searchTerm) qs.set('q', searchTerm)
+    const suffix = qs.toString()
+    return suffix ? `/reception/check-in-out?${suffix}` : '/reception/check-in-out'
+  }
+  const viewTabs = [
+    {
+      key: 'today' as const,
+      label: isTodayRange ? t('reception.checkInOutPage.today') : formatDateRangeCompact(checkin, checkout),
+      icon: activeTab === 'checkin' ? 'login' : 'logout',
+      href: viewHref('today'),
+      badge: viewCounts.today,
+    },
+    { key: 'upcoming' as const, label: t('reception.checkInOutPage.tabUpcoming'), icon: 'schedule', href: viewHref('upcoming'), badge: viewCounts.upcoming },
+    { key: 'inhouse' as const, label: t('reception.checkInOutPage.tabInHouse'), icon: 'group', href: viewHref('inhouse'), badge: viewCounts.inhouse },
+  ]
+
   return (
-    <div className="p-8 lg:p-12 max-w-7xl">
-      <div className="mb-6">
-        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.checkInOutPage.title')}</h1>
-
-        {/* Phase 48f — Row 1: mode controls (topic toggle + date range).
-            Wrapped in a flex container so they sit on one line on
-            desktop and wrap to multiple lines on small viewports. */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <CheckInOutTopicTabs
-            active={activeTab}
-            today={today}
-            checkin={checkin}
-            checkout={checkout}
-          />
-          <CheckInOutDateRange
-            defaultCheckin={checkin}
-            defaultCheckout={checkout}
-            today={today}
-          />
+    <div className="px-4 py-6 md:p-8 lg:p-12">
+      <header className="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <h1 className="font-display text-2xl md:text-[28px] leading-[1.25] text-primary">
+            {t('reception.checkInOutPage.title')}
+          </h1>
+          {/* Mode switch: which event the lists below are about. */}
+          <CheckInOutTopicTabs active={activeTab} today={today} checkin={checkin} checkout={checkout} />
         </div>
+        <CheckInOutDateRange defaultCheckin={checkin} defaultCheckout={checkout} today={today} />
+      </header>
 
-        {/* Phase 48f — Row 2: view selector (today / upcoming / inhouse).
-            Visually lighter than Row 1 (underline + light bg vs bold pill)
-            so the two rows read as different layers of the UI. */}
-        <CheckInOutViewTabs
-          active={activeView}
-          counts={viewCounts}
-          today={today}
-          checkin={checkin}
-          checkout={checkout}
-          activeTab={activeTab}
-        />
-      </div>
+      <Tabs active={activeView} tabs={viewTabs} />
 
-      {/* Phase 48e — only the active view is rendered below. The other
-          two are hidden (not just collapsed/scrolled past). Each view's
-          header has the search input; ?q= filters that view's query
-          (listQuery / upcomingCheckInsQuery / upcomingCheckOutsQuery /
-          inHouseQuery). */}
+      {/* Only the active view renders; ?q= filters that view's query. The
+          check-in / check-out buttons live on the booking's own page. */}
       {activeView === 'today' && (
-        <section className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
-          <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center">
-            <div className="flex items-center gap-3">
-              <div
-                className={`inline-flex items-center justify-center w-10 h-10 rounded-full ${
-                  activeTab === 'checkin' ? 'bg-primary/10 text-primary' : 'bg-secondary/20 text-secondary'
-                }`}
-              >
-                <MaterialIcon
-                  name={activeTab === 'checkin' ? 'login' : 'logout'}
-                  size={20}
-                />
-              </div>
-              <h2 className="font-display text-xl text-primary">{listTitle}</h2>
-              <span
-                className={`px-3 py-1 rounded-full text-caption font-semibold ${
-                  activeTab === 'checkin'
-                    ? 'bg-primary text-secondary'
-                    : 'bg-secondary text-on-secondary'
-                }`}
-              >
-                {list.length}
-              </span>
-            </div>
-            <CheckInOutListSearch initialQuery={searchTerm} />
-          </div>
+        <ListPanel title={listTitle} count={list.length} search={searchTerm}>
           {list.length === 0 ? (
             <EmptyStateWithCta locale={locale} message={emptyLabel} />
           ) : (
-            <div className="flex flex-col gap-2">
-              {list.map((b) => {
-                // The booked room type's ready room is the default; other
-                // ready rooms only if reception says the booked one has a
-                // problem (or it isn't ready).
-                const { booked, others, bookedNotReady } = splitCheckInUnits(
-                  allAvailableUnits,
-                  b.room_type_id,
-                  movableByBooking.get(b.id) ?? new Set(),
-                )
-                return (
-                  <BookingRow
-                    locale={locale}
-                    key={b.id}
-                    booking={b}
-                    action={
-                      // For tab=checkin: show "เข้าพักแล้ว" badge if
-                      // already checked_in, otherwise render the action
-                      // button. For tab=checkout: bookings are
-                      // pre-filtered to status='checked_in' so the
-                      // action button is always shown.
-                      activeTab === 'checkin' && b.status === 'checked_in' ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-caption font-semibold">
-                          <MaterialIcon name="verified" size={14} /> {t('reception.checkInOutPage.alreadyCheckedIn')}
-                        </span>
-                      ) : (
-                        <CheckInOutActions
-                          bookingId={b.id}
-                          action={activeTab === 'checkin' ? 'check_in' : 'check_out'}
-                          label={actionVerb}
-                          bookedUnits={activeTab === 'checkin' ? booked : undefined}
-                          otherUnits={activeTab === 'checkin' ? others : undefined}
-                          bookedNotReady={
-                            activeTab === 'checkin'
-                              ? bookedNotReady.map((u) => ({ ...u, reason: notReadyReasons[u.id] }))
-                              : undefined
-                          }
-                        />
-                      )
-                    }
-                  />
-                )
-              })}
-            </div>
+            <BookingTable bookings={list} infos={roomInfos(list)} locale={locale} />
           )}
-        </section>
+        </ListPanel>
       )}
 
       {activeView === 'upcoming' && (
-        <section className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
-          <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center">
-            <div className="flex items-center gap-3">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-secondary/15 text-secondary">
-                <MaterialIcon name="schedule" size={20} />
-              </div>
-              <div>
-                <h2 className="font-display text-xl text-primary">{upcomingTitle}</h2>
-                <p className="text-caption text-on-surface-variant">
-                  {formatDate(upcomingFrom, LOCALE_BCP47[locale])} – {formatDate(upcomingTo, LOCALE_BCP47[locale])}
-                </p>
-              </div>
-              <span className="px-3 py-1 rounded-full bg-secondary text-on-secondary text-caption font-semibold">
-                {upcoming.length}
-              </span>
-            </div>
-            {/* ?q= already filters upcomingCheckInsQuery / upcomingCheckOutsQuery. */}
-            <CheckInOutListSearch initialQuery={searchTerm} />
-          </div>
+        <ListPanel
+          title={upcomingTitle}
+          note={`${formatDate(upcomingFrom, LOCALE_BCP47[locale])} – ${formatDate(upcomingTo, LOCALE_BCP47[locale])}`}
+          count={upcoming.length}
+          search={searchTerm}
+        >
           {upcoming.length === 0 ? (
             <EmptyStateWithCta locale={locale} message={upcomingEmptyLabel} />
           ) : (
-            <div className="flex flex-col gap-2">
-              {upcoming.map((b) => (
-                <BookingRow
-                  locale={locale}
-                  key={b.id}
-                  booking={b}
-                  dateLabel={upcomingDateLabel(b, activeTab, locale)}
-                  nights={b.nights}
-                  total={b.total}
-                />
-              ))}
-            </div>
+            <BookingTable bookings={upcoming} infos={roomInfos(upcoming)} locale={locale} />
           )}
-        </section>
+        </ListPanel>
       )}
 
       {activeView === 'inhouse' && (
-        <section className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
-          <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center">
-            <div className="flex items-center gap-3">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-secondary">
-                <MaterialIcon name="group" size={20} />
-              </div>
-              <h2 className="font-display text-xl text-primary">{t('reception.checkInOutPage.inHouseTitle')}</h2>
-              <span className="px-3 py-1 rounded-full bg-primary text-secondary text-caption font-semibold">
-                {inHouse.length}
-              </span>
-            </div>
-            {/* ?q= already filters inHouseQuery (only while this view is active). */}
-            <CheckInOutListSearch initialQuery={searchTerm} />
-          </div>
+        <ListPanel title={t('reception.checkInOutPage.inHouseTitle')} count={inHouse.length} search={searchTerm}>
           {inHouse.length === 0 ? (
             <EmptyStateWithCta locale={locale} message={t('reception.checkInOutPage.noInHouseGuests')} />
           ) : (
-            <div className="flex flex-col gap-2">
-              {inHouse.map((b) => (
-                <BookingRow
-                  locale={locale}
-                  key={b.id}
-                  booking={b}
-                  dateLabel={t('reception.checkInOutPage.checkoutOn', { date: formatDate(b.check_out, LOCALE_BCP47[locale]) })}
-                  total={b.total}
-                />
-              ))}
-            </div>
+            <BookingTable bookings={inHouse} infos={roomInfos(inHouse)} locale={locale} />
           )}
-        </section>
+        </ListPanel>
       )}
     </div>
   )
 }
 
-interface GuestCardBooking {
+interface ListBooking {
   id: string
-  booker_full_name: string
-  room_type: { name: string; name_th: string | null } | null
-  guests: number
   booking_code: string
-}
-
-interface UpcomingBooking extends GuestCardBooking {
+  booker_full_name: string
+  booker_email: string
+  status: string
   check_in: string
   check_out: string
-  nights: number
-  total: number
+  room_type_id: string
+  room_type: { name: string; name_th: string | null } | null
+  room_unit: { unit_label: string } | null
+}
+
+interface RoomInfo {
+  room: string
+  note: string
+  /** ready = free for the guest; problem = can't take them yet; stay = guest in it. */
+  tone: 'ready' | 'problem' | 'stay'
+}
+
+const TONE: Record<RoomInfo['tone'], { dot: string; text: string }> = {
+  ready: { dot: 'bg-primary', text: 'text-primary' },
+  problem: { dot: 'bg-error', text: 'text-error' },
+  stay: { dot: 'bg-secondary', text: 'text-on-surface' },
+}
+
+/** One white panel per view: title + count, the search, then the table. */
+function ListPanel({
+  title,
+  note,
+  count,
+  search,
+  children,
+}: {
+  title: string
+  note?: string
+  count: number
+  search: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="bg-surface-container-lowest rounded-2xl">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center px-5 md:px-6 pt-5 md:pt-6 pb-4 border-b border-surface-container">
+        <div className="min-w-0">
+          <h2 className="font-display text-xl text-primary">
+            {title} <span className="text-on-surface-variant tabular-nums">· {count}</span>
+          </h2>
+          {note && <p className="text-[14px] text-on-surface-variant mt-0.5 tabular-nums">{note}</p>}
+        </div>
+        <CheckInOutListSearch initialQuery={search} />
+      </div>
+      {children}
+    </section>
+  )
 }
 
 /**
- * One compact row per booking (all three views): name + code, room ·
- * guests, then the optional date / nights / total, and the action outside
- * the link (a button must not sit inside an <a>). Wraps to two lines on
- * narrow screens.
+ * Name, email, room, both dates and whether the room can take the guest.
+ * The guest's name is a link stretched over the whole row, so a click
+ * anywhere opens /reception/check-in-out/[id] (where the actions are).
  */
-function BookingRow({
-  booking,
+function BookingTable({
+  bookings,
+  infos,
   locale,
-  dateLabel,
-  nights,
-  total,
-  action,
 }: {
+  bookings: ListBooking[]
+  infos: Map<string, RoomInfo>
   locale: Locale
-  booking: GuestCardBooking
-  dateLabel?: string
-  nights?: number
-  total?: number
-  action?: React.ReactNode
 }) {
   const t = getT(locale)
+  const bcp = LOCALE_BCP47[locale]
+  const th = 'px-4 first:pl-5 md:first:pl-6 py-3 text-left text-[13px] font-medium text-on-surface-variant whitespace-nowrap'
+  const td = 'px-4 first:pl-5 md:first:pl-6 py-4 align-top'
   return (
-    // flex-wrap: on narrow screens the action (room picker + button + reason)
-    // drops below the guest details instead of running past the card.
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface-container-low rounded-xl hover:bg-surface-container transition-colors">
-      <Link
-        href={`/reception/check-in-out/${booking.id}`}
-        // flex-wrap at every width: one line when it fits, otherwise the
-        // fixed-width date / nights / total drop to a second line instead
-        // of widening the page.
-        className="flex-1 min-w-48 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md focus-visible:outline-2 focus-visible:outline-secondary"
-      >
-        <span className="w-full md:w-auto md:flex-[3] min-w-0 flex items-baseline gap-2">
-          <span className="text-body-md font-semibold text-on-surface truncate">{booking.booker_full_name}</span>
-          <span className="shrink-0 text-caption text-on-surface-variant font-mono">#{booking.booking_code}</span>
-        </span>
-        <span className="md:flex-[2] min-w-0 text-caption text-on-surface-variant truncate">
-          {localizedName(booking.room_type, locale)} · {t('reception.common.guestsN', { count: booking.guests })}
-        </span>
-        {dateLabel && (
-          <span className="shrink-0 inline-flex items-center gap-1.5 text-caption text-on-surface-variant">
-            <MaterialIcon name="event" size={14} />
-            {dateLabel}
-          </span>
-        )}
-        {nights !== undefined && (
-          <span className="shrink-0 text-caption text-on-surface-variant">
-            {t('reception.common.nightsN', { count: nights })}
-          </span>
-        )}
-        {total !== undefined && (
-          <span className="shrink-0 md:w-24 md:text-right text-caption font-semibold text-on-surface">
-            {formatTHB(total)}
-          </span>
-        )}
-      </Link>
-      {action && <div className="ml-auto max-w-full">{action}</div>}
+    <div className="overflow-x-auto overflow-y-hidden">
+      <table className="w-full">
+        <thead className="border-b border-surface-container">
+          <tr>
+            <th scope="col" className={th}>{t('reception.checkInOutPage.colName')}</th>
+            <th scope="col" className={th}>{t('reception.checkInOutPage.colEmail')}</th>
+            <th scope="col" className={th}>{t('reception.checkInOutPage.colRoom')}</th>
+            <th scope="col" className={th}>{t('reception.checkInOutPage.colCheckIn')}</th>
+            <th scope="col" className={th}>{t('reception.checkInOutPage.colCheckOut')}</th>
+            <th scope="col" className={th}>{t('reception.checkInOutPage.colRoomStatus')}</th>
+            <th scope="col" className="w-12"><span className="sr-only">{t('reception.checkInOutPage.open')}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {bookings.map((b) => {
+            const info = infos.get(b.id)
+            const tone = info ? TONE[info.tone] : TONE.stay
+            return (
+              <tr key={b.id} className="relative border-t border-surface-container first:border-t-0 hover:bg-surface-container-low transition-colors">
+                <td className={td}>
+                  <div className="min-w-40 max-w-56">
+                    <Link
+                      href={`/reception/check-in-out/${b.id}`}
+                      className="text-body-md font-semibold text-on-surface [overflow-wrap:anywhere] after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-secondary focus-visible:after:-outline-offset-2"
+                    >
+                      {b.booker_full_name}
+                    </Link>
+                    <p className="text-[14px] text-on-surface-variant tabular-nums">{b.booking_code}</p>
+                  </div>
+                </td>
+                <td className={`${td} text-body-md text-on-surface`}>
+                  <span className="block max-w-56 truncate" title={b.booker_email}>{b.booker_email}</span>
+                </td>
+                <td className={td}>
+                  <p className="text-body-lg font-semibold text-primary whitespace-nowrap">{info?.room ?? '—'}</p>
+                  <p className="text-[14px] text-on-surface-variant min-w-36">{localizedName(b.room_type, locale)}</p>
+                </td>
+                <td className={`${td} text-body-md text-on-surface whitespace-nowrap tabular-nums`}>{formatDate(b.check_in, bcp)}</td>
+                <td className={`${td} text-body-md text-on-surface whitespace-nowrap tabular-nums`}>{formatDate(b.check_out, bcp)}</td>
+                <td className={td}>
+                  {info && (
+                    <p className={`flex items-start gap-2 text-body-md min-w-48 ${tone.text}`}>
+                      <span aria-hidden className={`mt-2 w-2 h-2 rounded-full shrink-0 ${tone.dot}`} />
+                      {info.note}
+                    </p>
+                  )}
+                </td>
+                <td className={`${td} pr-5 md:pr-6 text-right text-on-surface-variant`}>
+                  <MaterialIcon name="chevron_right" size={20} aria-hidden />
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -519,24 +498,16 @@ function EmptyStateWithCta({ message, locale }: { message: string; locale: Local
   // bookings" link so reception isn't stuck at a dead end when no
   // results match the current filter.
   return (
-    <div className="flex flex-col items-center gap-4 py-10">
-      <MaterialIcon name="inbox" size={40} className="text-outline-variant" />
+    <div className="flex flex-col items-center gap-4 py-12">
+      <MaterialIcon name="inbox" size={40} className="text-on-surface-variant" />
       <p className="text-body-md text-on-surface-variant">{message}</p>
       <Link
         href="/reception/bookings"
-        className="inline-flex items-center gap-2 text-label-md text-primary font-semibold uppercase tracking-wider px-4 py-2 rounded-full bg-primary/10 hover:bg-primary-fixed transition-colors"
+        className="inline-flex items-center gap-2 min-h-11 px-5 rounded-xl bg-primary/10 text-primary text-body-md font-semibold hover:bg-primary/15 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         {t('reception.common.seeAllBookings')}
         <MaterialIcon name="arrow_forward" size={16} />
       </Link>
     </div>
   )
-}
-
-/** Phase 48e — the date label follows the topic (เช็คอิน vs เช็คเอาท์). */
-function upcomingDateLabel(booking: UpcomingBooking, topic: CheckInOutTopic, locale: Locale): string {
-  const t = getT(locale)
-  const eventVerb = t(topic === 'checkin' ? 'reception.checkInOutPage.checkIn' : 'reception.checkInOutPage.checkOut')
-  const eventDateIso = topic === 'checkin' ? booking.check_in : booking.check_out
-  return t('reception.checkInOutPage.eventOn', { verb: eventVerb, date: formatDate(eventDateIso, LOCALE_BCP47[locale]) })
 }

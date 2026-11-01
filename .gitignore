@@ -39,3 +39,6 @@ next-env.d.ts
 /supabase/.temp/
 
 # .gitignore itself stays local
+
+# design-taste-frontend working files
+.taste-skill/

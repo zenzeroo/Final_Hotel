@@ -38,13 +38,13 @@ export default async function RoomsStatusPage(props: PageProps<'/reception/rooms
   const counts = { all: rooms.length, ...countRoomBuckets(rooms) }
 
   return (
-    <div className="p-8 lg:p-12 max-w-7xl">
+    <div className="px-4 py-6 md:p-8 lg:p-12">
       <div className="mb-6">
-        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.roomsPage.title')}</h1>
-        <p className="text-body-lg text-on-surface-variant mt-2">
+        <h1 className="font-display text-2xl md:text-[28px] leading-[1.25] text-primary">{t('reception.roomsPage.title')}</h1>
+        <p className="text-body-md text-on-surface-variant mt-1">
           {t('reception.roomsPage.subtitle', { rooms: rooms.length, floors: floors.length })}
         </p>
-        <p className="text-caption text-on-surface-variant mt-1 inline-flex items-center gap-1.5">
+        <p className="text-[14px] text-on-surface-variant mt-1 inline-flex items-center gap-1.5">
           <MaterialIcon name="info" size={14} />
           {t('reception.roomsPage.statusAutoHint')}
         </p>
@@ -61,7 +61,7 @@ export default async function RoomsStatusPage(props: PageProps<'/reception/rooms
 
           return (
             <section key={floor}>
-              <h2 className="font-display text-xl text-primary mb-3">{t('reception.roomsPage.floorN', { floor })}</h2>
+              <h2 className="text-body-lg font-semibold text-primary mb-3 px-1">{t('reception.roomsPage.floorN', { floor })}</h2>
               <RoomStatusList
                 locale={locale}
                 rooms={filtered.map((r) => ({

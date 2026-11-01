@@ -7,6 +7,7 @@ import { getT } from '@/lib/i18n/t'
 import { TaskCard } from '@/components/housekeeping/TaskCard'
 import { HousekeeperMyTasksTabs } from '@/components/housekeeping/HousekeeperMyTasksTabs'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { inWorkingOrder } from '@/lib/housekeeping/order'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,14 +42,14 @@ export default async function MyTasksPage(props: {
     ...t,
     next_check_in: nextCheckInMap.get(t.room_unit_id) ?? null,
   })
-  const myTasksWithEta = myTasks.map(attachEta)
-  const unassignedWithEta = unassigned.map(attachEta)
+  const myTasksWithEta = inWorkingOrder(myTasks.map(attachEta))
+  const unassignedWithEta = inWorkingOrder(unassigned.map(attachEta))
 
   return (
-    <div className="p-8 lg:p-12 max-w-7xl">
-      <header className="mb-8">
-        <h1 className="font-headline-md text-headline-md text-primary mb-2">{t('housekeeper.tasksPage.heading')}</h1>
-        <p className="text-body-lg text-on-surface-variant">{t('housekeeper.tasksPage.subtitle')}</p>
+    <div className="px-4 py-6 md:p-8 lg:p-12 max-w-6xl">
+      <header className="mb-6 md:mb-8">
+        <h1 className="font-display text-2xl md:text-[28px] leading-[1.25] text-primary">{t('housekeeper.tasksPage.heading')}</h1>
+        <p className="mt-1 text-body-md text-on-surface-variant">{t('housekeeper.tasksPage.subtitle')}</p>
       </header>
 
       <HousekeeperMyTasksTabs
@@ -59,13 +60,13 @@ export default async function MyTasksPage(props: {
 
       {tab === 'mine' ? (
         <section>
-          <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
+          <h2 className="sr-only">
             {t('housekeeper.tasksPage.mineHeading', { count: myTasksWithEta.length })}
           </h2>
           {myTasksWithEta.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-10 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface-container-lowest p-10 text-center">
               <MaterialIcon name="task_alt" size={48} className="text-on-surface-variant" />
-              <p className="font-title-md text-title-md text-on-surface">{t('housekeeper.tasksPage.mineEmpty')}</p>
+              <p className="font-display text-xl text-primary">{t('housekeeper.tasksPage.mineEmpty')}</p>
               <p className="text-body-md text-on-surface-variant">
                 {t('housekeeper.tasksPage.mineEmptyHintBefore')}{' '}
                 <a href="/housekeeper/tasks?tab=unassigned" className="text-primary underline">
@@ -75,7 +76,7 @@ export default async function MyTasksPage(props: {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               {myTasksWithEta.map((task) => (
                 <TaskCard
                   key={task.id}
@@ -90,13 +91,13 @@ export default async function MyTasksPage(props: {
         </section>
       ) : (
         <section>
-          <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
+          <h2 className="sr-only">
             {t('housekeeper.tasksPage.poolHeading', { count: unassignedWithEta.length })}
           </h2>
           {unassignedWithEta.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-10 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface-container-lowest p-10 text-center">
               <MaterialIcon name="check_circle" size={48} className="text-primary" />
-              <p className="font-title-md text-title-md text-on-surface">{t('housekeeper.tasksPage.poolEmpty')}</p>
+              <p className="font-display text-xl text-primary">{t('housekeeper.tasksPage.poolEmpty')}</p>
               <p className="text-body-md text-on-surface-variant">
                 {t('housekeeper.tasksPage.poolEmptyHint')}{' '}
                 <a href="/housekeeper/tasks?tab=mine" className="text-primary underline">
@@ -105,7 +106,7 @@ export default async function MyTasksPage(props: {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               {unassignedWithEta.map(t => (
                 <TaskCard
                   key={t.id}

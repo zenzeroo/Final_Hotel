@@ -61,7 +61,7 @@ export function CheckInOutListSearch({ initialQuery }: CheckInOutListSearchProps
   }
 
   return (
-    <div className="relative w-full md:w-72 md:ml-auto">
+    <div className="relative w-full md:w-80 md:ml-auto">
       <MaterialIcon
         name="search"
         size={18}
@@ -73,7 +73,7 @@ export function CheckInOutListSearch({ initialQuery }: CheckInOutListSearchProps
         onChange={(e) => handleChange(e.target.value)}
         placeholder={t('reception.checkInOutPage.searchPlaceholder')}
         aria-label={t('reception.checkInOutPage.searchAria')}
-        className="w-full bg-surface-container-low border border-outline-variant rounded-lg pl-10 pr-3 py-2 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
+        className="w-full h-11 bg-surface-container-low border border-transparent rounded-xl pl-10 pr-3 text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-secondary transition-colors"
       />
     </div>
   )

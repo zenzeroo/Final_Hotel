@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { useT } from '@/lib/i18n/useT'
 import type { RoomTypeName } from '@/lib/data/types'
@@ -32,6 +32,9 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
   const currentTypes = parseRoomTypesParam(params.get('type'))
   const currentFloor = params.get('floor') ?? 'all'
   const currentPrice = params.get('priceRange') ?? 'all'
+  // Below lg the filters fold behind one button so the rooms come first.
+  const [open, setOpen] = useState(false)
+  const activeCount = currentTypes.length + (currentFloor !== 'all' ? 1 : 0) + (currentPrice !== 'all' ? 1 : 0)
 
   const updateParam = useCallback(
     (key: string, value: string | null) => {
@@ -60,6 +63,20 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
 
   return (
     <aside className="flex flex-col gap-6">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls="room-filters"
+        className="lg:hidden flex items-center justify-between h-12 px-5 rounded-2xl bg-surface-container-lowest text-body-md font-semibold text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+      >
+        <span>
+          {t('roomsList.filterHeading')}
+          {activeCount > 0 && ` (${activeCount})`}
+        </span>
+        <MaterialIcon name={open ? 'expand_less' : 'expand_more'} size={22} />
+      </button>
+      <div id="room-filters" className={`${open ? 'flex' : 'hidden'} lg:flex flex-col gap-6`}>
       <Section title={t('roomsList.priceRange')}>
         <div className="flex flex-col gap-2">
           {PRICE_RANGES.map((range) => (
@@ -98,7 +115,7 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
         <select
           value={currentFloor}
           onChange={(e) => updateParam('floor', e.target.value === 'all' ? null : e.target.value)}
-          className="w-full px-4 py-2.5 bg-surface-container-low rounded-lg text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary border border-outline-variant"
+          className="w-full h-12 px-4 rounded-lg bg-surface-container-low text-body-md text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
           aria-label={t('roomsList.floor')}
         >
           <option value="all">{t('roomsList.any')}</option>
@@ -113,18 +130,19 @@ export function FilterSidebar({ roomTypes, floors }: FilterSidebarProps) {
       <button
         type="button"
         onClick={() => router.replace('/rooms', { scroll: false })}
-        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed transition-colors"
+        className="inline-flex items-center justify-center gap-2 h-12 px-4 rounded-lg text-primary font-semibold text-body-md hover:bg-primary-fixed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         <MaterialIcon name="refresh" size={16} />
         {t('roomsList.resetFilters')}
       </button>
+      </div>
     </aside>
   )
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-(--shadow-ambient) border border-outline-variant">
+    <div className="bg-surface-container-lowest rounded-2xl p-5">
       <h3 className="font-display text-lg text-primary mb-4">{title}</h3>
       {children}
     </div>
@@ -141,7 +159,7 @@ function Checkbox({
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="flex items-center gap-3 cursor-pointer group">
+    <label className="flex items-center gap-3 min-h-11 cursor-pointer group has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-secondary">
       <span
         className={`inline-flex items-center justify-center w-5 h-5 rounded border-2 transition-colors ${
           checked

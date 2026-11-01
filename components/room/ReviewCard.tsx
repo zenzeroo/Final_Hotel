@@ -13,7 +13,7 @@ interface ReviewCardProps {
 export function ReviewCard({ review }: ReviewCardProps) {
   const t = useT()
   return (
-    <article className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient) border border-outline-variant border-l-4 border-l-secondary p-5">
+    <article className="bg-surface-container-low p-6">
       <header className="flex items-start gap-3 mb-3">
         <div
           className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 ${review.avatarBgClass}`}
@@ -27,7 +27,7 @@ export function ReviewCard({ review }: ReviewCardProps) {
           </p>
           <div className="flex items-center gap-3 mt-0.5">
             <RatingStars value={review.rating} size={14} showValue={false} />
-            <span className="text-caption text-on-surface-variant">
+            <span className="text-[14px] text-on-surface-variant">
               {formatDate(review.createdAt)}
             </span>
           </div>
@@ -39,7 +39,7 @@ export function ReviewCard({ review }: ReviewCardProps) {
       ) : null}
 
       {review.body ? (
-        <blockquote className="text-body-md text-on-surface border-l-2 border-outline-variant pl-3 italic">
+        <blockquote className="text-body-md text-on-surface">
           {review.body}
         </blockquote>
       ) : (

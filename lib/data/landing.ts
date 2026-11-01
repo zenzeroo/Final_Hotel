@@ -17,7 +17,7 @@ import type { ResolvedHeroSlide, HeroSlideSourceType } from './types'
  * is defense-in-depth.
  *
  * Returns an empty array if no active slides exist — caller can fall back
- * to the static HeroSection.
+ * to the rooms' own photographs (app/page.tsx).
  */
 export async function getActiveHeroSlides(): Promise<ResolvedHeroSlide[]> {
   const supabase = await createClient()

@@ -14,12 +14,12 @@ export default async function ReceptionProfilePage() {
   const t = getT(await getLocale())
 
   return (
-    <div className="p-8 lg:p-12 max-w-7xl">
+    <div className="px-4 py-6 md:p-8 lg:p-12">
       <header className="mb-8">
-        <h1 className="font-headline-md text-headline-md text-primary">
+        <h1 className="font-display text-2xl md:text-[28px] leading-[1.25] text-primary">
           {t('staff.profilePage.title')}
         </h1>
-        <p className="text-body-lg text-on-surface-variant mt-2">
+        <p className="text-body-md text-on-surface-variant mt-1">
           {t('staff.profilePage.subtitle')}
         </p>
       </header>

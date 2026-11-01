@@ -12,7 +12,7 @@ import { MarketingConsentSwitch } from './MarketingConsentSwitch'
 export async function PrivacyConsentCard({ profile }: { profile: AccountProfile }) {
   const t = getT(await getLocale())
   return (
-    <div className="bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container p-gutter md:p-[32px] flex flex-col gap-4">
+    <div className="bg-surface-container-lowest rounded-2xl p-gutter md:p-[32px] flex flex-col gap-4">
       <div>
         <h3 className="font-headline-sm text-headline-sm text-primary">{t('consent.profileTitle')}</h3>
         <p className="text-on-surface-variant text-body-md mt-1">

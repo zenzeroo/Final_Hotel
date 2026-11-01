@@ -1,6 +1,5 @@
 import { getApprovedRoomReviews } from '@/lib/data/reviews'
 import { ReviewCard } from './ReviewCard'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
@@ -14,9 +13,8 @@ export async function ReviewList({ roomTypeId }: ReviewListProps) {
 
   if (reviews.length === 0) {
     return (
-      <div className="bg-surface-container-low rounded-2xl p-8 text-center border border-outline-variant">
-        <MaterialIcon name="reviews" size={36} className="text-outline-variant mb-3" />
-        <p className="text-body-md text-on-surface-variant">
+      <div className="bg-surface-container-low p-8">
+        <p className="text-body-md text-on-surface">
           {t('customer.review.noReviews')}
         </p>
       </div>

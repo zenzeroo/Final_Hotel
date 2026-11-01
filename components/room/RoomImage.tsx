@@ -14,7 +14,7 @@ interface RoomImageProps extends Omit<ImageProps, 'src' | 'alt'> {
 /**
  * Image wrapper for room hero/gallery images with graceful fallback.
  *
- * Renders a gradient + icon placeholder when:
+ * Renders a flat placeholder with an icon when:
  *   - `imageKey` is empty/null (e.g. mock data missing)
  *   - the underlying `<Image>` fails to load (404 / network error)
  *
@@ -41,7 +41,7 @@ export function RoomImage({
         role="img"
         aria-label={alt}
         className={[
-          'absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-container to-secondary-container',
+          'absolute inset-0 flex items-center justify-center bg-surface-container',
           className,
         ]
           .filter(Boolean)
@@ -50,7 +50,7 @@ export function RoomImage({
         <MaterialIcon
           name={fallbackIcon}
           size={48}
-          className="text-on-primary-container/60"
+          className="text-outline"
         />
       </div>
     )

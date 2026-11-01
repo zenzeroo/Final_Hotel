@@ -3,7 +3,6 @@ import { getSession } from '@/lib/supabase/getSession'
 import { signOut } from '@/app/actions/auth'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { r2Url } from '@/lib/r2/publicUrl'
-import { ScrollNavIsland } from './ScrollNavIsland'
 import { UserDropdownMenu } from './UserDropdownMenu'
 import { LanguageToggle } from './LanguageToggle'
 import { NavLink } from './NavLink'
@@ -19,23 +18,22 @@ export async function TopNavBar() {
   const t = getT(locale)
 
   return (
-    <ScrollNavIsland>
-      <header className="sticky top-0 z-50 bg-surface/80 backdrop-blur-md border-b border-outline-variant">
+    <header className="sticky top-0 z-50 bg-background">
         <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop)">
           <div className="flex items-center justify-between h-16">
             {/* Brand */}
             <Link
               href="/"
-              className="font-display text-2xl font-bold text-primary tracking-tight"
+              className="font-wordmark text-2xl font-bold text-primary tracking-tight"
             >
-              Zenzero Hotel
+              Zenzero
             </Link>
 
             {/* Nav Links (desktop only) — gap-4 instead of gap-8 keeps
                 the actions cluster from being squeezed off the right
                 edge when EN labels are longer ("My Bookings" vs TH
                 "ประวัติการจอง"). */}
-            <nav className="hidden md:flex items-center gap-4">
+            <nav className="hidden lg:flex items-center gap-4">
               <NavLink href="/">{t('nav.home')}</NavLink>
               <NavLink href="/rooms">{t('nav.rooms')}</NavLink>
               <NavLink href="/bookings">{t('nav.bookings')}</NavLink>
@@ -70,7 +68,7 @@ export async function TopNavBar() {
               <LanguageToggle currentLocale={locale} />
 
               {/* Auth controls — desktop full menu; mobile uses icon-only in MobileNavMenu */}
-              <div className="hidden md:flex items-center gap-4">
+              <div className="hidden lg:flex items-center gap-4">
                 {isAuthed && session ? (
                   session.role === 'user' ? (
                     <UserDropdownMenu session={session} />
@@ -85,7 +83,6 @@ export async function TopNavBar() {
           </div>
         </div>
       </header>
-    </ScrollNavIsland>
   )
 }
 
@@ -94,7 +91,7 @@ function LoginButton({ label }: { label: string }) {
     <Link
       href="/login"
       title={label}
-      className="inline-flex items-center justify-center h-10 px-5 rounded-full bg-primary text-on-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors min-w-[120px] whitespace-nowrap"
+      className="inline-flex items-center justify-center h-11 px-5 bg-primary text-on-primary font-semibold text-body-md hover:bg-primary-container active:translate-y-px transition-[background-color,transform] min-w-[120px] whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
     >
       <span className="truncate">{label}</span>
     </Link>
@@ -140,7 +137,7 @@ function UserMenu({
         <button
           type="submit"
           title={t('nav.logout')}
-          className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors min-w-[120px] justify-center whitespace-nowrap"
+          className="hidden md:inline-flex items-center gap-2 px-4 py-2 text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors min-w-[120px] justify-center whitespace-nowrap"
         >
           <MaterialIcon name="logout" size={16} className="flex-shrink-0" />
           <span className="truncate">{t('nav.logout')}</span>

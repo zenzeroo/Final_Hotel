@@ -15,7 +15,7 @@ export function SeverityBadge({ severity }: { severity: MaintenanceSeverity }) {
   const t = useT()
   const s = STYLES[severity]
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-caption uppercase tracking-wider ${s.bg} ${s.text}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[13px] font-medium whitespace-nowrap ${s.bg} ${s.text}`}>
       {t(`staff.severity.${severity}`)}
     </span>
   )

@@ -157,12 +157,12 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
   const hasSeasonalRates = appliedRates.length > 0
 
   return (
-    <aside className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient-lg) border border-outline-variant p-6 lg:sticky lg:top-24">
+    <aside className="bg-surface-container-low p-6 md:p-8 lg:sticky lg:top-24 lg:self-start">
       <div className="flex items-baseline justify-between mb-4">
         <div>
-          <span className="text-caption text-on-surface-variant uppercase tracking-wider">{t('customer.widget.price')}</span>
+          <span className="text-[14px] text-on-surface-variant">{t('customer.widget.price')}</span>
           <div className="flex items-baseline gap-1">
-            <span className="font-display text-4xl font-bold text-primary">{formatTHB(room.base_price)}</span>
+            <span className="font-display text-2xl font-bold text-primary">{formatTHB(room.base_price)}</span>
             <span className="text-body-md text-on-surface-variant">{t('customer.roomCard.perNight')}</span>
           </div>
         </div>
@@ -170,9 +170,9 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
       </div>
 
       {/* Date + guest picker */}
-      <div className="border border-outline-variant rounded-xl overflow-hidden mb-4">
-        <div className="grid grid-cols-2 divide-x divide-outline-variant">
-          <div className="hover:bg-primary-fixed transition-colors">
+      <div className="flex flex-col gap-px bg-surface-container mb-6">
+        <div className="grid grid-cols-2 gap-px">
+          <div className="bg-surface-container-lowest hover:bg-primary-fixed transition-colors">
             <DatePickerField
               label={t('customer.common.checkIn')}
               iconName=""
@@ -188,7 +188,7 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
               }}
             />
           </div>
-          <div className="hover:bg-primary-fixed transition-colors">
+          <div className="bg-surface-container-lowest hover:bg-primary-fixed transition-colors">
             <DatePickerField
               label={t('customer.common.checkOut')}
               iconName=""
@@ -198,10 +198,9 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
             />
           </div>
         </div>
-        <div className="border-t border-outline-variant p-3">
+        <div className="bg-surface-container-lowest p-3">
           <div className="flex items-center gap-2">
-            <MaterialIcon name="group" size={18} className="text-on-surface-variant" />
-            <span className="text-caption text-on-surface-variant uppercase tracking-wider">
+            <span className="text-[14px] text-on-surface-variant">
               {t('customer.common.guestsLabel')}
             </span>
             <span className="text-body-md font-medium text-on-surface ml-auto">
@@ -213,15 +212,15 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
 
       {/* Price breakdown */}
       {nights > 0 ? (
-        <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-outline-variant">
+        <div className="flex flex-col gap-2 mb-4">
           {hasSeasonalRates && (
-            <div className="px-3 py-2 bg-secondary/10 rounded-lg">
-              <div className="text-caption uppercase tracking-wider text-on-surface-variant mb-1">
+            <div className="px-3 py-2 bg-secondary-container/50">
+              <div className="text-[14px] text-on-surface mb-1">
                 {t('customer.widget.seasonalTitle')}
               </div>
               <ul className="flex flex-col gap-1">
                 {appliedRates.map((r) => (
-                  <li key={r.id} className="text-caption text-on-surface">
+                  <li key={r.id} className="text-[14px] text-on-surface">
                     {t('customer.common.seasonalLine', { label: r.label, nights: r.nights })}
                     {r.minNightsOverride != null && (
                       <span className="text-warning ml-1">({t('customer.common.minNights', { count: r.minNightsOverride })})</span>
@@ -253,7 +252,7 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
       {reserveError && (
         <div
           role="alert"
-          className="mt-4 px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error"
+          className="mt-4 px-4 py-3 bg-error-container text-body-md text-on-error-container"
         >
           {reserveError}
         </div>
@@ -263,7 +262,7 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
         type="button"
         onClick={handleReserve}
         disabled={nights === 0 || minNightsBlocked || isPending}
-        className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        className="mt-6 w-full inline-flex items-center justify-center gap-2 h-12 px-6 bg-primary text-on-primary font-semibold text-body-md hover:bg-primary-container active:translate-y-px transition-[background-color,transform] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         {isPending ? (
           <>
@@ -272,24 +271,23 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
           </>
         ) : (
           <>
-            <MaterialIcon name="bookmark" size={18} />
             {t('customer.widget.confirm')}
           </>
         )}
       </button>
 
-      <p className="mt-4 text-caption text-on-surface-variant text-center">
+      <p className="mt-3 text-[14px] text-on-surface-variant text-center">
         {t('customer.widget.noCharge')}
       </p>
 
-      <div className="mt-4 pt-4 border-t border-outline-variant flex flex-col gap-1.5">
+      <div className="mt-6 flex flex-col gap-1.5">
         {/* Phase 57c/d — refund rule always; a warning when the picked dates are too close */}
-        <div className="flex items-center gap-2 text-caption text-on-surface-variant">
+        <div className="flex items-center gap-2 text-[14px] text-on-surface">
           <MaterialIcon name="verified" size={16} className="text-primary" />
           <span>{t('customer.widget.refundRule', { min: refundMinDays })}</span>
         </div>
         {checkIn && !isRefundable(checkIn, refundMinDays) && (
-          <div className="flex items-center gap-2 text-caption text-error">
+          <div className="flex items-center gap-2 text-[14px] text-error">
             <MaterialIcon name="info" size={16} />
             <span>{t('customer.widget.refundNone')}</span>
           </div>
@@ -323,11 +321,11 @@ function PriceRow({
   emphasis?: boolean
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className={emphasis ? 'text-body-md font-bold text-primary' : 'text-body-md text-on-surface-variant'}>
+    <div className={`flex justify-between ${emphasis ? 'items-baseline pt-4' : 'items-center'}`}>
+      <span className={emphasis ? 'text-body-md font-semibold text-primary' : 'text-body-md text-on-surface'}>
         {label}
       </span>
-      <span className={emphasis ? 'text-body-md font-bold text-primary' : 'text-body-md text-on-surface'}>
+      <span className={emphasis ? 'font-display text-[32px] leading-none font-bold text-primary' : 'text-body-md text-on-surface tabular-nums'}>
         {value}
       </span>
     </div>

@@ -29,28 +29,32 @@ export function BookingTableRow({ booking: b }: BookingTableRowProps) {
   return (
     <tr
       onClick={() => router.push(detailUrl)}
-      className="border-t border-outline-variant hover:bg-primary-fixed transition-colors cursor-pointer"
+      className="border-t border-surface-container first:border-t-0 hover:bg-surface-container-low transition-colors cursor-pointer"
     >
       <Td>
-        <span className="font-mono text-body-md">{b.booking_code}</span>
+        <span className="text-body-md font-semibold text-primary whitespace-nowrap tabular-nums">{b.booking_code}</span>
       </Td>
       <Td>
-        <p className="text-body-md font-medium text-on-surface">{b.booker_full_name}</p>
-        <p className="text-caption text-on-surface-variant">{b.booker_email}</p>
+        {/* Capped width: one unbroken name or email must not stretch the table. */}
+        <div className="max-w-64">
+          <p className="text-body-md font-medium text-on-surface [overflow-wrap:anywhere]">{b.booker_full_name}</p>
+          <p className="text-[14px] text-on-surface-variant truncate" title={b.booker_email}>{b.booker_email}</p>
+        </div>
       </Td>
       <Td>
-        <p className="text-body-md text-on-surface">{localizedName(b.room_type, locale)}</p>
-        <p className="text-caption text-on-surface-variant">
+        <p className="text-body-md text-on-surface min-w-40">{localizedName(b.room_type, locale)}</p>
+        <p className="text-[14px] text-on-surface-variant">
           {t('reception.bookingsPage.guestsNights', { guests: b.guests, nights: b.nights })}
         </p>
       </Td>
       <Td>
-        <p className="text-body-md text-on-surface">{formatDate(b.check_in, LOCALE_BCP47[locale])}</p>
-        <p className="text-caption text-on-surface-variant">→ {formatDate(b.check_out, LOCALE_BCP47[locale])}</p>
+        <p className="text-body-md text-on-surface whitespace-nowrap tabular-nums">
+          {formatDate(b.check_in, LOCALE_BCP47[locale])} – {formatDate(b.check_out, LOCALE_BCP47[locale])}
+        </p>
       </Td>
       <Td>
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-caption font-semibold ${statusClass(
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[13px] font-medium whitespace-nowrap ${statusClass(
             b.status,
             b.payment_status,
           )}`}
@@ -67,7 +71,7 @@ export function BookingTableRow({ booking: b }: BookingTableRowProps) {
       <Td align="right" onClick={(e) => e.stopPropagation()}>
         <Link
           href={detailUrl}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors"
+          className="inline-flex items-center justify-center w-10 h-10 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors focus-visible:outline-2 focus-visible:outline-secondary"
           aria-label={t('reception.bookingsPage.viewDetails')}
           title={t('reception.bookingsPage.viewDetails')}
         >
@@ -90,7 +94,7 @@ function Td({
   return (
     <td
       onClick={onClick}
-      className={`px-4 py-3 ${align === 'right' ? 'text-right' : 'text-left'}`}
+      className={`px-4 py-4 align-top ${align === 'right' ? 'text-right' : 'text-left'}`}
     >
       {children}
     </td>

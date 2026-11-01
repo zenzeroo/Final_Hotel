@@ -2,8 +2,7 @@
 
 /**
  * TopNavBar nav link — client island for `usePathname()` so the active
- * item can render with the dark `bg-primary text-on-primary` style
- * (matches LanguageToggle's selected state).
+ * item can render underlined in the ink colour.
  *
  * Replaces the inline `NavLink` helper that used to live in TopNavBar.tsx
  * — that version was a Server Component and couldn't read the URL.
@@ -27,10 +26,10 @@ export function NavLink({ href, children }: NavLinkProps) {
       href={href}
       aria-current={isActive ? 'page' : undefined}
       title={typeof children === 'string' ? children : undefined}
-      className={`px-3 py-2 rounded-md text-body-md whitespace-nowrap transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${
+      className={`px-3 py-2 text-body-md whitespace-nowrap underline-offset-8 decoration-2 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${
         isActive
-          ? 'bg-primary text-on-primary font-semibold'
-          : 'text-on-surface hover:bg-primary-fixed hover:text-primary'
+          ? 'text-primary font-semibold underline'
+          : 'text-on-surface hover:text-primary hover:underline'
       }`}
     >
       {children}

@@ -42,8 +42,9 @@ export interface AccountProfileContentProps {
  * flips `profiles.is_active` via `/admin/staff`; only the User-side
  * self-delete path was removed.
  *
- * Layout: left column = profile card + quick links + LinkedAccountsCard;
- * right column = personal info + security (password / set-password).
+ * Layout (4:8): left column = profile card + quick links, sticky on wide
+ * screens so it stays beside the longer right column; right column = personal
+ * info, then sign-in (password, linked accounts), then PDPA consent.
  */
 export async function AccountProfileContent({
   profile,
@@ -52,18 +53,18 @@ export async function AccountProfileContent({
   searchParams,
 }: AccountProfileContentProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] gap-gutter lg:gap-10 items-start">
       {/* Left column */}
-      <div className="lg:col-span-1 flex flex-col gap-gutter">
+      <div className="flex flex-col gap-gutter lg:sticky lg:top-24">
         <ProfileCard profile={profile} />
         <AccountQuickLinks links={quickLinks} />
-        {searchParams && <LinkedAccountsCard searchParams={searchParams} />}
       </div>
 
       {/* Right column */}
-      <div className="lg:col-span-2 flex flex-col gap-gutter">
+      <div className="flex flex-col gap-gutter">
         <PersonalInfoForm profile={profile} role={role} />
         <AccountSecuritySection />
+        {searchParams && <LinkedAccountsCard searchParams={searchParams} />}
         {/* Phase 61 — PDPA consent; customers only (staff are not asked). */}
         {role === 'user' && <PrivacyConsentCard profile={profile} />}
       </div>

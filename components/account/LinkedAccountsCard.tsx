@@ -42,7 +42,7 @@ export async function LinkedAccountsCard({
   const linkCancelled = sp.link_error === 'cancelled'
 
   return (
-    <div className="bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container">
+    <div className="bg-surface-container-lowest rounded-2xl">
       <div className="p-gutter md:p-[32px] pb-base">
         <h3 className="font-headline-sm text-headline-sm text-primary">
           {t('profile.loginMethods')}

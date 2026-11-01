@@ -24,7 +24,7 @@ interface UserDropdownMenuProps {
  *   - click anywhere outside the menu
  *   - Escape key
  *
- * Follows the ScrollNavIsland pattern: minimal client island so the
+ * Minimal client island so the
  * rest of the nav stays a Server Component.
  */
 export function UserDropdownMenu({ session }: UserDropdownMenuProps) {

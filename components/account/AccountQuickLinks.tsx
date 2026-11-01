@@ -25,7 +25,7 @@ interface AccountQuickLinksProps {
 export function AccountQuickLinks({ links }: AccountQuickLinksProps) {
   if (links.length === 0) return null
   return (
-    <div className="bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container flex flex-col divide-y divide-surface-container">
+    <div className="bg-surface-container-lowest rounded-2xl flex flex-col divide-y divide-surface-container">
       {links.map((link) => (
         <Link
           key={link.href}

@@ -56,10 +56,10 @@ export function FilterChips() {
         <button
           key={chip.key}
           onClick={() => removeChip(chip)}
-          className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary text-on-primary rounded-full text-label-md font-semibold hover:bg-primary-container transition-colors duration-200"
+          className="inline-flex items-center gap-2 h-11 px-4 bg-primary-fixed text-primary text-body-md font-semibold hover:bg-primary hover:text-on-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
         >
           <span>{chip.label}</span>
-          <MaterialIcon name="close" size={14} />
+          <MaterialIcon name="close" size={16} />
         </button>
       ))}
     </div>

@@ -120,11 +120,14 @@ export function WalkInForm({ room }: WalkInFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
-      {/* LEFT: form */}
-      <div className="flex flex-col gap-4">
+    <form
+      onSubmit={handleSubmit}
+      className="grid grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] gap-6 items-start"
+    >
+      {/* LEFT: who is staying, then how they pay. */}
+      <div className="flex flex-col gap-6">
         {error && (
-          <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
+          <div role="alert" className="px-4 py-3 bg-error-container rounded-xl text-body-md text-on-error-container">
             {error}
             {createdBookingId && (
               <Link
@@ -137,15 +140,16 @@ export function WalkInForm({ room }: WalkInFormProps) {
           </div>
         )}
 
-        <div className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
-          <h2 className="font-display text-xl text-primary mb-4">{t('reception.walkIn.guestInfo')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label={t('reception.walkIn.fullName')} required>
+        <section className="bg-surface-container-lowest rounded-2xl p-6 md:p-8">
+          <h2 className="font-display text-xl text-primary mb-5">{t('reception.walkIn.guestInfo')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-5">
+            <Field label={t('reception.walkIn.fullName')} required wide>
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
+                autoComplete="name"
                 className="input"
               />
             </Field>
@@ -155,10 +159,11 @@ export function WalkInForm({ room }: WalkInFormProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
                 className="input"
               />
             </Field>
-            <Field label={t('reception.walkIn.phone')} required>
+            <Field label={t('reception.walkIn.phone')} required hint={t('reception.walkIn.phoneHint')}>
               <input
                 type="tel"
                 inputMode="numeric"
@@ -169,53 +174,28 @@ export function WalkInForm({ room }: WalkInFormProps) {
                 placeholder="08xxxxxxxx"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                className="input"
+                className="input tabular-nums"
               />
-              <p className="font-caption text-caption text-on-surface-variant">
-                {t('reception.walkIn.phoneHint')}
-              </p>
+            </Field>
+            <Field label={t('reception.walkIn.specialRequests')} wide>
+              <textarea
+                value={specialRequest}
+                onChange={(e) => setSpecialRequest(e.target.value)}
+                rows={3}
+                placeholder={t('reception.walkIn.specialPlaceholder')}
+                className="input resize-none"
+              />
             </Field>
           </div>
-        </div>
+        </section>
 
-        <div className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
-          <h2 className="font-display text-xl text-primary mb-4">{t('reception.walkIn.stayDates')}</h2>
-          {/* Locked: dates and guests were chosen on the room picker, whose
-              list only shows rooms free for them. Changing them goes back
-              there so availability is checked again. */}
-          <dl className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 rounded-lg bg-surface-container border border-outline-variant">
-            <LockedValue icon="login" label={t('reception.walkIn.checkIn')} value={formatDateNumeric(checkIn)} />
-            <LockedValue icon="logout" label={t('reception.walkIn.checkOut')} value={formatDateNumeric(checkOut)} />
-            <LockedValue icon="group" label={t('reception.walkIn.guests')} value={t('reception.common.guestsN', { count: guests })} />
-            <MaterialIcon name="lock" size={18} className="ml-auto text-on-surface-variant" aria-hidden />
-          </dl>
-          <Link
-            href={`/reception/bookings/new?checkin=${checkIn}&checkout=${checkOut}&guests=${guests}`}
-            className="mt-3 inline-flex items-center gap-1.5 text-caption text-primary hover:underline underline-offset-2"
-          >
-            <MaterialIcon name="edit_calendar" size={16} />
-            {t('reception.walkIn.changeStay')}
-          </Link>
-        </div>
-
-        <div className="bg-surface-container-lowest rounded-lg p-6 shadow-level-1">
-          <h2 className="font-display text-xl text-primary mb-4">{t('reception.walkIn.specialRequests')}</h2>
-          <textarea
-            value={specialRequest}
-            onChange={(e) => setSpecialRequest(e.target.value)}
-            rows={3}
-            placeholder={t('reception.walkIn.specialPlaceholder')}
-            className="input resize-none w-full"
-          />
-        </div>
-
-        <fieldset className="bg-surface-container-lowest rounded-xl border border-outline-variant p-4">
-          <legend className="px-2 text-label-md text-on-surface font-semibold">
-            {t('reception.walkIn.paymentMethod')}
-          </legend>
-          <div className="flex flex-col gap-2">
+        <fieldset className="bg-surface-container-lowest rounded-2xl p-6 md:p-8">
+          <legend className="sr-only">{t('reception.walkIn.paymentMethod')}</legend>
+          <p aria-hidden className="font-display text-xl text-primary mb-5">{t('reception.walkIn.paymentMethod')}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <PaymentOption
               value="cash"
+              icon="payments"
               label={t('reception.walkIn.payCash')}
               description={t('reception.walkIn.payCashDesc')}
               selected={paymentMethod === 'cash'}
@@ -223,6 +203,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
             />
             <PaymentOption
               value="card"
+              icon="credit_card"
               label={t('reception.walkIn.payCard')}
               description={t('reception.walkIn.payCardDesc')}
               selected={paymentMethod === 'card'}
@@ -230,6 +211,7 @@ export function WalkInForm({ room }: WalkInFormProps) {
             />
             <PaymentOption
               value="unpaid"
+              icon="schedule"
               label={t('reception.walkIn.payLater')}
               description={t('reception.walkIn.payLaterDesc')}
               selected={paymentMethod === 'unpaid'}
@@ -239,103 +221,136 @@ export function WalkInForm({ room }: WalkInFormProps) {
         </fieldset>
       </div>
 
-      {/* RIGHT: summary */}
-      <div className="lg:sticky lg:top-6 lg:self-start">
-        <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-6">
-          <h2 className="font-display text-lg text-primary mb-3">{localizedName(room, locale)}</h2>
-          <div className="space-y-2 text-body-md">
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">{t('reception.walkIn.priceXNights', { price: formatTHB(room.base_price), count: nights })}</span>
-              <span className="text-on-surface">{formatTHB(price.baseSubtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">{t('reception.walkIn.tax')}</span>
-              <span className="text-on-surface">{formatTHB(price.taxTotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">{t('reception.walkIn.resortFee')}</span>
-              <span className="text-on-surface">{formatTHB(price.feeTotal)}</span>
-            </div>
-          </div>
-          <div className="my-4 border-t border-outline-variant" />
-          <div className="flex justify-between items-baseline">
-            <span className="text-body-md font-bold text-primary">{t('reception.walkIn.grandTotal')}</span>
-            <span className="text-2xl font-display font-bold text-primary">{formatTHB(price.total)}</span>
-          </div>
+      {/* RIGHT: what is being booked, what it costs, and the one action. */}
+      <aside className="lg:sticky lg:top-6 bg-surface-container-lowest rounded-2xl p-6 md:p-8">
+        <p className="text-[14px] font-medium text-on-surface-variant">{t('reception.walkIn.summary')}</p>
+        <h2 className="mt-1 font-display text-2xl leading-[1.25] text-primary">{localizedName(room, locale)}</h2>
 
-          <button
-            type="submit"
-            disabled={isPending || !!createdBookingId || nights === 0 || !fullName || !email || !phone}
-            className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60"
-          >
-            {isPending ? (
-              <>
-                <span className="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-                {t('reception.walkIn.creating')}
-              </>
-            ) : (
-              <>
-                <MaterialIcon name="check_circle" size={18} />
-                {t('reception.walkIn.confirm')}
-              </>
-            )}
-          </button>
+        {/* Locked: dates and guests were chosen on the room picker, whose
+            list only shows rooms free for them. Changing them goes back
+            there so availability is checked again. */}
+        <dl className="mt-5 grid grid-cols-3 gap-3 rounded-xl bg-surface-container-low p-4">
+          <StayFact label={t('reception.walkIn.checkIn')} value={formatDateNumeric(checkIn)} />
+          <StayFact label={t('reception.walkIn.checkOut')} value={formatDateNumeric(checkOut)} />
+          <StayFact label={t('reception.walkIn.guests')} value={t('reception.common.guestsN', { count: guests })} />
+        </dl>
+        <Link
+          href={`/reception/bookings/new?checkin=${checkIn}&checkout=${checkOut}&guests=${guests}`}
+          title={t('reception.walkIn.changeStay')}
+          className="mt-2 inline-flex items-center gap-1.5 min-h-11 text-[14px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+        >
+          <MaterialIcon name="edit_calendar" size={18} />
+          {t('reception.walkIn.change')}
+        </Link>
+
+        <div className="mt-4 flex flex-col gap-2 text-body-md tabular-nums">
+          <PriceRow
+            label={t('reception.walkIn.priceXNights', { price: formatTHB(room.base_price), count: nights })}
+            value={formatTHB(price.baseSubtotal)}
+          />
+          <PriceRow label={t('reception.walkIn.tax')} value={formatTHB(price.taxTotal)} />
+          <PriceRow label={t('reception.walkIn.resortFee')} value={formatTHB(price.feeTotal)} />
         </div>
-      </div>
+        <div className="mt-4 pt-4 border-t border-surface-container flex justify-between items-baseline gap-4">
+          <span className="text-body-md font-semibold text-on-surface">{t('reception.walkIn.grandTotal')}</span>
+          <span className="font-display text-[28px] leading-none text-primary tabular-nums">{formatTHB(price.total)}</span>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isPending || !!createdBookingId || nights === 0 || !fullName || !email || !phone}
+          className="mt-6 w-full inline-flex items-center justify-center gap-2 h-12 px-6 bg-primary text-on-primary rounded-xl font-semibold text-body-md hover:bg-primary-container transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+        >
+          {isPending ? (
+            <>
+              <span className="inline-block w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" />
+              {t('reception.walkIn.creating')}
+            </>
+          ) : (
+            <>
+              <MaterialIcon name="check_circle" size={20} />
+              {t('reception.walkIn.confirm')}
+            </>
+          )}
+        </button>
+      </aside>
 
       <style jsx>{`
         .input {
           width: 100%;
           background: var(--color-surface-container-low);
-          border: 1px solid var(--color-outline-variant);
-          border-radius: 0.5rem;
+          border: 1px solid transparent;
+          border-radius: 0.75rem;
           padding: 0.75rem 1rem;
+          min-height: 2.75rem;
           font-size: 1rem;
           color: var(--color-on-surface);
-          transition: all 0.2s;
+          transition: border-color 0.2s, background-color 0.2s;
         }
         .input:focus {
           outline: none;
+          background: var(--color-surface-container-lowest);
           border-color: var(--color-secondary);
-          box-shadow: 0 0 0 1px var(--color-secondary);
         }
       `}</style>
     </form>
   )
 }
 
-function LockedValue({ icon, label, value }: { icon: string; label: string; value: string }) {
+function StayFact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <MaterialIcon name={icon} size={18} className="text-on-surface-variant shrink-0" />
-      <div>
-        <dt className="text-caption text-on-surface-variant">{label}</dt>
-        <dd className="text-body-md font-semibold text-on-surface whitespace-nowrap">{value}</dd>
-      </div>
+    <div className="min-w-0">
+      <dt className="text-[13px] text-on-surface-variant">{label}</dt>
+      <dd className="mt-0.5 text-body-md font-semibold text-on-surface tabular-nums">{value}</dd>
     </div>
   )
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function PriceRow({ label, value }: { label: string; value: string }) {
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-label-md text-on-surface">
+    <div className="flex justify-between gap-4">
+      <span className="text-on-surface-variant">{label}</span>
+      <span className="text-on-surface">{value}</span>
+    </div>
+  )
+}
+
+function Field({
+  label,
+  required,
+  wide,
+  hint,
+  children,
+}: {
+  label: string
+  required?: boolean
+  /** Spans both columns. */
+  wide?: boolean
+  hint?: string
+  children: React.ReactNode
+}) {
+  return (
+    <label className={`flex flex-col gap-1.5 ${wide ? 'md:col-span-2' : ''}`}>
+      <span className="text-[14px] font-medium text-on-surface">
         {label}
-        {required && <span className="text-error">*</span>}
+        {required && <span className="text-error"> *</span>}
       </span>
       {children}
+      {hint && <span className="text-[13px] text-on-surface-variant">{hint}</span>}
     </label>
   )
 }
 
 function PaymentOption({
   value,
+  icon,
   label,
   description,
   selected,
   onSelect,
 }: {
   value: 'cash' | 'card' | 'unpaid'
+  icon: string
   label: string
   description: string
   selected: boolean
@@ -343,10 +358,8 @@ function PaymentOption({
 }) {
   return (
     <label
-      className={`flex items-start gap-3 px-3 py-3 rounded-lg border cursor-pointer transition-colors ${
-        selected
-          ? 'border-primary bg-primary/5'
-          : 'border-outline-variant hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed'
+      className={`relative flex flex-col gap-2 p-4 rounded-xl border-2 cursor-pointer transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-secondary ${
+        selected ? 'border-primary bg-primary/5' : 'border-surface-container hover:border-outline-variant'
       }`}
     >
       <input
@@ -355,12 +368,19 @@ function PaymentOption({
         value={value}
         checked={selected}
         onChange={onSelect}
-        className="mt-1 w-4 h-4 accent-primary"
+        className="sr-only"
       />
-      <div className="flex flex-col">
-        <span className="text-body-md font-semibold text-on-surface">{label}</span>
-        <span className="text-body-sm text-on-surface-variant">{description}</span>
-      </div>
+      <span className="flex items-center justify-between gap-2">
+        <MaterialIcon name={icon} size={22} className={selected ? 'text-primary' : 'text-on-surface-variant'} />
+        <span
+          aria-hidden
+          className={`w-5 h-5 rounded-full border-2 grid place-items-center ${selected ? 'border-primary' : 'border-outline-variant'}`}
+        >
+          {selected && <span className="w-2.5 h-2.5 rounded-full bg-primary" />}
+        </span>
+      </span>
+      <span className="text-body-md font-semibold text-on-surface">{label}</span>
+      <span className="text-[13px] leading-snug text-on-surface-variant">{description}</span>
     </label>
   )
 }

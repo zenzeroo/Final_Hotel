@@ -42,9 +42,9 @@ export default async function AccountProfilePage(props: {
     <>
       <TopNavBar />
       <main className="flex-1 bg-background">
-        <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-section-gap">
-          <div className="mb-gutter">
-            <h1 className="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary mb-base">
+        <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) pt-10 md:pt-14 pb-16 md:pb-20">
+          <div className="mb-8 md:mb-10">
+            <h1 className="font-display text-[36px] md:text-[48px] leading-[1.15] tracking-[-0.01em] text-primary mb-3">
               {t('profile.title')}
             </h1>
             <p className="text-on-surface-variant text-body-lg">

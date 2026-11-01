@@ -157,20 +157,13 @@ const NAV_BY_ROLE: Record<StaffRole, NavGroup[]> = {
   ],
 }
 
-const ROLE_LABEL_KEY: Record<StaffRole, string> = {
-  reception: 'reception.sidebar.dashboard',
-  housekeeper: 'housekeeper.title',
-  manager: 'manager.title',
-  admin: 'admin.title',
-}
-
 /**
  * Desktop sidebar — visible at md+ only. On mobile, the same content
  * is rendered inside `<StaffMobileHeader>`'s overlay via `<StaffSidebarNav>`.
  */
 export function StaffSidebar({ role, userName, avatarKey, userId }: StaffSidebarProps & { userId: string }) {
   return (
-    <aside className="hidden md:flex w-72 shrink-0 self-start sticky top-0 z-30 bg-primary text-secondary h-screen flex-col">
+    <aside className="hidden md:flex w-72 shrink-0 self-start sticky top-0 z-30 bg-primary text-on-primary h-screen flex-col">
       <StaffSidebarNav
         role={role}
         userName={userName}
@@ -215,26 +208,18 @@ export function StaffSidebarNav({
 
   return (
     <>
-      {/* Brand */}
-      <div className={`relative px-6 py-6 border-b border-primary-container ${headerAction ? 'pr-16' : ''}`}>
+      {/* Brand + who this workspace is for */}
+      <div className={`relative px-6 pt-6 pb-5 border-b border-on-primary/10 ${headerAction ? 'pr-16' : ''}`}>
         {headerAction && <div className="absolute right-4 top-5">{headerAction}</div>}
         <Link
           href={roleHomePath(role)}
           onClick={onNavigate}
-          className="group inline-flex items-center gap-1 font-display text-2xl font-bold text-secondary hover:text-on-primary hover:translate-x-0.5 transition-all duration-150 ease-out rounded px-1 -mx-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+          className="font-wordmark text-2xl font-bold text-secondary-container hover:text-on-primary transition-colors rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-container"
         >
           Zenzero Hotel
-          <MaterialIcon
-            name="arrow_forward"
-            size={20}
-            className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
-          />
         </Link>
-        {/* Role label (e.g. 'แดชบอร์ดผู้จัดการ' / 'Manager Dashboard') wraps
-            differently per language — reserve 1-line height so the brand
-            + role label block doesn't reflow when toggling TH↔EN. */}
-        <p className="text-caption text-secondary/70 mt-1 uppercase tracking-wider min-h-[1.25rem] leading-tight truncate" title={t(ROLE_LABEL_KEY[role])}>
-          {t(ROLE_LABEL_KEY[role])}
+        <p className="mt-1 text-[14px] text-on-primary/70 truncate" title={t(`staff.roleName.${role}`)}>
+          {t(`staff.roleName.${role}`)}
         </p>
         {showsLanguageToggle(role) && (
           <div className="mt-3">
@@ -250,13 +235,13 @@ export function StaffSidebarNav({
           const label = t(`nav.groups.${group.key}`)
           const panelId = `nav-group-${role}-${group.key}`
           return (
-            <div key={group.key} className="flex flex-col pt-3 first:pt-0">
+            <div key={group.key} className="flex flex-col pt-4 first:pt-0">
               <button
                 type="button"
                 onClick={() => toggle(group.key)}
                 aria-expanded={open}
                 aria-controls={panelId}
-                className="flex items-center justify-between px-3 py-1 rounded-md text-caption font-semibold uppercase tracking-wider text-secondary/70 hover:text-secondary hover:bg-secondary/5 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+                className="flex items-center justify-between min-h-8 px-3 rounded-md text-[13px] font-medium text-on-primary/60 hover:text-on-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-container"
               >
                 <span className="truncate">{label}</span>
                 <MaterialIcon
@@ -275,7 +260,7 @@ export function StaffSidebarNav({
                 className={`grid transition-[grid-template-rows] duration-200 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
               >
                 <div className="min-h-0 overflow-hidden -mx-1 px-1">
-                  <div className="flex flex-col gap-1 pt-1">
+                  <div className="flex flex-col gap-0.5 pt-1">
                     {group.items.map((item) => {
                       const isActive = isItemActive(item)
                       if (item.disabled) {
@@ -283,14 +268,12 @@ export function StaffSidebarNav({
                           <div
                             key={item.href}
                             aria-disabled="true"
-                            className="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary/40 cursor-not-allowed transition-colors duration-150 hover:bg-secondary/5"
+                            className="flex items-center gap-3 min-h-11 px-3 rounded-lg text-on-primary/40 cursor-not-allowed"
                             title={t('staff.comingSoon')}
                           >
                             <MaterialIcon name={item.icon} size={20} className="flex-shrink-0" />
                             <TruncatedText text={navLabel(t, role, item.key)} className="text-body-md" />
-                            <span className="ml-auto flex-shrink-0 text-[10px] uppercase tracking-wider text-secondary/40 transition-opacity duration-150 group-hover:opacity-70">
-                              {t('staff.comingSoon')}
-                            </span>
+                            <span className="ml-auto flex-shrink-0 text-[12px]">{t('staff.comingSoon')}</span>
                           </div>
                         )
                       }
@@ -300,29 +283,19 @@ export function StaffSidebarNav({
                           href={item.href}
                           onClick={onNavigate}
                           aria-current={isActive ? 'page' : undefined}
-                          className={`group relative overflow-hidden flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 transition-all duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary [--icon-fill:1] ${
+                          className={`relative flex items-center gap-3 min-h-11 px-3 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-container ${
                             isActive
-                              ? 'bg-primary text-on-primary font-semibold border-secondary shadow-[-3px_0_8px_-1px_rgba(254,215,152,0.5)]'
-                              : 'text-secondary/80 border-transparent hover:bg-primary-fixed hover:text-primary hover:translate-x-0.5 hover:border-l-secondary hover:shadow-[-2px_0_6px_-1px_rgba(254,215,152,0.3)]'
+                              ? 'bg-on-primary/10 text-on-primary font-semibold before:absolute before:left-0 before:top-2.5 before:bottom-2.5 before:w-1 before:rounded-full before:bg-secondary-container'
+                              : 'text-on-primary/75 hover:bg-on-primary/5 hover:text-on-primary'
                           }`}
                         >
-                          <MaterialIcon name={item.icon} size={20} filled={isActive} className="flex-shrink-0" />
-                          <TruncatedText text={navLabel(t, role, item.key)} className="text-body-md" />
                           <MaterialIcon
-                            name="chevron_right"
-                            size={18}
-                            className={`flex-shrink-0 ml-auto transition-all duration-150 ease-out ${
-                              isActive
-                                ? 'opacity-100 translate-x-0'
-                                : 'opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0'
-                            }`}
+                            name={item.icon}
+                            size={20}
+                            filled={isActive}
+                            className={`flex-shrink-0 ${isActive ? 'text-secondary-container' : ''}`}
                           />
-                          {/* Sheen sweep — pseudo-element travels left-to-right on hover.
-                              pointer-events-none + aria-hidden so it's purely decorative. */}
-                          <span
-                            aria-hidden
-                            className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-secondary/15 to-transparent -translate-x-full group-hover:translate-x-[200%] transition-transform duration-700 ease-out"
-                          />
+                          <TruncatedText text={navLabel(t, role, item.key)} className="text-body-md" />
                         </Link>
                       )
                     })}
@@ -334,49 +307,35 @@ export function StaffSidebarNav({
         })}
       </nav>
 
-      {/* User + Profile + Logout */}
-      <div className="px-3 py-4 border-t border-primary-container">
-        <div className="px-3 py-2 mb-2">
-          <p
-            className="text-caption text-secondary/70 uppercase tracking-wider min-h-[1.25rem] leading-tight truncate"
-            title={userName ?? t('staff.userFallback')}
-          >
-            {userName ?? t('staff.userFallback')}
-          </p>
-        </div>
-        {/* Profile link — /[role]/profile. Inherits the same Tier 3 polish
-            (slide + chevron + border-l accent) as the main nav items. */}
+      {/* Who is signed in → profile; then sign out. */}
+      <div className="px-3 py-4 border-t border-on-primary/10 flex flex-col gap-0.5">
         <Link
           href={`/${role}/profile`}
           onClick={onNavigate}
-          className="group flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 border-transparent text-secondary/80 hover:bg-primary-fixed hover:text-primary hover:translate-x-0.5 hover:border-l-secondary hover:shadow-[-2px_0_6px_-1px_rgba(254,215,152,0.3)] [--icon-fill:1] transition-all duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+          aria-current={pathname === `/${role}/profile` ? 'page' : undefined}
+          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-container ${
+            pathname === `/${role}/profile` ? 'bg-on-primary/10' : 'hover:bg-on-primary/5'
+          }`}
         >
           <AvatarBadge
             avatarKey={avatarKey ?? null}
             fullName={userName ?? t('staff.userFallback')}
-            size={20}
+            size={32}
           />
-          <span className="text-body-md min-w-0 truncate flex-1" title={t('staff.profile')}>
-            {t('staff.profile')}
+          <span className="min-w-0 flex-1">
+            <span className="block text-body-md font-semibold text-on-primary truncate" title={userName ?? t('staff.userFallback')}>
+              {userName ?? t('staff.userFallback')}
+            </span>
+            <span className="block text-[13px] text-on-primary/60 truncate">{t('staff.profile')}</span>
           </span>
-          <MaterialIcon
-            name="chevron_right"
-            size={18}
-            className="flex-shrink-0 ml-auto opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
-          />
         </Link>
         <form action={signOut}>
           <button
             type="submit"
-            className="group w-full flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg border-l-2 border-transparent text-secondary/80 hover:bg-primary-fixed hover:text-primary hover:translate-x-0.5 hover:border-l-error/50 transition-all duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+            className="w-full flex items-center gap-3 min-h-11 px-3 rounded-lg text-on-primary/75 hover:bg-on-primary/5 hover:text-on-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-container"
           >
             <MaterialIcon name="logout" size={20} className="flex-shrink-0" />
             <TruncatedText text={t('nav.logout')} className="text-body-md" />
-            <MaterialIcon
-              name="chevron_right"
-              size={18}
-              className="flex-shrink-0 ml-auto opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
-            />
           </button>
         </form>
       </div>

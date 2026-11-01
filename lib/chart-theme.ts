@@ -19,5 +19,5 @@ export const chartColors = {
 } as const
 
 export const chartFont = {
-  family: '"Inter", system-ui, sans-serif',
+  family: '"Anuphan", system-ui, sans-serif',
 } as const

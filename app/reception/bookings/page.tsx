@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getAllBookings } from '@/lib/data/staff'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Pagination } from '@/components/ui/Pagination'
+import { Tabs } from '@/components/ui/Tabs'
 import { BookingFilters } from './BookingFilters'
 import { BookingTableRow } from './BookingTableRow'
 import { getLocale } from '@/lib/i18n/getLocale'
@@ -12,11 +13,22 @@ export const dynamic = 'force-dynamic'
 
 const PAGE_SIZE = 20
 
+const STATUS_TABS = [
+  { key: 'all', label: 'reception.bookingsPage.filterAll' },
+  { key: 'confirmed', label: 'reception.bookingsPage.filterUnpaid' },
+  { key: 'checked_in', label: 'reception.bookingsPage.filterCheckedIn' },
+  { key: 'checked_out', label: 'reception.bookingsPage.filterCheckedOut' },
+  { key: 'cancelled', label: 'reception.bookingsPage.filterCancelled' },
+] as const
+
+type StatusKey = (typeof STATUS_TABS)[number]['key']
+
 export default async function ReceptionBookingsPage(props: PageProps<'/reception/bookings'>) {
   const t = getT(await getLocale())
   const searchParams = await props.searchParams
 
-  const statusFilter = typeof searchParams.status === 'string' ? searchParams.status : 'all'
+  const statusParam = typeof searchParams.status === 'string' ? searchParams.status : 'all'
+  const statusFilter: StatusKey = STATUS_TABS.some((s) => s.key === statusParam) ? (statusParam as StatusKey) : 'all'
   const search = typeof searchParams.q === 'string' ? searchParams.q : ''
 
   const pageParam = Number(searchParams.page ?? 1)
@@ -48,12 +60,23 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
 
   const { rows: bookings, total, totalPages } = result
 
+  // Tabs keep the search; switching status starts again at page 1.
+  const tabHref = (status: StatusKey) => {
+    const qs = new URLSearchParams()
+    if (status !== 'all') qs.set('status', status)
+    if (search) qs.set('q', search)
+    const suffix = qs.toString()
+    return suffix ? `/reception/bookings?${suffix}` : '/reception/bookings'
+  }
+
   return (
-    <div className="p-8 lg:p-12 max-w-7xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="px-4 py-6 md:p-8 lg:p-12">
+      <header className="flex items-start justify-between flex-wrap gap-4 mb-6">
         <div>
-          <h1 className="font-headline-md text-headline-md text-primary">{t('reception.bookingsPage.heading')}</h1>
-          <p className="text-body-lg text-on-surface-variant mt-2">
+          <h1 className="font-display text-2xl md:text-[28px] leading-[1.25] text-primary">
+            {t('reception.bookingsPage.heading')}
+          </h1>
+          <p className="text-body-md text-on-surface-variant mt-1">
             {total > 0
               ? t('reception.bookingsPage.countPaged', { total, page, pages: totalPages })
               : t('reception.bookingsPage.countZero')}
@@ -61,25 +84,32 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
         </div>
         <Link
           href="/reception/bookings/new"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-secondary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+          className="inline-flex items-center gap-2 h-11 px-5 bg-primary text-on-primary rounded-xl font-semibold text-body-md hover:bg-primary-container transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
         >
-          <MaterialIcon name="add" size={18} />
-          Walk-in Booking
+          <MaterialIcon name="add" size={20} />
+          {t('reception.walkInBooking')}
         </Link>
+      </header>
+
+      <Tabs
+        active={statusFilter}
+        tabs={STATUS_TABS.map((s) => ({ key: s.key, label: t(s.label), href: tabHref(s.key) }))}
+      />
+
+      <div className="mb-4">
+        <BookingFilters initialSearch={search} />
       </div>
 
-      <BookingFilters initialStatus={statusFilter} initialSearch={search} />
-
       {bookings.length === 0 ? (
-        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-lg shadow-level-1">
-          <MaterialIcon name="search_off" size={48} className="text-outline-variant mx-auto mb-3" />
+        <div className="text-center py-16 bg-surface-container-lowest rounded-2xl">
+          <MaterialIcon name="search_off" size={40} className="text-on-surface-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">{t('reception.bookingsPage.empty')}</p>
         </div>
       ) : (
         <>
-          <div className="mt-6 bg-surface-container-lowest rounded-lg shadow-level-1 overflow-x-auto overflow-y-hidden">
+          <div className="bg-surface-container-lowest rounded-2xl overflow-x-auto overflow-y-hidden">
             <table className="w-full">
-              <thead className="bg-surface-container">
+              <thead className="border-b border-surface-container">
                 <tr>
                   <Th>{t('reception.bookingsPage.colCode')}</Th>
                   <Th>{t('reception.bookingsPage.colGuest')}</Th>
@@ -87,7 +117,9 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
                   <Th>{t('reception.bookingsPage.colDates')}</Th>
                   <Th>{t('reception.bookingsPage.colStatus')}</Th>
                   <Th align="right">{t('reception.bookingsPage.colTotal')}</Th>
-                  <Th align="right">{t('reception.bookingsPage.colActions')}</Th>
+                  <Th align="right">
+                    <span className="sr-only">{t('reception.bookingsPage.colActions')}</span>
+                  </Th>
                 </tr>
               </thead>
               <tbody>
@@ -116,7 +148,8 @@ export default async function ReceptionBookingsPage(props: PageProps<'/reception
 function Th({ children, align }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (
     <th
-      className={`px-4 py-3 text-caption text-on-surface-variant uppercase tracking-wider font-semibold ${
+      scope="col"
+      className={`px-4 py-3 text-[13px] font-medium text-on-surface-variant whitespace-nowrap ${
         align === 'right' ? 'text-right' : 'text-left'
       }`}
     >

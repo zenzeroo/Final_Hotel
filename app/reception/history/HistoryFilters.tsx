@@ -71,19 +71,19 @@ export function HistoryFilters({
           onChange={(e) => setQ(e.target.value)}
           placeholder={t('reception.historyPage.searchPlaceholder')}
           aria-label={t('reception.historyPage.searchPlaceholder')}
-          className="w-full bg-surface-container-lowest border border-outline-variant rounded-full pl-12 pr-4 py-3 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
+          className="w-full h-11 bg-surface-container-lowest border border-transparent rounded-xl pl-12 pr-4 text-body-md text-on-surface placeholder:text-on-surface-variant hover:border-outline-variant focus:outline-none focus:border-secondary transition-colors"
         />
       </div>
       <DateField label={t('reception.common.from')} value={from} max={to || undefined} onChange={setFrom} />
       <DateField label={t('reception.common.to')} value={to} min={from || undefined} onChange={setTo} />
       <label className="flex flex-col gap-1">
-        <span className="text-caption text-on-surface-variant font-semibold px-1">
+        <span className="text-[13px] text-on-surface-variant px-1">
           {t('reception.historyPage.categoryLabel')}
         </span>
         <select
           value={category}
           onChange={(e) => go(q, e.target.value)}
-          className="bg-surface-container-lowest border border-outline-variant rounded-full px-4 py-3 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
+          className="h-11 bg-surface-container-lowest border border-transparent rounded-xl px-4 text-body-md text-on-surface hover:border-outline-variant focus:outline-none focus:border-secondary transition-colors"
         >
           {categories.map((c) => (
             <option key={c.value} value={c.value}>
@@ -94,7 +94,7 @@ export function HistoryFilters({
       </label>
       <button
         type="submit"
-        className="px-6 py-3 bg-primary text-secondary rounded-full font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+        className="h-11 px-6 bg-primary text-on-primary rounded-xl font-semibold text-body-md hover:bg-primary-container transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         {t('reception.historyPage.search')}
       </button>
@@ -108,7 +108,7 @@ export function HistoryFilters({
           setTo('')
           router.replace('/reception/history')
         }}
-        className="inline-flex items-center gap-1.5 px-4 py-3 rounded-full text-label-md font-semibold text-primary hover:bg-primary-fixed transition-colors"
+        className="inline-flex items-center gap-1.5 h-11 px-4 rounded-xl text-body-md font-semibold text-primary hover:bg-primary/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         <MaterialIcon name="filter_alt_off" size={18} />
         {t('reception.historyPage.clearFilters')}
@@ -132,14 +132,14 @@ function DateField({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-caption text-on-surface-variant font-semibold px-1">{label}</span>
+      <span className="text-[13px] text-on-surface-variant px-1">{label}</span>
       <input
         type="date"
         value={value}
         min={min}
         max={max}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-surface-container-lowest border border-outline-variant rounded-full px-4 py-[0.6875rem] text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
+        className="h-11 bg-surface-container-lowest border border-transparent rounded-xl px-4 text-body-md text-on-surface tabular-nums hover:border-outline-variant focus:outline-none focus:border-secondary transition-colors"
       />
     </label>
   )

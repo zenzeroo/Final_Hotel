@@ -1,0 +1,48 @@
+[
+ {
+  "file": "public/found/ginger-koehler-1896.png",
+  "media": "image",
+  "ref": "commons:184797350",
+  "title": "Illustration of Zingiber officinale",
+  "creator": "Franz Eugen Köhler",
+  "creatorUrl": null,
+  "date": "1896",
+  "license": "CC0",
+  "licenseCode": "cc0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "creditRequired": false,
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_of_Zingiber_officinale.png",
+  "via": "Wikimedia Commons",
+  "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/22/Illustration_of_Zingiber_officinale.png/1920px-Illustration_of_Zingiber_officinale.png",
+  "width": 1920,
+  "height": 2501,
+  "bytes": 4733865,
+  "credit": "\"Illustration of Zingiber officinale\" by Franz Eugen Köhler, CC0, via Wikimedia Commons",
+  "notes": [],
+  "saved": "2026-10-31T16:08:21.811Z"
+ },
+ {
+  "file": "public/found/sukhumvit-road-2024.jpg",
+  "media": "image",
+  "ref": "commons:168819565",
+  "title": "Bangkok, Thailand, Sukhumvit Road, 2024",
+  "creator": "OPK-Photography",
+  "creatorUrl": null,
+  "date": "2025-06-26",
+  "license": "CC BY-SA 4.0",
+  "licenseCode": "by-sa",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "creditRequired": true,
+  "page": "https://commons.wikimedia.org/wiki/File:Bangkok,_Thailand,_Sukhumvit_Road,_2024.jpg",
+  "via": "Wikimedia Commons",
+  "image": "https://upload.wikimedia.org/wikipedia/commons/6/68/Bangkok%2C_Thailand%2C_Sukhumvit_Road%2C_2024.jpg",
+  "width": 3200,
+  "height": 1800,
+  "bytes": 3850587,
+  "credit": "\"Bangkok, Thailand, Sukhumvit Road, 2024\" by OPK-Photography, CC BY-SA 4.0, via Wikimedia Commons",
+  "notes": [
+   "Share-alike: an altered version (recoloured, combined with other pictures) must be shared under the same licence."
+  ],
+  "saved": "2026-10-31T16:08:23.088Z"
+ }
+]

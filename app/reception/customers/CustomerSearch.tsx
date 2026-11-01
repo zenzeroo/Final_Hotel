@@ -43,12 +43,12 @@ export function CustomerSearch({ initialQuery }: CustomerSearchProps) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t('reception.customersPage.inputPlaceholder')}
-          className="w-full bg-surface-container-lowest border border-outline-variant rounded-full pl-12 pr-4 py-3 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
+          className="w-full h-11 bg-surface-container-lowest border border-transparent rounded-xl pl-12 pr-4 text-body-md text-on-surface placeholder:text-on-surface-variant hover:border-outline-variant focus:outline-none focus:border-secondary transition-colors"
         />
       </div>
       <button
         type="submit"
-        className="px-6 py-3 bg-primary text-secondary rounded-full font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors"
+        className="h-11 px-6 bg-primary text-on-primary rounded-xl font-semibold text-body-md hover:bg-primary-container transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         {t('reception.customersPage.search')}
       </button>

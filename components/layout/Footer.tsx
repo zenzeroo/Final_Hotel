@@ -1,16 +1,17 @@
 import Link from 'next/link'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
+import { FOUND_IMAGES } from '@/lib/found-images'
 
 export async function Footer() {
   const year = new Date().getFullYear()
   const t = getT(await getLocale())
   return (
-    <footer className="bg-primary text-secondary py-16 mt-20">
-      <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) flex flex-col items-center gap-8">
+    <footer className="bg-primary text-on-primary py-16 mt-20">
+      <div className="page-x flex flex-col items-center gap-8 text-center">
         <Link
           href="/"
-          className="font-display text-3xl font-bold text-secondary"
+          className="font-wordmark text-3xl font-bold text-secondary-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-container"
         >
           Zenzero Hotel
         </Link>
@@ -22,7 +23,25 @@ export async function Footer() {
           <FooterLink href="/careers">{t('footer.careers')}</FooterLink>
         </nav>
 
-        <p className="text-caption text-secondary/70">{t('footer.copyright').replace('2024', String(year))}</p>
+        <div className="flex flex-col gap-2 text-[13px] text-on-primary/80">
+          <p>{t('footer.copyright').replace('2024', String(year))}</p>
+          {/* Credits for the openly licensed pictures on the public pages (lib/found-images.ts). */}
+          <p>
+            {t('footer.credits')}{' '}
+            {FOUND_IMAGES.map((img, i) => (
+              <span key={img.src}>
+                {i > 0 && ' · '}
+                <a href={img.page} target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline">
+                  {img.creator}
+                </a>
+                {', '}
+                <a href={img.licenseUrl} target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline">
+                  {img.license}
+                </a>
+              </span>
+            ))}
+          </p>
+        </div>
       </div>
     </footer>
   )
@@ -32,7 +51,7 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
   return (
     <Link
       href={href}
-      className="px-2 py-1 rounded text-secondary/80 hover:bg-primary-fixed hover:text-primary transition-colors"
+      className="px-2 py-1 text-on-primary/90 hover:bg-primary-fixed hover:text-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-container"
     >
       {children}
     </Link>

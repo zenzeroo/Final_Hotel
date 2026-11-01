@@ -19,9 +19,9 @@ interface CheckInOutDateRangeProps {
  * Phase 48b — check-in / check-out date range picker for
  * /reception/check-in-out.
  *
- * Two inline `<input type="date">` fields matching the visual style of
- * the homepage SearchBar (rounded-full, leading calendar icon, label
- * stack). Reuses the `?checkin=&checkout=` URL param convention from
+ * Two inline `<input type="date">` fields (white rounded box, leading
+ * calendar icon, small label above the date). Reuses the
+ * `?checkin=&checkout=` URL param convention from
  * SearchBar so reception can deep-link the same dates the customer
  * search flow uses.
  *
@@ -69,13 +69,13 @@ export function CheckInOutDateRange({
   }
 
   return (
-    <div className="mt-1 inline-flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap">
       {/* From-date field (range-neutral label — the active topic is
           chosen by the separate tab control, not by this input). */}
-      <label className="relative inline-flex items-center gap-2 bg-surface-container-low border border-outline-variant rounded-full pl-3 pr-4 py-1.5 hover:border-secondary focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary transition-colors">
+      <label className="relative inline-flex items-center gap-2 min-h-11 bg-surface-container-lowest border border-transparent rounded-xl pl-3 pr-4 py-1.5 hover:border-outline-variant focus-within:border-secondary transition-colors">
         <MaterialIcon name="calendar_today" size={16} className="text-on-surface-variant shrink-0" />
         <div className="flex flex-col">
-          <span className="text-caption text-on-surface-variant font-semibold uppercase tracking-wider leading-none">
+          <span className="text-[13px] text-on-surface-variant leading-none">
             {t('reception.common.from')}
           </span>
           <input
@@ -83,16 +83,16 @@ export function CheckInOutDateRange({
             value={defaultCheckin}
             onChange={(e) => handleCheckinChange(e.target.value)}
             aria-label={t('reception.common.fromAria')}
-            className="bg-transparent text-body-md text-on-surface focus:outline-none w-32"
+            className="bg-transparent text-body-md text-on-surface focus:outline-none w-32 tabular-nums"
           />
         </div>
       </label>
 
       {/* To-date field (range-neutral label). */}
-      <label className="relative inline-flex items-center gap-2 bg-surface-container-low border border-outline-variant rounded-full pl-3 pr-4 py-1.5 hover:border-secondary focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary transition-colors">
+      <label className="relative inline-flex items-center gap-2 min-h-11 bg-surface-container-lowest border border-transparent rounded-xl pl-3 pr-4 py-1.5 hover:border-outline-variant focus-within:border-secondary transition-colors">
         <MaterialIcon name="event" size={16} className="text-on-surface-variant shrink-0" />
         <div className="flex flex-col">
-          <span className="text-caption text-on-surface-variant font-semibold uppercase tracking-wider leading-none">
+          <span className="text-[13px] text-on-surface-variant leading-none">
             {t('reception.common.to')}
           </span>
           <input
@@ -101,7 +101,7 @@ export function CheckInOutDateRange({
             min={defaultCheckin}
             onChange={(e) => handleCheckoutChange(e.target.value)}
             aria-label={t('reception.common.toAria')}
-            className="bg-transparent text-body-md text-on-surface focus:outline-none w-32"
+            className="bg-transparent text-body-md text-on-surface focus:outline-none w-32 tabular-nums"
           />
         </div>
       </label>
@@ -110,7 +110,7 @@ export function CheckInOutDateRange({
         <button
           type="button"
           onClick={() => navigate(today, today)}
-          className="ml-1 text-caption text-primary font-semibold uppercase tracking-wider px-2 py-1 rounded hover:bg-primary-fixed transition-colors"
+          className="min-h-11 px-3 text-[14px] text-primary font-semibold rounded-lg underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-secondary"
         >
           {t('reception.checkInOutPage.backToToday')}
         </button>

@@ -8,7 +8,7 @@
  * decision. Keyboard left/right arrows also navigate when the section is
  * focused.
  *
- * The default overlay text (label + heading + subheading) is shown when a
+ * The default overlay text (heading + subheading) is shown when a
  * slide doesn't override it (room_type source, or custom without caption).
  * Promotion + custom_with_caption slides override the heading/subheading
  * per Section 2e of the plan.
@@ -38,14 +38,12 @@ interface HeroCarouselProps {
    * Default heading (TH) — used when a slide doesn't provide its own.
    * Kept as a prop so the page component can pass i18n strings down.
    */
-  defaultLabel: string
   defaultHeading: string
   defaultSubheading: string
 }
 
 export function HeroCarousel({
   slides,
-  defaultLabel,
   defaultHeading,
   defaultSubheading,
 }: HeroCarouselProps) {
@@ -113,8 +111,8 @@ export function HeroCarousel({
                 sizes="100vw"
                 className="object-cover"
               />
-              <div className="absolute inset-0 bg-primary/40 mix-blend-multiply" />
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-primary/60" />
+              {/* Neutral scrim so the white heading reads on any photo. */}
+              <div className="absolute inset-0 bg-black/35" />
             </div>
           )
         })}
@@ -124,10 +122,7 @@ export function HeroCarousel({
           center line). Static across all slides — the carousel only swaps
           background images, the heading text stays constant. */}
       <div className="absolute top-[38%] left-0 right-0 z-10 -translate-y-1/2 px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) flex flex-col items-center text-center pointer-events-none">
-        <span className="text-label-md text-secondary font-semibold uppercase tracking-wider mb-4">
-          {defaultLabel}
-        </span>
-        <h1 className="font-display text-4xl md:text-6xl lg:text-7xl text-on-primary font-bold leading-tight max-w-3xl">
+        <h1 className="font-display text-4xl md:text-6xl lg:text-7xl text-on-primary font-bold leading-tight max-w-4xl text-balance">
           {defaultHeading}
         </h1>
         {defaultSubheading && (
@@ -146,7 +141,7 @@ export function HeroCarousel({
             type="button"
             onClick={goPrev}
             aria-label={t('customer.carousel.prev')}
-            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20 inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/30 hover:bg-primary/50 backdrop-blur-sm text-on-primary transition-colors"
+            className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 inline-flex items-center justify-center w-11 h-11 md:w-12 md:h-12 bg-black/55 hover:bg-primary text-on-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
           >
             <MaterialIcon name="chevron_left" size={28} />
           </button>
@@ -154,7 +149,7 @@ export function HeroCarousel({
             type="button"
             onClick={goNext}
             aria-label={t('customer.carousel.next')}
-            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20 inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/30 hover:bg-primary/50 backdrop-blur-sm text-on-primary transition-colors"
+            className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-20 inline-flex items-center justify-center w-11 h-11 md:w-12 md:h-12 bg-black/55 hover:bg-primary text-on-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
           >
             <MaterialIcon name="chevron_right" size={28} />
           </button>
@@ -170,7 +165,7 @@ export function HeroCarousel({
 
       {/* Dot indicators — just above the SearchBar (between heading and SearchBar). */}
       {total > 1 && (
-        <div className="absolute bottom-28 md:bottom-auto md:top-[70%] left-0 right-0 z-20 flex items-center justify-center gap-2">
+        <div className="absolute hidden md:flex md:top-[70%] left-0 right-0 z-20 items-center justify-center gap-2">
           {slides.map((slide, idx) => {
             const isActive = idx === activeIdx
             return (
@@ -180,7 +175,7 @@ export function HeroCarousel({
                 onClick={() => goTo(idx)}
                 aria-label={t('customer.carousel.goTo', { n: idx + 1 })}
                 aria-current={isActive ? 'true' : undefined}
-                className={`h-2 rounded-full motion-safe:transition-all motion-safe:duration-300 ${
+                className={`h-2 rounded-full motion-safe:transition-[width,background-color] motion-safe:duration-300 ${
                   isActive
                     ? 'w-8 bg-secondary'
                     : 'w-2 bg-secondary/30 hover:bg-secondary/50'

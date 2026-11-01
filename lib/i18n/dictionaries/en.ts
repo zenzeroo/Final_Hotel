@@ -34,16 +34,22 @@ export const en: Dictionary = {
       website: 'Website',
     },
     notification: 'Notifications',
-    greeting: 'Hello',
   },
 
   // Footer
   footer: {
+    credits: 'Pictures from open collections:',
     privacy: 'Privacy Policy',
     terms: 'Terms of Service',
     contact: 'Contact Us',
     careers: 'Careers',
     copyright: '© 2024 Zenzero Hotel. All rights reserved.',
+  },
+
+  // Shared customer copy: the name's meaning and the street photo caption (about, contact)
+  landing: {
+    meaning: 'Zenzero is Italian for ginger',
+    whereCaption: 'Sukhumvit Road at night, under the BTS line. Soi 11 is by Nana station.',
   },
 
   // Homepage
@@ -1057,6 +1063,7 @@ export const en: Dictionary = {
     requests: 'Requests',
     history: 'History',
     sidebar: {
+      walkIn: 'Walk-in booking',
       dashboard: 'Dashboard',
       checkInOut: 'Check-in / out',
       bookings: 'Bookings',
@@ -1076,6 +1083,16 @@ export const en: Dictionary = {
       filterAll: 'All',
     },
     checkInOutPage: {
+      colName: 'Full name',
+      colEmail: 'Email',
+      colRoom: 'Room',
+      colCheckIn: 'Check-in',
+      colCheckOut: 'Check-out',
+      colRoomStatus: 'Room status',
+      roomReady: 'Free and ready for the guest',
+      noRoomLeft: 'Free rooms of this type are taken by the bookings above',
+      inHouseUntil: 'Staying — checks out {date}',
+      open: 'Open booking',
       title: 'Check-in / Check-out',
       todayArrivals: "Today's arrivals",
       todayDepartures: "Today's departures",
@@ -1096,15 +1113,12 @@ export const en: Dictionary = {
       emptyRange: 'No {verb} for {range}',
       upcomingTitle: 'Upcoming {verb}',
       upcomingEmpty: 'No {verb} in the next 3 days',
-      alreadyCheckedIn: 'Checked in',
       inHouseTitle: 'Guests in house',
       noInHouseGuests: 'No guests in house',
-      checkoutOn: 'Check-out {date}',
-      eventOn: '{verb} {date}',
       backToToday: 'Back to today',
       today: 'Today',
-      tabUpcoming: 'Upcoming ({count})',
-      tabInHouse: 'In house ({count})',
+      tabUpcoming: 'Upcoming',
+      tabInHouse: 'In house now',
       selectRoomFirst: 'Please select a room before checking in',
       noRoomReady: 'No room is ready for check-in — check room status on the Rooms page',
       roomProblem: 'Room has a problem? Choose another room',
@@ -1266,7 +1280,7 @@ export const en: Dictionary = {
       from: 'From',
       maxGuests: 'Up to {count} guests',
       createHeading: 'Create walk-in booking',
-      createSubtitle: 'Enter guest details and stay dates',
+      createSubtitle: 'Enter the guest’s details and choose how they pay',
       guestInfo: 'Guest details',
       fullName: 'Full name',
       email: 'Email',
@@ -1295,6 +1309,8 @@ export const en: Dictionary = {
       grandTotal: 'Grand total',
       creating: 'Creating…',
       confirm: 'Confirm booking',
+      summary: 'Booking summary',
+      change: 'Change dates / guests',
     },
     common: {
       updateFailed: 'Could not update: {detail}',
@@ -1312,16 +1328,23 @@ export const en: Dictionary = {
   // Housekeeper
   housekeeper: {
     title: 'Housekeeping Dashboard',
+    dashboard: {
+      nextTask: 'Next task',
+      inProgress: 'In progress',
+      noNextTask: 'No tasks are assigned to you right now',
+      noNextTaskBody: 'See the unclaimed tasks and pick one up on My tasks.',
+      openTasks: 'Go to my tasks',
+      today: 'Today',
+      urgentWaiting: 'Urgent tasks waiting',
+      otherTasks: 'My other tasks',
+      seeAll: 'See all tasks',
+    },
     myTasks: 'My tasks',
     unassigned: 'Unassigned',
     roomsToClean: 'Rooms to clean',
     pendingMaintenance: 'Pending maintenance',
     shiftProgress: 'Shift progress',
     myBookings: 'Upcoming bookings',
-    tabs: {
-      emptyUrgent: 'No urgent tasks',
-      emptyAssigned: 'No tasks assigned to you',
-    },
     sidebar: {
       dashboard: 'Dashboard',
       tasks: 'Tasks',
@@ -1344,7 +1367,7 @@ export const en: Dictionary = {
       heading: 'My tasks',
       subtitle: 'Tasks assigned to you and the unclaimed task pool',
       tabMine: 'My tasks',
-      tabPool: 'Unclaimed pool',
+      tabPool: 'Unclaimed',
       mineHeading: 'My tasks ({count})',
       poolHeading: 'Unclaimed pool ({count})',
       mineEmpty: 'You have no assigned tasks right now',
@@ -1361,9 +1384,10 @@ export const en: Dictionary = {
       underMaintenance: 'Under maintenance',
       outOfOrder: 'Out of order',
       heading: 'Room status overview',
-      subtitle: 'Every room and its current status',
+      subtitle: '{rooms} rooms · {floors} floors · View only: status changes on check-in, check-out and finished tasks',
       noMatchingRooms: 'No rooms match this filter',
-      readOnly: 'Read only (managed by reception)',
+      roomCount: '{count} rooms',
+      filterLabel: 'Filter by status',
     },
     maintenancePage: {
       title: 'Maintenance Reports',
@@ -1388,6 +1412,12 @@ export const en: Dictionary = {
       typeOther: 'Other',
       heading: 'Maintenance & damage reports',
       subtitle: 'Track issues reported across the hotel',
+      colRoom: 'Room',
+      colIssue: 'Problem',
+      colSeverity: 'Severity',
+      colStatus: 'Status',
+      colReporter: 'Reported by',
+      colReportedAt: 'Reported',
       managerNote: 'Note: closing rooms and resolving reports is done by a manager',
     },
     historyPage: {
@@ -1395,18 +1425,19 @@ export const en: Dictionary = {
       // with the actual page labels).
       // Phase 53b — `tabMy` + `tabAll` removed (single-user view).
       pageTitle: 'Work history',
-      pageSubtitle: 'Track your shift performance over time',
-      roomsCleaned: 'Rooms cleaned',
+      pageSubtitle: 'The tasks you finished, day by day',
+      roomsCleaned: 'Finished this month',
       tasksToday: 'Today',
-      tasksThisWeek: 'This week',
-      recentLogTitle: 'Recent work log',
-      noLog: 'No completed tasks yet',
-      started: 'Started',
-      finished: 'Finished',
-      // Phase 53b — month picker controls.
-      monthPickerLabel: 'Select month',
-      monthPickerApply: 'View',
-      monthPickerClear: 'All time',
+      tasksThisWeek: 'Last 7 days',
+      yesterday: 'Yesterday',
+      dayCount: '{count} tasks',
+      minutes: '{n} min',
+      hoursMinutes: '{h} h {m} min',
+      shownOf: 'Showing {shown} of {total} tasks',
+      monthNav: 'Choose month',
+      prevMonth: 'Previous month',
+      nextMonth: 'Next month',
+      thisMonth: 'Back to this month',
       emptyMonth: 'No completed tasks in this month',
     },
     // Phase 53 — labels threaded to TaskCard's started/finished prefix
@@ -1416,14 +1447,17 @@ export const en: Dictionary = {
       finished: 'Finished',
     },
     dashboardTabs: {
-      urgent: 'Urgent',
-      assigned: 'Assigned to me',
       shiftTarget: 'Target: 12 rooms',
     },
   },
 
   // Admin
   admin: {
+    recentActivity: 'Recent activity',
+    colWhen: 'When',
+    colStaff: 'By',
+    colAction: 'Action',
+    system: 'System',
     title: 'Admin Dashboard',
     sidebar: {
       dashboard: 'Dashboard',
@@ -2053,6 +2087,12 @@ export const en: Dictionary = {
 
   // Phase 27.E — labels shared by every staff portal (badges, cards, chrome)
   staff: {
+    roleName: {
+      reception: 'Reception',
+      housekeeper: 'Housekeeping',
+      manager: 'Manager',
+      admin: 'Admin',
+    },
     status: {
       unassigned: 'Unassigned',
       assigned: 'Assigned',
@@ -2393,8 +2433,10 @@ export const en: Dictionary = {
       executive: "· Executive floor",
       seaView: "· Sea view",
       roomCount: "{count} rooms",
-      emptyTitle: "No rooms found",
-      emptyBody: "Try adjusting the filters or choosing another floor to see more options",
+      emptyTitle: "Nothing free on these dates",
+      emptyBody: "The rooms that match your filters are booked for these dates. Move the dates, or clear the filters to see other rooms.",
+      tryLater: "Try one day later",
+      clearFilters: "Clear filters",
     },
     filters: {
       type: "Type: {value}",
@@ -2533,7 +2575,7 @@ export const en: Dictionary = {
       frontDesk: "24-hour front desk",
       bookingTitle: "Booking",
       booking: "Book easily online, pay your way, and cancel according to the policy you chose.",
-      seeRooms: "See all rooms →",
+      seeRooms: "See all rooms",
     },
     pagination: {
       prev: "Previous",
@@ -2590,8 +2632,10 @@ export const en: Dictionary = {
     openPdf: 'Open the PDF',
     viewerFailed: 'This document could not be displayed here.',
     updatedAt: 'Last updated {date}',
-    termsEyebrow: 'Terms',
     termsTitle: 'Terms of service',
+    onThisPage: 'On this page',
+    related: 'Related documents',
+    questions: 'Questions? Contact us',
   },
 
   consent: {
@@ -2621,7 +2665,6 @@ export const en: Dictionary = {
   privacyPage: {
     metaTitle: 'Privacy policy — Zenzero Hotel',
     metaDescription: 'How Zenzero Hotel collects, uses and protects your personal data',
-    eyebrow: 'Policy',
     title: 'Privacy policy',
     intro:
       'Zenzero Hotel respects the privacy of every guest and user. We collect and use your personal data under the Thai Personal Data Protection Act B.E. 2562 (PDPA) and related laws.',

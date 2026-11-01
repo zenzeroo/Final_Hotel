@@ -18,10 +18,10 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
   const customers = result.rows
 
   return (
-    <div className="p-8 lg:p-12 max-w-7xl">
+    <div className="px-4 py-6 md:p-8 lg:p-12">
       <div className="mb-6">
-        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.customersPage.title')}</h1>
-        <p className="text-body-lg text-on-surface-variant mt-2">
+        <h1 className="font-display text-2xl md:text-[28px] leading-[1.25] text-primary">{t('reception.customersPage.title')}</h1>
+        <p className="text-body-md text-on-surface-variant mt-1">
           {t('reception.customersPage.subtitle')}
         </p>
       </div>
@@ -29,19 +29,19 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
       <CustomerSearch initialQuery={q} />
 
       {q && customers.length === 0 && (
-        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-lg shadow-level-1">
-          <MaterialIcon name="person_off" size={48} className="text-outline-variant mx-auto mb-3" />
+        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-2xl">
+          <MaterialIcon name="person_off" size={40} className="text-on-surface-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">{t('reception.customersPage.noMatch', { q })}</p>
         </div>
       )}
 
       {customers.length > 0 && (
-        <div className="mt-6 bg-surface-container-lowest rounded-lg shadow-level-1 overflow-x-auto overflow-y-hidden">
-          <p className="text-body-md text-on-surface-variant px-4 pt-3 pb-1">
+        <div className="mt-6 bg-surface-container-lowest rounded-2xl overflow-x-auto overflow-y-hidden">
+          <p className="text-[14px] text-on-surface-variant px-4 pt-4 pb-2">
             {t('reception.customersPage.countPeople', { count: result.total })}
           </p>
           <table className="w-full">
-            <thead className="bg-surface-container">
+            <thead className="border-b border-surface-container">
               <tr>
                 <Th>{t('reception.customersPage.colName')}</Th>
                 <Th>{t('reception.customersPage.colEmail')}</Th>
@@ -52,7 +52,7 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
             </thead>
             <tbody>
               {customers.map((c) => (
-                <tr key={c.id} className="border-t border-outline-variant hover:bg-primary-fixed transition-colors">
+                <tr key={c.id} className="border-t border-surface-container first:border-t-0 hover:bg-surface-container-low transition-colors">
                   <Td>
                     <p className="text-body-md font-medium text-on-surface">{c.full_name ?? '—'}</p>
                   </Td>
@@ -61,17 +61,17 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
                   </Td>
                   <Td>
                     {/* Masked on the server — the full number never reaches the browser. */}
-                    <span className="text-body-md text-on-surface font-mono whitespace-nowrap">{maskPhone(c.phone) ?? '—'}</span>
+                    <span className="text-body-md text-on-surface tabular-nums whitespace-nowrap">{maskPhone(c.phone) ?? '—'}</span>
                   </Td>
                   <Td>
-                    <span className="text-body-md text-on-surface-variant">
+                    <span className="text-body-md text-on-surface-variant whitespace-nowrap tabular-nums">
                       {formatDate(c.created_at, LOCALE_BCP47[locale])}
                     </span>
                   </Td>
                   <Td align="right">
                     <a
                       href={`/reception/bookings?q=${encodeURIComponent(c.full_name ?? '')}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary text-primary text-caption font-semibold uppercase tracking-wider hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
+                      className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-lg text-primary text-[14px] font-semibold whitespace-nowrap hover:bg-primary/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
                     >
                       <MaterialIcon name="bookmark" size={14} />
                       {t('reception.customersPage.viewBookings')}
@@ -85,8 +85,8 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
       )}
 
       {!q && (
-        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-lg shadow-level-1">
-          <MaterialIcon name="search" size={48} className="text-outline-variant mx-auto mb-3" />
+        <div className="mt-8 text-center py-16 bg-surface-container-lowest rounded-2xl">
+          <MaterialIcon name="search" size={40} className="text-on-surface-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">{t('reception.customersPage.typeToSearch')}</p>
         </div>
       )}
@@ -97,7 +97,7 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
 function Th({ children, align }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (
     <th
-      className={`px-4 py-3 text-caption text-on-surface-variant uppercase tracking-wider font-semibold ${
+      className={`px-4 py-3 text-[13px] text-on-surface-variant font-medium whitespace-nowrap ${
         align === 'right' ? 'text-right' : 'text-left'
       }`}
     >
@@ -108,6 +108,6 @@ function Th({ children, align }: { children: React.ReactNode; align?: 'left' | '
 
 function Td({ children, align }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (
-    <td className={`px-4 py-3 ${align === 'right' ? 'text-right' : 'text-left'}`}>{children}</td>
+    <td className={`px-4 py-4 ${align === 'right' ? 'text-right' : 'text-left'}`}>{children}</td>
   )
 }

@@ -33,6 +33,14 @@ function formatTimestamp(iso: string, localeBcp: string): string {
   return `${weekday} ${dmy(d)} ${time}`
 }
 
+/** Morning / afternoon / evening by the hotel's clock (Asia/Bangkok). */
+function greeting(t: ReturnType<typeof getT>): string {
+  const h = Number(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hour12: false, timeZone: 'Asia/Bangkok' }).format(new Date()))
+  if (h < 12) return t('manager.greetingMorning')
+  if (h < 18) return t('manager.greetingAfternoon')
+  return t('manager.greetingEvening')
+}
+
 export default async function AdminDashboard() {
   const locale = await getLocale()
   const t = getT(locale)
@@ -68,7 +76,7 @@ export default async function AdminDashboard() {
             {t('admin.title')}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
-            {t('nav.greeting')} {name} · {t('admin.title')} · {today(localeBcp)}
+            {greeting(t)}, {name} · {today(localeBcp)}
           </p>
         </div>
       </header>
@@ -132,7 +140,7 @@ export default async function AdminDashboard() {
       {/* Recent activity */}
       <section className="mb-12">
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
-          Recent Activity
+          {t('admin.recentActivity')}
         </h2>
         {recentActivity.length === 0 ? (
           <div className="bg-surface-container-lowest rounded-lg shadow-level-1 p-8 text-center text-on-surface-variant">
@@ -143,14 +151,14 @@ export default async function AdminDashboard() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-outline-variant">
-                  <th className="px-4 py-3 text-left text-label-md uppercase tracking-wider text-on-surface-variant font-medium">
-                    When
+                  <th className="px-4 py-3 text-left text-[13px] text-on-surface-variant font-medium">
+                    {t('admin.colWhen')}
                   </th>
-                  <th className="px-4 py-3 text-left text-label-md uppercase tracking-wider text-on-surface-variant font-medium">
-                    Staff
+                  <th className="px-4 py-3 text-left text-[13px] text-on-surface-variant font-medium">
+                    {t('admin.colStaff')}
                   </th>
-                  <th className="px-4 py-3 text-left text-label-md uppercase tracking-wider text-on-surface-variant font-medium">
-                    Action
+                  <th className="px-4 py-3 text-left text-[13px] text-on-surface-variant font-medium">
+                    {t('admin.colAction')}
                   </th>
                 </tr>
               </thead>
@@ -164,7 +172,7 @@ export default async function AdminDashboard() {
                       {formatTimestamp(entry.timestamp, localeBcp)}
                     </td>
                     <td className="px-4 py-3 text-body-md text-on-surface-variant">
-                      {entry.staffName ?? 'System'}
+                      {entry.staffName ?? t('admin.system')}
                       {entry.staffRole && (
                         <span className="text-caption text-on-surface-variant ml-1">
                           ({entry.staffRole})

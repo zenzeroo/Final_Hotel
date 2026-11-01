@@ -26,7 +26,7 @@ export function ProfileCard({ profile }: ProfileCardProps) {
   const memberSince = formatMemberSince(profile.created_at, LOCALE_BCP47[locale])
 
   return (
-    <div className="bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container flex flex-col items-center text-center">
+    <div className="bg-surface-container-lowest rounded-2xl flex flex-col items-center text-center">
       <div className="w-full p-gutter md:p-[32px] flex flex-col items-center">
         <AvatarUploader
           avatarKey={profile.avatar_key}

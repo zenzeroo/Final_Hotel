@@ -56,7 +56,7 @@ export function RatingStars({
               key={i}
               name="star"
               size={size}
-              className="text-outline-variant"
+              className="text-outline"
             />
           )
         })}
@@ -67,7 +67,7 @@ export function RatingStars({
         </span>
       )}
       {count !== undefined && (
-        <span className="text-caption text-on-surface-variant">
+        <span className="text-[14px] text-on-surface-variant">
           {t('customer.rating.reviewsCount', { count })}
         </span>
       )}

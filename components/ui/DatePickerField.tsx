@@ -105,7 +105,7 @@ export function DatePickerField({
         )}
         <div className="flex flex-col flex-1 min-w-0">
           {label && (
-            <span className="text-caption text-on-surface-variant font-semibold uppercase tracking-wider">
+            <span className="text-[14px] text-on-surface-variant">
               {label}
             </span>
           )}

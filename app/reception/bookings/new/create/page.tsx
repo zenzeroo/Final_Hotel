@@ -1,7 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { WalkInForm } from './WalkInForm'
-import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
@@ -23,10 +22,10 @@ export default async function CreateWalkInBookingPage(props: PageProps<'/recepti
   if (error || !room) notFound()
 
   return (
-    <div className="p-8 lg:p-12 max-w-4xl">
+    <div className="px-4 py-6 md:p-8 lg:p-12 max-w-6xl">
       <div className="mb-6">
-        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.walkIn.createHeading')}</h1>
-        <p className="text-body-lg text-on-surface-variant mt-2">
+        <h1 className="font-display text-2xl md:text-[28px] leading-[1.25] text-primary">{t('reception.walkIn.createHeading')}</h1>
+        <p className="text-body-md text-on-surface-variant mt-1">
           {t('reception.walkIn.createSubtitle')}
         </p>
       </div>

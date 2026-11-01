@@ -80,26 +80,23 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
         <TopNavBar />
         <main className="flex-1 bg-background">
           <TransactionalHeader backHref={`/rooms/${room.slug}`} />
-          <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">
-            <h1 className="font-display text-3xl text-primary mb-8">{t('customer.bookingForm.pageTitle')}</h1>
-
-            <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-8">
-              <BookingForm
-                existingBooking={existing}
-                room={{
-                  id: room.id,
-                  slug: room.slug,
-                  name: room.name,
-                  name_th: room.name_th,
-                  hero_image_key: room.hero_image_key,
-                  base_price: room.base_price,
-                }}
-                quote={quote}
-                minNightsBlocked={minNightsBlocked}
-                settings={pricingSettings}
-                refundMinDays={refundMinDays}
-              />
-            </div>
+          <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) pt-8 pb-16">
+            <h1 className="font-display text-3xl md:text-4xl text-primary mb-8">{t('customer.bookingForm.pageTitle')}</h1>
+            <BookingForm
+              existingBooking={existing}
+              room={{
+                id: room.id,
+                slug: room.slug,
+                name: room.name,
+                name_th: room.name_th,
+                hero_image_key: room.hero_image_key,
+                base_price: room.base_price,
+              }}
+              quote={quote}
+              minNightsBlocked={minNightsBlocked}
+              settings={pricingSettings}
+              refundMinDays={refundMinDays}
+            />
           </div>
         </main>
         <Footer />
@@ -161,33 +158,30 @@ export default async function NewBookingPage(props: PageProps<'/bookings/new'>) 
       <TopNavBar />
       <main className="flex-1 bg-background">
         <TransactionalHeader backHref={`/rooms/${room.slug}`} />
-        <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) py-8">
-          <h1 className="font-display text-3xl text-primary mb-8">{t('customer.bookingForm.pageTitle')}</h1>
-
-          <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-8">
-            <BookingForm
-              room={{
-                id: room.id,
-                slug: room.slug,
-                name: room.name,
-                name_th: room.name_th,
-                hero_image_key: room.hero_image_key,
-                base_price: room.base_price,
-              }}
-              checkIn={checkIn}
-              checkOut={checkOut}
-              guests={guests}
-              profile={{
-                fullName: profile?.full_name ?? user.user_metadata?.full_name ?? '',
-                email: user.email ?? '',
-                phone: profile?.phone ?? user.user_metadata?.phone ?? '',
-              }}
-              quote={quote}
-              minNightsBlocked={minNightsBlocked}
-              settings={pricingSettings}
-              refundMinDays={refundMinDays}
-            />
-          </div>
+        <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop) pt-8 pb-16">
+          <h1 className="font-display text-3xl md:text-4xl text-primary mb-8">{t('customer.bookingForm.pageTitle')}</h1>
+          <BookingForm
+            room={{
+              id: room.id,
+              slug: room.slug,
+              name: room.name,
+              name_th: room.name_th,
+              hero_image_key: room.hero_image_key,
+              base_price: room.base_price,
+            }}
+            checkIn={checkIn}
+            checkOut={checkOut}
+            guests={guests}
+            profile={{
+              fullName: profile?.full_name ?? user.user_metadata?.full_name ?? '',
+              email: user.email ?? '',
+              phone: profile?.phone ?? user.user_metadata?.phone ?? '',
+            }}
+            quote={quote}
+            minNightsBlocked={minNightsBlocked}
+            settings={pricingSettings}
+            refundMinDays={refundMinDays}
+          />
         </div>
       </main>
       <Footer />

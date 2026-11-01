@@ -6,7 +6,7 @@ import type { MaintenanceReport } from '@/lib/data/types'
 import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
 import { getT } from '@/lib/i18n/t'
 
-/** Compact one-line version of MaintenanceReportCard (wraps on narrow screens). */
+/** Compact one-line maintenance report (wraps on narrow screens). */
 export function MaintenanceReportRow({
   report,
   locale = 'th',

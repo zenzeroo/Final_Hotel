@@ -44,7 +44,7 @@ export function MobileNavMenu({ isAuthed, role, labels, locale }: MobileNavMenuP
         type="button"
         onClick={() => setOpen(true)}
         aria-label={labels.menuAriaLabel}
-        className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-primary-fixed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+        className="lg:hidden inline-flex items-center justify-center w-11 h-11 hover:bg-primary-fixed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
       >
         <MaterialIcon name="menu" size={24} />
       </button>
@@ -84,7 +84,7 @@ export function MobileNavMenu({ isAuthed, role, labels, locale }: MobileNavMenuP
               <button
                 type="submit"
                 title={labels.logout}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant text-label-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors min-w-[140px] justify-center whitespace-nowrap"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-surface-container text-body-md text-on-surface hover:bg-primary-fixed hover:text-primary transition-colors min-w-[140px] justify-center whitespace-nowrap"
               >
                 <MaterialIcon name="logout" size={16} className="flex-shrink-0" />
                 <span className="truncate">{labels.logout}</span>
@@ -95,7 +95,7 @@ export function MobileNavMenu({ isAuthed, role, labels, locale }: MobileNavMenuP
               href="/login"
               onClick={close}
               title={labels.login}
-              className="ml-auto inline-flex items-center justify-center h-10 px-5 rounded-full bg-primary text-on-primary font-semibold text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors min-w-[140px] whitespace-nowrap"
+              className="ml-auto inline-flex items-center justify-center h-11 px-5 bg-primary text-on-primary font-semibold text-body-md hover:bg-primary-container transition-colors min-w-[140px] whitespace-nowrap"
             >
               <span className="truncate">{labels.login}</span>
             </Link>

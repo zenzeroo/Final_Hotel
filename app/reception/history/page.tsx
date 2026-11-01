@@ -89,10 +89,10 @@ export default async function ActionHistoryPage(props: PageProps<'/reception/his
   })
 
   return (
-    <div className="p-8 lg:p-12 max-w-7xl">
+    <div className="px-4 py-6 md:p-8 lg:p-12">
       <div className="mb-6">
-        <h1 className="font-headline-md text-headline-md text-primary">{t('reception.historyPage.heading')}</h1>
-        <p className="text-body-lg text-on-surface-variant mt-2">
+        <h1 className="font-display text-2xl md:text-[28px] leading-[1.25] text-primary">{t('reception.historyPage.heading')}</h1>
+        <p className="text-body-md text-on-surface-variant mt-1">
           {t('reception.historyPage.subtitle', { count: events.length })}
         </p>
       </div>
@@ -108,37 +108,37 @@ export default async function ActionHistoryPage(props: PageProps<'/reception/his
       </div>
 
       {events.length === 0 && filtered ? (
-        <div className="text-center py-16 bg-surface-container-lowest rounded-lg shadow-level-1">
-          <MaterialIcon name="search_off" size={48} className="text-outline-variant mx-auto mb-3" />
+        <div className="text-center py-16 bg-surface-container-lowest rounded-2xl">
+          <MaterialIcon name="search_off" size={40} className="text-on-surface-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">{t('reception.historyPage.noMatch')}</p>
         </div>
       ) : events.length === 0 ? (
-        <div className="text-center py-16 bg-surface-container-lowest rounded-lg shadow-level-1">
-          <MaterialIcon name="history" size={48} className="text-outline-variant mx-auto mb-3" />
+        <div className="text-center py-16 bg-surface-container-lowest rounded-2xl">
+          <MaterialIcon name="history" size={40} className="text-on-surface-variant mx-auto mb-3" />
           <p className="text-body-md text-on-surface-variant">{t('reception.historyPage.empty')}</p>
           <p className="text-caption text-on-surface-variant mt-1">
             {t('reception.historyPage.emptyHint')}
           </p>
         </div>
       ) : (
-        <>
+        <div className="bg-surface-container-lowest rounded-2xl overflow-hidden">
           <div
             aria-hidden="true"
-            className={`hidden ${GRID} px-4 pb-2 text-caption text-on-surface-variant uppercase tracking-wider font-semibold`}
+            className={`hidden ${GRID} px-4 py-3 border-b border-surface-container text-[13px] text-on-surface-variant font-medium`}
           >
             <span>{t('reception.historyPage.event')}</span>
             <span>{t('reception.historyPage.colBooking')}</span>
             <span>{t('reception.historyPage.colActor')}</span>
             <span className="text-right">{t('reception.historyPage.colWhen')}</span>
           </div>
-          <ul className="flex flex-col gap-2">
+          <ul>
             {events.map((e) => (
-              <li key={e.id}>
+              <li key={e.id} className="border-t border-surface-container first:border-t-0">
                 <EventRow event={e} t={t} dateLocale={LOCALE_BCP47[locale]} />
               </li>
             ))}
           </ul>
-        </>
+        </div>
       )}
     </div>
   )
@@ -156,27 +156,27 @@ function EventRow({
   const meta = EVENT_TYPE_META[e.event_type]
   const actorRole = e.actor ? (ROLE_LABEL[e.actor.role] ? t(ROLE_LABEL[e.actor.role]) : e.actor.role) : null
   const rowClass =
-    `flex flex-wrap items-center gap-x-4 gap-y-2 ${GRID} px-4 py-3 bg-surface-container-low rounded-xl transition-colors`
+    `flex flex-wrap items-center gap-x-4 gap-y-2 ${GRID} px-4 py-3.5 transition-colors`
 
   const content = (
     <>
-      <span className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-caption font-semibold w-44 max-w-full ${meta.color}`}>
+      <span className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-medium w-44 max-w-full ${meta.color}`}>
         <MaterialIcon name={meta.icon} size={14} />
         <span className="truncate">{t(meta.label)}</span>
       </span>
       <span className="flex-[2] min-w-40 md:min-w-0 truncate">
-        <span className="font-mono text-body-md font-bold text-on-surface">
+        <span className="text-body-md font-semibold text-primary tabular-nums">
           {e.booking?.booking_code ?? (e.booking_id ? `#${e.booking_id.slice(0, 8)}` : '—')}
         </span>
         {e.booking?.booker_full_name && (
           <span className="text-body-md text-on-surface-variant"> · {e.booking.booker_full_name}</span>
         )}
       </span>
-      <span className="flex-1 min-w-32 md:min-w-0 inline-flex items-center gap-1.5 text-caption text-on-surface-variant truncate">
+      <span className="flex-1 min-w-32 md:min-w-0 inline-flex items-center gap-1.5 text-[14px] text-on-surface-variant truncate">
         <MaterialIcon name={e.actor ? 'person' : 'smart_toy'} size={14} />
         {e.actor ? `${e.actor.full_name ?? '—'} · ${actorRole}` : t('reception.historyPage.system')}
       </span>
-      <span className="ml-auto shrink-0 text-caption text-on-surface-variant md:text-right">
+      <span className="ml-auto shrink-0 text-[14px] text-on-surface-variant tabular-nums md:text-right">
         {formatDateTime(e.created_at, dateLocale)}
       </span>
     </>
@@ -185,7 +185,7 @@ function EventRow({
   return e.booking_id ? (
     <Link
       href={`/reception/bookings/${e.booking_id}?from=history`}
-      className={`${rowClass} hover:bg-primary-fixed focus-visible:outline-2 focus-visible:outline-secondary`}
+      className={`${rowClass} hover:bg-surface-container-low focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-secondary`}
     >
       {content}
     </Link>

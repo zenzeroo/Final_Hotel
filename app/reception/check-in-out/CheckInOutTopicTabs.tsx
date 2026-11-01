@@ -68,26 +68,26 @@ export function CheckInOutTopicTabs({
         type="button"
         onClick={() => navigate('checkin')}
         aria-pressed={active === 'checkin'}
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md font-semibold uppercase tracking-wider transition-colors ${
+        className={`inline-flex items-center gap-2 h-10 px-4 rounded-full text-body-md font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${
           active === 'checkin'
             ? 'bg-primary text-on-primary'
-            : 'text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
+            : 'text-on-surface-variant hover:text-primary'
         }`}
       >
-        <MaterialIcon name="login" size={16} />
+        <MaterialIcon name="login" size={18} />
         {t('reception.checkInOutPage.checkIn')}
       </button>
       <button
         type="button"
         onClick={() => navigate('checkout')}
         aria-pressed={active === 'checkout'}
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md font-semibold uppercase tracking-wider transition-colors ${
+        className={`inline-flex items-center gap-2 h-10 px-4 rounded-full text-body-md font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${
           active === 'checkout'
             ? 'bg-primary text-on-primary'
-            : 'text-on-surface-variant hover:bg-primary-fixed hover:text-primary'
+            : 'text-on-surface-variant hover:text-primary'
         }`}
       >
-        <MaterialIcon name="logout" size={16} />
+        <MaterialIcon name="logout" size={18} />
         {t('reception.checkInOutPage.checkOut')}
       </button>
     </div>

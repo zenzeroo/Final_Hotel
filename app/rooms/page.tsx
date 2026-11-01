@@ -66,7 +66,7 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
       <TopNavBar />
       <main className="flex-1 bg-background">
         {/* Top search bar (compact) */}
-        <section className="bg-surface-container-low border-b border-outline-variant py-6">
+        <section className="bg-surface-container-low py-6">
           <div className="max-w-(--spacing-container-max) mx-auto px-(--spacing-margin-mobile) md:px-(--spacing-margin-desktop)">
             <SearchBar
               variant="compact"
@@ -90,7 +90,7 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
 
             {/* Results */}
             <div>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-baseline justify-between gap-4 mb-6">
                 <h1 className="font-display text-3xl text-primary">{t('roomsList.title')}</h1>
                 <span className="text-body-md text-on-surface-variant">
                   {t('roomsList.resultsCount', { count: total })}
@@ -99,12 +99,27 @@ export default async function RoomsPage(props: PageProps<'/rooms'>) {
 
               <FilterChips />
 
-              <FloorGroupSection rooms={rooms} locale={locale} searchParams={searchParams} />
+              <FloorGroupSection
+                rooms={rooms}
+                locale={locale}
+                searchParams={searchParams}
+                emptyActions={{
+                  laterHref: `/rooms?${new URLSearchParams({ ...stringParams(searchParams), checkin: addDaysLocalIso(todayPlus1, 1), checkout: addDaysLocalIso(todayPlus2, 1) })}`,
+                  clearHref: `/rooms?${new URLSearchParams({ checkin: todayPlus1, checkout: todayPlus2 })}`,
+                }}
+              />
             </div>
           </div>
         </div>
       </main>
       <Footer />
     </>
+  )
+}
+
+/** The plain string params of the current URL, for rebuilding a link. */
+function stringParams(params: Record<string, string | string[] | undefined>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
   )
 }

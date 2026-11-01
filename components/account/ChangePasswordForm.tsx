@@ -55,7 +55,7 @@ export function ChangePasswordForm() {
 
   if (!open) {
     return (
-      <div className="flex justify-between items-center bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container p-gutter md:p-[32px]">
+      <div className="flex justify-between items-center bg-surface-container-lowest rounded-2xl p-gutter md:p-[32px]">
         <h3 className="font-headline-sm text-headline-sm text-primary">{t('profile.security')}</h3>
         <button
           type="button"
@@ -69,7 +69,7 @@ export function ChangePasswordForm() {
   }
 
   return (
-    <div className="bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container">
+    <div className="bg-surface-container-lowest rounded-2xl">
       <h3 className="font-headline-sm text-headline-sm text-primary p-gutter md:p-[32px] pb-base">
         {t('profile.changePassword')}
       </h3>

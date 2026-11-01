@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Inter } from "next/font/google";
+import { Playfair_Display, Anuphan } from "next/font/google";
 import "./globals.css";
 import { getLocale } from "@/lib/i18n/getLocale";
 import { getT } from "@/lib/i18n/t";
@@ -7,16 +7,19 @@ import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationLoader } from "@/components/ui/NavigationLoader";
 
+// Faces load into their own variables; globals.css maps them onto
+// --font-display / --font-body. Playfair has no Thai glyphs, so Thai
+// display text falls through to Anuphan rather than the OS font.
 const playfair = Playfair_Display({
-  variable: "--font-display",
+  variable: "--font-playfair",
   subsets: ["latin", "latin-ext"],
   weight: ["400", "600", "700"],
   display: "swap",
 });
 
-const inter = Inter({
-  variable: "--font-body",
-  subsets: ["latin", "latin-ext"],
+const anuphan = Anuphan({
+  variable: "--font-anuphan",
+  subsets: ["thai", "latin", "latin-ext"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
 });
@@ -34,7 +37,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang={locale}
-      className={`${playfair.variable} ${inter.variable} h-full antialiased`}
+      className={`${playfair.variable} ${anuphan.variable} h-full antialiased`}
     >
       <head>
         {/* Material Symbols Outlined */}

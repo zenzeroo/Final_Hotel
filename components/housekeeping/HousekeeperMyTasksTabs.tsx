@@ -1,7 +1,7 @@
 /**
  * Housekeeper tasks page tabs (`/housekeeper/tasks`).
  *
- * Mirrors `components/housekeeping/HousekeeperTasksTabs.tsx` (dashboard tabs):
+ * Same tab pattern as app/manager/bookings:
  * client component (translates labels via useT), URL-driven state (via parent page's searchParams),
  * labels are dictionary keys translated here (Tabs primitive renders `label` as-is).
  *

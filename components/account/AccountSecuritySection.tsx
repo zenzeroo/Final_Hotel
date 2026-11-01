@@ -27,7 +27,7 @@ export async function AccountSecuritySection() {
   // the "set password" form instead. No current-password verification
   // needed since the admin client sets the password directly.
   return (
-    <div className="bg-surface-container-lowest rounded-xl shadow-(--shadow-ambient) border border-surface-container">
+    <div className="bg-surface-container-lowest rounded-2xl">
       <div className="p-gutter md:p-[32px] pb-base">
         <h3 className="font-headline-sm text-headline-sm text-primary">
           {locale === 'en' ? 'Security' : 'ความปลอดภัย'}

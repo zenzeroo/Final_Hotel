@@ -8,5 +8,5 @@ import dynamic from 'next/dynamic'
  */
 export const PdfViewerLazy = dynamic(() => import('./PdfViewer').then((m) => m.PdfViewer), {
   ssr: false,
-  loading: () => <div className="h-[60vh] w-full animate-pulse rounded-xl bg-surface-container" />,
+  loading: () => <div className="h-[60vh] w-full bg-surface-container" />,
 })

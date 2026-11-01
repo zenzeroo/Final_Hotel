@@ -141,7 +141,7 @@ async function computeHistory(
     id, task_type, priority, status, started_at, completed_at, room_unit_id,
     room_unit:room_units(id, floor, unit_label, view_label, status,
       room_type:room_types(id, name, name_th, hero_image_key))
-  `, { count: 'exact' }).eq('status', 'completed').order('completed_at', { ascending: false }).limit(20)
+  `, { count: 'exact' }).eq('status', 'completed').order('completed_at', { ascending: false }).limit(300)
   if (userId) monthQuery = monthQuery.eq('assigned_to', userId)
   if (options?.monthFrom) monthQuery = monthQuery.gte('completed_at', options.monthFrom)
   if (options?.monthToExclusive) monthQuery = monthQuery.lt('completed_at', options.monthToExclusive)

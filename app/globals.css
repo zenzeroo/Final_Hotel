@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* Typography — the next/font variables are set on <html> in app/layout.tsx.
+   Anuphan carries both Thai and Latin; it is also the Thai fallback for
+   Playfair, which has no Thai glyphs. */
+@theme {
+  --font-display: var(--font-playfair), var(--font-anuphan), ui-serif, Georgia, serif;
+  --font-body: var(--font-anuphan), ui-sans-serif, system-ui, sans-serif;
+  --font-wordmark: var(--font-playfair), ui-serif, Georgia, serif;
+}
+
+html:lang(th) {
+  --font-display: var(--font-anuphan), ui-sans-serif, system-ui, sans-serif;
+}
+
 /* ============================================================
    Zenzero Hotel Design System
    Source: V1_Prototype/zenzero_hotel/DESIGN.md
@@ -57,9 +70,6 @@
   --color-outline: #727972;
   --color-outline-variant: #c2c8c1;
 
-  /* Typography */
-  --font-display: "Playfair Display", ui-serif, Georgia, serif;
-  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
 
   /* Spacing Scale (8px linear) */
   --spacing-base: 8px;
@@ -103,6 +113,27 @@
   @keyframes loader-in {
     from { opacity: 0; }
     to { opacity: 1; }
+  }
+}
+
+/* Customer pages — one pair of outer margins and one section rhythm
+   (design-taste-frontend, docs/superpowers/plans/2026-10-31-customer-redesign.md). */
+/* Content lines up with the 1280px container (nav bar, /rooms) while the
+   element's own background still runs edge to edge. */
+@utility page-x {
+  padding-inline: var(--spacing-margin-mobile);
+  @media (width >= 48rem) {
+    padding-inline: max(
+      var(--spacing-margin-desktop),
+      calc((100% - var(--spacing-container-max)) / 2 + var(--spacing-margin-desktop))
+    );
+  }
+}
+
+@utility section-y {
+  padding-block: 96px;
+  @media (width >= 48rem) {
+    padding-block: 160px;
   }
 }
 

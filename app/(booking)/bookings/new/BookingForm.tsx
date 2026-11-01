@@ -72,7 +72,7 @@ function SubmitButton({
     <button
       type="submit"
       disabled={disabled || pending}
-      className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary transition-colors disabled:opacity-60"
+      className="mt-6 w-full inline-flex items-center justify-center gap-2 h-12 px-6 bg-primary text-on-primary rounded-full font-semibold text-body-md hover:bg-primary-container active:translate-y-px transition-[background-color,transform] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
     >
       {pending ? (
         <>
@@ -207,26 +207,26 @@ export function BookingForm(props: BookingFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-8">
+    <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] gap-6 lg:gap-10 items-start">
       {/* LEFT: Form fields */}
       <div className="flex flex-col gap-6">
         {state?.error && (
-          <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-body-md text-error">
+          <div className="px-4 py-3 rounded-xl bg-error-container text-body-md text-on-error-container">
             {state.error}
           </div>
         )}
 
         {minNightsBlocked && (
-          <div className="px-4 py-3 bg-warning/10 border border-warning/30 rounded-lg text-body-md text-warning">
+          <div className="px-4 py-3 rounded-xl bg-warning-container text-body-md text-on-warning-container">
             {t('customer.bookingForm.minNightsBlock')}
           </div>
         )}
 
         {/* Booker info */}
-        <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <h2 className="font-display text-xl text-primary mb-4">{t('customer.bookingForm.bookerHeading')}</h2>
-          <div className="flex flex-col gap-4">
-            <Field label={t('auth.fullName')} required>
+        <section className="bg-surface-container-lowest rounded-2xl p-6 md:p-8">
+          <h2 className="font-display text-2xl text-primary mb-6">{t('customer.bookingForm.bookerHeading')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+            <Field label={t('auth.fullName')} required wide>
               <input
                 type="text"
                 value={fullName}
@@ -256,7 +256,7 @@ export function BookingForm(props: BookingFormProps) {
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none"
                 />
               </div>
-              <p className="font-caption text-caption text-on-surface-variant">
+              <p className="text-[13px] text-on-surface-variant">
                 {t('bookingForm.emailLockedHint')}
               </p>
             </Field>
@@ -273,15 +273,15 @@ export function BookingForm(props: BookingFormProps) {
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                 className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
               />
-              <p className="font-caption text-caption text-on-surface-variant">
+              <p className="text-[13px] text-on-surface-variant">
                 {t('customer.bookingForm.phoneHint')}
               </p>
             </Field>
-            <Field label={t('customer.bookingForm.special')}>
+            <Field label={t('customer.bookingForm.special')} wide>
               <textarea
                 value={specialRequest}
                 onChange={(e) => setSpecialRequest(e.target.value)}
-                rows={3}
+                rows={4}
                 placeholder={t('customer.bookingForm.specialPlaceholder')}
                 className="w-full bg-surface-container-low border border-outline-variant rounded-lg py-3 px-4 text-body-md text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors resize-none"
               />
@@ -290,9 +290,9 @@ export function BookingForm(props: BookingFormProps) {
         </section>
 
         {/* Promo code */}
-        <section className="bg-surface-container-lowest rounded-2xl p-6 shadow-(--shadow-ambient) border border-outline-variant">
-          <h2 className="font-display text-xl text-primary mb-4">{t('customer.bookingForm.promoHeading')}</h2>
-          <div className="flex gap-2">
+        <section className="bg-surface-container-lowest rounded-2xl p-6 md:p-8">
+          <h2 className="font-display text-2xl text-primary mb-6">{t('customer.bookingForm.promoHeading')}</h2>
+          <div className="flex gap-3">
             <input
               type="text"
               value={promoCode}
@@ -302,7 +302,7 @@ export function BookingForm(props: BookingFormProps) {
             />
             <button
               type="button"
-              className="px-6 py-3 border border-primary text-primary rounded-lg font-semibold text-label-md uppercase tracking-wider hover:bg-primary-fixed hover:text-primary hover:border-primary-fixed transition-colors"
+              className="px-6 py-3 rounded-lg bg-primary-fixed text-primary font-semibold text-body-md hover:bg-primary hover:text-on-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
             >
               {t('customer.bookingForm.applyCode')}
             </button>
@@ -312,20 +312,20 @@ export function BookingForm(props: BookingFormProps) {
 
       {/* RIGHT: Sticky summary */}
       <div className="lg:sticky lg:top-24 lg:self-start">
-        <div className="bg-surface-container-lowest rounded-2xl shadow-(--shadow-ambient-lg) border border-outline-variant overflow-hidden">
+        <div className="bg-surface-container-lowest rounded-2xl overflow-hidden">
           {/* Room image */}
-          <div className="relative aspect-[16/10] bg-surface-container">
+          <div className="relative aspect-[16/9] bg-surface-container">
             <Image
               src={r2Url(room.hero_image_key)}
-              alt={room.name}
+              alt={localizedName(room, locale)}
               fill
               sizes="(max-width: 1024px) 100vw, 40vw"
               className="object-cover"
             />
           </div>
 
-          <div className="p-6">
-            <h3 className="font-display text-xl text-primary">{localizedName(room, locale)}</h3>
+          <div className="p-6 md:p-8">
+            <h3 className="font-display text-2xl text-primary">{localizedName(room, locale)}</h3>
 
             <div className="mt-4 flex flex-col gap-2 text-body-md">
               <SummaryRow icon="event" label={t('customer.common.checkIn')} value={formatDate(checkIn)} />
@@ -334,15 +334,15 @@ export function BookingForm(props: BookingFormProps) {
               <SummaryRow icon="group" label={t('customer.common.guestsLabel')} value={t('customer.common.guests', { count: guests })} />
             </div>
 
-            <div className="my-4 border-t border-outline-variant" />
+            <div className="my-5 border-t border-outline-variant" />
 
             <div className="flex flex-col gap-2 text-body-md">
               {quote.appliedRates.length > 0 ? (
                 <>
                   <PriceRow label={t('customer.bookingForm.baseLine', { price: formatTHB(room.base_price), nights })} value={formatTHB(nights * room.base_price)} />
                   {quote.appliedRates.map((applied) => (
-                    <div key={applied.id} className="ml-4 flex flex-col gap-1 text-caption text-on-surface-variant">
-                      <span className="italic">{t('customer.common.seasonalLine', { label: applied.label, nights: applied.nights })}</span>
+                    <div key={applied.id} className="ml-4 flex flex-col gap-1 text-[14px] text-on-surface-variant">
+                      <span>{t('customer.common.seasonalLine', { label: applied.label, nights: applied.nights })}</span>
                       {applied.minNightsOverride != null && (
                         <span className="text-warning">{t('customer.common.minNights', { count: applied.minNightsOverride })}</span>
                       )}
@@ -357,17 +357,17 @@ export function BookingForm(props: BookingFormProps) {
               <PriceRow label={t('customer.common.resortFeePerNight', { fee: formatTHB(settings.resortFeePerNight) })} value={formatTHB(price.feeTotal)} />
             </div>
 
-            <div className="my-4 border-t border-outline-variant" />
-            <PriceRow label={t('customer.common.total')} value={formatTHB(price.total)} emphasis />
+            <div className="my-5 border-t border-outline-variant" />
+            <PriceRow label={t('customer.common.total')} value={formatTHB(price.total)} emphasis total />
 
             {/* Phase 57c — refund rule for this check-in date, accepted before booking */}
             <div
-              className={`mt-6 rounded-lg border px-4 py-3 text-caption ${
-                refundDeadline ? 'border-outline-variant bg-surface-container-low' : 'border-error/30 bg-error/10'
+              className={`mt-6 rounded-xl px-4 py-4 text-[14px] ${
+                refundDeadline ? 'bg-surface-container-low' : 'bg-error-container'
               }`}
             >
               <p className="font-semibold text-on-surface mb-1">{t('customer.bookingForm.refundHeading')}</p>
-              <p className={refundDeadline ? 'text-on-surface-variant' : 'text-error'}>
+              <p className={refundDeadline ? 'text-on-surface' : 'text-on-error-container'}>
                 {refundDeadline
                   ? t('customer.bookingForm.refundUntil', { date: formatDate(refundDeadline), min: props.refundMinDays })
                   : t('customer.bookingForm.refundNone', { min: props.refundMinDays })}
@@ -389,7 +389,7 @@ export function BookingForm(props: BookingFormProps) {
               label={t('customer.bookingForm.confirmPay')}
             />
 
-            <p className="mt-4 text-caption text-on-surface-variant text-center">
+            <p className="mt-3 text-[13px] text-on-surface-variant text-center">
               {t('customer.bookingForm.afterNote')}
             </p>
           </div>
@@ -399,10 +399,21 @@ export function BookingForm(props: BookingFormProps) {
   )
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({
+  label,
+  required,
+  wide,
+  children,
+}: {
+  label: string
+  required?: boolean
+  /** Spans both columns of the two-column field grid. */
+  wide?: boolean
+  children: React.ReactNode
+}) {
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-label-md text-on-surface">
+    <label className={`flex flex-col gap-1.5 ${wide ? 'md:col-span-2' : ''}`}>
+      <span className="text-[14px] font-medium text-on-surface">
         {label}
         {required && <span className="text-error">*</span>}
       </span>
@@ -421,13 +432,24 @@ function SummaryRow({ icon, label, value }: { icon: string; label: string; value
   )
 }
 
-function PriceRow({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
+function PriceRow({
+  label,
+  value,
+  emphasis,
+  total,
+}: {
+  label: string
+  value: string
+  emphasis?: boolean
+  /** The grand total: the largest figure in the summary. */
+  total?: boolean
+}) {
   return (
-    <div className="flex items-center justify-between">
+    <div className={`flex justify-between gap-4 ${total ? 'items-baseline' : 'items-center'}`}>
       <span className={emphasis ? 'text-body-md font-bold text-primary' : 'text-body-md text-on-surface-variant'}>
         {label}
       </span>
-      <span className={emphasis ? 'text-lg font-display font-bold text-primary' : 'text-body-md text-on-surface'}>
+      <span className={total ? 'text-[28px] leading-none font-display font-bold text-primary' : emphasis ? 'text-lg font-display font-bold text-primary' : 'text-body-md text-on-surface tabular-nums'}>
         {value}
       </span>
     </div>
