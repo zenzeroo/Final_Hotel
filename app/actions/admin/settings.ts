@@ -63,6 +63,5 @@ export async function updateHotelSettingsAction(formData: FormData): Promise<Act
   }
 
   revalidatePath('/admin/settings')
-  revalidatePath('/manager/settings')
   return { ok: true }
 }

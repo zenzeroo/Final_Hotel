@@ -264,6 +264,30 @@ export interface RevenueBarPoint {
   label?: string // 'Mon', 'Tue' ...
 }
 
+/** A booking arriving or leaving today (manager dashboard). */
+export interface MovementRow {
+  id: string
+  booking_code: string
+  booker_full_name: string
+  status: string
+  check_in: string
+  check_out: string
+  created_at: string
+  room_type_id: string
+  room_type: { id: string; name: string; name_th: string | null } | null
+  room_unit: { unit_label: string } | null
+}
+
+/** Lists behind the manager dashboard's "needs action" panel (one per ActionKind). */
+export interface ManagerActionQueue {
+  refunds: RefundRequest[]
+  repairs: MaintenanceReport[]
+  damage: DamageReport[]
+  tasks: UnassignedTask[]
+  housekeepers: HousekeeperOption[]
+  reviews: ReviewForModeration[]
+}
+
 export interface ManagerDashboardStats {
   /** Phase 54 — paid bookings (paid + partial_refund) created today (Bangkok). */
   revenueToday: number
@@ -465,6 +489,8 @@ export interface RefundRequest {
   guestName: string
   reason: string
   amount: number // THB
+  /** When the guest asked (refund_requests.created_at). */
+  requestedAt: string
   /** Phase 55 — linked booking context so the manager can judge the request. */
   checkIn?: string
   checkOut?: string

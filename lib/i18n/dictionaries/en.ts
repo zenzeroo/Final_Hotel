@@ -467,7 +467,6 @@ export const en: Dictionary = {
   // Manager dashboard
   manager: {
     title: 'Manager Dashboard',
-    subtitle: 'Zenzero Hotel performance overview',
     greetingMorning: 'Good morning',
     // Phase 55 — refund card context for the manager
     refundStay: 'Stay {from} – {to}',
@@ -478,9 +477,31 @@ export const en: Dictionary = {
     vsYesterday: 'vs yesterday',
     // Phase 54 — aggregated dashboard alerts
     noYesterdayData: "No data from yesterday to compare",
+    today: {
+      title: "Today's figures",
+      checkOutsNote: 'Check-outs include guests already gone',
+    },
+    week: {
+      title: 'Last 7 days',
+      revenue: 'Revenue',
+      occupancy: 'Occupancy',
+      fullReport: 'Full report',
+    },
+    movements: {
+      title: 'Arriving & leaving today',
+      arrivals: 'Arriving today',
+      departures: 'Leaving today',
+      none: 'None today',
+    },
+    actions: {
+      title: 'Needs action',
+      nothingWaiting: 'Nothing is waiting for you right now',
+      seeAll: 'See all ({count})',
+      requestedOn: 'Requested {date}',
+      manageReviews: 'Manage reviews',
+      urgent: 'Urgent',
+    },
     alerts: {
-      title: "Alerts",
-      empty: "No active alerts",
       more: "+{count}",
       maintenanceCritical: {
         title: "{count} critical maintenance report(s)",
@@ -535,7 +556,6 @@ export const en: Dictionary = {
       maintenance: 'Maintenance',
       reports: 'Reports',
       reviews: 'Reviews',
-      settings: 'Settings',
       staff: 'Staff',
       promotions: 'Promotions',
       rooms: 'Rooms',
@@ -776,37 +796,6 @@ export const en: Dictionary = {
       noBody: '— No text —',
       moderatedBy: 'Moderated by {name}',
       moderatedAt: 'on {date}',
-    },
-    settingsPage: {
-      title: 'Hotel Settings',
-      save: 'Save',
-      hotelName: 'Hotel name',
-      taxRate: 'Tax rate',
-      resortFee: 'Resort fee',
-      currency: 'Currency',
-      checkInTime: 'Check-in time',
-      checkOutTime: 'Check-out time',
-      contactPhone: 'Phone',
-      address: 'Address',
-      localeDefault: 'Default language',
-      subtitle: 'Hotel details, policies and tax — editable in Admin only',
-      modeEdit: 'Edit mode (Admin)',
-      modeReadOnly: 'Read-only mode',
-      taxHint: 'Tax charged on room rates',
-      resortFeeLabel: 'Resort fee',
-      resortFeeHint: 'Per night, per room',
-      checkIn: 'Check-in',
-      checkInHint: 'Room available from',
-      checkOut: 'Check-out',
-      checkOutHint: 'Room vacated by',
-      hotelInfo: 'Hotel information',
-      hotelNameBoth: 'Hotel name (TH/EN)',
-      email: 'Email',
-      cancellationPolicies: 'Cancellation policies',
-      freeCancelBefore: 'Free cancellation until',
-      hoursShort: '{count} h before',
-      refund: 'Refund',
-      lastUpdated: 'Last updated {date}',
     },
     // Phase 54 — /manager/bookings table
     bookingsTable: {

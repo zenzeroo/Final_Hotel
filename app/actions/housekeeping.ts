@@ -222,6 +222,7 @@ export async function assignTask(taskId: string, housekeeperId: string): Promise
   await notifyTaskAssigned(housekeeperId, 1, `task_assigned:${data.id}:${housekeeperId}`)
 
   revalidatePath('/manager/housekeeping')
+  revalidatePath('/manager')
   revalidatePath('/housekeeper/tasks')
   revalidatePath('/housekeeper')
   return { ok: true, data: { taskId: data.id } }

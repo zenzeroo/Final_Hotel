@@ -37,7 +37,6 @@ import type {
   HotelSettings,
   RoomUnitWithType,
   SeasonalRate,
-  CancellationPolicy,
   HeroSlide,
   OccupancyPoint,
   ReportMetric,
@@ -50,10 +49,17 @@ import type {
   HousekeeperCard,
   AssignedTaskCard,
   HousekeeperWorkload,
+  ManagerActionQueue,
+  MovementRow,
 } from './types'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
 import { ilikePattern } from '@/lib/search/ilike'
 import { chartColors } from '@/lib/chart-theme'
+import { ACTION_LIMIT, type ActionKind } from '@/lib/manager/action-queue'
+import { getMaintenanceReports } from './supabase-housekeeper'
+import { getPendingReviews } from './supabase-reviews'
+import { getRoomNotReadyReasons } from './staff'
+import { inArrivalOrder, isCheckInReady, planRooms, type NotReadyReason, type RoomPlan } from '@/lib/room-status'
 import { addDaysIso, diffDaysIso, getTodayBangkok, parseReportRange, toBangkokIsoDate } from '@/lib/dates'
 
 // =========================================================
@@ -93,6 +99,119 @@ const STATUS_NORMALIZE: Record<string, BookingOversightStatus> = {
 
 function normalizeStatus(s: string): BookingOversightStatus {
   return STATUS_NORMALIZE[s] ?? 'pending'
+}
+
+const REFUND_SELECT = 'id, booking_code, guest_name, reason, amount, created_at, booking:bookings(check_in, check_out, status)'
+
+function toRefundRequest(r: {
+  id: string
+  booking_code: string
+  guest_name: string
+  reason: string
+  amount: number
+  created_at: string
+  booking: unknown
+}): RefundRequest {
+  const b = r.booking as { check_in: string; check_out: string; status: string } | null
+  return {
+    id: r.id,
+    bookingCode: r.booking_code,
+    guestName: r.guest_name,
+    reason: r.reason,
+    amount: r.amount,
+    requestedAt: r.created_at,
+    ...(b ? { checkIn: b.check_in, checkOut: b.check_out, bookingStatus: b.status } : {}),
+  }
+}
+
+/**
+ * Items for the dashboard's "needs action" panel — only for the kinds that
+ * have something waiting (see actionKinds). Each list uses the same filter
+ * as its alert count in getManagerDashboardStats and is capped at
+ * ACTION_LIMIT, so the queries stay small however big the hotel's history.
+ */
+export async function getManagerActionQueue(kinds: readonly ActionKind[]): Promise<ManagerActionQueue> {
+  const want = new Set(kinds)
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const none = Promise.resolve({ data: [] as never[], error: null })
+  const [refundRes, repairs, damageRes, taskRes, housekeepers, reviews] = await Promise.all([
+    want.has('refundsPending')
+      ? supabase.from('refund_requests').select(REFUND_SELECT).eq('status', 'pending').order('created_at', { ascending: false }).limit(ACTION_LIMIT)
+      : none,
+    want.has('maintenanceCritical') ? getMaintenanceReports({ status: ['open'], severity: ['critical'] }) : [],
+    want.has('damageUrgent')
+      ? supabase.from('damage_reports').select(DAMAGE_REPORT_SELECT).eq('resolved', false).eq('severity', 'urgent').order('created_at', { ascending: false }).limit(ACTION_LIMIT)
+      : none,
+    want.has('unassignedTasks')
+      ? supabase
+          .from('housekeeping_tasks')
+          // Left join: a task without a room is still counted, so it is listed too.
+          .select('id, task_type, created_at, priority, room_unit:room_units(unit_label)')
+          .eq('status', 'unassigned')
+          .order('created_at', { ascending: true })
+          .limit(ACTION_LIMIT)
+      : none,
+    want.has('unassignedTasks') ? listHousekeepers() : [],
+    want.has('reviewsPending') ? getPendingReviews(ACTION_LIMIT) : [],
+  ])
+  if (refundRes.error) wrapSupabaseError('', refundRes.error)
+  if (damageRes.error) wrapSupabaseError('', damageRes.error)
+  if (taskRes.error) wrapSupabaseError('', taskRes.error)
+  return {
+    refunds: (refundRes.data ?? []).map(toRefundRequest),
+    repairs: repairs.slice(0, ACTION_LIMIT),
+    damage: ((damageRes.data ?? []) as unknown as DamageReportRow[]).map(toDamageReport),
+    tasks: (taskRes.data ?? []).map((t) => {
+      const ru = Array.isArray(t.room_unit) ? t.room_unit[0] : t.room_unit
+      return {
+        id: t.id,
+        taskType: t.task_type,
+        roomNumber: ru?.unit_label ?? '—',
+        requestedAt: t.created_at,
+        urgent: t.priority === 'urgent' || t.priority === 'high',
+      }
+    }),
+    housekeepers,
+    reviews,
+  }
+}
+
+/**
+ * Today's arrivals (check-in today, not yet gone) and departures (check-out
+ * today, still in house), with the room each will use and, when it isn't
+ * ready, why — the same rule as /reception/check-in-out (planRooms).
+ */
+export async function getTodayMovements(): Promise<{
+  arrivals: MovementRow[]
+  departures: MovementRow[]
+  plans: Map<string, RoomPlan>
+  reasons: Record<string, NotReadyReason>
+}> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const today = getTodayBangkok()
+  const select = 'id, booking_code, booker_full_name, status, check_in, check_out, created_at, room_type_id, room_type:room_types(id, name, name_th), room_unit:room_units(unit_label)'
+  const [arrRes, depRes, unitRes] = await Promise.all([
+    supabase.from('bookings').select(select).eq('check_in', today).in('status', ['confirmed', 'checked_in']).order('booker_full_name'),
+    supabase.from('bookings').select(select).eq('check_out', today).eq('status', 'checked_in').order('booker_full_name'),
+    supabase.from('room_units').select('id, unit_label, status, room_type_id').eq('is_active', true).order('floor').order('unit_label'),
+  ])
+  if (arrRes.error) wrapSupabaseError('', arrRes.error)
+  if (depRes.error) wrapSupabaseError('', depRes.error)
+  if (unitRes.error) wrapSupabaseError('', unitRes.error)
+  const arrivals = (arrRes.data ?? []) as unknown as MovementRow[]
+  const departures = (depRes.data ?? []) as unknown as MovementRow[]
+  const units = (unitRes.data ?? []).map((u) => ({
+    id: u.id as string,
+    unit_label: u.unit_label as string,
+    status: u.status as string,
+    roomTypeId: u.room_type_id as string | null,
+  }))
+  const plans = new Map([...planRooms(inArrivalOrder(arrivals), units), ...planRooms(departures, units)])
+  const blocked = [...plans.values()].flatMap((p) => (p.kind === 'blocked' ? [{ id: p.unitId, status: p.status }] : []))
+  const reasons = await getRoomNotReadyReasons(blocked.filter((u) => !isCheckInReady(u.status)))
+  return { arrivals, departures, plans, reasons }
 }
 
 export async function getManagerDashboardStats(): Promise<ManagerDashboardStats> {
@@ -933,7 +1052,7 @@ export async function getBookingsOversight(page = 1, search?: string): Promise<B
   ] = await Promise.all([
     supabase
       .from('refund_requests')
-      .select('id, booking_code, guest_name, reason, amount, created_at, booking:bookings(check_in, check_out, status)')
+      .select(REFUND_SELECT)
       .eq('status', 'pending')
       .order('created_at', { ascending: false }),
     bookingsQuery
@@ -989,17 +1108,7 @@ export async function getBookingsOversight(page = 1, search?: string): Promise<B
     }
   }
 
-  const refundRequests: RefundRequest[] = (refundRows ?? []).map((r) => ({
-    id: r.id,
-    bookingCode: r.booking_code,
-    guestName: r.guest_name,
-    reason: r.reason,
-    amount: r.amount,
-    ...(() => {
-      const b = r.booking as unknown as { check_in: string; check_out: string; status: string } | null
-      return b ? { checkIn: b.check_in, checkOut: b.check_out, bookingStatus: b.status } : {}
-    })(),
-  }))
+  const refundRequests: RefundRequest[] = (refundRows ?? []).map(toRefundRequest)
 
   const bookings: BookingOversightRow[] = (bookingRows ?? []).map((row) => {
     // room_type + room_unit are embedded relations; could be null for
@@ -1722,28 +1831,6 @@ export async function listSeasonalRates(): Promise<SeasonalRate[]> {
     const r = row as SeasonalRate & { room_type: { name: string } | null }
     return { ...r, room_type_name: r.room_type?.name }
   })
-}
-
-export async function listCancellationPolicies(): Promise<CancellationPolicy[]> {
-  // Phase 12: real query against the seeded table. refund_pct was added in
-  // migration 20260834 (default 100, with 100/50/0 backfill for the 3
-  // existing seed rows). public-read RLS is set in
-  // 20260819_bookings_rls.sql:61-64, so no auth check is needed.
-  const { createClient } = await import('@/lib/supabase/server')
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('cancellation_policies')
-    .select('id, name, free_cancel_hours, refund_pct, description')
-    .order('free_cancel_hours', { ascending: false })
-  if (error) wrapSupabaseError('', error)
-  return (data ?? []).map((r) => ({
-    id: r.id,
-    name: r.name,
-    free_cancel_hours: r.free_cancel_hours,
-    // numeric → number; explicit cast in case the JS client returns a string.
-    refund_pct: Number(r.refund_pct),
-    description: r.description,
-  }))
 }
 
 export async function setPromotionActive(args: { promotionId: string; isActive: boolean }): Promise<Promotion> {

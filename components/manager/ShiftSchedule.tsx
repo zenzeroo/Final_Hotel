@@ -53,11 +53,17 @@ export function ShiftSchedule({ staff, week, today, locale }: ShiftScheduleProps
         </li>
       ))}
     </ul>
-    <div className="bg-surface-container-lowest rounded-lg shadow-level-1 overflow-x-auto">
-      <table className="w-full">
+    <div className="bg-surface-container-lowest rounded-2xl overflow-x-auto">
+      <table className="w-full table-fixed min-w-[56rem]">
+        <colgroup>
+          <col className="w-44" />
+          {week.dates.map((d) => (
+            <col key={d} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 bg-surface-container-low px-4 py-3 text-left text-label-md uppercase tracking-wider text-on-surface-variant font-medium border-b border-r border-outline-variant">
+            <th className="sticky left-0 z-10 bg-surface-container-low px-4 py-3 text-left text-[13px] text-on-surface-variant font-medium border-b border-r border-outline-variant">
               {t('manager.staffPage.shiftStaffCol')}
             </th>
             {week.dates.map((d) => {
@@ -66,7 +72,7 @@ export function ShiftSchedule({ staff, week, today, locale }: ShiftScheduleProps
               return (
                 <th
                   key={d}
-                  className={`px-3 py-3 text-center text-label-md uppercase tracking-wider font-medium border-b border-outline-variant ${
+                  className={`px-3 py-3 text-center text-[13px] font-medium border-b border-outline-variant ${
                     isToday ? 'bg-secondary-container/40 text-secondary' : 'text-on-surface-variant'
                   }`}
                 >
@@ -80,11 +86,11 @@ export function ShiftSchedule({ staff, week, today, locale }: ShiftScheduleProps
         <tbody>
           {activeStaff.map((member) => (
             <tr key={member.id} className="border-b border-outline-variant last:border-b-0">
-              <td className="sticky left-0 z-10 bg-surface-container-lowest px-4 py-3 text-body-md font-medium text-primary border-r border-outline-variant whitespace-nowrap">
+              <td className="sticky left-0 z-10 bg-surface-container-lowest px-4 py-3 text-body-md font-medium text-primary border-r border-outline-variant truncate" title={member.full_name}>
                 {member.full_name}
               </td>
               {week.dates.map((d) => (
-                <td key={d} className="px-1 py-3 text-center whitespace-nowrap">
+                <td key={d} className="px-1.5 py-2 text-center">
                   <ShiftCell
                     // Re-mount when the server value changes (e.g. after
                     // "copy previous week") so the controlled state resyncs.
@@ -104,7 +110,7 @@ export function ShiftSchedule({ staff, week, today, locale }: ShiftScheduleProps
           <tr className="border-t-2 border-outline-variant">
             <th
               scope="row"
-              className="sticky left-0 z-10 bg-surface-container-low px-4 py-3 text-left text-label-md uppercase tracking-wider text-on-surface-variant font-medium border-r border-outline-variant whitespace-nowrap"
+              className="sticky left-0 z-10 bg-surface-container-low px-4 py-3 text-left text-[13px] text-on-surface-variant font-medium border-r border-outline-variant whitespace-nowrap"
             >
               {t('manager.staffPage.coverageRow')}
             </th>
@@ -126,13 +132,15 @@ export function ShiftSchedule({ staff, week, today, locale }: ShiftScheduleProps
                   title={count === 0 ? t('manager.staffPage.coverageNone') : undefined}
                 >
                   {count === 0 ? (
-                    <span className="inline-flex items-center gap-1">
+                    <span className="inline-flex h-6 min-w-12 items-center justify-center gap-1">
                       <MaterialIcon name="warning" size={14} />
                       <span className="sr-only">{t('manager.staffPage.coverageNone')}</span>
                       0
                     </span>
                   ) : (
-                    t('manager.staffPage.coverageCount', { count })
+                    <span className="inline-flex h-6 min-w-12 items-center justify-center">
+                      {t('manager.staffPage.coverageCount', { count })}
+                    </span>
                   )}
                 </td>
               )

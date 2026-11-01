@@ -16,7 +16,7 @@ export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'
 
 /** Roles that get the TH | EN switch in the sidebar (and the mobile menu). */
 function showsLanguageToggle(role: StaffRole): boolean {
-  return role === 'reception'
+  return role === 'reception' || role === 'manager'
 }
 
 /**
@@ -125,7 +125,6 @@ const NAV_BY_ROLE: Record<StaffRole, NavGroup[]> = {
         { key: 'staff', href: '/manager/staff', icon: 'badge' },
       ],
     },
-    { key: 'system', items: [{ key: 'settings', href: '/manager/settings', icon: 'settings' }] },
   ],
   admin: [
     { key: 'overview', items: [{ key: 'dashboard', href: '/admin', icon: 'dashboard' }] },

@@ -7,6 +7,7 @@ import {
 import { KpiCard } from '@/components/manager/KpiCard'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
+import { greeting } from '@/lib/i18n/greeting'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
 
 export const dynamic = 'force-dynamic'
@@ -31,14 +32,6 @@ function formatTimestamp(iso: string, localeBcp: string): string {
   const weekday = new Intl.DateTimeFormat(localeBcp, { weekday: 'long' }).format(d)
   const time = new Intl.DateTimeFormat(localeBcp, { hour: 'numeric', minute: 'numeric' }).format(d)
   return `${weekday} ${dmy(d)} ${time}`
-}
-
-/** Morning / afternoon / evening by the hotel's clock (Asia/Bangkok). */
-function greeting(t: ReturnType<typeof getT>): string {
-  const h = Number(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hour12: false, timeZone: 'Asia/Bangkok' }).format(new Date()))
-  if (h < 12) return t('manager.greetingMorning')
-  if (h < 18) return t('manager.greetingAfternoon')
-  return t('manager.greetingEvening')
 }
 
 export default async function AdminDashboard() {

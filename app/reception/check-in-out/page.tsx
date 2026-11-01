@@ -8,7 +8,7 @@ import {
 } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { LOCALE_BCP47, type Locale } from '@/lib/i18n/config'
-import { reasonText } from './reasonText'
+import { roomPlanNote, type RoomNote } from '@/lib/room-status-text'
 import { CheckInOutDateRange } from './CheckInOutDateRange'
 import { CheckInOutListSearch } from './CheckInOutListSearch'
 import {
@@ -19,7 +19,7 @@ import { Tabs } from '@/components/ui/Tabs'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { localizedName } from '@/lib/format/roomType'
 import { getT } from '@/lib/i18n/t'
-import { isCheckInReady, splitCheckInUnits } from '@/lib/room-status'
+import { inArrivalOrder, isCheckInReady, planRooms } from '@/lib/room-status'
 import { getRoomNotReadyReasons } from '@/lib/data/staff'
 
 export const dynamic = 'force-dynamic'
@@ -221,32 +221,12 @@ export default async function CheckInOutPage(props: PageProps<'/reception/check-
    * the guest yet. The check-in itself (room choice, moves) is on [id].
    */
   const roomInfos = (bookings: ListBooking[]): Map<string, RoomInfo> => {
-    const taken = new Set<string>()
+    const plans = planRooms(inArrivalOrder(bookings), allAvailableUnits)
     return new Map(
-      bookings.map((b): [string, RoomInfo] => {
-        if (b.status === 'checked_in') {
-          return [b.id, {
-            room: b.room_unit?.unit_label ?? '—',
-            note: t('reception.checkInOutPage.inHouseUntil', { date: formatDate(b.check_out, LOCALE_BCP47[locale]) }),
-            tone: 'stay',
-          }]
-        }
-        const { booked, bookedNotReady } = splitCheckInUnits(allAvailableUnits, b.room_type_id)
-        const free = booked.find((u) => !taken.has(u.id))
-        if (free) {
-          taken.add(free.id)
-          return [b.id, { room: free.unit_label, note: t('reception.checkInOutPage.roomReady'), tone: 'ready' }]
-        }
-        const blocked = bookedNotReady[0]
-        if (blocked) {
-          return [b.id, {
-            room: blocked.unit_label,
-            note: reasonText(notReadyReasons[blocked.id] ?? { kind: 'status', status: blocked.status }, t),
-            tone: 'problem',
-          }]
-        }
-        return [b.id, { room: '—', note: t('reception.checkInOutPage.noRoomLeft'), tone: 'problem' }]
-      }),
+      bookings.map((b) => [
+        b.id,
+        roomPlanNote(plans.get(b.id) ?? { kind: 'none' }, notReadyReasons, t, b.check_out, LOCALE_BCP47[locale]),
+      ]),
     )
   }
 
@@ -367,16 +347,12 @@ interface ListBooking {
   check_in: string
   check_out: string
   room_type_id: string
+  created_at: string
   room_type: { name: string; name_th: string | null } | null
   room_unit: { unit_label: string } | null
 }
 
-interface RoomInfo {
-  room: string
-  note: string
-  /** ready = free for the guest; problem = can't take them yet; stay = guest in it. */
-  tone: 'ready' | 'problem' | 'stay'
-}
+type RoomInfo = RoomNote
 
 const TONE: Record<RoomInfo['tone'], { dot: string; text: string }> = {
   ready: { dot: 'bg-primary', text: 'text-primary' },

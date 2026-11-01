@@ -9,6 +9,8 @@ import {
   isCheckInReady,
   splitCheckInUnits,
   notReadyReason,
+  planRooms,
+  inArrivalOrder,
 } from './room-status'
 
 test('splitCheckInUnits: booked room type first, other ready rooms as alternatives', () => {
@@ -92,4 +94,46 @@ test('splitCheckInUnits: other rooms only of types with room for the stay', () =
   const limited = splitCheckInUnits(units, 'villa', new Set(['twin']))
   assert.deepEqual(limited.others.map((u) => u.id), ['c'])
   assert.deepEqual(limited.bookedNotReady.map((u) => u.id), ['a'])
+})
+
+const booking = (id: string, status: string, roomUnit: string | null = null) => ({
+  id,
+  status,
+  room_type_id: 'T',
+  room_unit: roomUnit ? { unit_label: roomUnit } : null,
+})
+const unit = (id: string, label: string, status: string, roomTypeId: string | null = 'T') => ({
+  id,
+  unit_label: label,
+  status,
+  roomTypeId,
+})
+
+test('planRooms gives each ready room once, in list order', () => {
+  const plans = planRooms(
+    [booking('b1', 'confirmed'), booking('b2', 'confirmed')],
+    [unit('u1', '101', 'ready'), unit('u2', '102', 'waiting_cleaning')],
+  )
+  assert.deepEqual(plans.get('b1'), { kind: 'ready', unitId: 'u1', room: '101' })
+  assert.deepEqual(plans.get('b2'), { kind: 'blocked', unitId: 'u2', room: '102', status: 'waiting_cleaning' })
+})
+
+test('planRooms: checked-in booking keeps its room', () => {
+  const plans = planRooms([booking('b1', 'checked_in', 'V-01')], [unit('u1', '101', 'ready')])
+  assert.deepEqual(plans.get('b1'), { kind: 'staying', room: 'V-01' })
+})
+
+test('planRooms: type with no rooms → none', () => {
+  const plans = planRooms([booking('b1', 'confirmed')], [unit('u9', '901', 'ready', 'OTHER')])
+  assert.deepEqual(plans.get('b1'), { kind: 'none' })
+})
+
+test('inArrivalOrder sorts by check-in, then booking time, then id', () => {
+  const rows = [
+    { id: 'c', check_in: '2026-11-01', created_at: '2026-10-20T10:00:00Z' },
+    { id: 'b', check_in: '2026-11-01', created_at: '2026-10-01T10:00:00Z' },
+    { id: 'a', check_in: '2026-11-01', created_at: '2026-10-01T10:00:00Z' },
+    { id: 'z', check_in: '2026-10-31', created_at: '2026-10-25T10:00:00Z' },
+  ]
+  assert.deepEqual(inArrivalOrder(rows).map((r) => r.id), ['z', 'a', 'b', 'c'])
 })

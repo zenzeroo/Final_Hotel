@@ -469,7 +469,6 @@ export const th = {
   // Manager dashboard
   manager: {
     title: 'แดชบอร์ดผู้จัดการ',
-    subtitle: 'ภาพรวมการดำเนินงาน Zenzero Hotel',
     greetingMorning: 'สวัสดีตอนเช้า',
     // Phase 55 — refund card context for the manager
     refundStay: 'วันเข้าพัก {from} – {to}',
@@ -480,9 +479,31 @@ export const th = {
     vsYesterday: 'เทียบเมื่อวาน',
     // Phase 54 — aggregated dashboard alerts
     noYesterdayData: "ไม่มีข้อมูลเมื่อวานให้เทียบ",
+    today: {
+      title: 'ตัวเลขวันนี้',
+      checkOutsNote: 'เช็คเอาท์นับรวมแขกที่ออกไปแล้ว',
+    },
+    week: {
+      title: '7 วันล่าสุด',
+      revenue: 'รายได้',
+      occupancy: 'อัตราการเข้าพัก',
+      fullReport: 'ดูรายงานเต็ม',
+    },
+    movements: {
+      title: 'แขกเข้า-ออกวันนี้',
+      arrivals: 'เข้าพักวันนี้',
+      departures: 'ออกวันนี้',
+      none: 'ไม่มีรายการวันนี้',
+    },
+    actions: {
+      title: 'ต้องดำเนินการ',
+      nothingWaiting: 'ตอนนี้ไม่มีเรื่องที่รอคุณ',
+      seeAll: 'ดูทั้งหมด ({count})',
+      requestedOn: 'ขอเมื่อ {date}',
+      manageReviews: 'จัดการรีวิว',
+      urgent: 'ด่วน',
+    },
     alerts: {
-      title: "การแจ้งเตือน",
-      empty: "ไม่มีการแจ้งเตือนที่ใช้งานอยู่",
       more: "+{count}",
       maintenanceCritical: {
         title: "แจ้งซ่อมระดับวิกฤต {count} รายการ",
@@ -537,7 +558,6 @@ export const th = {
       maintenance: 'แจ้งซ่อมบำรุง',
       reports: 'รายงาน',
       reviews: 'รีวิว',
-      settings: 'ตั้งค่า',
       staff: 'พนักงาน',
       promotions: 'โปรโมชั่น',
       rooms: 'ห้องพัก',
@@ -778,37 +798,6 @@ export const th = {
       noBody: '— ไม่มีคำอธิบาย —',
       moderatedBy: 'ดำเนินการโดย {name}',
       moderatedAt: 'เมื่อ {date}',
-    },
-    settingsPage: {
-      title: 'ตั้งค่าโรงแรม',
-      save: 'บันทึก',
-      hotelName: 'ชื่อโรงแรม',
-      taxRate: 'อัตราภาษี',
-      resortFee: 'ค่าบริการ',
-      currency: 'สกุลเงิน',
-      checkInTime: 'เวลาเช็คอิน',
-      checkOutTime: 'เวลาเช็คเอาท์',
-      contactPhone: 'เบอร์โทรศัพท์',
-      address: 'ที่อยู่',
-      localeDefault: 'ภาษาเริ่มต้น',
-      subtitle: 'ข้อมูลโรงแรม นโยบาย และภาษี — ตั้งค่าได้ผ่าน Admin เท่านั้น',
-      modeEdit: 'โหมดแก้ไข (Admin)',
-      modeReadOnly: 'โหมดอ่านอย่างเดียว',
-      taxHint: 'ภาษีที่เรียกเก็บจากค่าห้องพัก',
-      resortFeeLabel: 'ค่าบริการรีสอร์ท',
-      resortFeeHint: 'ต่อคืน ต่อห้อง',
-      checkIn: 'เช็คอิน',
-      checkInHint: 'เวลาเข้าห้องพัก',
-      checkOut: 'เช็คเอาท์',
-      checkOutHint: 'เวลาออกจากห้องพัก',
-      hotelInfo: 'ข้อมูลโรงแรม',
-      hotelNameBoth: 'ชื่อโรงแรม (TH/EN)',
-      email: 'อีเมล',
-      cancellationPolicies: 'นโยบายการยกเลิก',
-      freeCancelBefore: 'ยกเลิกฟรีก่อน',
-      hoursShort: '{count} ชม.',
-      refund: 'คืนเงิน',
-      lastUpdated: 'อัปเดตล่าสุดเมื่อ {date}',
     },
     // Phase 54 — /manager/bookings table
     bookingsTable: {

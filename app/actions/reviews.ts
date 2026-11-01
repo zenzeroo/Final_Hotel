@@ -106,6 +106,7 @@ export async function moderateReviewAction(formData: FormData): Promise<ActionRe
   }
 
   revalidatePath('/manager/reviews')
+  revalidatePath('/manager')
   revalidatePath('/rooms')
   return { ok: true }
 }

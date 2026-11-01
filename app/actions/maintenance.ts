@@ -64,6 +64,7 @@ export async function confirmMaintenanceRoomClosure(
   if (updateRoomErr) return actionFail(updateRoomErr, 'Could not close room')
 
   revalidatePath('/manager/maintenance')
+  revalidatePath('/manager')
   revalidatePath('/reception/maintenance')
   revalidatePath('/housekeeper/maintenance')
   revalidatePath('/housekeeper/rooms')
@@ -127,6 +128,7 @@ export async function resolveMaintenanceReport(
   }
 
   revalidatePath('/manager/maintenance')
+  revalidatePath('/manager')
   revalidatePath('/reception/maintenance')
   revalidatePath('/housekeeper/maintenance')
   revalidatePath('/housekeeper/rooms')

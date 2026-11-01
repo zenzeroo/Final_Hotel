@@ -42,17 +42,22 @@ export function ShiftCell({ staffId, staffName, date, position }: ShiftCellProps
   return (
     <>
       <label
-        className={`relative inline-flex items-center gap-1 rounded-full pl-2 pr-1 py-1 text-caption ${
+        title={value ? t(SHIFT_LABEL_KEY[value]) : t('manager.staffPage.shiftNone')}
+        className={`relative flex w-full h-8 items-center justify-center gap-1 rounded-full px-2 text-caption ${
           style ? style.tone : 'bg-surface-container-low text-on-surface-variant'
         } ${isPending ? 'opacity-50' : ''}`}
       >
-        {style ? <MaterialIcon name={style.icon} size={14} /> : null}
+        {style ? (
+          <MaterialIcon name={style.icon} size={14} className="shrink-0" />
+        ) : (
+          <span aria-hidden className="w-[14px] shrink-0" />
+        )}
         <select
           value={value}
           disabled={isPending}
           onChange={(e) => handleChange(e.target.value as ShiftPosition | '')}
           aria-label={t('manager.staffPage.shiftCellLabel', { name: staffName, date })}
-          className="bg-transparent text-caption focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary rounded cursor-pointer disabled:cursor-wait"
+          className="min-w-0 flex-1 truncate text-center bg-transparent text-caption focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary rounded cursor-pointer disabled:cursor-wait"
         >
           <option value="">{t('manager.staffPage.shiftNone')}</option>
           {(Object.keys(SHIFT_LABEL_KEY) as ShiftPosition[]).map((p) => (

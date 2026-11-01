@@ -124,6 +124,20 @@ export async function getApprovedRoomReviews(roomTypeId: string): Promise<Public
   return (data ?? []).map((r) => toModeration(r as unknown as ReviewRow)).map(toPublic)
 }
 
+/** Newest pending reviews only (manager dashboard) — not the whole archive. */
+export async function getPendingReviews(limit: number): Promise<ReviewForModeration[]> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('reviews')
+    .select(REVIEW_SELECT)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) wrapSupabaseError('', error)
+  return (data ?? []).map((row) => toModeration(row as unknown as ReviewRow))
+}
+
 export async function getReviewModerationQueue(): Promise<ReviewQueueData> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()

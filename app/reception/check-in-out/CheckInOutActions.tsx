@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useT } from '@/lib/i18n/useT'
-import { reasonText } from './reasonText'
+import { reasonText } from '@/lib/room-status-text'
 import type { NotReadyReason } from '@/lib/room-status'
 
 export interface CheckInUnit {

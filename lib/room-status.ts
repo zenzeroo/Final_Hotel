@@ -82,3 +82,54 @@ export function notReadyReason(status: string, facts: NotReadyFacts = {}): NotRe
       return { kind: 'status', status }
   }
 }
+
+/**
+ * Which room each booking in a list will use, in list order. A checked-in
+ * booking stays in its assigned room. Otherwise it gets the first ready
+ * room of its booked type not already given to an earlier booking; failing
+ * that, the type's first room that isn't ready (so the caller can say
+ * why), or nothing when the type has no room at all.
+ */
+export type RoomPlan =
+  | { kind: 'staying'; room: string | null }
+  | { kind: 'ready'; unitId: string; room: string }
+  | { kind: 'blocked'; unitId: string; room: string; status: string }
+  | { kind: 'none' }
+
+export function planRooms(
+  bookings: readonly { id: string; status: string; room_type_id: string; room_unit: { unit_label: string } | null }[],
+  units: readonly { id: string; unit_label: string; status: string; roomTypeId: string | null }[],
+): Map<string, RoomPlan> {
+  const taken = new Set<string>()
+  const plans = new Map<string, RoomPlan>()
+  for (const b of bookings) {
+    if (b.status === 'checked_in') {
+      plans.set(b.id, { kind: 'staying', room: b.room_unit?.unit_label ?? null })
+      continue
+    }
+    const { booked, bookedNotReady } = splitCheckInUnits(units, b.room_type_id)
+    const free = booked.find((u) => !taken.has(u.id))
+    if (free) {
+      taken.add(free.id)
+      plans.set(b.id, { kind: 'ready', unitId: free.id, room: free.unit_label })
+    } else if (bookedNotReady[0]) {
+      const u = bookedNotReady[0]
+      plans.set(b.id, { kind: 'blocked', unitId: u.id, room: u.unit_label, status: u.status })
+    } else {
+      plans.set(b.id, { kind: 'none' })
+    }
+  }
+  return plans
+}
+
+/**
+ * One fixed order for handing out rooms (planRooms is order-sensitive):
+ * check-in date, then who booked first, then id. Reception and the manager
+ * dashboard both plan in this order so they name the same room.
+ */
+export function inArrivalOrder<T extends { id: string; check_in: string; created_at: string }>(rows: readonly T[]): T[] {
+  return [...rows].sort(
+    (a, b) =>
+      a.check_in.localeCompare(b.check_in) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
+  )
+}
