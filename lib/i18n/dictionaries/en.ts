@@ -1837,6 +1837,7 @@ export const en: Dictionary = {
     },
     promotionForm: {
       code: 'Code',
+      codeHint: 'Letters, digits and hyphens only; saved in upper case',
       name: 'Promotion name',
       namePlaceholder: 'Summer discount',
       description: 'Description',

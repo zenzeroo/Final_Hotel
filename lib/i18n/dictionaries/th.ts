@@ -1839,6 +1839,7 @@ export const th = {
     },
     promotionForm: {
       code: 'โค้ด',
+      codeHint: 'ใช้ได้เฉพาะตัวอักษรอังกฤษ ตัวเลข และขีด (-) ระบบเก็บเป็นตัวพิมพ์ใหญ่',
       name: 'ชื่อโปรโมชั่น',
       namePlaceholder: 'ส่วนลดฤดูร้อน',
       description: 'คำอธิบาย',

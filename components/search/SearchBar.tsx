@@ -6,6 +6,7 @@ import { MaterialIcon } from '../ui/MaterialIcon'
 import {
   getMinCheckInLocalIso,
   addDaysLocalIso,
+  formatBangkokDate,
 } from '@/lib/dates'
 import { useT } from '@/lib/i18n/useT'
 
@@ -180,8 +181,11 @@ function DateField({
   min: string
   onChange: (v: string) => void
 }) {
+  // The native date input shows the browser's own order (MM/DD/YYYY in an
+  // English Chrome), so it sits invisible over the field: it still opens the
+  // calendar and enforces `min`, while the text shows DD/MM/YYYY.
   return (
-    <label className="flex-1 flex items-center gap-3 px-4 py-3 bg-surface-container-lowest">
+    <label className="relative flex-1 flex items-center gap-3 px-4 py-3 bg-surface-container-lowest cursor-pointer focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary">
       <MaterialIcon
         name="calendar_today"
         size={20}
@@ -191,14 +195,23 @@ function DateField({
         <span className="text-[14px] text-on-surface-variant">
           {label}
         </span>
-        <input
-          type="date"
-          value={value}
-          min={min}
-          onChange={(e) => onChange(e.target.value)}
-          className="bg-transparent text-body-md font-medium text-on-surface focus:outline-none"
-        />
+        <span className="text-body-md font-medium text-on-surface tabular-nums">{formatBangkokDate(value)}</span>
       </div>
+      <input
+        type="date"
+        value={value}
+        min={min}
+        onChange={(e) => onChange(e.target.value)}
+        onClick={(e) => {
+          try {
+            e.currentTarget.showPicker()
+          } catch {
+            // unsupported / not user-activated — native behaviour stays
+          }
+        }}
+        aria-label={label}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+      />
     </label>
   )
 }

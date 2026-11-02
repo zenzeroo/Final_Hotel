@@ -117,7 +117,9 @@ export function PromotionForm({ mode, initial, roomTypes }: PromotionFormProps) 
             placeholder="SUMMER25"
             required
             maxLength={40}
-            className={inputClass}
+            pattern="[A-Za-z0-9\-]+"
+            title={t('admin.promotionForm.codeHint')}
+            className={`${inputClass} uppercase`}
           />
         </Field>
 

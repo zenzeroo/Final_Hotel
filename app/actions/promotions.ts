@@ -16,6 +16,7 @@ import {
   R2UploadError,
 } from '@/lib/r2/upload'
 import { deleteObjectFromR2 } from '@/lib/r2/delete'
+import { PROMO_CODE_PATTERN } from '@/lib/data/bookings'
 
 /**
  * Phase 43 — Generate an R2 object key for a promotion hero image.
@@ -108,7 +109,8 @@ export async function togglePromotionAction(formData: FormData): Promise<ActionR
 // =====================================================
 
 const promotionInputSchema = z.object({
-  code: z.string().min(1).max(40),
+  // Codes are matched case-insensitively at checkout; store them upper-case.
+  code: z.string().trim().min(1).max(40).regex(PROMO_CODE_PATTERN).transform((c) => c.toUpperCase()),
   name: z.string().min(1).max(120),
   description: z.string().max(500).nullable(),
   discount_type: z.enum(['percent', 'flat']),

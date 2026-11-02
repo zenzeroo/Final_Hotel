@@ -299,16 +299,26 @@ export async function getCancellationPolicyById(
   return (data as CancellationPolicy) ?? null
 }
 
+/** Allowed promo-code characters; shared with the manager/admin promotion form. */
+export const PROMO_CODE_PATTERN = /^[A-Za-z0-9-]+$/
+
 /**
- * Get promotion by code (must be active).
+ * Get promotion by code (must be active), ignoring letter case.
  */
 export async function getPromotionByCode(code: string): Promise<Promotion | null> {
+  // Codes are letters, digits and '-' only. Rejecting anything else keeps the
+  // ilike below an exact match: PostgREST treats '*', '%' and '_' as wildcards.
+  const normalized = code.trim()
+  if (!PROMO_CODE_PATTERN.test(normalized)) return null
+
   const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('promotions')
     .select('*')
-    .eq('code', code.toUpperCase())
+    // Case-insensitive so codes saved before upper-casing (e.g. 'Tester1234')
+    // are still found.
+    .ilike('code', normalized)
     .eq('is_active', true)
     .maybeSingle()
 
