@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import type { RoomType } from '@/lib/data/types'
 import { formatDateTime } from '@/lib/dates'
 import { formatTHB } from '@/lib/pricing'
+import { localizedName } from '@/lib/format/roomType'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useLocale } from '@/lib/i18n/useT'
@@ -25,7 +26,8 @@ interface RoomTypesAdminTableProps {
   /** Which tab the table is rendering — drives the available row actions. */
   tab: TabKey
   /** Active physical rooms per room type id — 0 means it cannot be booked. */
-  unitCounts: Record<string, number>
+  /** Active room numbers per room type id. */
+  unitLabels: Record<string, string[]>
 }
 
 /**
@@ -277,7 +279,7 @@ const EMPTY_ICON: Record<TabKey, string> = {
   deleted: 'delete',
 }
 
-export function RoomTypesAdminTable({ roomTypes, tab, unitCounts }: RoomTypesAdminTableProps) {
+export function RoomTypesAdminTable({ roomTypes, tab, unitLabels }: RoomTypesAdminTableProps) {
   const t = useT()
   const locale = useLocale()
   if (roomTypes.length === 0) {
@@ -300,11 +302,10 @@ export function RoomTypesAdminTable({ roomTypes, tab, unitCounts }: RoomTypesAdm
           <thead className="bg-surface-container-low border-b border-outline-variant">
             <tr className="text-label-md uppercase tracking-wider text-on-surface-variant">
               <th className="text-left px-4 py-3 font-medium">{t('admin.roomTypes.colType')}</th>
-              <th className="text-left px-4 py-3 font-medium">Slug (URL)</th>
               <th className="text-right px-4 py-3 font-medium">{t('admin.roomTypes.colBasePrice')}</th>
               <th className="text-right px-4 py-3 font-medium">{t('admin.roomTypes.colGuests')}</th>
               <th className="text-right px-4 py-3 font-medium">{t('admin.roomTypes.colSize')}</th>
-              <th className="text-right px-4 py-3 font-medium">{t('admin.roomTypes.colRooms')}</th>
+              <th className="text-left px-4 py-3 font-medium">{t('admin.roomTypes.colRooms')}</th>
               {tab === 'deleted' ? (
                 <th className="text-left px-4 py-3 font-medium">{t('admin.roomTypes.colDeletedAt')}</th>
               ) : (
@@ -317,13 +318,8 @@ export function RoomTypesAdminTable({ roomTypes, tab, unitCounts }: RoomTypesAdm
             {roomTypes.map((r) => (
               <tr key={r.id} className="hover:bg-primary-fixed transition-colors">
                 <td className="px-4 py-4">
-                  <p className="text-body-md font-medium text-primary">{r.name}</p>
-                  <p className="text-caption text-on-surface-variant">{r.name_th}</p>
-                </td>
-                <td className="px-4 py-4">
-                  <span className="font-mono text-body-sm text-on-surface-variant">
-                    {r.slug}
-                  </span>
+                  <p className="text-body-md font-medium text-primary">{localizedName(r, locale)}</p>
+                  <p className="text-caption text-on-surface-variant">{locale === 'th' ? r.name : r.name_th}</p>
                 </td>
                 <td className="px-4 py-4 text-right text-body-md text-primary font-semibold">
                   {formatTHB(r.base_price)}
@@ -334,9 +330,9 @@ export function RoomTypesAdminTable({ roomTypes, tab, unitCounts }: RoomTypesAdm
                 <td className="px-4 py-4 text-right text-body-md text-on-surface">
                   {t('admin.roomTypes.sizeSqm', { count: r.size_sqm })}
                 </td>
-                <td className="px-4 py-4 text-right text-body-md">
-                  {(unitCounts[r.id] ?? 0) > 0 ? (
-                    <span className="text-on-surface">{t('admin.roomTypes.roomsN', { count: unitCounts[r.id] })}</span>
+                <td className="px-4 py-4 text-body-md">
+                  {(unitLabels[r.id] ?? []).length > 0 ? (
+                    <span className="text-on-surface tabular-nums">{unitLabels[r.id].join(', ')}</span>
                   ) : (
                     <span
                       className="inline-flex items-center gap-1 text-error"

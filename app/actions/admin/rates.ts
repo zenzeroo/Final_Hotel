@@ -10,9 +10,13 @@ import {
   isRoomTypeSlugTaken,
   getAmenityCatalog,
   createRoomUnit,
-  setRoomUnitActive,
+  isRoomNumberTaken,
+  listUnitsForRoomType,
+  updateRoomUnit,
+  ROOM_NUMBER_TAKEN_MESSAGE,
   SLUG_TAKEN_MESSAGE,
 } from '@/lib/data/rooms'
+import { roomSlugFor } from '@/lib/room-slug'
 import { createSeasonalRate } from '@/lib/data/manager'
 import {
   uploadImageToR2,
@@ -56,7 +60,6 @@ const AMENITY_SLUGS = new Set(getAmenityCatalog().map((a) => a.slug))
 /** Fields shared by the create + edit forms (images handled separately). */
 function readRoomTypeFields(formData: FormData) {
   return {
-    slug: String(formData.get('slug') ?? '').trim(),
     name: String(formData.get('name') ?? '').trim(),
     name_th: String(formData.get('name_th') ?? '').trim(),
     short_desc: String(formData.get('short_desc') ?? '').trim(),
@@ -83,14 +86,42 @@ function collectFiles(values: FormDataEntryValue[]): File[] {
   )
 }
 
+/** The room's own number (one entry = one room type + its one room). */
+const unitLabelSchema = z
+  .string()
+  .trim()
+  .min(1, 'กรุณากรอกเลขห้อง')
+  .max(20)
+  .regex(/^[A-Za-z0-9-]+$/, 'เลขห้องใช้ได้เฉพาะตัวอักษรอังกฤษ ตัวเลข และ -')
+
+/**
+ * Create a room: its room_types row (name, price, photos…) plus its one
+ * room_units row (number, floor). Refused before any upload when the number
+ * is taken on that floor; if the room row still fails, the type and the
+ * uploaded images are removed so no room is left without a number.
+ */
 export async function createRoomTypeAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
   await requireRole('admin', '/admin/rates')
 
-  const parsed = roomTypeSchema.safeParse(readRoomTypeFields(formData))
+  const unitLabel = unitLabelSchema.safeParse(String(formData.get('unit_label') ?? ''))
+  if (!unitLabel.success) return { ok: false, error: unitLabel.error.issues[0]?.message ?? 'Invalid room number' }
+
+  const parsed = roomTypeSchema.safeParse({
+    ...readRoomTypeFields(formData),
+    slug: roomSlugFor(unitLabel.data, crypto.randomUUID().slice(0, 6)),
+  })
   if (!parsed.success) {
     return { ok: false, error: 'Invalid input: ' + parsed.error.issues[0]?.message }
+  }
+
+  try {
+    if (await isRoomNumberTaken({ floor: parsed.data.floor, unitLabel: unitLabel.data })) {
+      return { ok: false, error: ROOM_NUMBER_TAKEN_MESSAGE }
+    }
+  } catch (e) {
+    return actionFail(e, 'Could not check room number')
   }
 
   const heroFile = formData.get('hero_image_file')
@@ -145,7 +176,24 @@ export async function createRoomTypeAction(
     return actionFail(e, 'Could not create room type')
   }
 
+  try {
+    await createRoomUnit({
+      roomTypeId: created.id,
+      floor: parsed.data.floor,
+      unitLabel: unitLabel.data,
+      viewLabel: parsed.data.view_label,
+    })
+  } catch (e) {
+    // No room without a number: undo the type and its images.
+    const supabase = await createClient()
+    await supabase.from('room_types').delete().eq('id', created.id)
+    await deleteUploaded(uploaded, 'createRoomTypeAction')
+    return actionFail(e, 'Could not create room')
+  }
+
   revalidatePath('/admin/rates')
+  revalidatePath('/reception/rooms')
+  revalidatePath('/manager/housekeeping')
   revalidatePath('/admin/rates/room-types')
   revalidatePath('/manager/rooms')
   revalidatePath('/rooms')
@@ -181,6 +229,9 @@ function parseStringArray(raw: FormDataEntryValue | null): string[] {
 export async function updateRoomTypeAction(formData: FormData): Promise<ActionResult> {
   await requireRole('admin', '/admin/rates')
 
+  const unitLabel = unitLabelSchema.safeParse(String(formData.get('unit_label') ?? ''))
+  if (!unitLabel.success) return { ok: false, error: unitLabel.error.issues[0]?.message ?? 'Invalid room number' }
+
   const candidate = {
     id: String(formData.get('id') ?? '').trim(),
     ...readRoomTypeFields(formData),
@@ -193,6 +244,18 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
 
   const { id, ...rest } = parsed.data
 
+  // This entry's room (one per entry). Checked before any upload.
+  let unit
+  try {
+    unit = (await listUnitsForRoomType(id))[0]
+    const floor = rest.floor ?? unit?.floor ?? 1
+    if (await isRoomNumberTaken({ floor, unitLabel: unitLabel.data, exceptUnitId: unit?.id })) {
+      return { ok: false, error: ROOM_NUMBER_TAKEN_MESSAGE }
+    }
+  } catch (e) {
+    return actionFail(e, 'Could not check room number')
+  }
+
   // SECURITY: fetch current DB state instead of trusting form-supplied hero/gallery
   // keys. The form can claim anything (manipulated hidden inputs, crafted request),
   // but the DB row is the single source of truth. This prevents the action from
@@ -201,7 +264,7 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
   const supabase = await createClient()
   const { data: rt, error: rtErr } = await supabase
     .from('room_types')
-    .select('hero_image_key, gallery_keys')
+    .select('hero_image_key, gallery_keys, slug')
     .eq('id', id)
     .single()
   if (rtErr || !rt) {
@@ -234,14 +297,14 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
 
   try {
     if (heroFile instanceof File && heroFile.size > 0 && heroFile.type.length > 0) {
-      const slugForKey = rest.slug ?? id
+      const slugForKey = (rt.slug as string | null) ?? id
       const ext = pickExt(heroFile)
       const key = roomImageKey(slugForKey, 'hero', ext)
       const result = await uploadImageToR2(heroFile, key)
       newHeroKeys.push(result.key)
     }
     for (const file of galleryFiles) {
-      const slugForKey = rest.slug ?? id
+      const slugForKey = (rt.slug as string | null) ?? id
       const ext = pickExt(file)
       const key = roomImageKey(slugForKey, 'gallery', ext)
       const result = await uploadImageToR2(file, key)
@@ -302,6 +365,15 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
     return actionFail(e, 'Could not update room type')
   }
 
+  // The room itself: renumber / move it, or give a legacy entry its room.
+  try {
+    const roomFields = { floor: rest.floor ?? unit?.floor ?? 1, unitLabel: unitLabel.data, viewLabel: rest.view_label ?? null }
+    if (unit) await updateRoomUnit({ unitId: unit.id, ...roomFields })
+    else await createRoomUnit({ roomTypeId: id, ...roomFields })
+  } catch (e) {
+    return actionFail(e, 'Could not update room number')
+  }
+
   // Best-effort R2 cleanup AFTER DB success. If a delete fails, the DB row
   // is still consistent — orphan R2 files can be cleaned by a periodic job.
   for (const key of deleteKeys) {
@@ -316,6 +388,8 @@ export async function updateRoomTypeAction(formData: FormData): Promise<ActionRe
   revalidatePath(`/admin/rates/room-types/${id}/edit`)
   revalidatePath('/admin/rates')
   revalidatePath('/manager/rooms')
+  revalidatePath('/reception/rooms')
+  revalidatePath('/manager/housekeeping')
   revalidatePath('/rooms')
   return { ok: true }
 }
@@ -459,72 +533,6 @@ export async function permanentlyDeleteRoomTypeAction(
   revalidatePath('/admin/rates')
   revalidatePath('/manager/rooms')
   revalidatePath('/rooms')
-  return { ok: true }
-}
-
-// =====================================================
-// Physical room (room_units) actions
-// =====================================================
-
-const roomUnitSchema = z.object({
-  room_type_id: z.string().uuid('Invalid room type id'),
-  unit_label: z
-    .string()
-    .min(1, 'กรุณากรอกเลขห้อง')
-    .max(20)
-    .regex(/^[A-Za-z0-9-]+$/, 'เลขห้องใช้ได้เฉพาะตัวอักษรอังกฤษ ตัวเลข และ -'),
-  floor: z.number().int().min(1, 'ชั้นต้องอยู่ระหว่าง 1–50').max(50, 'ชั้นต้องอยู่ระหว่าง 1–50'),
-  view_label: z.string().max(80).nullable(),
-})
-
-// A unit change moves the sellable pool + the room grids.
-function revalidateUnitPages(roomTypeId: string) {
-  revalidatePath('/admin/rates/room-types')
-  revalidatePath(`/admin/rates/room-types/${roomTypeId}/edit`)
-  revalidatePath('/manager/rooms')
-  revalidatePath('/manager/housekeeping')
-  revalidatePath('/reception/rooms')
-  revalidatePath('/rooms')
-}
-
-export async function createRoomUnitAction(formData: FormData): Promise<ActionResult> {
-  await requireRole('admin', '/admin/rates')
-  const parsed = roomUnitSchema.safeParse({
-    room_type_id: String(formData.get('room_type_id') ?? '').trim(),
-    unit_label: String(formData.get('unit_label') ?? '').trim(),
-    floor: Number(formData.get('floor') ?? 0),
-    view_label: String(formData.get('view_label') ?? '').trim() || null,
-  })
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
-
-  try {
-    await createRoomUnit({
-      roomTypeId: parsed.data.room_type_id,
-      floor: parsed.data.floor,
-      unitLabel: parsed.data.unit_label,
-      viewLabel: parsed.data.view_label,
-    })
-  } catch (e) {
-    return actionFail(e, 'Could not add room')
-  }
-  revalidateUnitPages(parsed.data.room_type_id)
-  return { ok: true }
-}
-
-export async function setRoomUnitActiveAction(formData: FormData): Promise<ActionResult> {
-  await requireRole('admin', '/admin/rates')
-  const unitId = String(formData.get('unit_id') ?? '').trim()
-  const roomTypeId = String(formData.get('room_type_id') ?? '').trim()
-  const activeRaw = String(formData.get('is_active') ?? '')
-  if (!z.string().uuid().safeParse(unitId).success) return { ok: false, error: 'Invalid room id' }
-  if (activeRaw !== 'true' && activeRaw !== 'false') return { ok: false, error: 'Invalid is_active value' }
-
-  try {
-    await setRoomUnitActive({ unitId, active: activeRaw === 'true' })
-  } catch (e) {
-    return actionFail(e, activeRaw === 'true' ? 'Could not enable room' : 'Could not disable room')
-  }
-  revalidateUnitPages(roomTypeId)
   return { ok: true }
 }
 

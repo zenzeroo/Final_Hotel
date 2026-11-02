@@ -1,7 +1,6 @@
 import type { Amenity, RoomType, RoomUnitStatus, SearchFilters, SearchResult } from './types'
 import { hasSupabase } from '../env'
 import { wrapSupabaseError } from '@/lib/errors/supabase'
-import { getTodayBangkok } from '@/lib/dates'
 
 /**
  * Supabase implementation — the only data layer (mock layer deleted).
@@ -338,17 +337,19 @@ export async function listUnitsForRoomType(roomTypeId: string): Promise<AdminRoo
   return (data ?? []) as AdminRoomUnit[]
 }
 
-/** Active unit count per room type — a type with 0 cannot be booked. */
-export async function countUnitsByRoomType(client?: DbClient): Promise<Record<string, number>> {
+/** Active room numbers per room type, in floor / number order. */
+export async function listUnitLabelsByRoomType(client?: DbClient): Promise<Record<string, string[]>> {
   const supabase = client ?? (await getClient())
   const { data, error } = await supabase
     .from('room_units')
-    .select('room_type_id')
+    .select('room_type_id, unit_label')
     .eq('is_active', true)
-  if (error) wrapSupabaseError('countUnitsByRoomType', error)
-  const counts: Record<string, number> = {}
-  for (const u of data ?? []) counts[u.room_type_id] = (counts[u.room_type_id] ?? 0) + 1
-  return counts
+    .order('floor')
+    .order('unit_label')
+  if (error) wrapSupabaseError('listUnitLabelsByRoomType', error)
+  const labels: Record<string, string[]> = {}
+  for (const u of data ?? []) (labels[u.room_type_id] ??= []).push(u.unit_label)
+  return labels
 }
 
 /** Slug already used by any room type (incl. inactive / soft-deleted)? */
@@ -358,6 +359,35 @@ export async function isRoomTypeSlugTaken(slug: string, client?: DbClient): Prom
   if (error) wrapSupabaseError('isRoomTypeSlugTaken', error)
   return (data ?? []).length > 0
 }
+
+/** A room with this number already exists on this floor (the DB's unique rule)? */
+export async function isRoomNumberTaken(
+  args: { floor: number; unitLabel: string; exceptUnitId?: string },
+  client?: DbClient,
+): Promise<boolean> {
+  const supabase = client ?? (await getClient())
+  let q = supabase.from('room_units').select('id').eq('floor', args.floor).eq('unit_label', args.unitLabel).limit(1)
+  if (args.exceptUnitId) q = q.neq('id', args.exceptUnitId)
+  const { data, error } = await q
+  if (error) wrapSupabaseError('isRoomNumberTaken', error)
+  return (data ?? []).length > 0
+}
+
+/** Change a room's number, floor or view (admin edit of that room). */
+export async function updateRoomUnit(
+  args: { unitId: string; floor: number; unitLabel: string; viewLabel: string | null },
+  client?: DbClient,
+): Promise<void> {
+  const supabase = client ?? (await getClient())
+  const { error } = await supabase
+    .from('room_units')
+    .update({ floor: args.floor, unit_label: args.unitLabel, view_label: args.viewLabel })
+    .eq('id', args.unitId)
+  if (error?.code === '23505') throw new Error(ROOM_NUMBER_TAKEN_MESSAGE)
+  if (error) wrapSupabaseError('updateRoomUnit', error)
+}
+
+export const ROOM_NUMBER_TAKEN_MESSAGE = 'มีห้องเลขนี้ในชั้นนี้อยู่แล้ว'
 
 export async function createRoomUnit(
   args: { roomTypeId: string; floor: number; unitLabel: string; viewLabel: string | null },
@@ -372,41 +402,7 @@ export async function createRoomUnit(
     status: 'available',
     is_active: true,
   })
-  if (error?.code === '23505') throw new Error('มีห้องเลขนี้ในชั้นนี้อยู่แล้ว')
+  if (error?.code === '23505') throw new Error(ROOM_NUMBER_TAKEN_MESSAGE)
   if (error) wrapSupabaseError('createRoomUnit', error)
 }
 
-/**
- * Turn a physical room on/off for sale. Turning it off is refused while a
- * guest is in it or a confirmed/checked-in booking assigned to it is not over.
- */
-export async function setRoomUnitActive(
-  args: { unitId: string; active: boolean },
-  client?: DbClient,
-): Promise<void> {
-  const supabase = client ?? (await getClient())
-  if (!args.active) {
-    const { data: unit, error: unitErr } = await supabase
-      .from('room_units')
-      .select('status')
-      .eq('id', args.unitId)
-      .maybeSingle()
-    if (unitErr) wrapSupabaseError('setRoomUnitActive', unitErr)
-    if (!unit) throw new Error('ไม่พบห้องนี้')
-    const { count, error: bkErr } = await supabase
-      .from('bookings')
-      .select('id', { count: 'exact', head: true })
-      .eq('room_unit_id', args.unitId)
-      .in('status', ['confirmed', 'checked_in'])
-      .gt('check_out', getTodayBangkok())
-    if (bkErr) wrapSupabaseError('setRoomUnitActive', bkErr)
-    if (unit.status === 'occupied' || (count ?? 0) > 0) {
-      throw new Error('ห้องนี้มีการจอง/แขกพักอยู่ — ปิดไม่ได้')
-    }
-  }
-  const { error } = await supabase
-    .from('room_units')
-    .update({ is_active: args.active })
-    .eq('id', args.unitId)
-  if (error) wrapSupabaseError('setRoomUnitActive', error)
-}

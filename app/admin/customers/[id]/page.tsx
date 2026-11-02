@@ -126,13 +126,19 @@ export default async function CustomerDetailPage(props: {
                   <th className="text-right px-3 py-2 font-medium">{t('admin.customersPage.colNights')}</th>
                   <th className="text-right px-3 py-2 font-medium">{t('admin.customersPage.colTotal')}</th>
                   <th className="text-left px-3 py-2 font-medium">{t('admin.common.status')}</th>
+                  <th className="w-10" aria-hidden />
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
                 {bookings.map((b) => (
-                  <tr key={b.id} className="hover:bg-primary-fixed transition-colors">
-                    <td className="px-3 py-2 font-mono text-body-sm text-primary">
-                      {b.booking_code}
+                  <tr key={b.id} className="relative hover:bg-surface-container-low transition-colors">
+                    <td className="px-3 py-2 text-body-sm font-semibold text-primary">
+                      <Link
+                        href={`/admin/customers/${customer.id}/bookings/${b.id}`}
+                        className="tabular-nums after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-secondary focus-visible:after:-outline-offset-2"
+                      >
+                        {b.booking_code}
+                      </Link>
                     </td>
                     <td className="px-3 py-2 text-body-sm">{b.check_in}</td>
                     <td className="px-3 py-2 text-body-sm">{b.check_out}</td>
@@ -144,6 +150,9 @@ export default async function CustomerDetailPage(props: {
                     </td>
                     <td className="px-3 py-2">
                       <BookingStatusBadge status={b.status} label={t(BOOKING_STATUS_KEY[b.status])} />
+                    </td>
+                    <td className="px-2 py-2 text-right text-on-surface-variant">
+                      <MaterialIcon name="chevron_right" size={18} aria-hidden />
                     </td>
                   </tr>
                 ))}

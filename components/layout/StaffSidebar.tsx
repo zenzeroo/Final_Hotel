@@ -16,15 +16,15 @@ export type StaffRole = 'reception' | 'housekeeper' | 'manager' | 'admin'
 
 /** Roles that get the TH | EN switch in the sidebar (and the mobile menu). */
 function showsLanguageToggle(role: StaffRole): boolean {
-  return role === 'reception' || role === 'manager'
+  return role !== 'housekeeper'
 }
 
 /**
- * Reception and manager get no in-app notifications (nothing is sent to them
- * either); the manager dashboard's Alerts panel covers what needs action.
+ * Only housekeepers get the in-app bell (task assignments). Reception, manager
+ * and admin have none; the manager dashboard's "needs action" covers theirs.
  */
 export function showsNotificationBell(role: StaffRole): boolean {
-  return role !== 'reception' && role !== 'manager'
+  return role === 'housekeeper'
 }
 
 interface StaffSidebarProps {

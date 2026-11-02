@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
-import { getMaintenanceReports } from '@/lib/data/housekeeper'
+import { getAllRoomUnits, getMaintenanceReports } from '@/lib/data/housekeeper'
+import { MaintenanceReportModal } from '@/components/housekeeping/MaintenanceReportModal'
 import { MaintenanceReportTable } from '@/components/manager/MaintenanceReportTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Tabs } from '@/components/ui/Tabs'
@@ -37,7 +38,7 @@ export default async function ManagerMaintenance(props: {
   // Fetch every report once: the count cards always cover all statuses,
   // only the table follows the selected tab. The "all" tab lists outstanding
   // work only; resolved reports live under their own tab.
-  const allReports = await getMaintenanceReports()
+  const [allReports, roomUnits] = await Promise.all([getMaintenanceReports(), getAllRoomUnits()])
   const reports =
     filter === 'all'
       ? allReports.filter(r => r.status !== 'resolved')
@@ -58,14 +59,17 @@ export default async function ManagerMaintenance(props: {
   const resolvedCount = allReports.filter(r => r.status === 'resolved').length
 
   return (
-    <div className="p-8 lg:p-12 max-w-7xl">
-      <header className="mb-8">
-        <h1 className="font-headline-md text-headline-md text-primary mb-2">
-          {t('manager.maintenancePage.title')}
-        </h1>
-        <p className="text-body-lg text-on-surface-variant">
-          {t('manager.maintenancePage.subtitle')}
-        </p>
+    <div className="px-4 py-6 md:p-8 lg:p-12">
+      <header className="mb-6 flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="font-display text-2xl md:text-[28px] leading-[1.25] text-primary">
+            {t('manager.maintenancePage.title')}
+          </h1>
+          <p className="text-body-md text-on-surface-variant mt-1">
+            {t('manager.maintenancePage.subtitle')}
+          </p>
+        </div>
+        <MaintenanceReportModal roomUnits={roomUnits} />
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

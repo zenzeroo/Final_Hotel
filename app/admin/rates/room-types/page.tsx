@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { listRoomTypes, countUnitsByRoomType } from '@/lib/data/rooms'
+import { listRoomTypes, listUnitLabelsByRoomType } from '@/lib/data/rooms'
 import { Tabs, type TabItem } from '@/components/ui/Tabs'
 import { RoomTypesAdminTable } from '@/components/admin/RoomTypesAdminTable'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
@@ -24,11 +24,11 @@ export default async function AdminRoomTypesPage(props: {
   // Parallel fetch all 3 lists — used both for the body table (the matching
   // list) AND the 3 tab badge counts. Cheap because each is a tiny filtered
   // count(*) query against an indexed column.
-  const [activeList, inactiveList, deletedList, unitCounts] = await Promise.all([
+  const [activeList, inactiveList, deletedList, unitLabels] = await Promise.all([
     listRoomTypes({ isActive: true, isDeleted: false }),
     listRoomTypes({ isActive: false, isDeleted: false }),
     listRoomTypes({ isDeleted: true }),
-    countUnitsByRoomType(),
+    listUnitLabelsByRoomType(),
   ])
 
   const roomTypes =
@@ -109,7 +109,7 @@ export default async function AdminRoomTypesPage(props: {
         <h2 className="font-headline-sm text-headline-sm text-primary mb-4">
           {SECTION_TITLE[tab]}
         </h2>
-        <RoomTypesAdminTable roomTypes={roomTypes} tab={tab} unitCounts={unitCounts} />
+        <RoomTypesAdminTable roomTypes={roomTypes} tab={tab} unitLabels={unitLabels} />
       </section>
     </div>
   )

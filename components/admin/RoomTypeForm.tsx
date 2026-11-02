@@ -19,6 +19,8 @@ interface RoomTypeFormProps {
   initial?: RoomType
   /** Every amenity the site can render — shown as checkboxes. */
   amenityCatalog: Amenity[]
+  /** Edit: this room's current number (one entry = one room). */
+  initialUnitLabel?: string
 }
 
 interface FormState {
@@ -373,7 +375,7 @@ function RoomImagesSection({ initial, requireHero }: { initial?: RoomType; requi
   )
 }
 
-export function RoomTypeForm({ mode, initial, amenityCatalog }: RoomTypeFormProps) {
+export function RoomTypeForm({ mode, initial, amenityCatalog, initialUnitLabel }: RoomTypeFormProps) {
   const t = useT()
   const router = useRouter()
   const wrapped = async (
@@ -411,16 +413,17 @@ export function RoomTypeForm({ mode, initial, amenityCatalog }: RoomTypeFormProp
       {mode === 'edit' && initial && <input type="hidden" name="id" value={initial.id} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label={t('admin.roomTypeForm.slug')} required>
+        <Field label={t('admin.roomTypeForm.unitLabel')} required>
           <input
-            name="slug"
+            name="unit_label"
             type="text"
-            defaultValue={initial?.slug ?? ''}
-            placeholder="deluxe-garden-view"
+            defaultValue={initialUnitLabel ?? ''}
+            placeholder="305"
             required
-            maxLength={80}
-            pattern="[a-z0-9\-]+"
-            className={`${inputClass} font-mono`}
+            maxLength={20}
+            pattern="[A-Za-z0-9\-]+"
+            title={t('admin.roomTypeForm.unitLabelHint')}
+            className={inputClass}
           />
         </Field>
 

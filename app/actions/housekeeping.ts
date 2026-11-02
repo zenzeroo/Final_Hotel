@@ -170,6 +170,9 @@ export async function reportMaintenance(input: {
   revalidatePath('/housekeeper')
   revalidatePath('/housekeeper/maintenance')
   revalidatePath('/housekeeper/rooms')
+  revalidatePath('/manager/maintenance')
+  revalidatePath('/manager')
+  revalidatePath('/reception/maintenance')
   return { ok: true }
 }
 

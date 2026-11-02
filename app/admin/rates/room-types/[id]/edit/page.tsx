@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getRoomTypeById, getAmenityCatalog, listUnitsForRoomType } from '@/lib/data/rooms'
 import { RoomTypeForm } from '@/components/admin/RoomTypeForm'
-import { RoomUnitsSection } from '@/components/admin/RoomUnitsSection'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
@@ -35,9 +34,9 @@ export default async function EditRoomTypePage({
 
       <header className="mb-8">
         <h1 className="font-headline-md text-headline-md text-primary">
-          {t('admin.roomTypes.editHeading', { name: roomType.name })}
+          {t('admin.roomTypes.editHeading', { room: units[0]?.unit_label ?? '—', name: roomType.name_th || roomType.name })}
         </h1>
-        <p className="text-body-lg text-on-surface-variant mt-2">{roomType.name_th}</p>
+        <p className="text-body-lg text-on-surface-variant mt-2">{roomType.name}</p>
       </header>
 
       {created === '1' && (
@@ -47,9 +46,12 @@ export default async function EditRoomTypePage({
         </div>
       )}
 
-      <RoomTypeForm mode="edit" initial={roomType} amenityCatalog={getAmenityCatalog()} />
-
-      <RoomUnitsSection roomTypeId={roomType.id} defaultFloor={roomType.floor} units={units} />
+      <RoomTypeForm
+        mode="edit"
+        initial={roomType}
+        initialUnitLabel={units[0]?.unit_label}
+        amenityCatalog={getAmenityCatalog()}
+      />
     </div>
   )
 }
