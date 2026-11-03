@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import Link from 'next/link'
 import type { Customer } from '@/lib/data/types'
 import { formatDate } from '@/lib/dates'
+import { BlacklistBadge } from '@/components/ui/BlacklistBadge'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useLocale } from '@/lib/i18n/useT'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
@@ -167,6 +168,10 @@ export function CustomersAdminTable({
                       {c.total_bookings ?? 0}
                     </td>
                     <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                      {c.is_blacklisted && (
+                        <BlacklistBadge label={t('admin.customersPage.statusBlacklisted')} />
+                      )}
                       {c.is_suspended ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-on-error-container text-[10px] uppercase tracking-wider font-semibold">
                           <MaterialIcon name="block" size={12} />
@@ -182,6 +187,7 @@ export function CustomersAdminTable({
                           {t('admin.common.off')}
                         </span>
                       )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link

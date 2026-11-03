@@ -5,6 +5,7 @@ import { useState, useMemo, useTransition, useEffect } from 'react'
 import { MaterialIcon } from '../ui/MaterialIcon'
 import { RatingStars } from './RatingStars'
 import { ConfirmModal } from '../ui/ConfirmModal'
+import { Modal } from '../ui/Modal'
 import { useT } from '@/lib/i18n/useT'
 import {
   calculateNights,
@@ -66,6 +67,8 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
   // Phase 42 — inline error from createTempBookingAction (replaces the
   // pre-Phase-42 redirect-with-search-params flow that had no error path).
   const [reserveError, setReserveError] = useState<string | null>(null)
+  // Blacklisted customer — hotel phone to show in the pop-up (null = closed).
+  const [blacklistPhone, setBlacklistPhone] = useState<string | null>(null)
 
   // Phase parity — capture full QuoteResult so calculatePrice uses the
   // seasonal-aware baseSubtotal. Also drives the appliedRates banner.
@@ -132,6 +135,10 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
         // re-reads max_guests at server-side anyway as defense-in-depth.
         guests: room.max_guests,
       })
+      if (result.blacklisted) {
+        setBlacklistPhone(result.hotelPhone ?? '')
+        return
+      }
       if (!result.ok || !result.bookingId) {
         setReserveError(result.error ?? t('rooms.tempBookingError'))
         return
@@ -306,6 +313,30 @@ export function BookingWidget({ room, settings, defaultCheckIn, defaultCheckOut,
         body={t('roomDetail.loginToBook.body')}
         cancelLabel={t('roomDetail.loginToBook.continueViewing')}
         okLabel={t('roomDetail.loginToBook.goToLogin')}
+      />
+
+      {/* Blacklisted customer — booking refused; reception has been notified. */}
+      <Modal
+        open={blacklistPhone !== null}
+        onClose={() => setBlacklistPhone(null)}
+        variant="alert"
+        title={
+          <span className="flex items-center gap-2 text-error">
+            <MaterialIcon name="gpp_bad" size={24} />
+            {t('roomDetail.blacklisted.title')}
+          </span>
+        }
+        body={
+          <p className="text-body-md text-on-surface">
+            {t('roomDetail.blacklisted.body')}{' '}
+            {blacklistPhone ? (
+              <a href={`tel:${blacklistPhone.replace(/[^0-9+]/g, '')}`} className="font-semibold text-primary underline tabular-nums">
+                {blacklistPhone}
+              </a>
+            ) : null}
+          </p>
+        }
+        actions={[{ label: t('roomDetail.blacklisted.close'), onClick: () => setBlacklistPhone(null) }]}
       />
     </aside>
   )

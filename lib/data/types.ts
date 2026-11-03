@@ -733,6 +733,10 @@ export interface Customer {
   is_suspended: boolean
   suspended_at: string | null
   suspended_reason: string | null
+  /** Blacklist — can still sign in, but online booking is refused. */
+  is_blacklisted: boolean
+  blacklisted_at: string | null
+  blacklisted_reason: string | null
   total_bookings?: number
 }
 

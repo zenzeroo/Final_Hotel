@@ -27,6 +27,7 @@ import type { UserRole } from '@/lib/supabase/roles'
 import { sendEmail } from '@/lib/email/resend'
 import { getRecipientLocale } from '@/lib/email/recipient-locale'
 import { notifyRoles, notifyUser } from '@/lib/notifications/notify'
+import { getHotelSettings } from '@/lib/data/supabase-manager'
 
 const createBookingSchema = z.object({
   roomTypeId: z.string().uuid(),
@@ -55,6 +56,60 @@ export interface CreateBookingResult {
   success?: boolean
   error?: string
   bookingId?: string
+  /** Customer is blacklisted — the room page shows a pop-up with `hotelPhone`. */
+  blacklisted?: boolean
+  hotelPhone?: string
+}
+
+/**
+ * Blacklisted customers can sign in but not book. Returns the refusal the
+ * room page turns into a pop-up. With `attempt`, also tells reception who
+ * tried to book which room (in-app notification + booking_events audit row).
+ */
+async function refuseBlacklisted(
+  t: Awaited<ReturnType<typeof getServerT>>['t'],
+  attempt?: {
+    userId: string
+    name: string
+    roomTypeId: string
+    roomName: string
+    checkIn: string
+    checkOut: string
+  },
+): Promise<{ ok: false; blacklisted: true; hotelPhone: string; error: string }> {
+  const { phone } = await getHotelSettings()
+  if (attempt) {
+    // One notification per customer + room + dates per minute — a double
+    // click doesn't spam reception, a later retry is still reported.
+    const minute = Math.floor(Date.now() / 60_000)
+    const params = {
+      name: attempt.name,
+      room: attempt.roomName,
+      checkIn: attempt.checkIn,
+      checkOut: attempt.checkOut,
+    }
+    await Promise.all([
+      notifyRoles(['reception'], {
+        type: 'blacklist_booking_attempt',
+        params,
+        link: `/reception/blacklist?q=${encodeURIComponent(attempt.name)}`,
+        eventKey: `blacklist_attempt:${attempt.userId}:${attempt.roomTypeId}:${attempt.checkIn}:${attempt.checkOut}:${minute}`,
+      }),
+      (async () => {
+        const admin = await createAdminClient()
+        const { error } = await admin.from('booking_events').insert({
+          booking_id: null,
+          actor_id: attempt.userId,
+          actor_role: 'user',
+          event_type: 'blacklist_booking_attempt',
+          description: `Blacklisted customer tried to book ${attempt.roomName} (${attempt.checkIn} – ${attempt.checkOut})`,
+          metadata: { target_customer_id: attempt.userId, room_type_id: attempt.roomTypeId, ...params },
+        })
+        if (error) console.error('[blacklist attempt] audit insert failed:', error.message)
+      })(),
+    ])
+  }
+  return { ok: false, blacklisted: true, hotelPhone: phone, error: t('actions.common.blacklisted', { phone }) }
 }
 
 /**
@@ -120,12 +175,13 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   // doesn't read profiles and inline EXISTS-on-profiles triggers 42P17.
   const { data: customerProfile } = await supabase
     .from('profiles')
-    .select('is_suspended, role, terms_version')
+    .select('is_suspended, is_blacklisted, role, terms_version')
     .eq('id', user.id)
     .maybeSingle()
   if (customerProfile?.is_suspended) {
     return { error: t('actions.common.suspended') }
   }
+  if (customerProfile?.is_blacklisted) return refuseBlacklisted(t)
   await redirectIfConsentMissing(customerProfile)
 
   // Get room
@@ -366,6 +422,9 @@ export interface CreateTempBookingResult {
   error?: string
   bookingId?: string
   expiresAt?: string
+  /** Customer is blacklisted — the room page shows a pop-up with `hotelPhone`. */
+  blacklisted?: boolean
+  hotelPhone?: string
 }
 
 /**
@@ -417,15 +476,26 @@ export async function createTempBookingAction(
   const [{ data: customerProfile }, { data: room, error: roomErr }] = await Promise.all([
     supabase
       .from('profiles')
-      .select('is_suspended, full_name, phone, role, terms_version')
+      .select('is_suspended, is_blacklisted, full_name, phone, role, terms_version')
       .eq('id', user.id)
       .maybeSingle(),
-    supabase.from('room_types').select('base_price, max_guests, is_active').eq('id', data.roomTypeId).maybeSingle(),
+    supabase.from('room_types').select('base_price, max_guests, is_active, name').eq('id', data.roomTypeId).maybeSingle(),
   ])
 
   // Phase 36 — block suspended customers (mirrors createBooking guard).
   if (customerProfile?.is_suspended) {
     return { error: t('actions.common.suspended') }
+  }
+  // Blacklist — signed in, but cannot book. Reception is told about the attempt.
+  if (customerProfile?.is_blacklisted) {
+    return refuseBlacklisted(t, {
+      userId: user.id,
+      name: customerProfile.full_name ?? user.email ?? user.id,
+      roomTypeId: data.roomTypeId,
+      roomName: room?.name ?? data.roomTypeId,
+      checkIn: data.checkIn,
+      checkOut: data.checkOut,
+    })
   }
   await redirectIfConsentMissing(customerProfile)
   if (roomErr || !room) return { error: t('actions.common.roomNotFound') }
@@ -573,7 +643,7 @@ export async function completeTempBookingAction(
   // id — run them together. The sweep must finish before the read below
   // so a stale row is flipped to 'expired' instead of being completed.
   const [{ data: customerProfile }] = await Promise.all([
-    supabase.from('profiles').select('is_suspended, role, terms_version').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('is_suspended, is_blacklisted, role, terms_version').eq('id', user.id).maybeSingle(),
     supabase.rpc('expire_specific_temp_booking', {
       p_booking_id: data.bookingId,
       p_user_id: user.id,
@@ -582,6 +652,7 @@ export async function completeTempBookingAction(
   if (customerProfile?.is_suspended) {
     return { error: t('actions.common.suspended') }
   }
+  if (customerProfile?.is_blacklisted) return refuseBlacklisted(t)
   await redirectIfConsentMissing(customerProfile)
 
   // Load the existing temp booking. Confirms ownership + active state.

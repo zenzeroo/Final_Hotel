@@ -127,6 +127,12 @@ export const en: Dictionary = {
     },
     // Phase 42 — fallback error from createTempBookingAction.
     tempBookingError: 'Could not create temporary booking',
+    // Blacklist pop-up — shown instead of the booking flow.
+    blacklisted: {
+      title: 'Booking unavailable',
+      body: 'Your account is on our blacklist. To have your name removed, please contact the hotel at',
+      close: 'Close',
+    },
   },
 
   // Room card (homepage featured grid)
@@ -1061,6 +1067,16 @@ export const en: Dictionary = {
       maintenance: 'Maintenance',
       requests: 'Requests',
       history: 'History',
+      blacklist: 'Blacklist',
+    },
+    blacklistPage: {
+      title: 'Blacklist',
+      subtitle: 'Blacklisted guests can sign in but cannot book online — only an admin can remove them',
+      countPeople: '{count} blacklisted',
+      empty: 'No blacklisted guests',
+      noMatch: 'No blacklisted guest matches "{q}"',
+      colReason: 'Reason',
+      colSince: 'Blacklisted on',
     },
     maintenancePage: {
       title: 'Maintenance reports',
@@ -1262,6 +1278,8 @@ export const en: Dictionary = {
       roleManager: 'Manager',
     },
     walkIn: {
+      blacklistWarning: '{name} is blacklisted — please review before confirming this booking',
+      blacklistReason: 'Reason: {reason}',
       pickerHeading: 'Walk-in booking',
       pickerSubtitle: 'Pick a room to create a booking for a guest who arrived without a reservation',
       noRooms: 'No rooms available for the selected dates ({from} – {to})',
@@ -1542,6 +1560,19 @@ export const en: Dictionary = {
       suspendPlaceholder: 'e.g. policy violation, inappropriate behaviour...',
       suspending: 'Suspending…',
       unsuspendBody: 'Lift the suspension for {name}? They will be able to sign in and book as usual.',
+      blacklist: 'Blacklist',
+      unblacklist: 'Remove from blacklist',
+      confirmBlacklist: 'Confirm blacklist',
+      confirmUnblacklist: 'Confirm removal',
+      blacklistBody: 'Blacklist {name}? They can still sign in but cannot book online, and every attempt notifies reception.',
+      unblacklistBody: 'Remove {name} from the blacklist? They will be able to book as usual.',
+      blacklistReason: 'Reason (optional)',
+      blacklistPlaceholder: 'e.g. repeated no-shows, damaged a room...',
+      blacklisting: 'Saving…',
+      statusBlacklisted: 'Blacklisted',
+      blacklistInfo: 'Blacklist details',
+      blacklistedAt: 'Blacklisted on',
+      blacklistedReason: 'Reason',
       processing: 'Processing…',
       backToList: 'Back to customers',
       personalInfo: 'Personal information',
@@ -2163,6 +2194,7 @@ export const en: Dictionary = {
       invalidInputPlain: 'Invalid input',
       notLoggedIn: 'Please sign in',
       suspended: 'Your account has been suspended. Please contact our staff.',
+      blacklisted: 'Your account is blacklisted. Please contact the hotel at {phone}.',
       noAccountEmail:
         'Your account has no email address. Please contact our staff to update it before booking.',
       userNotFound: 'User not found',
@@ -2593,6 +2625,7 @@ export const en: Dictionary = {
       maintenance_reported: 'Maintenance reported for room {room} (severity: {severity})',
       task_assigned: 'You have {count} new task(s)',
       booking_new: 'New booking {code}, check-in {checkIn}',
+      blacklist_booking_attempt: 'Blacklisted guest {name} tried to book {room} ({checkIn} – {checkOut})',
     },
   },
   // Phase 61 — PDPA consent (register form, /consent, profile card)

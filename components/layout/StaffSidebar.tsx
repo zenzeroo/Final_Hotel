@@ -72,6 +72,7 @@ const NAV_BY_ROLE: Record<StaffRole, NavGroup[]> = {
       key: 'customers',
       items: [
         { key: 'customers', href: '/reception/customers', icon: 'search' },
+        { key: 'blacklist', href: '/reception/blacklist', icon: 'gpp_bad' },
         { key: 'requests', href: '/reception/requests', icon: 'forum' },
       ],
     },

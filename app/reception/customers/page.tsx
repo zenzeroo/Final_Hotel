@@ -2,6 +2,7 @@ import { listAllCustomers } from '@/lib/data/staff'
 import { formatDate } from '@/lib/dates'
 import { maskPhone } from '@/lib/phone'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { BlacklistBadge } from '@/components/ui/BlacklistBadge'
 import { CustomerSearch } from './CustomerSearch'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
 import { getLocale } from '@/lib/i18n/getLocale'
@@ -54,7 +55,10 @@ export default async function CustomersPage(props: PageProps<'/reception/custome
               {customers.map((c) => (
                 <tr key={c.id} className="border-t border-surface-container first:border-t-0 hover:bg-surface-container-low transition-colors">
                   <Td>
-                    <p className="text-body-md font-medium text-on-surface">{c.full_name ?? '—'}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-body-md font-medium text-on-surface">{c.full_name ?? '—'}</p>
+                      {c.is_blacklisted && <BlacklistBadge label={t('admin.customersPage.statusBlacklisted')} />}
+                    </div>
                   </Td>
                   <Td>
                     <span className="text-body-md text-on-surface break-all">{c.email ?? '—'}</span>

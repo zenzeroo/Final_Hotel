@@ -18,6 +18,7 @@ export const NOTIFICATION_TYPES = [
   'maintenance_reported',
   'task_assigned',
   'booking_new',
+  'blacklist_booking_attempt',
 ] as const
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
@@ -44,4 +45,5 @@ export const NOTIFICATION_ICON: Record<NotificationType, string> = {
   maintenance_reported: 'build',
   task_assigned: 'cleaning_services',
   booking_new: 'event_available',
+  blacklist_booking_attempt: 'gpp_bad',
 }

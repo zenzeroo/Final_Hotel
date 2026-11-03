@@ -8,6 +8,9 @@ import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { LOCALE_BCP47 } from '@/lib/i18n/config'
 import { SuspendCustomerButton } from '@/components/admin/SuspendCustomerButton'
 import { UnsuspendCustomerButton } from '@/components/admin/UnsuspendCustomerButton'
+import { BlacklistCustomerButton } from '@/components/admin/BlacklistCustomerButton'
+import { UnblacklistCustomerButton } from '@/components/admin/UnblacklistCustomerButton'
+import { BlacklistBadge } from '@/components/ui/BlacklistBadge'
 import { getLocale } from '@/lib/i18n/getLocale'
 import { getT } from '@/lib/i18n/t'
 
@@ -41,14 +44,29 @@ export default async function CustomerDetailPage(props: {
 
       <header className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-headline-md text-headline-md text-primary">
+          <h1 className="font-headline-md text-headline-md text-primary flex items-center gap-3 flex-wrap">
             {customer.full_name ?? t('admin.common.noName')}
+            {customer.is_blacklisted && (
+              <BlacklistBadge label={t('admin.customersPage.statusBlacklisted')} size="md" />
+            )}
           </h1>
           <p className="text-body-lg text-on-surface-variant mt-2">
             {t('admin.customersPage.detail.title')}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {!isSelf &&
+            (customer.is_blacklisted ? (
+              <UnblacklistCustomerButton
+                customerId={customer.id}
+                customerName={customer.full_name}
+              />
+            ) : (
+              <BlacklistCustomerButton
+                customerId={customer.id}
+                customerName={customer.full_name}
+              />
+            ))}
           {!isSelf &&
             (customer.is_suspended ? (
               <UnsuspendCustomerButton
@@ -79,6 +97,32 @@ export default async function CustomerDetailPage(props: {
           />
         </div>
       </section>
+
+      {/* Blacklist info (if blacklisted) */}
+      {customer.is_blacklisted && (
+        <section className="bg-surface-container-highest rounded-xl border-2 border-on-surface p-6 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <MaterialIcon name="gpp_bad" size={20} className="text-error" />
+            <h2 className="font-headline-sm text-headline-sm text-on-surface">
+              {t('admin.customersPage.blacklistInfo')}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <DetailRow
+              label={t('admin.customersPage.blacklistedAt')}
+              value={
+                customer.blacklisted_at
+                  ? formatDateTime(customer.blacklisted_at, LOCALE_BCP47[locale])
+                  : '—'
+              }
+            />
+            <DetailRow
+              label={t('admin.customersPage.blacklistedReason')}
+              value={customer.blacklisted_reason ?? '—'}
+            />
+          </div>
+        </section>
+      )}
 
       {/* Suspension info (if suspended) */}
       {customer.is_suspended && (

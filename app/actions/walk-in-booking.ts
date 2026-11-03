@@ -11,6 +11,8 @@ import { getActiveSeasonalRatesForRange, getPricingConstants } from '@/lib/data/
 import { getDefaultCancellationPolicy, getRefundNotice } from '@/lib/data/bookings'
 import { translateSupabaseError, translateZodIssues } from '@/lib/errors/translate'
 import { sendEmail } from '@/lib/email/resend'
+import { requireRole } from '@/lib/auth/require'
+import { getBlacklistByEmail } from '@/lib/data/staff'
 
 /**
  * Phase 12 — Walk-in booking server action.
@@ -313,4 +315,17 @@ export async function createWalkInBooking(input: WalkInBookingInput): Promise<Wa
   }
 
   return { success: true, bookingId, userId: guestUserId }
+}
+
+/**
+ * Walk-in form email check — is there a blacklisted customer account with
+ * this email? Warning only: reception may still create the booking.
+ */
+export async function checkWalkInBlacklistAction(
+  email: string,
+): Promise<{ name: string | null; reason: string | null } | null> {
+  await requireRole(['reception', 'manager', 'admin'], '/reception/bookings/new')
+  if (!z.string().email().safeParse(email.trim()).success) return null
+  const hit = await getBlacklistByEmail(email)
+  return hit ? { name: hit.full_name, reason: hit.blacklisted_reason } : null
 }

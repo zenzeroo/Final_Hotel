@@ -202,6 +202,7 @@ export interface CustomerSummary {
   phone: string | null
   email: string | null
   created_at: string
+  is_blacklisted: boolean
 }
 
 export interface CustomerListPage {
@@ -231,7 +232,7 @@ export async function listAllCustomers(
   // admin/manager/housekeeper) showing up in the customer picker.
   let dataQuery = supabase
     .from('profiles')
-    .select('id, full_name, phone, email, created_at')
+    .select('id, full_name, phone, email, created_at, is_blacklisted')
     .eq('role', 'user')
     .order('created_at', { ascending: false })
     .limit(20)
@@ -256,6 +257,54 @@ export async function listAllCustomers(
     rows: (dataRes.data ?? []) as CustomerSummary[],
     total: countRes.count ?? 0,
   }
+}
+
+export interface BlacklistedCustomer extends CustomerSummary {
+  blacklisted_at: string | null
+  blacklisted_reason: string | null
+}
+
+/**
+ * Blacklisted customers for the reception blacklist page, newest first.
+ * Optional `search` matches full_name, phone OR email (≥2 characters).
+ */
+export async function listBlacklistedCustomers(
+  opts: { search?: string; limit?: number } = {},
+): Promise<{ rows: BlacklistedCustomer[]; total: number }> {
+  const supabase = await createClient()
+  const pattern = ilikePattern(opts.search)
+  const term = pattern && pattern.length >= 4 ? pattern : null // at least 2 characters
+
+  let q = supabase
+    .from('profiles')
+    .select('id, full_name, phone, email, created_at, is_blacklisted, blacklisted_at, blacklisted_reason', {
+      count: 'exact',
+    })
+    .eq('role', 'user')
+    .eq('is_blacklisted', true)
+    .order('blacklisted_at', { ascending: false })
+    .limit(Math.min(Math.max(opts.limit ?? 100, 1), 200))
+  if (term) q = q.or(`full_name.ilike.${term},phone.ilike.${term},email.ilike.${term}`)
+
+  const { data, count, error } = await q
+  if (error) wrapSupabaseError('listBlacklistedCustomers', error)
+  return { rows: (data ?? []) as BlacklistedCustomer[], total: count ?? 0 }
+}
+
+/** Blacklist state for the walk-in form's email check (null when no account). */
+export async function getBlacklistByEmail(
+  email: string,
+): Promise<{ full_name: string | null; blacklisted_reason: string | null } | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('full_name, blacklisted_reason')
+    .eq('role', 'user')
+    .eq('is_blacklisted', true)
+    .eq('email', email.trim().toLowerCase())
+    .maybeSingle()
+  if (error) wrapSupabaseError('getBlacklistByEmail', error)
+  return data ?? null
 }
 
 export interface RecentEvent {

@@ -123,6 +123,12 @@ export const th = {
     },
     // Phase 42 — fallback error from createTempBookingAction.
     tempBookingError: 'ไม่สามารถสร้างการจองชั่วคราว',
+    // Blacklist pop-up — shown instead of the booking flow.
+    blacklisted: {
+      title: 'ไม่สามารถทำการจองได้',
+      body: 'บัญชีของคุณติดแบล็คลิสต์อยู่ หากต้องการแก้ไขชื่อออกจากแบล็คลิสต์ กรุณาติดต่อโรงแรมที่เบอร์',
+      close: 'ปิด',
+    },
   },
 
   // Room card (homepage featured grid)
@@ -1063,6 +1069,16 @@ export const th = {
       maintenance: 'แจ้งซ่อมบำรุง',
       requests: 'คำขอ',
       history: 'ประวัติ',
+      blacklist: 'แบล็คลิสต์',
+    },
+    blacklistPage: {
+      title: 'รายชื่อแบล็คลิสต์',
+      subtitle: 'ลูกค้าที่ติดแบล็คลิสต์จะเข้าสู่ระบบได้ แต่ไม่สามารถจองออนไลน์ได้ — การปลดชื่อทำได้โดยแอดมินเท่านั้น',
+      countPeople: 'ติดแบล็คลิสต์ {count} คน',
+      empty: 'ยังไม่มีลูกค้าที่ติดแบล็คลิสต์',
+      noMatch: 'ไม่พบลูกค้าแบล็คลิสต์ที่ตรงกับ "{q}"',
+      colReason: 'เหตุผล',
+      colSince: 'ติดแบล็คลิสต์เมื่อ',
     },
     maintenancePage: {
       title: 'รายงานการซ่อมบำรุง',
@@ -1264,6 +1280,8 @@ export const th = {
       roleManager: 'ผู้จัดการ',
     },
     walkIn: {
+      blacklistWarning: 'ลูกค้า {name} ติดแบล็คลิสต์ — โปรดตรวจสอบก่อนยืนยันการจอง',
+      blacklistReason: 'เหตุผล: {reason}',
       pickerHeading: 'การจองแบบ Walk-in',
       pickerSubtitle: 'เลือกห้องพักเพื่อสร้างการจองสำหรับลูกค้าที่มาถึงโดยไม่ได้จองล่วงหน้า',
       noRooms: 'ไม่มีห้องว่างในช่วงวันที่เลือก ({from} – {to})',
@@ -1544,6 +1562,19 @@ export const th = {
       suspendPlaceholder: 'เช่น ลูกค้าทำผิดนโยบาย, พฤติกรรมไม่เหมาะสม...',
       suspending: 'กำลังระงับ…',
       unsuspendBody: 'ปลดการระงับบัญชีของ {name}? ลูกค้าจะสามารถเข้าสู่ระบบและทำการจองได้ตามปกติ',
+      blacklist: 'ติดแบล็คลิสต์',
+      unblacklist: 'ปลดแบล็คลิสต์',
+      confirmBlacklist: 'ยืนยันติดแบล็คลิสต์',
+      confirmUnblacklist: 'ยืนยันปลดแบล็คลิสต์',
+      blacklistBody: 'ติดแบล็คลิสต์ {name}? ลูกค้ายังเข้าสู่ระบบได้ แต่จะไม่สามารถจองห้องพักออนไลน์ได้ และทุกครั้งที่พยายามจองจะแจ้งเตือนไปยังแผนกต้อนรับ',
+      unblacklistBody: 'ปลด {name} ออกจากแบล็คลิสต์? ลูกค้าจะสามารถจองห้องพักได้ตามปกติ',
+      blacklistReason: 'เหตุผล (ไม่บังคับ)',
+      blacklistPlaceholder: 'เช่น ไม่มาเข้าพักซ้ำหลายครั้ง, สร้างความเสียหายให้ห้องพัก...',
+      blacklisting: 'กำลังบันทึก…',
+      statusBlacklisted: 'แบล็คลิสต์',
+      blacklistInfo: 'ข้อมูลแบล็คลิสต์',
+      blacklistedAt: 'ติดแบล็คลิสต์เมื่อ',
+      blacklistedReason: 'เหตุผล',
       processing: 'กำลังดำเนินการ…',
       backToList: 'กลับไปหน้ารายชื่อลูกค้า',
       personalInfo: 'ข้อมูลส่วนตัว',
@@ -2165,6 +2196,7 @@ export const th = {
       invalidInputPlain: 'ข้อมูลไม่ถูกต้อง',
       notLoggedIn: 'กรุณาเข้าสู่ระบบ',
       suspended: 'บัญชีของคุณถูกระงับ กรุณาติดต่อเจ้าหน้าที่',
+      blacklisted: 'บัญชีของคุณติดแบล็คลิสต์ กรุณาติดต่อโรงแรมที่เบอร์ {phone}',
       noAccountEmail:
         'ไม่พบอีเมลของบัญชีของคุณ กรุณาติดต่อเจ้าหน้าที่เพื่ออัปเดตข้อมูลก่อนทำการจอง',
       userNotFound: 'ไม่พบข้อมูลผู้ใช้',
@@ -2596,6 +2628,7 @@ export const th = {
       maintenance_reported: 'แจ้งซ่อมห้อง {room} (ความรุนแรง: {severity})',
       task_assigned: 'คุณได้รับมอบหมายงานใหม่ {count} งาน',
       booking_new: 'การจองใหม่ {code} เช็คอิน {checkIn}',
+      blacklist_booking_attempt: 'ลูกค้าแบล็คลิสต์ {name} พยายามจองห้อง {room} ({checkIn} – {checkOut})',
     },
   },
   // Phase 61 — PDPA consent (register form, /consent, profile card)

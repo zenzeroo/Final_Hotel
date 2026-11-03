@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition, useMemo } from 'react'
-import { createWalkInBooking } from '@/app/actions/walk-in-booking'
+import { checkWalkInBlacklistAction, createWalkInBooking } from '@/app/actions/walk-in-booking'
 import { createWalkInCheckoutSessionAction } from '@/app/actions/payment'
 import { calculateNights, calculatePrice, formatTHB } from '@/lib/pricing'
 import { getMinCheckInLocalIso, addDaysLocalIso, formatDateNumeric } from '@/lib/dates'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
+import { BlacklistBadge } from '@/components/ui/BlacklistBadge'
 import { useLocale, useT } from '@/lib/i18n/useT'
 import { localizedName } from '@/lib/format/roomType'
 
@@ -59,6 +60,8 @@ export function WalkInForm({ room }: WalkInFormProps) {
   const guests = initialGuests
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  // Blacklisted account behind this email — warning only, booking still allowed.
+  const [blacklistHit, setBlacklistHit] = useState<{ name: string | null; reason: string | null } | null>(null)
   const [phone, setPhone] = useState('')
   const [specialRequest, setSpecialRequest] = useState('')
   // Phase 17 — replaces `markAsPaid` boolean. `card` triggers a Stripe
@@ -157,11 +160,26 @@ export function WalkInForm({ room }: WalkInFormProps) {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setBlacklistHit(null)
+                }}
+                onBlur={async () => setBlacklistHit(email ? await checkWalkInBlacklistAction(email) : null)}
                 required
                 autoComplete="email"
                 className="input"
               />
+              {blacklistHit && (
+                <div role="alert" className="mt-2 flex flex-col gap-1 px-3 py-2 rounded-lg border-2 border-error bg-error-container/40 text-body-md text-on-error-container">
+                  <span className="flex flex-wrap items-center gap-2 font-semibold">
+                    <BlacklistBadge label={t('admin.customersPage.statusBlacklisted')} />
+                    {t('reception.walkIn.blacklistWarning', { name: blacklistHit.name ?? email })}
+                  </span>
+                  {blacklistHit.reason && (
+                    <span className="text-[14px]">{t('reception.walkIn.blacklistReason', { reason: blacklistHit.reason })}</span>
+                  )}
+                </div>
+              )}
             </Field>
             <Field label={t('reception.walkIn.phone')} required hint={t('reception.walkIn.phoneHint')}>
               <input

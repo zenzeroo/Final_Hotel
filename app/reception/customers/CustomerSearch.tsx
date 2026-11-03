@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useT } from '@/lib/i18n/useT'
@@ -12,6 +12,7 @@ interface CustomerSearchProps {
 export function CustomerSearch({ initialQuery }: CustomerSearchProps) {
   const t = useT()
   const router = useRouter()
+  const pathname = usePathname()
   const params = useSearchParams()
   const [q, setQ] = useState(initialQuery)
   // Re-sync when the URL query changes (back/forward) — adjust during render
@@ -27,7 +28,7 @@ export function CustomerSearch({ initialQuery }: CustomerSearchProps) {
     const next = new URLSearchParams(params.toString())
     if (q) next.set('q', q)
     else next.delete('q')
-    router.replace(`/reception/customers?${next.toString()}`)
+    router.replace(`${pathname}?${next.toString()}`)
   }
 
   return (

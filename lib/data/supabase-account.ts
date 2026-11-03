@@ -333,6 +333,8 @@ export interface ListCustomersOptions {
    *   - false     → only active
    */
   isSuspended?: boolean
+  /** true → only blacklisted customers. */
+  isBlacklisted?: boolean
   /** 1-indexed page of `pageSize` rows. */
   page?: number
   pageSize?: number
@@ -354,7 +356,7 @@ export async function listCustomers(
   let q = admin
     .from('profiles')
     .select(
-      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason, bookings!bookings_user_id_fkey(count)',
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason, is_blacklisted, blacklisted_at, blacklisted_reason, bookings!bookings_user_id_fkey(count)',
       { count: 'exact' },
     )
     .eq('role', 'user')
@@ -369,6 +371,7 @@ export async function listCustomers(
 
   if (opts.isSuspended === true) q = q.eq('is_suspended', true)
   if (opts.isSuspended === false) q = q.eq('is_suspended', false)
+  if (opts.isBlacklisted === true) q = q.eq('is_blacklisted', true)
 
   const { data, count, error } = await q.range(from, from + pageSize - 1)
   if (error) wrapSupabaseError('listCustomers', error)
@@ -395,7 +398,7 @@ export async function getCustomerById(id: string): Promise<Customer | null> {
   const { data, error } = await admin
     .from('profiles')
     .select(
-      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason',
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason, is_blacklisted, blacklisted_at, blacklisted_reason',
     )
     .eq('id', id)
     .eq('role', 'user')
@@ -424,7 +427,7 @@ export async function suspendCustomer(args: {
     .update(update)
     .eq('id', args.targetId)
     .select(
-      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason',
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason, is_blacklisted, blacklisted_at, blacklisted_reason',
     )
     .single()
   if (error) wrapSupabaseError('suspendCustomer', error)
@@ -449,10 +452,61 @@ export async function unsuspendCustomer(args: {
     })
     .eq('id', args.targetId)
     .select(
-      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason',
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason, is_blacklisted, blacklisted_at, blacklisted_reason',
     )
     .single()
   if (error) wrapSupabaseError('unsuspendCustomer', error)
+  return data as Customer
+}
+
+/**
+ * Blacklist a customer. They can still sign in, but the booking actions
+ * refuse them (app/actions/booking.ts). Caller (server action) must
+ * verify admin role + self-protection.
+ */
+export async function blacklistCustomer(args: {
+  targetId: string
+  reason: string | null
+  actorId: string
+}): Promise<Customer> {
+  const admin = await createAdminClient()
+  const { data, error } = await admin
+    .from('profiles')
+    .update({
+      is_blacklisted: true,
+      blacklisted_at: new Date().toISOString(),
+      blacklisted_reason: args.reason,
+      blacklisted_by: args.actorId,
+    })
+    .eq('id', args.targetId)
+    .eq('role', 'user')
+    .select(
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason, is_blacklisted, blacklisted_at, blacklisted_reason',
+    )
+    .single()
+  if (error) wrapSupabaseError('blacklistCustomer', error)
+  return data as Customer
+}
+
+/** Remove a customer from the blacklist. Caller must verify admin role. */
+export async function unblacklistCustomer(args: {
+  targetId: string
+}): Promise<Customer> {
+  const admin = await createAdminClient()
+  const { data, error } = await admin
+    .from('profiles')
+    .update({
+      is_blacklisted: false,
+      blacklisted_at: null,
+      blacklisted_reason: null,
+      blacklisted_by: null,
+    })
+    .eq('id', args.targetId)
+    .select(
+      'id, full_name, email, phone, created_at, is_active, is_suspended, suspended_at, suspended_reason, is_blacklisted, blacklisted_at, blacklisted_reason',
+    )
+    .single()
+  if (error) wrapSupabaseError('unblacklistCustomer', error)
   return data as Customer
 }
 /**
